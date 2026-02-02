@@ -122,6 +122,67 @@ function Component() {
 - Use `pytest`
 - Test files: `tests/test_*.py`
 - Mock external APIs (Claude, OpenAI, Supabase)
+- Use `vitest` for TypeScript (web)
+
+---
+
+## Testing Philosophy
+
+Tests should serve three purposes: **documentation**, **confidence**, and **safety**.
+
+### Core Principles
+
+1. **Tests document the code** — Test names and structure should explain what the code does. Someone reading tests should understand the expected behavior.
+
+2. **Cover happy and sad paths** — Every function with logic should have tests for:
+   - Success cases (happy path)
+   - Failure cases (sad path)
+   - Edge cases (null, empty, boundary values)
+
+3. **Tests enable safe refactoring** — If tests pass after a refactor, the behavior is preserved. Tests should catch regressions.
+
+4. **Don't overtest** — Focus on behavior, not implementation details. Don't test:
+   - Every line of code
+   - Private/internal functions
+   - Third-party library behavior
+   - Simple getters/setters
+
+### What to Test
+
+| Test | Don't Test |
+|------|------------|
+| Public APIs and functions | Internal implementation details |
+| Business logic | Framework/library code |
+| Edge cases and error handling | Simple pass-through functions |
+| Integration points (APIs, DB) | Trivial code (getters, setters) |
+
+### Test Structure
+
+```python
+# Python
+def test_function_does_something_when_condition():
+    """Should [expected behavior] when [condition]."""
+    # Arrange
+    # Act
+    # Assert
+```
+
+```typescript
+// TypeScript
+it("should [expected behavior] when [condition]", () => {
+  // Arrange
+  // Act
+  // Assert
+});
+```
+
+### Guidelines
+
+- **One concept per test** — Each test verifies one logical behavior
+- **Descriptive names** — Test name should describe the scenario and expectation
+- **Fast tests** — Tests should run quickly to encourage frequent runs
+- **Isolated tests** — Tests should not depend on each other or external state
+- **Test behavior, not implementation** — Verify *what* code does, not *how*
 
 ---
 
