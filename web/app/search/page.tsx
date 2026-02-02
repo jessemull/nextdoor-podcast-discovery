@@ -1,7 +1,15 @@
-// TODO: Implement semantic search page
-// - Search input with debouncing
-// - Use Supabase RPC for vector similarity search
-// - Display results as PostCard components
+/**
+ * Search Page - Semantic search for posts
+ *
+ * TODO: Implement this page
+ * GitHub Issue: Create issue titled "Implement semantic search page"
+ *
+ * Features to implement:
+ * - Search input with debouncing (use useDeferredValue or custom hook)
+ * - Call Supabase RPC function for vector similarity search
+ * - Display results as PostCard components
+ * - Show loading state and empty state
+ */
 
 export default function SearchPage() {
   return (

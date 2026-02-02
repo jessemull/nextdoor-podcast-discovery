@@ -1,6 +1,6 @@
 /**
  * Environment variable validation and typed access.
- * 
+ *
  * This module provides safe access to environment variables with
  * validation to fail fast if required variables are missing.
  */
@@ -24,6 +24,9 @@ export const env = {
   },
 
   // Auth
+  get NEXTAUTH_URL() {
+    return getEnvVar("NEXTAUTH_URL");
+  },
   get NEXTAUTH_SECRET() {
     return getEnvVar("NEXTAUTH_SECRET");
   },

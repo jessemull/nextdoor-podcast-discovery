@@ -1,7 +1,15 @@
-// TODO: Implement settings page
-// - Display current ranking weights
-// - Allow adjusting weights (absurdity, humor, drama, relatability)
-// - Save to Supabase settings table
+/**
+ * Settings Page - Configure ranking weights
+ *
+ * TODO: Implement this page
+ * GitHub Issue: Create issue titled "Implement settings page"
+ *
+ * Features to implement:
+ * - Display current ranking weights from Supabase settings table
+ * - Slider controls for each weight (absurdity, humor, drama, relatability)
+ * - Save button to update weights in database
+ * - Show success/error toast on save
+ */
 
 export default function SettingsPage() {
   return (

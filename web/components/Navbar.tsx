@@ -1,7 +1,13 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+
+import { cn } from "@/lib/utils";
+
+const navLinkClass = cn(
+  "text-gray-400 hover:text-white transition-colors"
+);
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -9,23 +15,17 @@ export function Navbar() {
   return (
     <nav className="bg-gray-900 border-b border-gray-800">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold">
+        <Link href="/" className="text-xl font-bold" aria-label="Go to home page">
           🎙️ Podcast Discovery
         </Link>
 
         <div className="flex items-center gap-4">
-          {/* TODO: Create /search page with semantic search */}
-          <Link
-            href="/search"
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          {/* TODO: Implement /search page - see GitHub issue #X */}
+          <Link href="/search" className={navLinkClass}>
             Search
           </Link>
-          {/* TODO: Create /settings page for ranking weights */}
-          <Link
-            href="/settings"
-            className="text-gray-400 hover:text-white transition-colors"
-          >
+          {/* TODO: Implement /settings page - see GitHub issue #X */}
+          <Link href="/settings" className={navLinkClass}>
             Settings
           </Link>
 
@@ -36,19 +36,16 @@ export function Navbar() {
               <span className="text-sm text-gray-400">{session.user?.email}</span>
               <button
                 onClick={() => signOut()}
-                className="px-3 py-1 text-sm bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+                aria-label="Sign out of your account"
+                className={cn(
+                  "px-3 py-1 text-sm rounded-md transition-colors",
+                  "bg-gray-800 hover:bg-gray-700"
+                )}
               >
                 Sign Out
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => signIn("google")}
-              className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-500 rounded-md transition-colors"
-            >
-              Sign In
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </nav>

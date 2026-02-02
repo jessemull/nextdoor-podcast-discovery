@@ -38,18 +38,6 @@ def validate_env() -> None:
         sys.exit(1)
 
 
-def get_env(name: str) -> str:
-    """Get a required environment variable.
-
-    Raises:
-        KeyError: If the environment variable is not set.
-    """
-    value = os.environ.get(name)
-    if not value:
-        raise KeyError(f"Environment variable {name} is not set")
-    return value
-
-
 # Claude settings
 CLAUDE_MODEL = "claude-3-haiku-20240307"
 CLAUDE_MAX_TOKENS = 500

@@ -11,6 +11,7 @@ export function cn(...inputs: ClassValue[]): string {
 
 /**
  * Format a date for relative display (e.g., "2 days ago").
+ * Handles both past and future dates.
  */
 export function formatRelativeTime(date: string | null): string {
   if (!date) return "Unknown";
@@ -20,6 +21,16 @@ export function formatRelativeTime(date: string | null): string {
   const diffMs = now.getTime() - then.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  // Handle future dates
+  if (diffDays < 0) {
+    const futureDays = Math.abs(diffDays);
+    if (futureDays === 1) return "Tomorrow";
+    if (futureDays < 7) return `In ${futureDays} days`;
+    if (futureDays < 30) return `In ${Math.floor(futureDays / 7)} weeks`;
+    return `In ${Math.floor(futureDays / 30)} months`;
+  }
+
+  // Handle past dates
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
@@ -35,3 +46,6 @@ export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 3) + "...";
 }
+
+// UI Constants
+export const POST_PREVIEW_LENGTH = 300;

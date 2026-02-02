@@ -1,7 +1,7 @@
 "use client";
 
 import { PostWithScores } from "@/lib/types";
-import { formatRelativeTime, truncate } from "@/lib/utils";
+import { cn, formatRelativeTime, truncate, POST_PREVIEW_LENGTH } from "@/lib/utils";
 
 interface PostCardProps {
   post: PostWithScores;
@@ -41,7 +41,9 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
       </div>
 
       {/* Content */}
-      <p className="text-gray-200 mb-3">{truncate(post.text, 300)}</p>
+      <p className="text-gray-200 mb-3">
+        {truncate(post.text, POST_PREVIEW_LENGTH)}
+      </p>
 
       {/* Scores */}
       {scores && (
@@ -79,6 +81,7 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
         {onViewDetails && (
           <button
             onClick={() => onViewDetails(post.id)}
+            aria-label={`View details for post from ${post.neighborhood?.name || "unknown neighborhood"}`}
             className="text-xs text-gray-400 hover:text-white transition-colors"
           >
             View Details
@@ -87,6 +90,7 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
         {!ranking?.used_on_episode && onMarkUsed && (
           <button
             onClick={() => onMarkUsed(post.id)}
+            aria-label="Mark this post as used in an episode"
             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
           >
             Mark as Used
@@ -102,16 +106,16 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
  * Color-coded based on score value (green=high, red=low).
  */
 function ScoreBadge({ label, value }: { label: string; value: number }) {
-  const getColor = (v: number) => {
-    if (v >= 8) return "text-green-400";
-    if (v >= 6) return "text-yellow-400";
-    if (v >= 4) return "text-orange-400";
-    return "text-red-400";
-  };
+  const colorClass = cn(
+    value >= 8 && "text-green-400",
+    value >= 6 && value < 8 && "text-yellow-400",
+    value >= 4 && value < 6 && "text-orange-400",
+    value < 4 && "text-red-400"
+  );
 
   return (
     <span className="text-xs text-gray-400">
-      {label}: <span className={getColor(value)}>{value.toFixed(1)}</span>
+      {label}: <span className={colorClass}>{value.toFixed(1)}</span>
     </span>
   );
 }
