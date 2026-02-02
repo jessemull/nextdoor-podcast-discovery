@@ -1,6 +1,8 @@
 # Podcast Post Discovery Platform — Architecture
 
 > Technical architecture and implementation plan for the Nextdoor post discovery system.
+> 
+> **Cost Target**: ~$1–$5/month using free tiers and cost-optimized services.
 
 ---
 
@@ -9,16 +11,17 @@
 1. [System Overview](#1-system-overview)
 2. [Architecture Layers](#2-architecture-layers)
 3. [Technology Stack](#3-technology-stack)
-4. [Data Flow](#4-data-flow)
-5. [Database Schema](#5-database-schema)
-6. [Component Specifications](#6-component-specifications)
-7. [Infrastructure](#7-infrastructure)
-8. [Security & Authentication](#8-security--authentication)
-9. [Error Handling & Monitoring](#9-error-handling--monitoring)
-10. [Development Setup](#10-development-setup)
-11. [Deployment Pipeline](#11-deployment-pipeline)
-12. [Design Decisions](#12-design-decisions)
-13. [Implementation Checklist](#13-implementation-checklist)
+4. [Cost Breakdown](#4-cost-breakdown)
+5. [Data Flow](#5-data-flow)
+6. [Database Schema](#6-database-schema)
+7. [Component Specifications](#7-component-specifications)
+8. [Infrastructure](#8-infrastructure)
+9. [Security & Authentication](#9-security--authentication)
+10. [Error Handling & Monitoring](#10-error-handling--monitoring)
+11. [Development Setup](#11-development-setup)
+12. [Deployment Pipeline](#12-deployment-pipeline)
+13. [Design Decisions](#13-design-decisions)
+14. [Implementation Checklist](#14-implementation-checklist)
 
 ---
 
@@ -36,6 +39,18 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 | **Curation Dashboard** | Private web UI for browsing, filtering, and selecting posts |
 | **Episode Tracking** | Mark posts as used, prevent duplicates |
 
+### Cost-Optimized Approach
+
+This architecture prioritizes **free tiers** and **pay-per-use** services:
+
+| Traditional Approach | Our Approach | Savings |
+|---------------------|--------------|---------|
+| EC2 ($15/mo) | GitHub Actions (free) | $15/mo |
+| RDS ($15/mo) | Supabase Free (free) | $15/mo |
+| AWS Secrets Manager ($2/mo) | GitHub Secrets (free) | $2/mo |
+| CloudWatch ($5/mo) | GitHub Actions logs (free) | $5/mo |
+| Claude Sonnet (~$10/mo) | Claude Haiku (~$1/mo) | $9/mo |
+
 ---
 
 ## 2. Architecture Layers
@@ -44,7 +59,7 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         PRESENTATION LAYER                              │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Next.js Web UI (Private Dashboard)                               │  │
+│  │  Next.js Web UI (Vercel Free Tier)                                │  │
 │  │  • Authentication (NextAuth.js)                                   │  │
 │  │  • Feed view with filters                                         │  │
 │  │  • Semantic + keyword search                                      │  │
@@ -57,7 +72,7 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              API LAYER                                  │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Next.js API Routes                                               │  │
+│  │  Next.js API Routes (via Vercel)                                  │  │
 │  │  • GET  /api/posts         → Filtered, ranked post list           │  │
 │  │  • GET  /api/posts/:id     → Single post with related posts       │  │
 │  │  • POST /api/posts/:id/use → Mark as used on episode              │  │
@@ -69,41 +84,40 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          PROCESSING LAYER                               │
-│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────┐  │
-│  │  Scraper Service    │  │  LLM Scoring Worker │  │  Embedding      │  │
-│  │  (Python/Playwright)│  │  (Python)           │  │  Worker         │  │
-│  │                     │  │                     │  │  (Python)       │  │
-│  │  • Daily cron       │  │  • Claude API       │  │  • OpenAI API   │  │
-│  │  • Session mgmt     │  │  • Score posts      │  │  • Generate     │  │
-│  │  • Multi-neighbor   │  │  • Generate tags    │  │    vectors      │  │
-│  │  • Dedup by hash    │  │  • Summarize        │  │  • Batch mode   │  │
-│  │  • Rate limiting    │  │  • Batch processing │  │                 │  │
-│  └─────────────────────┘  └─────────────────────┘  └─────────────────┘  │
+│                    PROCESSING LAYER (GitHub Actions)                    │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  Scheduled Workflow (Daily @ 2:00 AM UTC)                        │   │
+│  │                                                                  │   │
+│  │  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐            │   │
+│  │  │   Scraper   │ → │ LLM Scorer  │ → │  Embedder   │            │   │
+│  │  │ (Playwright)│   │(Claude Haiku│   │  (OpenAI)   │            │   │
+│  │  └─────────────┘   └─────────────┘   └─────────────┘            │   │
+│  │                                                                  │   │
+│  │  • Runs in GitHub-hosted runner (Ubuntu)                        │   │
+│  │  • 2,000 free minutes/month (uses ~5 min/day = 150 min/month)   │   │
+│  │  • Session cookies stored encrypted in Supabase                 │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                            DATA LAYER                                   │
+│                      DATA LAYER (Supabase Free Tier)                    │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  PostgreSQL (RDS) + pgvector                                      │  │
+│  │  PostgreSQL + pgvector (500MB storage)                            │  │
 │  │  • posts              — Raw post data                             │  │
 │  │  • llm_scores         — Claude analysis results                   │  │
 │  │  • post_embeddings    — Vector representations                    │  │
 │  │  • rankings           — Calculated scores, episode usage          │  │
 │  │  • neighborhoods      — Configuration                             │  │
 │  │  • settings           — Ranking weights, preferences              │  │
+│  │  • sessions           — Encrypted Nextdoor session cookies        │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  S3 (Optional)                                                    │  │
-│  │  • Raw HTML backups (30-day retention)                            │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  AWS Secrets Manager                                              │  │
-│  │  • Nextdoor credentials                                           │  │
-│  │  • Claude API key                                                 │  │
-│  │  • OpenAI API key                                                 │  │
-│  │  • Database credentials                                           │  │
+│  │  GitHub Secrets                                                   │  │
+│  │  • NEXTDOOR_EMAIL, NEXTDOOR_PASSWORD                              │  │
+│  │  • ANTHROPIC_API_KEY                                              │  │
+│  │  • OPENAI_API_KEY                                                 │  │
+│  │  • SUPABASE_URL, SUPABASE_KEY                                     │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -111,8 +125,10 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         EXTERNAL SERVICES                               │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐  │
-│  │  Nextdoor       │  │  Claude API     │  │  OpenAI Embeddings API  │  │
+│  │  Nextdoor       │  │  Claude Haiku   │  │  OpenAI Embeddings API  │  │
 │  │  (via scraper)  │  │  (scoring)      │  │  (vector generation)    │  │
+│  │                 │  │  ~$0.25/1M in   │  │  $0.02/1M tokens        │  │
+│  │                 │  │  ~$1.25/1M out  │  │                         │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -123,121 +139,188 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 
 ### Frontend
 
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| Framework | Next.js 14+ (App Router) | SSR, API routes, React ecosystem |
-| Language | TypeScript | Type safety, better DX |
-| Styling | Tailwind CSS | Rapid UI development |
-| Auth | NextAuth.js | Easy setup, multiple providers |
-| State | React Query (TanStack) | Server state management |
+| Component | Technology | Cost | Rationale |
+|-----------|------------|------|-----------|
+| Framework | Next.js 14+ (App Router) | Free | SSR, API routes, React ecosystem |
+| Hosting | Vercel Hobby | Free | Generous free tier, easy deploys |
+| Language | TypeScript | Free | Type safety, better DX |
+| Styling | Tailwind CSS | Free | Rapid UI development |
+| Auth | NextAuth.js | Free | Easy setup, Google OAuth |
+| State | React Query (TanStack) | Free | Server state management |
 
 ### Backend / Processing
 
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| Scraper | Python 3.11+ / Playwright | Best browser automation support |
-| Workers | Python 3.11+ | Same runtime as scraper |
-| API | Next.js API Routes | Unified deployment with frontend |
-| Task Queue | (Optional) Celery + Redis | If async processing needed |
+| Component | Technology | Cost | Rationale |
+|-----------|------------|------|-----------|
+| Scraper Runtime | GitHub Actions | Free | 2,000 min/month free tier |
+| Scraper | Python 3.11+ / Playwright | Free | Best browser automation |
+| LLM Scoring | Claude Haiku | ~$1/mo | 20x cheaper than Sonnet, still good |
+| Embeddings | OpenAI `text-embedding-3-small` | ~$0.50/mo | Extremely cheap, high quality |
 
 ### Data
 
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| Database | PostgreSQL 16 | Robust, pgvector support |
-| Vector Store | pgvector extension | Embeddings in same DB |
-| Migrations | Prisma or Alembic | Schema versioning |
+| Component | Technology | Cost | Rationale |
+|-----------|------------|------|-----------|
+| Database | Supabase Free Tier | Free | PostgreSQL + pgvector included |
+| Storage Limit | 500MB | Free | Enough for ~50K posts with embeddings |
+| Secrets | GitHub Secrets | Free | Secure, integrated with Actions |
 
-### External APIs
+### Service Comparison: Why These Choices
 
-| Service | Provider | Purpose |
-|---------|----------|---------|
-| LLM Scoring | Claude (Anthropic) | Post analysis, tagging, summaries |
-| Embeddings | OpenAI `text-embedding-3-small` | Vector generation for semantic search |
-
-### Infrastructure
-
-| Component | AWS Service | Notes |
-|-----------|-------------|-------|
-| Compute (Scraper) | EC2 t3.small or ECS Fargate | Cron-based execution |
-| Database | RDS PostgreSQL | With pgvector, automated backups |
-| Frontend Hosting | Vercel or Amplify | Simpler than self-hosted |
-| Secrets | AWS Secrets Manager | Centralized credential storage |
-| Monitoring | CloudWatch | Logs, metrics, alarms |
-| Storage | S3 | Optional HTML backups |
+| Need | Alternatives Considered | Chosen | Why |
+|------|------------------------|--------|-----|
+| Database | RDS, PlanetScale, Neon | **Supabase** | pgvector included, generous free tier |
+| Compute | EC2, Lambda, Railway | **GitHub Actions** | Free, Playwright support, scheduled |
+| LLM | Claude Sonnet, GPT-4 | **Claude Haiku** | 20x cheaper, fast, good enough |
+| Hosting | Amplify, Netlify, Railway | **Vercel** | Best Next.js support, free tier |
 
 ---
 
-## 4. Data Flow
+## 4. Cost Breakdown
 
-### Daily Pipeline
+### Monthly Costs (Estimated)
+
+| Service | Tier | Monthly Cost | Notes |
+|---------|------|-------------|-------|
+| **Supabase** | Free | $0.00 | 500MB storage, 2GB bandwidth |
+| **Vercel** | Hobby | $0.00 | 100GB bandwidth, serverless |
+| **GitHub Actions** | Free | $0.00 | 2,000 min/month (need ~150) |
+| **Claude Haiku** | Pay-per-use | ~$0.50–$1.00 | ~500 posts × ~500 tokens |
+| **OpenAI Embeddings** | Pay-per-use | ~$0.10–$0.50 | ~500 posts × ~200 tokens |
+| | | | |
+| **Total** | | **~$1–$2/month** | API costs only |
+
+### Cost Scaling
+
+| Posts/Month | Claude Haiku | OpenAI Embeddings | Total |
+|-------------|-------------|-------------------|-------|
+| 100 | $0.10 | $0.02 | ~$0.12 |
+| 500 | $0.50 | $0.10 | ~$0.60 |
+| 1,000 | $1.00 | $0.20 | ~$1.20 |
+| 5,000 | $5.00 | $1.00 | ~$6.00 |
+
+### Free Tier Limits to Watch
+
+| Service | Limit | What Happens |
+|---------|-------|--------------|
+| Supabase | 500MB storage | Need to upgrade ($25/mo) or clean old data |
+| Supabase | 2GB bandwidth/mo | Paused project (rarely hit) |
+| Vercel | 100GB bandwidth | Need to upgrade ($20/mo) |
+| GitHub Actions | 2,000 min/mo | Jobs queue until next month |
+
+### Storage Estimate
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  1. SCRAPE (Daily @ 2:00 AM UTC)                                        │
-│     ┌─────────────────────────────────────────────────────────────────┐  │
-│     │  For each active neighborhood:                                  │  │
-│     │    1. Load or refresh session cookies                          │  │
-│     │    2. Navigate to neighborhood feed (mobile view)              │  │
-│     │    3. Scroll and extract posts                                 │  │
-│     │    4. Compute SHA256 hash of post text                         │  │
-│     │    5. Skip if hash exists in DB (dedup)                        │  │
-│     │    6. Insert new posts into `posts` table                      │  │
-│     │    7. Optionally store raw HTML in S3                          │  │
-│     └─────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│  2. ANALYZE (Triggered after scrape completes)                          │
-│     ┌─────────────────────────────────────────────────────────────────┐  │
-│     │  Query posts without LLM scores:                               │  │
-│     │    1. Batch posts (10 per request to reduce API calls)         │  │
-│     │    2. Send to Claude with few-shot prompt                      │  │
-│     │    3. Parse JSON response                                      │  │
-│     │    4. Insert scores, tags, summary into `llm_scores`           │  │
-│     │    5. Respect rate limits (exponential backoff)                │  │
-│     └─────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│  3. EMBED (Triggered after analysis completes)                          │
-│     ┌─────────────────────────────────────────────────────────────────┐  │
-│     │  Query posts without embeddings:                               │  │
-│     │    1. Batch posts (up to 100 per request)                      │  │
-│     │    2. Send to OpenAI embeddings API                            │  │
-│     │    3. Store vectors in `post_embeddings`                       │  │
-│     └─────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│  4. RANK (Triggered after embedding completes)                          │
-│     ┌─────────────────────────────────────────────────────────────────┐  │
-│     │  For each post with scores:                                    │  │
-│     │    1. Load current ranking weights from settings               │  │
-│     │    2. Calculate: final_score = Σ(score × weight)               │  │
-│     │    3. Upsert into `rankings` table                             │  │
-│     └─────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│  5. SERVE (On-demand via Web UI)                                        │
-│     ┌─────────────────────────────────────────────────────────────────┐  │
-│     │  User requests:                                                │  │
-│     │    • Feed: JOIN posts + scores + rankings, ORDER BY final_score│  │
-│     │    • Search: Text search OR vector similarity query            │  │
-│     │    • Related: Vector similarity on selected post               │  │
-│     │    • Mark used: Update rankings.used_on_episode                │  │
-│     └─────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
+Per post (average):
+  - posts table:        ~500 bytes
+  - llm_scores:         ~200 bytes
+  - post_embeddings:    ~6KB (1536 floats × 4 bytes)
+  - rankings:           ~50 bytes
+  - indexes:            ~1KB
+  ─────────────────────────────
+  Total per post:       ~8KB
+
+500MB limit ÷ 8KB = ~62,500 posts
+
+At 500 posts/month = ~10 years before hitting limit
 ```
 
 ---
 
-## 5. Database Schema
+## 5. Data Flow
+
+### Daily Pipeline (GitHub Actions)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  SCHEDULED WORKFLOW: Daily @ 2:00 AM UTC                                │
+│  ────────────────────────────────────────────────────────────────────── │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  JOB 1: SCRAPE (~3 minutes)                                        │  │
+│  │  ──────────────────────────────────────────────────────────────── │  │
+│  │  1. Install Playwright + browsers                                 │  │
+│  │  2. Load session cookies from Supabase (or login fresh)           │  │
+│  │  3. For each active neighborhood:                                 │  │
+│  │     a. Navigate to feed (mobile view)                             │  │
+│  │     b. Scroll and extract posts                                   │  │
+│  │     c. Compute SHA256 hash                                        │  │
+│  │     d. Skip if hash exists (dedup)                                │  │
+│  │     e. Insert new posts                                           │  │
+│  │  4. Save updated session cookies to Supabase                      │  │
+│  │  5. Output: List of new post IDs                                  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                     │
+│                                    ▼                                     │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  JOB 2: ANALYZE (~1 minute)                                        │  │
+│  │  ──────────────────────────────────────────────────────────────── │  │
+│  │  1. Query posts without LLM scores                                │  │
+│  │  2. Batch posts (5-10 per request)                                │  │
+│  │  3. Send to Claude Haiku with scoring prompt                      │  │
+│  │  4. Parse JSON response                                           │  │
+│  │  5. Insert scores, tags, summary into llm_scores                  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                     │
+│                                    ▼                                     │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  JOB 3: EMBED (~30 seconds)                                        │  │
+│  │  ──────────────────────────────────────────────────────────────── │  │
+│  │  1. Query posts without embeddings                                │  │
+│  │  2. Batch texts (up to 100 per request)                           │  │
+│  │  3. Call OpenAI embeddings API                                    │  │
+│  │  4. Store vectors in post_embeddings                              │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                     │
+│                                    ▼                                     │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  JOB 4: RANK (~10 seconds)                                         │  │
+│  │  ──────────────────────────────────────────────────────────────── │  │
+│  │  1. Load ranking weights from settings                            │  │
+│  │  2. Calculate: final_score = Σ(score × weight)                    │  │
+│  │  3. Upsert into rankings table                                    │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  Total runtime: ~5 minutes                                              │
+│  Monthly usage: ~150 minutes (well under 2,000 free minutes)            │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### On-Demand (Web UI)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  USER REQUESTS (via Next.js API Routes on Vercel)                       │
+│  ──────────────────────────────────────────────────────────────────────  │
+│                                                                          │
+│  GET /api/posts                                                          │
+│  └── Query: JOIN posts + llm_scores + rankings                          │
+│      └── Filter: neighborhood, tags, used_on_episode                    │
+│      └── Order: final_score DESC                                        │
+│      └── Paginate: offset/limit                                         │
+│                                                                          │
+│  GET /api/search?q=...                                                   │
+│  └── If semantic: Generate embedding → vector similarity search         │
+│  └── If keyword: Full-text search with ts_vector                        │
+│                                                                          │
+│  GET /api/posts/:id                                                      │
+│  └── Fetch post + scores                                                │
+│  └── Find related: Vector similarity top 5                              │
+│                                                                          │
+│  POST /api/posts/:id/use                                                 │
+│  └── Update: rankings.used_on_episode = true                            │
+│  └── Update: rankings.episode_date = NOW()                              │
+│                                                                          │
+│  PUT /api/settings                                                       │
+│  └── Update ranking weights                                             │
+│  └── Trigger re-rank (or lazy re-rank on next fetch)                    │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Database Schema
 
 ### Entity Relationship Diagram
 
@@ -254,22 +337,22 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 │ updated_at      │       │ url             │       │ podcast_score   │
 └─────────────────┘       │ image_urls      │       │ tags        JSON│
                           │ posted_at       │       │ summary         │
-                          │ created_at      │       │ processed_at    │
-                          └─────────────────┘       └─────────────────┘
-                                   │
-                    ┌──────────────┼──────────────┐
-                    │              │              │
-                    ▼              ▼              ▼
-          ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-          │ post_embeddings │ │    rankings     │ │   settings      │
-          ├─────────────────┤ ├─────────────────┤ ├─────────────────┤
-          │ id          PK  │ │ id          PK  │ │ id          PK  │
-          │ post_id     FK  │ │ post_id     FK  │ │ key             │
-          │ embedding VECTOR│ │ final_score     │ │ value       JSON│
-          │ model           │ │ used_on_episode │ │ updated_at      │
-          │ created_at      │ │ episode_date    │ └─────────────────┘
-          └─────────────────┘ │ updated_at      │
-                              └─────────────────┘
+┌─────────────────┐       │ created_at      │       │ processed_at    │
+│    sessions     │       └─────────────────┘       └─────────────────┘
+├─────────────────┤                │
+│ id          PK  │ ┌──────────────┼──────────────┐
+│ neighborhood_id │ │              │              │
+│ cookies_enc     │ ▼              ▼              ▼
+│ expires_at      │ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ updated_at      │ │ post_embeddings │ │    rankings     │ │   settings      │
+└─────────────────┘ ├─────────────────┤ ├─────────────────┤ ├─────────────────┤
+                    │ id          PK  │ │ id          PK  │ │ id          PK  │
+                    │ post_id     FK  │ │ post_id     FK  │ │ key             │
+                    │ embedding VECTOR│ │ final_score     │ │ value       JSON│
+                    │ model           │ │ used_on_episode │ │ updated_at      │
+                    │ created_at      │ │ episode_date    │ └─────────────────┘
+                    └─────────────────┘ │ updated_at      │
+                                        └─────────────────┘
 ```
 
 ### Table Definitions
@@ -283,8 +366,20 @@ CREATE TABLE neighborhoods (
     slug VARCHAR(255) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true,
     weight_modifier FLOAT DEFAULT 1.0,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `sessions` (for storing Nextdoor cookies)
+
+```sql
+CREATE TABLE sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    neighborhood_id UUID REFERENCES neighborhoods(id),
+    cookies_encrypted TEXT NOT NULL,          -- AES-256 encrypted JSON
+    expires_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
@@ -294,16 +389,16 @@ CREATE TABLE neighborhoods (
 CREATE TABLE posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     neighborhood_id UUID NOT NULL REFERENCES neighborhoods(id),
-    post_id_ext VARCHAR(255) NOT NULL,              -- Nextdoor's post ID
-    user_id_hash VARCHAR(64),                        -- SHA256 of user ID (anonymized)
+    post_id_ext VARCHAR(255) NOT NULL,        -- Nextdoor's post ID
+    user_id_hash VARCHAR(64),                  -- SHA256 of user ID (anonymized)
     text TEXT NOT NULL,
-    hash VARCHAR(64) NOT NULL,                       -- SHA256 of text for dedup
+    hash VARCHAR(64) NOT NULL,                 -- SHA256 of text for dedup
     url VARCHAR(512),
     image_urls JSONB DEFAULT '[]',
-    posted_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
+    posted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     
-    UNIQUE(neighborhood_id, hash)                    -- Prevent duplicates per neighborhood
+    UNIQUE(neighborhood_id, hash)              -- Prevent duplicates per neighborhood
 );
 
 CREATE INDEX idx_posts_neighborhood ON posts(neighborhood_id);
@@ -321,10 +416,10 @@ CREATE TABLE llm_scores (
     humor FLOAT CHECK (humor >= 0 AND humor <= 10),
     drama FLOAT CHECK (drama >= 0 AND drama <= 10),
     relatability FLOAT CHECK (relatability >= 0 AND relatability <= 10),
-    podcast_score FLOAT,                             -- Raw LLM opinion
+    podcast_score FLOAT,                       -- Raw LLM opinion
     tags JSONB DEFAULT '[]',
     summary TEXT,
-    processed_at TIMESTAMP DEFAULT NOW()
+    processed_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_llm_scores_post ON llm_scores(post_id);
@@ -333,18 +428,20 @@ CREATE INDEX idx_llm_scores_post ON llm_scores(post_id);
 #### `post_embeddings`
 
 ```sql
+-- pgvector is pre-installed on Supabase
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE post_embeddings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     post_id UUID NOT NULL UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
-    embedding VECTOR(1536),                          -- OpenAI text-embedding-3-small dimension
+    embedding VECTOR(1536),                    -- OpenAI text-embedding-3-small dimension
     model VARCHAR(50) DEFAULT 'text-embedding-3-small',
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Use HNSW index for better performance (Supabase supports this)
 CREATE INDEX idx_embeddings_vector ON post_embeddings 
-    USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+    USING hnsw (embedding vector_cosine_ops);
 ```
 
 #### `rankings`
@@ -356,7 +453,7 @@ CREATE TABLE rankings (
     final_score FLOAT NOT NULL DEFAULT 0,
     used_on_episode BOOLEAN DEFAULT false,
     episode_date DATE,
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_rankings_score ON rankings(final_score DESC);
@@ -370,7 +467,7 @@ CREATE TABLE settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key VARCHAR(100) NOT NULL UNIQUE,
     value JSONB NOT NULL,
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Default ranking weights
@@ -380,43 +477,75 @@ INSERT INTO settings (key, value) VALUES
 
 ---
 
-## 6. Component Specifications
+## 7. Component Specifications
 
-### 6.1 Scraper Service
+### 7.1 Scraper (GitHub Actions)
 
 **Location**: `/scraper/`
 
-**Responsibilities**:
-- Log into Nextdoor (persist session cookies)
-- Navigate neighborhood feeds
-- Extract post data
-- Deduplicate and store
+**Runs in**: GitHub Actions Ubuntu runner
 
-**Key Classes**:
+**Key Files**:
+
+```
+/scraper/
+├── __init__.py
+├── main.py                    # Entry point for GitHub Action
+├── session_manager.py         # Cookie persistence via Supabase
+├── post_extractor.py          # DOM parsing logic
+├── scraper.py                 # Main orchestrator
+├── config.py                  # Configuration
+└── requirements.txt
+```
+
+**Session Manager** (stores cookies in Supabase):
 
 ```python
 # scraper/session_manager.py
+import os
+from cryptography.fernet import Fernet
+from supabase import create_client
+
 class SessionManager:
-    """Manages Nextdoor login sessions per neighborhood."""
+    """Manages Nextdoor login sessions stored in Supabase."""
     
-    def get_cookies(neighborhood: str) -> list[dict] | None
-    def save_cookies(neighborhood: str, cookies: list[dict]) -> None
-    def is_session_valid(neighborhood: str) -> bool
-    def clear_session(neighborhood: str) -> None
-
-# scraper/post_extractor.py
-class PostExtractor:
-    """Extracts post data from Nextdoor pages."""
+    def __init__(self):
+        self.supabase = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_KEY"]
+        )
+        self.cipher = Fernet(os.environ["SESSION_ENCRYPTION_KEY"])
     
-    def extract_posts(page: Page) -> list[RawPost]
-    def scroll_and_load(page: Page, max_posts: int) -> None
-
-# scraper/scraper.py
-class NextdoorScraper:
-    """Main scraper orchestrator."""
+    def get_cookies(self, neighborhood_id: str) -> list[dict] | None:
+        """Load and decrypt session cookies from Supabase."""
+        result = self.supabase.table("sessions") \
+            .select("cookies_encrypted, expires_at") \
+            .eq("neighborhood_id", neighborhood_id) \
+            .single() \
+            .execute()
+        
+        if not result.data:
+            return None
+        
+        # Check expiration
+        if result.data["expires_at"] < datetime.now().isoformat():
+            return None
+        
+        # Decrypt cookies
+        encrypted = result.data["cookies_encrypted"].encode()
+        decrypted = self.cipher.decrypt(encrypted)
+        return json.loads(decrypted)
     
-    def scrape_neighborhood(neighborhood: str) -> list[Post]
-    def run_all() -> ScrapingResult
+    def save_cookies(self, neighborhood_id: str, cookies: list[dict]) -> None:
+        """Encrypt and save session cookies to Supabase."""
+        encrypted = self.cipher.encrypt(json.dumps(cookies).encode())
+        
+        self.supabase.table("sessions").upsert({
+            "neighborhood_id": neighborhood_id,
+            "cookies_encrypted": encrypted.decode(),
+            "expires_at": (datetime.now() + timedelta(days=7)).isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
 ```
 
 **Configuration**:
@@ -424,71 +553,101 @@ class NextdoorScraper:
 ```python
 # scraper/config.py
 SCRAPER_CONFIG = {
-    "headless": True,                    # Use headless with stealth
+    "headless": True,                    # GitHub Actions = headless only
     "scroll_delay_ms": (2000, 5000),     # Random delay range
     "max_posts_per_run": 100,
-    "session_storage_path": "./sessions",
-    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)...",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
 }
 ```
 
-### 6.2 LLM Scoring Worker
+### 7.2 LLM Scoring Worker
 
-**Location**: `/workers/llm_scorer/`
+**Location**: `/scraper/llm_scorer.py` (runs in same GitHub Action)
 
-**Responsibilities**:
-- Query unprocessed posts
-- Call Claude API with structured prompt
-- Parse and store results
+**Model**: Claude Haiku (`claude-3-haiku-20240307`)
+
+**Why Haiku over Sonnet?**
+- 20x cheaper ($0.25 vs $3 per 1M input tokens)
+- Faster (important in GitHub Actions with time limits)
+- Good enough for humor/absurdity scoring
 
 **Prompt Template**:
 
 ```python
 SCORING_PROMPT = """
-Analyze the following Nextdoor post and provide scores and metadata.
+Analyze this Nextdoor post and return JSON scores.
 
 Post:
 {post_text}
 
-Respond with a JSON object:
-{
-  "absurdity": <1-10 float>,
-  "humor": <1-10 float>,
-  "drama": <1-10 float>,
-  "relatability": <1-10 float>,
-  "podcast_worthiness": <1-10 float>,
+Return ONLY valid JSON:
+{{
+  "absurdity": <1-10>,
+  "humor": <1-10>,
+  "drama": <1-10>,
+  "relatability": <1-10>,
+  "podcast_worthiness": <1-10>,
   "tags": ["tag1", "tag2"],
-  "summary": "<one line summary>"
-}
+  "summary": "<one line>"
+}}
 
-Scoring guidelines:
-- absurdity: How bizarre or unexpected is this situation?
-- humor: How funny would this be to read on a podcast?
-- drama: How much conflict or tension is present?
-- relatability: Would listeners nod and say "that's so true"?
-- podcast_worthiness: Overall, how good is this for the show?
+Scoring:
+- absurdity: How bizarre/unexpected?
+- humor: How funny for a podcast?
+- drama: Conflict level?
+- relatability: "That's so true" factor?
+- podcast_worthiness: Overall show potential?
 
-Tags should be lowercase, hyphenated (e.g., "lost-pet", "neighbor-feud", "hoa-drama").
+Tags: lowercase, hyphenated (e.g., "lost-pet", "neighbor-feud").
 """
 ```
-
-### 6.3 Embedding Worker
-
-**Location**: `/workers/embedder/`
-
-**Responsibilities**:
-- Query posts without embeddings
-- Call OpenAI embeddings API
-- Store vectors in pgvector
 
 **Implementation**:
 
 ```python
+# scraper/llm_scorer.py
+import anthropic
+
+client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY env var
+
+def score_posts(posts: list[dict]) -> list[dict]:
+    """Score multiple posts with Claude Haiku."""
+    results = []
+    
+    for post in posts:
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=500,
+            messages=[{
+                "role": "user",
+                "content": SCORING_PROMPT.format(post_text=post["text"])
+            }]
+        )
+        
+        # Parse JSON from response
+        scores = json.loads(response.content[0].text)
+        scores["post_id"] = post["id"]
+        results.append(scores)
+    
+    return results
+```
+
+### 7.3 Embedding Worker
+
+**Location**: `/scraper/embedder.py`
+
+**Model**: OpenAI `text-embedding-3-small` (1536 dimensions)
+
+**Implementation**:
+
+```python
+# scraper/embedder.py
 from openai import OpenAI
 
-client = OpenAI()
+client = OpenAI()  # Uses OPENAI_API_KEY env var
 
 def generate_embeddings(texts: list[str]) -> list[list[float]]:
+    """Generate embeddings for multiple texts in one API call."""
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=texts
@@ -496,21 +655,15 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 ```
 
-### 6.4 Web UI
+### 7.4 Web UI
 
 **Location**: `/web/`
 
-**Pages**:
+**Hosting**: Vercel (Free Tier)
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Dashboard with ranked post feed |
-| `/search` | Search interface (keyword + semantic) |
-| `/post/[id]` | Post detail with related posts |
-| `/settings` | Ranking weight configuration |
-| `/neighborhoods` | Manage neighborhoods |
+**Database Connection**: Supabase client
 
-**Key Components**:
+**Key Files**:
 
 ```
 /web/
@@ -520,6 +673,8 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
 │   ├── api/
 │   │   ├── auth/[...nextauth]/route.ts
 │   │   ├── posts/route.ts
+│   │   ├── posts/[id]/route.ts
+│   │   ├── posts/[id]/use/route.ts
 │   │   ├── search/route.ts
 │   │   └── settings/route.ts
 │   ├── page.tsx                    # Main feed
@@ -533,70 +688,99 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
 │   ├── RankingSliders.tsx
 │   ├── TagFilter.tsx
 │   └── NeighborhoodFilter.tsx
-└── lib/
-    ├── db.ts                       # Prisma client
-    ├── auth.ts                     # NextAuth config
-    └── api.ts                      # API helpers
+├── lib/
+│   ├── supabase.ts               # Supabase client
+│   ├── auth.ts                   # NextAuth config
+│   └── api.ts                    # API helpers
+├── package.json
+└── next.config.js
+```
+
+**Supabase Client**:
+
+```typescript
+// web/lib/supabase.ts
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// For server-side (API routes)
+export const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+)
 ```
 
 ---
 
-## 7. Infrastructure
+## 8. Infrastructure
 
-### AWS Architecture
+### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              VPC                                        │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                      Private Subnet                              │   │
-│  │  ┌─────────────────┐        ┌─────────────────────────────────┐  │   │
-│  │  │   EC2 Scraper   │        │        RDS PostgreSQL           │  │   │
-│  │  │   t3.small      │───────▶│        db.t3.micro              │  │   │
-│  │  │                 │        │        + pgvector               │  │   │
-│  │  │  Cron: 2am UTC  │        │                                 │  │   │
-│  │  └─────────────────┘        └─────────────────────────────────┘  │   │
-│  │                                          ▲                       │   │
-│  └──────────────────────────────────────────│───────────────────────┘   │
-│                                             │                           │
-└─────────────────────────────────────────────│───────────────────────────┘
-                                              │
-                          ┌───────────────────┴───────────────────┐
-                          │                                       │
-                ┌─────────▼─────────┐               ┌─────────────▼─────────┐
-                │      Vercel       │               │   Secrets Manager     │
-                │   (Next.js App)   │               │   • DB credentials    │
-                │                   │               │   • API keys          │
-                └───────────────────┘               └───────────────────────┘
-                          │
-                          ▼
-                ┌───────────────────┐
-                │    CloudWatch     │
-                │   • Logs          │
-                │   • Alarms        │
-                └───────────────────┘
+│                           GITHUB                                        │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │  Repository: nextdoor-podcast                                     │  │
+│  │  ├── /scraper (Python)                                           │  │
+│  │  ├── /web (Next.js)                                              │  │
+│  │  └── /.github/workflows                                          │  │
+│  │                                                                   │  │
+│  │  Secrets:                                                         │  │
+│  │  ├── NEXTDOOR_EMAIL, NEXTDOOR_PASSWORD                           │  │
+│  │  ├── ANTHROPIC_API_KEY, OPENAI_API_KEY                           │  │
+│  │  ├── SUPABASE_URL, SUPABASE_KEY                                  │  │
+│  │  ├── SESSION_ENCRYPTION_KEY                                      │  │
+│  │  └── VERCEL_TOKEN (for deploy)                                   │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                              │                                          │
+│              ┌───────────────┴───────────────┐                          │
+│              ▼                               ▼                          │
+│  ┌─────────────────────┐         ┌─────────────────────┐               │
+│  │  Actions: Scraper   │         │  Actions: Deploy    │               │
+│  │  (scheduled, daily) │         │  (on push to main)  │               │
+│  │                     │         │                     │               │
+│  │  • Runs Playwright  │         │  • Deploys to Vercel│               │
+│  │  • Calls Claude     │         │                     │               │
+│  │  • Calls OpenAI     │         │                     │               │
+│  └──────────┬──────────┘         └──────────┬──────────┘               │
+│             │                               │                           │
+└─────────────│───────────────────────────────│───────────────────────────┘
+              │                               │
+              ▼                               ▼
+┌─────────────────────────┐       ┌─────────────────────────┐
+│       SUPABASE          │       │        VERCEL           │
+│  (Free Tier)            │       │  (Hobby Tier)           │
+│                         │       │                         │
+│  PostgreSQL + pgvector  │◄──────│  Next.js App            │
+│  • 500MB storage        │       │  • API Routes           │
+│  • 2GB bandwidth        │       │  • SSR Pages            │
+│  • Unlimited API calls  │       │  • Auth (NextAuth)      │
+└─────────────────────────┘       └─────────────────────────┘
 ```
 
-### Cost Breakdown (Monthly)
+### No AWS Required!
 
-| Service | Spec | Est. Cost |
-|---------|------|-----------|
-| EC2 | t3.small (on-demand) | $15 |
-| RDS | db.t3.micro, 20GB | $15 |
-| Secrets Manager | 4 secrets | $2 |
-| CloudWatch | Basic metrics + logs | $5 |
-| Vercel | Hobby/Pro | $0–$20 |
-| Claude API | ~500 posts/month | $5–$10 |
-| OpenAI Embeddings | ~500 posts/month | $0.50 |
-| **Total** | | **~$40–$70/month** |
+This architecture eliminates all AWS dependencies:
+
+| Previously | Now |
+|------------|-----|
+| EC2 | GitHub Actions |
+| RDS | Supabase |
+| Secrets Manager | GitHub Secrets |
+| CloudWatch | GitHub Actions logs |
+| S3 | Not needed (skip HTML backups) |
 
 ---
 
-## 8. Security & Authentication
+## 9. Security & Authentication
 
 ### Web UI Authentication
 
-Using NextAuth.js with email whitelist:
+Using NextAuth.js with Google OAuth + email whitelist:
 
 ```typescript
 // web/lib/auth.ts
@@ -605,7 +789,7 @@ import GoogleProvider from "next-auth/providers/google"
 
 const ALLOWED_EMAILS = [
   "your-email@example.com",
-  // Add team members as needed
+  // Add more as needed
 ]
 
 export const authOptions = {
@@ -623,16 +807,28 @@ export const authOptions = {
 }
 ```
 
-### Secrets Management
+### Secrets Storage
 
-All secrets stored in AWS Secrets Manager:
+All secrets in GitHub repository settings:
 
-| Secret Name | Contents |
-|-------------|----------|
-| `nextdoor/credentials` | Nextdoor login email/password |
-| `nextdoor/db` | Database connection string |
-| `nextdoor/claude` | Anthropic API key |
-| `nextdoor/openai` | OpenAI API key |
+| Secret | Purpose |
+|--------|---------|
+| `NEXTDOOR_EMAIL` | Nextdoor login email |
+| `NEXTDOOR_PASSWORD` | Nextdoor login password |
+| `ANTHROPIC_API_KEY` | Claude API access |
+| `OPENAI_API_KEY` | Embeddings API access |
+| `SUPABASE_URL` | Database URL |
+| `SUPABASE_KEY` | Database service key |
+| `SESSION_ENCRYPTION_KEY` | Fernet key for cookie encryption |
+| `GOOGLE_CLIENT_ID` | OAuth for web UI |
+| `GOOGLE_CLIENT_SECRET` | OAuth for web UI |
+| `NEXTAUTH_SECRET` | NextAuth session encryption |
+
+### Session Cookie Security
+
+- Cookies encrypted with **AES-256** (Fernet) before storage
+- Encryption key stored in GitHub Secrets
+- 7-day TTL, auto-refresh on successful scrape
 
 ### Data Privacy
 
@@ -640,12 +836,11 @@ All secrets stored in AWS Secrets Manager:
 |------|----------|
 | User IDs | Hashed (SHA256) before storage |
 | Post content | Stored as-is (public posts) |
-| Session cookies | Encrypted at rest, 7-day TTL |
-| Raw HTML | 30-day retention, then deleted |
+| Session cookies | Encrypted at rest |
 
 ---
 
-## 9. Error Handling & Monitoring
+## 10. Error Handling & Monitoring
 
 ### Retry Strategy
 
@@ -669,7 +864,7 @@ class ScraperError(Exception):
     pass
 
 class SessionExpiredError(ScraperError):
-    """Nextdoor session has expired."""
+    """Nextdoor session has expired, need fresh login."""
     pass
 
 class RateLimitError(ScraperError):
@@ -681,50 +876,70 @@ class CaptchaRequiredError(ScraperError):
     pass
 ```
 
-### CloudWatch Alarms
+### GitHub Actions Notifications
 
-| Alarm | Condition | Action |
-|-------|-----------|--------|
-| Scraper Failed | Error count > 0 in 1 hour | SNS → Email |
-| No Posts Scraped | Posts count = 0 after run | SNS → Email |
-| High API Latency | Claude latency > 10s | Log warning |
-| DB Connection Failed | Connection errors > 3 | SNS → Email |
+Since we're not using CloudWatch, we use GitHub's built-in notifications:
 
-### Logging Structure
+```yaml
+# In workflow file
+- name: Notify on failure
+  if: failure()
+  uses: actions/github-script@v7
+  with:
+    script: |
+      github.rest.issues.create({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        title: '🚨 Scraper failed',
+        body: `Workflow failed: ${context.workflow}\nRun: ${context.runId}`
+      })
+```
+
+Or use the **Slack GitHub App** for notifications.
+
+### Logging
 
 ```python
-import structlog
+import logging
 
-logger = structlog.get_logger()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 logger.info(
     "scrape_complete",
-    neighborhood="downtown",
-    posts_found=47,
-    posts_new=12,
-    duration_seconds=145
+    extra={
+        "neighborhood": "downtown",
+        "posts_found": 47,
+        "posts_new": 12,
+        "duration_seconds": 145
+    }
 )
 ```
 
+Logs are visible in GitHub Actions run history.
+
 ---
 
-## 10. Development Setup
+## 11. Development Setup
 
 ### Prerequisites
 
 - Python 3.11+
 - Node.js 20+
-- Docker & Docker Compose
-- PostgreSQL client (optional)
+- Docker (for local Postgres)
+- Supabase account (free)
 
-### Local Environment
+### Quick Start
 
 ```bash
 # Clone repository
 git clone <repo-url>
 cd nextdoor
 
-# Start local database
+# Set up local database (for development only)
 docker-compose up -d
 
 # Set up Python environment
@@ -739,10 +954,10 @@ npm install
 
 # Copy environment files
 cp .env.example .env.local
-# Edit .env.local with your API keys
+# Edit .env.local with your API keys (get from Supabase dashboard)
 ```
 
-### Docker Compose
+### Docker Compose (Local Dev)
 
 ```yaml
 # docker-compose.yml
@@ -768,19 +983,13 @@ volumes:
 ### Makefile
 
 ```makefile
-.PHONY: dev db-up db-down migrate test
+.PHONY: dev db-up db-down test
 
 db-up:
-	docker-compose up -d db
+	docker-compose up -d
 
 db-down:
 	docker-compose down
-
-migrate:
-	cd web && npx prisma migrate deploy
-
-seed:
-	cd web && npx prisma db seed
 
 dev-scraper:
 	cd scraper && python -m scraper.main --dry-run
@@ -791,25 +1000,73 @@ dev-web:
 test:
 	cd scraper && pytest
 	cd web && npm test
+
+# Generate new encryption key for sessions
+gen-key:
+	python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+### Environment Variables
+
+**For Scraper** (`.env` or GitHub Secrets):
+
+```bash
+# Nextdoor credentials
+NEXTDOOR_EMAIL="your-email@example.com"
+NEXTDOOR_PASSWORD="your-password"
+
+# APIs
+ANTHROPIC_API_KEY="sk-ant-..."
+OPENAI_API_KEY="sk-..."
+
+# Supabase
+SUPABASE_URL="https://xxxxx.supabase.co"
+SUPABASE_KEY="eyJ..."
+
+# Session encryption (generate with: make gen-key)
+SESSION_ENCRYPTION_KEY="..."
+```
+
+**For Web** (`web/.env.local`):
+
+```bash
+# Supabase (public)
+NEXT_PUBLIC_SUPABASE_URL="https://xxxxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
+
+# Supabase (server-side)
+SUPABASE_URL="https://xxxxx.supabase.co"
+SUPABASE_SERVICE_KEY="eyJ..."
+
+# Auth
+NEXTAUTH_SECRET="random-secret-here"
+NEXTAUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
 ```
 
 ---
 
-## 11. Deployment Pipeline
+## 12. Deployment Pipeline
 
-### GitHub Actions Workflow
+### GitHub Actions Workflows
+
+#### Scraper (Daily Schedule)
 
 ```yaml
-# .github/workflows/deploy.yml
-name: Deploy
+# .github/workflows/scrape.yml
+name: Daily Scrape
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # 2:00 AM UTC daily
+  workflow_dispatch:      # Allow manual trigger
 
 jobs:
-  test:
+  scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
       - uses: actions/checkout@v4
       
@@ -818,49 +1075,66 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Python deps
+      - name: Install dependencies
         run: |
           cd scraper
           pip install -r requirements.txt
-          pip install pytest
+          playwright install chromium
       
-      - name: Run Python tests
-        run: cd scraper && pytest
+      - name: Run scraper
+        env:
+          NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
+          NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
+        run: |
+          cd scraper
+          python -m scraper.main
       
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Run LLM scoring
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          cd scraper
+          python -m scraper.llm_scorer
       
-      - name: Install Node deps
-        run: cd web && npm ci
+      - name: Generate embeddings
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          cd scraper
+          python -m scraper.embedder
       
-      - name: Run frontend tests
-        run: cd web && npm test
+      - name: Update rankings
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          cd scraper
+          python -m scraper.ranker
+```
 
-  deploy-scraper:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ec2-user/nextdoor
-            git pull origin main
-            cd scraper
-            source venv/bin/activate
-            pip install -r requirements.txt
-            sudo systemctl restart nextdoor-scraper
+#### Web Deploy (On Push)
 
-  deploy-web:
-    needs: test
+```yaml
+# .github/workflows/deploy-web.yml
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+
+jobs:
+  deploy:
     runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/checkout@v4
       
@@ -873,81 +1147,122 @@ jobs:
           working-directory: ./web
 ```
 
+### First-Time Setup
+
+1. **Create Supabase Project**
+   - Go to [supabase.com](https://supabase.com)
+   - Create new project (free tier)
+   - Run SQL from Section 6 to create tables
+   - Copy URL and keys
+
+2. **Set Up GitHub Secrets**
+   - Go to repo → Settings → Secrets
+   - Add all secrets from Section 11
+
+3. **Set Up Vercel**
+   - Connect repo to Vercel
+   - Set environment variables
+   - Get `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+4. **Configure Google OAuth**
+   - Go to [Google Cloud Console](https://console.cloud.google.com)
+   - Create OAuth credentials
+   - Add authorized redirect: `https://your-app.vercel.app/api/auth/callback/google`
+
+5. **Run Initial Scrape**
+   - Go to Actions → Daily Scrape → Run workflow
+   - Monitor logs for any issues
+
 ---
 
-## 12. Design Decisions
+## 13. Design Decisions
 
 ### Decision Log
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **Embeddings Provider** | OpenAI | Claude doesn't offer embeddings; OpenAI is cheap and proven |
-| **Browser Mode** | Headless + Stealth | Simpler than Xvfb; switch if blocked |
-| **Frontend Framework** | Next.js | API routes + SSR in one package |
-| **Vector DB** | pgvector | Keep everything in one DB; simpler ops |
-| **Hosting** | Vercel (web) + EC2 (scraper) | Vercel for easy deploys; EC2 for browser automation |
-| **Auth** | NextAuth.js + Google | Simple setup, secure, familiar |
-| **Images** | Store URLs only | Display in UI without download/storage complexity |
-| **Data Retention** | Posts: indefinite, HTML: 30 days | Balance archival vs storage costs |
+| **Compute** | GitHub Actions | Free 2,000 min/month, Playwright support |
+| **Database** | Supabase Free | PostgreSQL + pgvector, 500MB free |
+| **LLM Model** | Claude Haiku | 20x cheaper than Sonnet, fast enough |
+| **Embeddings** | OpenAI | $0.02/1M tokens, proven quality |
+| **Secrets** | GitHub Secrets | Free, integrated with Actions |
+| **Frontend Host** | Vercel Free | Best Next.js support |
+| **Auth** | NextAuth + Google | Simple, secure, free |
+| **Session Storage** | Supabase (encrypted) | No need for separate storage |
+| **HTML Backups** | Skip | Not worth storage cost for MVP |
+| **Monitoring** | GitHub Actions logs | Free, sufficient for low volume |
 
-### Future Considerations
+### Trade-offs Accepted
 
-| Item | Notes |
-|------|-------|
-| **CAPTCHA Handling** | May need 2Captcha if frequently challenged |
-| **Multi-user Support** | Current design is single-user; could add user table later |
-| **Image Analysis** | Claude Vision could score images if needed |
-| **Podcast Script Gen** | Could auto-generate script drafts from top posts |
+| Trade-off | Impact | Mitigation |
+|-----------|--------|------------|
+| GitHub Actions limit | 2,000 min/month | Only need ~150 min/month |
+| Supabase 500MB | ~62K posts max | Years of runway at 500/month |
+| Haiku vs Sonnet | Slightly less nuanced | Good enough for scoring humor |
+| No CloudWatch | Less observability | GitHub logs + manual monitoring |
+| No HTML backups | Can't debug old scrapes | Accept the risk for cost savings |
+
+### Future Upgrades (If Needed)
+
+| Trigger | Upgrade Path | New Cost |
+|---------|--------------|----------|
+| Hit 500MB | Supabase Pro | +$25/mo |
+| Need better LLM | Claude Sonnet | +$10/mo |
+| More scraping | Railway or EC2 spot | +$5-15/mo |
+| Team access | Vercel Pro | +$20/mo |
 
 ---
 
-## 13. Implementation Checklist
+## 14. Implementation Checklist
 
 ### Phase 1: Foundation
 
 - [ ] **1.1** Initialize repository structure
-  - [ ] Create `/scraper`, `/web`, `/db`, `/infra` directories
-  - [ ] Set up Python project with `pyproject.toml`
+  - [ ] Create `/scraper`, `/web` directories
+  - [ ] Set up Python project with `pyproject.toml` and `requirements.txt`
   - [ ] Set up Next.js project with TypeScript
   - [ ] Create `docker-compose.yml` for local dev
+  - [ ] Create `.env.example` files
 
-- [ ] **1.2** Database setup
-  - [ ] Write initial migration with all tables
+- [ ] **1.2** Supabase setup
+  - [ ] Create Supabase project (free tier)
   - [ ] Enable pgvector extension
-  - [ ] Create seed script with test data
-  - [ ] Set up Prisma (or SQLAlchemy) models
+  - [ ] Run SQL to create all tables
+  - [ ] Create seed script with test neighborhood
+  - [ ] Note down URL and keys
 
-- [ ] **1.3** Local development environment
-  - [ ] Document setup in README
-  - [ ] Create Makefile for common tasks
-  - [ ] Add `.env.example` files
+- [ ] **1.3** GitHub setup
+  - [ ] Create repository
+  - [ ] Add all secrets (see Section 11)
+  - [ ] Test secret access with simple workflow
 
 ### Phase 2: Scraper
 
 - [ ] **2.1** Core scraper implementation
-  - [ ] Session manager (cookie persistence)
-  - [ ] Playwright browser setup with stealth
+  - [ ] Session manager with Supabase storage
+  - [ ] Cookie encryption/decryption
+  - [ ] Playwright browser setup (headless)
   - [ ] Post extractor (DOM parsing)
   - [ ] Deduplication logic (hash-based)
 
 - [ ] **2.2** Scraper reliability
   - [ ] Retry logic with exponential backoff
-  - [ ] Error classification (session expired, rate limit, etc.)
-  - [ ] Logging with structlog
+  - [ ] Error classification
+  - [ ] Logging
   - [ ] Dry-run mode for testing
 
-- [ ] **2.3** Multi-neighborhood support
-  - [ ] Neighborhood configuration
-  - [ ] Per-neighborhood session storage
-  - [ ] Sequential scraping with delays
+- [ ] **2.3** GitHub Actions workflow
+  - [ ] Create `.github/workflows/scrape.yml`
+  - [ ] Test with manual trigger
+  - [ ] Verify data appears in Supabase
 
 ### Phase 3: LLM Integration
 
-- [ ] **3.1** Claude scoring worker
-  - [ ] Prompt template with few-shot examples
+- [ ] **3.1** Claude Haiku scoring worker
+  - [ ] Prompt template
   - [ ] JSON response parsing
-  - [ ] Batch processing (multiple posts per request)
-  - [ ] Rate limit handling
+  - [ ] Batch processing
+  - [ ] Error handling
 
 - [ ] **3.2** OpenAI embeddings worker
   - [ ] Embedding generation
@@ -956,8 +1271,8 @@ jobs:
 
 - [ ] **3.3** Ranking calculation
   - [ ] Implement ranking formula
-  - [ ] Configurable weights from settings table
-  - [ ] Re-ranking on weight change
+  - [ ] Read weights from settings table
+  - [ ] Update rankings table
 
 ### Phase 4: Web UI
 
@@ -978,7 +1293,7 @@ jobs:
   - [ ] RankingSliders component
   - [ ] TagFilter component
   - [ ] NeighborhoodFilter component
-  - [ ] SemanticSearchInput component
+  - [ ] SearchBar with semantic toggle
 
 - [ ] **4.4** API routes
   - [ ] GET /api/posts
@@ -987,44 +1302,35 @@ jobs:
   - [ ] GET /api/search
   - [ ] PUT /api/settings
 
-### Phase 5: Infrastructure
+### Phase 5: Deployment
 
-- [ ] **5.1** AWS setup
-  - [ ] Create VPC with subnets
-  - [ ] Provision RDS PostgreSQL with pgvector
-  - [ ] Provision EC2 for scraper
-  - [ ] Set up Secrets Manager
+- [ ] **5.1** Vercel setup
+  - [ ] Connect repo to Vercel
+  - [ ] Configure environment variables
+  - [ ] Set up custom domain (optional)
 
-- [ ] **5.2** Deployment
-  - [ ] GitHub Actions workflow
-  - [ ] Vercel project for frontend
-  - [ ] EC2 systemd service for scraper
-  - [ ] Cron job configuration
+- [ ] **5.2** GitHub Actions finalization
+  - [ ] Deploy workflow for web
+  - [ ] Enable scheduled scrape workflow
+  - [ ] Test full pipeline end-to-end
 
-- [ ] **5.3** Monitoring
-  - [ ] CloudWatch log groups
-  - [ ] CloudWatch alarms
-  - [ ] SNS topic for notifications
-  - [ ] Basic dashboard
-
-### Phase 6: Polish & Launch
-
-- [ ] **6.1** Testing
-  - [ ] Unit tests for scraper
-  - [ ] Unit tests for workers
-  - [ ] Integration tests for API routes
-  - [ ] End-to-end test for full pipeline
-
-- [ ] **6.2** Documentation
+- [ ] **5.3** Documentation
   - [ ] README with setup instructions
-  - [ ] API documentation
+  - [ ] Document environment variables
   - [ ] Runbook for common issues
 
-- [ ] **6.3** Launch
-  - [ ] Run full pipeline manually
-  - [ ] Verify data in production
-  - [ ] Enable automated cron
-  - [ ] Monitor first week of runs
+### Phase 6: Launch
+
+- [ ] **6.1** Final testing
+  - [ ] Run scraper manually, verify data
+  - [ ] Test all UI features
+  - [ ] Test auth flow
+  - [ ] Test semantic search
+
+- [ ] **6.2** Go live
+  - [ ] Enable daily schedule
+  - [ ] Monitor first 3 days of runs
+  - [ ] Check API costs in dashboards
 
 ---
 
@@ -1038,35 +1344,27 @@ make db-up                    # Start local Postgres
 make dev-web                  # Start Next.js dev server
 make dev-scraper              # Run scraper in dry-run mode
 
-# Deployment
-git push origin main          # Triggers CI/CD
+# Generate encryption key
+make gen-key
 
-# Database
-npx prisma migrate deploy     # Run migrations
-npx prisma studio             # Open DB GUI
-
-# Scraper (on EC2)
-sudo systemctl status nextdoor-scraper
-sudo journalctl -u nextdoor-scraper -f
+# Manual workflow trigger
+gh workflow run scrape.yml    # Requires GitHub CLI
 ```
 
-### Environment Variables
+### Important URLs
 
-```bash
-# Database
-DATABASE_URL="postgresql://user:pass@host:5432/nextdoor"
+| Service | URL |
+|---------|-----|
+| Supabase Dashboard | https://app.supabase.com |
+| Vercel Dashboard | https://vercel.com/dashboard |
+| GitHub Actions | https://github.com/YOUR_USER/YOUR_REPO/actions |
+| Anthropic Console | https://console.anthropic.com |
+| OpenAI Dashboard | https://platform.openai.com |
 
-# Auth
-NEXTAUTH_SECRET="random-secret"
-NEXTAUTH_URL="http://localhost:3000"
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
+### Cost Monitoring
 
-# APIs
-ANTHROPIC_API_KEY="sk-ant-..."
-OPENAI_API_KEY="sk-..."
-
-# AWS (for scraper)
-AWS_REGION="us-east-1"
-AWS_SECRET_NAME="nextdoor/credentials"
-```
+Check these monthly:
+- **Anthropic Console** → Usage → Check Haiku costs
+- **OpenAI Dashboard** → Usage → Check embeddings costs
+- **Supabase** → Project → Usage → Check storage
+- **Vercel** → Project → Usage → Check bandwidth
