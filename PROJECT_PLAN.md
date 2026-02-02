@@ -1,6 +1,6 @@
-# Podcast Post Discovery Platform — Architecture
+# Podcast Post Discovery Platform — Project Plan
 
-> Technical architecture and implementation plan for the Nextdoor post discovery system.
+> Complete technical plan for the Nextdoor post discovery system.
 > 
 > **Cost Target**: ~$1–$5/month using free tiers and cost-optimized services.
 
@@ -12,16 +12,18 @@
 2. [Architecture Layers](#2-architecture-layers)
 3. [Technology Stack](#3-technology-stack)
 4. [Cost Breakdown](#4-cost-breakdown)
-5. [Data Flow](#5-data-flow)
-6. [Database Schema](#6-database-schema)
-7. [Component Specifications](#7-component-specifications)
-8. [Infrastructure](#8-infrastructure)
-9. [Security & Authentication](#9-security--authentication)
-10. [Error Handling & Monitoring](#10-error-handling--monitoring)
-11. [Development Setup](#11-development-setup)
-12. [Deployment Pipeline](#12-deployment-pipeline)
-13. [Design Decisions](#13-design-decisions)
-14. [Implementation Checklist](#14-implementation-checklist)
+5. [Repository Structure](#5-repository-structure)
+6. [Data Flow](#6-data-flow)
+7. [Database Schema](#7-database-schema)
+8. [Component Specifications](#8-component-specifications)
+9. [Special Features](#9-special-features)
+10. [Infrastructure](#10-infrastructure)
+11. [Security & Authentication](#11-security--authentication)
+12. [Error Handling & Monitoring](#12-error-handling--monitoring)
+13. [Development Setup](#13-development-setup)
+14. [Deployment Pipeline](#14-deployment-pipeline)
+15. [Design Decisions](#15-design-decisions)
+16. [Implementation Checklist](#16-implementation-checklist)
 
 ---
 
@@ -38,6 +40,7 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 | **Semantic Search** | Find related posts by meaning, not just keywords |
 | **Curation Dashboard** | Private web UI for browsing, filtering, and selecting posts |
 | **Episode Tracking** | Mark posts as used, prevent duplicates |
+| **Pittsburgh Sports Facts** | Random facts for Matt on each login (powered by Claude) |
 
 ### Cost-Optimized Approach
 
@@ -65,6 +68,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 │  │  • Semantic + keyword search                                      │  │
 │  │  • Ranking weight sliders                                         │  │
 │  │  • Episode tracking                                               │  │
+│  │  • Pittsburgh sports facts for Matt 🏈                            │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -79,6 +83,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 │  │  • GET  /api/search        → Keyword + semantic search            │  │
 │  │  • GET  /api/neighborhoods → List configured neighborhoods        │  │
 │  │  • PUT  /api/settings      → Update ranking weights               │  │
+│  │  • GET  /api/sports-fact   → Random Pittsburgh sports fact        │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -126,8 +131,9 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 │                         EXTERNAL SERVICES                               │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐  │
 │  │  Nextdoor       │  │  Claude Haiku   │  │  OpenAI Embeddings API  │  │
-│  │  (via scraper)  │  │  (scoring)      │  │  (vector generation)    │  │
-│  │                 │  │  ~$0.25/1M in   │  │  $0.02/1M tokens        │  │
+│  │  (via scraper)  │  │  (scoring +     │  │  (vector generation)    │  │
+│  │                 │  │   sports facts) │  │  $0.02/1M tokens        │  │
+│  │                 │  │  ~$0.25/1M in   │  │                         │  │
 │  │                 │  │  ~$1.25/1M out  │  │                         │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -185,7 +191,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 | **Supabase** | Free | $0.00 | 500MB storage, 2GB bandwidth |
 | **Vercel** | Hobby | $0.00 | 100GB bandwidth, serverless |
 | **GitHub Actions** | Free | $0.00 | 2,000 min/month (need ~150) |
-| **Claude Haiku** | Pay-per-use | ~$0.50–$1.00 | ~500 posts × ~500 tokens |
+| **Claude Haiku** | Pay-per-use | ~$0.50–$1.00 | ~500 posts + sports facts |
 | **OpenAI Embeddings** | Pay-per-use | ~$0.10–$0.50 | ~500 posts × ~200 tokens |
 | | | | |
 | **Total** | | **~$1–$2/month** | API costs only |
@@ -227,7 +233,195 @@ At 500 posts/month = ~10 years before hitting limit
 
 ---
 
-## 5. Data Flow
+## 5. Repository Structure
+
+We use a **monorepo** approach — everything in a single repository for simplicity.
+
+### Why Monorepo?
+
+| Benefit | Description |
+|---------|-------------|
+| **Single source of truth** | All code in one place |
+| **Shared secrets** | One set of GitHub Secrets |
+| **Coordinated changes** | Update scraper + web in one PR |
+| **Simpler CI/CD** | Workflows can access everything |
+| **Appropriate for scale** | Solo/small team project |
+
+### Directory Structure
+
+```
+nextdoor/
+│
+├── .github/
+│   └── workflows/
+│       ├── scrape.yml              # Daily scraper workflow (scheduled)
+│       └── deploy.yml              # Web deploy on push to main
+│
+├── scraper/                        # Python scraper + workers
+│   ├── src/
+│   │   ├── __init__.py
+│   │   ├── main.py                 # Entry point for GitHub Action
+│   │   ├── scraper.py              # Main scraper orchestrator
+│   │   ├── session_manager.py      # Cookie persistence via Supabase
+│   │   ├── post_extractor.py       # DOM parsing logic
+│   │   ├── llm_scorer.py           # Claude Haiku scoring
+│   │   ├── embedder.py             # OpenAI embeddings
+│   │   ├── ranker.py               # Calculate final scores
+│   │   └── config.py               # Configuration constants
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── test_scraper.py
+│   │   ├── test_extractor.py
+│   │   └── fixtures/               # Test HTML samples
+│   │       └── sample_feed.html
+│   ├── pyproject.toml              # Python project metadata
+│   ├── requirements.txt            # Python dependencies
+│   └── README.md                   # Scraper-specific documentation
+│
+├── web/                            # Next.js frontend
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   └── login/
+│   │   │       └── page.tsx
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/
+│   │   │   │   └── route.ts
+│   │   │   ├── posts/
+│   │   │   │   ├── route.ts        # GET /api/posts
+│   │   │   │   └── [id]/
+│   │   │   │       ├── route.ts    # GET /api/posts/:id
+│   │   │   │       └── use/
+│   │   │   │           └── route.ts # POST /api/posts/:id/use
+│   │   │   ├── search/
+│   │   │   │   └── route.ts        # GET /api/search
+│   │   │   ├── settings/
+│   │   │   │   └── route.ts        # PUT /api/settings
+│   │   │   └── sports-fact/
+│   │   │       └── route.ts        # GET /api/sports-fact (for Matt)
+│   │   ├── post/[id]/
+│   │   │   └── page.tsx            # Post detail page
+│   │   ├── search/
+│   │   │   └── page.tsx            # Search page
+│   │   ├── settings/
+│   │   │   └── page.tsx            # Settings page
+│   │   ├── layout.tsx              # Root layout
+│   │   ├── page.tsx                # Main feed (home)
+│   │   └── globals.css             # Global styles
+│   ├── components/
+│   │   ├── ui/                     # Base UI components (shadcn/ui style)
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── input.tsx
+│   │   │   └── slider.tsx
+│   │   ├── PostCard.tsx            # Individual post display
+│   │   ├── PostFeed.tsx            # List of posts
+│   │   ├── SearchBar.tsx           # Search input
+│   │   ├── RankingSliders.tsx      # Weight adjustment sliders
+│   │   ├── TagFilter.tsx           # Filter by tags
+│   │   ├── NeighborhoodFilter.tsx  # Filter by neighborhood
+│   │   ├── Navbar.tsx              # Navigation bar
+│   │   └── SportsFact.tsx          # Pittsburgh sports fact banner
+│   ├── lib/
+│   │   ├── supabase.ts             # Supabase client setup
+│   │   ├── auth.ts                 # NextAuth configuration
+│   │   ├── claude.ts               # Claude API helper
+│   │   ├── utils.ts                # Utility functions
+│   │   └── types.ts                # TypeScript type definitions
+│   ├── public/
+│   │   └── favicon.ico
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   ├── tailwind.config.ts
+│   ├── next.config.js
+│   ├── .env.example                # Example environment variables
+│   └── README.md                   # Web-specific documentation
+│
+├── database/                       # Database management
+│   ├── migrations/
+│   │   ├── 001_initial_schema.sql  # Create all tables
+│   │   ├── 002_add_sessions.sql    # Sessions table
+│   │   └── 003_add_indexes.sql     # Performance indexes
+│   ├── seeds/
+│   │   └── seed_neighborhoods.sql  # Initial neighborhood data
+│   └── README.md                   # How to run migrations
+│
+├── scripts/                        # Utility scripts
+│   ├── setup-local.sh              # Set up local dev environment
+│   ├── generate-encryption-key.py  # Generate Fernet key
+│   └── test-supabase-connection.py # Verify Supabase connection
+│
+├── .env.example                    # Root-level env example
+├── .gitignore                      # Git ignore rules
+├── docker-compose.yml              # Local Postgres for development
+├── Makefile                        # Common commands
+├── PROJECT_PLAN.md                 # This document
+└── README.md                       # Project overview and quick start
+```
+
+### File Responsibilities
+
+#### `/scraper/src/`
+
+| File | Responsibility |
+|------|----------------|
+| `main.py` | Entry point — orchestrates full pipeline |
+| `scraper.py` | Playwright browser automation |
+| `session_manager.py` | Load/save encrypted cookies to Supabase |
+| `post_extractor.py` | Parse Nextdoor DOM, extract post data |
+| `llm_scorer.py` | Call Claude Haiku, parse JSON scores |
+| `embedder.py` | Call OpenAI, generate vectors |
+| `ranker.py` | Calculate `final_score` from weights |
+| `config.py` | Configuration constants |
+
+#### `/web/app/`
+
+| Path | Responsibility |
+|------|----------------|
+| `page.tsx` | Main feed — ranked posts list |
+| `search/page.tsx` | Semantic + keyword search |
+| `post/[id]/page.tsx` | Post detail with related posts |
+| `settings/page.tsx` | Ranking weight configuration |
+| `api/` | All API routes (server-side) |
+
+#### `/database/migrations/`
+
+Numbered SQL files, run in order:
+```
+001_initial_schema.sql    → Create core tables
+002_add_sessions.sql      → Add sessions table
+003_add_indexes.sql       → Performance indexes
+```
+
+### Workflow Connections
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        GitHub Repository                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐         ┌─────────────┐                      │
+│   │  /scraper   │         │   /web      │                      │
+│   │  (Python)   │         │  (Next.js)  │                      │
+│   └──────┬──────┘         └──────┬──────┘                      │
+│          │                       │                              │
+│   ┌──────▼──────┐         ┌──────▼──────┐                      │
+│   │  scrape.yml │         │  deploy.yml │                      │
+│   │  (daily)    │         │  (on push)  │                      │
+│   └──────┬──────┘         └──────┬──────┘                      │
+│          │                       │                              │
+└──────────│───────────────────────│──────────────────────────────┘
+           │                       │
+           ▼                       ▼
+    ┌─────────────┐         ┌─────────────┐
+    │  Supabase   │◄────────│   Vercel    │
+    │  (data)     │         │  (hosting)  │
+    └─────────────┘         └─────────────┘
+```
+
+---
+
+## 6. Data Flow
 
 ### Daily Pipeline (GitHub Actions)
 
@@ -315,12 +509,16 @@ At 500 posts/month = ~10 years before hitting limit
 │  └── Update ranking weights                                             │
 │  └── Trigger re-rank (or lazy re-rank on next fetch)                    │
 │                                                                          │
+│  GET /api/sports-fact (for Matt only)                                    │
+│  └── Call Claude Haiku for random Pittsburgh sports fact                │
+│  └── Return fact as JSON                                                │
+│                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Database Schema
+## 7. Database Schema
 
 ### Entity Relationship Diagram
 
@@ -477,9 +675,9 @@ INSERT INTO settings (key, value) VALUES
 
 ---
 
-## 7. Component Specifications
+## 8. Component Specifications
 
-### 7.1 Scraper (GitHub Actions)
+### 8.1 Scraper (GitHub Actions)
 
 **Location**: `/scraper/`
 
@@ -489,19 +687,20 @@ INSERT INTO settings (key, value) VALUES
 
 ```
 /scraper/
-├── __init__.py
-├── main.py                    # Entry point for GitHub Action
-├── session_manager.py         # Cookie persistence via Supabase
-├── post_extractor.py          # DOM parsing logic
-├── scraper.py                 # Main orchestrator
-├── config.py                  # Configuration
+├── src/
+│   ├── __init__.py
+│   ├── main.py                    # Entry point for GitHub Action
+│   ├── session_manager.py         # Cookie persistence via Supabase
+│   ├── post_extractor.py          # DOM parsing logic
+│   ├── scraper.py                 # Main orchestrator
+│   └── config.py                  # Configuration
 └── requirements.txt
 ```
 
 **Session Manager** (stores cookies in Supabase):
 
 ```python
-# scraper/session_manager.py
+# scraper/src/session_manager.py
 import os
 from cryptography.fernet import Fernet
 from supabase import create_client
@@ -551,7 +750,7 @@ class SessionManager:
 **Configuration**:
 
 ```python
-# scraper/config.py
+# scraper/src/config.py
 SCRAPER_CONFIG = {
     "headless": True,                    # GitHub Actions = headless only
     "scroll_delay_ms": (2000, 5000),     # Random delay range
@@ -560,9 +759,9 @@ SCRAPER_CONFIG = {
 }
 ```
 
-### 7.2 LLM Scoring Worker
+### 8.2 LLM Scoring Worker
 
-**Location**: `/scraper/llm_scorer.py` (runs in same GitHub Action)
+**Location**: `/scraper/src/llm_scorer.py`
 
 **Model**: Claude Haiku (`claude-3-haiku-20240307`)
 
@@ -602,46 +801,14 @@ Tags: lowercase, hyphenated (e.g., "lost-pet", "neighbor-feud").
 """
 ```
 
-**Implementation**:
+### 8.3 Embedding Worker
 
-```python
-# scraper/llm_scorer.py
-import anthropic
-
-client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY env var
-
-def score_posts(posts: list[dict]) -> list[dict]:
-    """Score multiple posts with Claude Haiku."""
-    results = []
-    
-    for post in posts:
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=500,
-            messages=[{
-                "role": "user",
-                "content": SCORING_PROMPT.format(post_text=post["text"])
-            }]
-        )
-        
-        # Parse JSON from response
-        scores = json.loads(response.content[0].text)
-        scores["post_id"] = post["id"]
-        results.append(scores)
-    
-    return results
-```
-
-### 7.3 Embedding Worker
-
-**Location**: `/scraper/embedder.py`
+**Location**: `/scraper/src/embedder.py`
 
 **Model**: OpenAI `text-embedding-3-small` (1536 dimensions)
 
-**Implementation**:
-
 ```python
-# scraper/embedder.py
+# scraper/src/embedder.py
 from openai import OpenAI
 
 client = OpenAI()  # Uses OPENAI_API_KEY env var
@@ -655,43 +822,19 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 ```
 
-### 7.4 Web UI
+### 8.4 Web UI
 
 **Location**: `/web/`
 
 **Hosting**: Vercel (Free Tier)
 
-**Database Connection**: Supabase client
-
-**Key Files**:
+**Key Components**:
 
 ```
 /web/
-├── app/
-│   ├── (auth)/
-│   │   └── login/page.tsx
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts
-│   │   ├── posts/route.ts
-│   │   ├── posts/[id]/route.ts
-│   │   ├── posts/[id]/use/route.ts
-│   │   ├── search/route.ts
-│   │   └── settings/route.ts
-│   ├── page.tsx                    # Main feed
-│   ├── search/page.tsx
-│   ├── post/[id]/page.tsx
-│   └── settings/page.tsx
-├── components/
-│   ├── PostCard.tsx
-│   ├── PostFeed.tsx
-│   ├── SearchBar.tsx
-│   ├── RankingSliders.tsx
-│   ├── TagFilter.tsx
-│   └── NeighborhoodFilter.tsx
-├── lib/
-│   ├── supabase.ts               # Supabase client
-│   ├── auth.ts                   # NextAuth config
-│   └── api.ts                    # API helpers
+├── app/                          # Next.js App Router
+├── components/                   # React components
+├── lib/                          # Utilities and clients
 ├── package.json
 └── next.config.js
 ```
@@ -716,7 +859,176 @@ export const supabaseAdmin = createClient(
 
 ---
 
-## 8. Infrastructure
+## 9. Special Features
+
+### 9.1 Pittsburgh Sports Facts for Matt
+
+When Matt logs in, he sees a random interesting fact about Pittsburgh sports teams (Steelers, Pirates, Penguins).
+
+#### How It Works
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                     PITTSBURGH SPORTS FACT FLOW                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. Matt logs in via Google OAuth                                   │
+│     └── NextAuth identifies user by email                           │
+│                                                                      │
+│  2. Frontend checks if user is Matt                                 │
+│     └── If yes, call GET /api/sports-fact                           │
+│                                                                      │
+│  3. API route calls Claude Haiku                                    │
+│     └── "Give me a random interesting fact about Pittsburgh         │
+│          sports (Steelers, Pirates, or Penguins)"                   │
+│                                                                      │
+│  4. Display fact in welcome banner                                  │
+│     └── "Hey Matt! Did you know... [fact]"                          │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+#### Implementation
+
+**API Route** (`/web/app/api/sports-fact/route.ts`):
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const anthropic = new Anthropic();
+
+// Matt's email (configure in env or hardcode)
+const MATT_EMAIL = process.env.MATT_EMAIL || 'matt@example.com';
+
+const SPORTS_FACT_PROMPT = `Give me one random, interesting, and lesser-known fact about Pittsburgh sports teams (Steelers, Pirates, or Penguins). 
+
+Requirements:
+- Pick a random team each time
+- Make it surprising or amusing
+- Keep it to 1-2 sentences
+- Include the year if relevant
+- Don't repeat common facts everyone knows
+
+Return ONLY the fact, no preamble.`;
+
+export async function GET() {
+  // Verify user is Matt
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.email || session.user.email !== MATT_EMAIL) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 150,
+      messages: [{
+        role: 'user',
+        content: SPORTS_FACT_PROMPT
+      }]
+    });
+
+    const fact = response.content[0].type === 'text' 
+      ? response.content[0].text 
+      : '';
+
+    return Response.json({ fact });
+  } catch (error) {
+    console.error('Failed to generate sports fact:', error);
+    return Response.json({ 
+      fact: "The Steelers have won 6 Super Bowls, more than any other NFL team!" 
+    });
+  }
+}
+```
+
+**Frontend Component** (`/web/components/SportsFact.tsx`):
+
+```tsx
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+
+const MATT_EMAIL = 'matt@example.com'; // Or from env
+
+export function SportsFact() {
+  const { data: session } = useSession();
+  const [shouldFetch, setShouldFetch] = useState(false);
+
+  // Only fetch for Matt
+  useEffect(() => {
+    if (session?.user?.email === MATT_EMAIL) {
+      setShouldFetch(true);
+    }
+  }, [session]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['sports-fact'],
+    queryFn: async () => {
+      const res = await fetch('/api/sports-fact');
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
+    enabled: shouldFetch,
+    staleTime: Infinity, // Don't refetch during session
+  });
+
+  if (!shouldFetch || isLoading || !data?.fact) {
+    return null;
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-4 py-3 rounded-lg mb-6 shadow-md">
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">🏈</span>
+        <div>
+          <p className="font-bold">Hey Matt!</p>
+          <p className="text-sm">{data.fact}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**Usage in Layout**:
+
+```tsx
+// web/app/page.tsx
+import { SportsFact } from '@/components/SportsFact';
+
+export default function Home() {
+  return (
+    <main className="container mx-auto px-4 py-8">
+      <SportsFact />
+      {/* Rest of the feed */}
+    </main>
+  );
+}
+```
+
+#### Cost Impact
+
+- Claude Haiku: ~100 tokens per request
+- At $0.25/1M input + $1.25/1M output tokens
+- ~$0.0001 per fact
+- If Matt logs in 30 times/month = $0.003/month
+- **Negligible cost impact**
+
+#### Example Facts Claude Might Generate
+
+- "In 1972, the Steelers' 'Immaculate Reception' was voted the greatest play in NFL history, but to this day, no one can agree if the ball actually touched a Raiders player first."
+- "The Pittsburgh Pirates once had a parrot named 'Parrot' as their mascot from 1979-1985, who would ride around on a ATV during games."
+- "Mario Lemieux came out of retirement in 2000 as both a player AND owner of the Penguins—the only person to ever do both simultaneously in NHL history."
+
+---
+
+## 10. Infrastructure
 
 ### Architecture Diagram
 
@@ -724,7 +1036,7 @@ export const supabaseAdmin = createClient(
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           GITHUB                                        │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Repository: nextdoor-podcast                                     │  │
+│  │  Repository: nextdoor                                             │  │
 │  │  ├── /scraper (Python)                                           │  │
 │  │  ├── /web (Next.js)                                              │  │
 │  │  └── /.github/workflows                                          │  │
@@ -759,12 +1071,11 @@ export const supabaseAdmin = createClient(
 │  • 500MB storage        │       │  • API Routes           │
 │  • 2GB bandwidth        │       │  • SSR Pages            │
 │  • Unlimited API calls  │       │  • Auth (NextAuth)      │
+│                         │       │  • Sports Facts API     │
 └─────────────────────────┘       └─────────────────────────┘
 ```
 
 ### No AWS Required!
-
-This architecture eliminates all AWS dependencies:
 
 | Previously | Now |
 |------------|-----|
@@ -772,11 +1083,11 @@ This architecture eliminates all AWS dependencies:
 | RDS | Supabase |
 | Secrets Manager | GitHub Secrets |
 | CloudWatch | GitHub Actions logs |
-| S3 | Not needed (skip HTML backups) |
+| S3 | Not needed |
 
 ---
 
-## 9. Security & Authentication
+## 11. Security & Authentication
 
 ### Web UI Authentication
 
@@ -789,7 +1100,7 @@ import GoogleProvider from "next-auth/providers/google"
 
 const ALLOWED_EMAILS = [
   "your-email@example.com",
-  // Add more as needed
+  "matt@example.com",  // Matt gets sports facts!
 ]
 
 export const authOptions = {
@@ -823,12 +1134,7 @@ All secrets in GitHub repository settings:
 | `GOOGLE_CLIENT_ID` | OAuth for web UI |
 | `GOOGLE_CLIENT_SECRET` | OAuth for web UI |
 | `NEXTAUTH_SECRET` | NextAuth session encryption |
-
-### Session Cookie Security
-
-- Cookies encrypted with **AES-256** (Fernet) before storage
-- Encryption key stored in GitHub Secrets
-- 7-day TTL, auto-refresh on successful scrape
+| `MATT_EMAIL` | Matt's email for sports facts |
 
 ### Data Privacy
 
@@ -840,7 +1146,7 @@ All secrets in GitHub repository settings:
 
 ---
 
-## 10. Error Handling & Monitoring
+## 12. Error Handling & Monitoring
 
 ### Retry Strategy
 
@@ -870,18 +1176,11 @@ class SessionExpiredError(ScraperError):
 class RateLimitError(ScraperError):
     """Hit rate limit, need to back off."""
     pass
-
-class CaptchaRequiredError(ScraperError):
-    """CAPTCHA challenge detected."""
-    pass
 ```
 
 ### GitHub Actions Notifications
 
-Since we're not using CloudWatch, we use GitHub's built-in notifications:
-
 ```yaml
-# In workflow file
 - name: Notify on failure
   if: failure()
   uses: actions/github-script@v7
@@ -895,35 +1194,9 @@ Since we're not using CloudWatch, we use GitHub's built-in notifications:
       })
 ```
 
-Or use the **Slack GitHub App** for notifications.
-
-### Logging
-
-```python
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-logger.info(
-    "scrape_complete",
-    extra={
-        "neighborhood": "downtown",
-        "posts_found": 47,
-        "posts_new": 12,
-        "duration_seconds": 145
-    }
-)
-```
-
-Logs are visible in GitHub Actions run history.
-
 ---
 
-## 11. Development Setup
+## 13. Development Setup
 
 ### Prerequisites
 
@@ -939,7 +1212,7 @@ Logs are visible in GitHub Actions run history.
 git clone <repo-url>
 cd nextdoor
 
-# Set up local database (for development only)
+# Set up local database
 docker-compose up -d
 
 # Set up Python environment
@@ -954,7 +1227,7 @@ npm install
 
 # Copy environment files
 cp .env.example .env.local
-# Edit .env.local with your API keys (get from Supabase dashboard)
+# Edit .env.local with your keys
 ```
 
 ### Docker Compose (Local Dev)
@@ -974,7 +1247,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/migrations:/docker-entrypoint-initdb.d
 
 volumes:
   pgdata:
@@ -992,7 +1265,7 @@ db-down:
 	docker-compose down
 
 dev-scraper:
-	cd scraper && python -m scraper.main --dry-run
+	cd scraper && python -m src.main --dry-run
 
 dev-web:
 	cd web && npm run dev
@@ -1001,53 +1274,13 @@ test:
 	cd scraper && pytest
 	cd web && npm test
 
-# Generate new encryption key for sessions
 gen-key:
 	python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-### Environment Variables
-
-**For Scraper** (`.env` or GitHub Secrets):
-
-```bash
-# Nextdoor credentials
-NEXTDOOR_EMAIL="your-email@example.com"
-NEXTDOOR_PASSWORD="your-password"
-
-# APIs
-ANTHROPIC_API_KEY="sk-ant-..."
-OPENAI_API_KEY="sk-..."
-
-# Supabase
-SUPABASE_URL="https://xxxxx.supabase.co"
-SUPABASE_KEY="eyJ..."
-
-# Session encryption (generate with: make gen-key)
-SESSION_ENCRYPTION_KEY="..."
-```
-
-**For Web** (`web/.env.local`):
-
-```bash
-# Supabase (public)
-NEXT_PUBLIC_SUPABASE_URL="https://xxxxx.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
-
-# Supabase (server-side)
-SUPABASE_URL="https://xxxxx.supabase.co"
-SUPABASE_SERVICE_KEY="eyJ..."
-
-# Auth
-NEXTAUTH_SECRET="random-secret-here"
-NEXTAUTH_URL="http://localhost:3000"
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-```
-
 ---
 
-## 12. Deployment Pipeline
+## 14. Deployment Pipeline
 
 ### GitHub Actions Workflows
 
@@ -1060,7 +1293,7 @@ name: Daily Scrape
 on:
   schedule:
     - cron: '0 2 * * *'  # 2:00 AM UTC daily
-  workflow_dispatch:      # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -1081,48 +1314,24 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
       
-      - name: Run scraper
+      - name: Run pipeline
         env:
           NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
           NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
         run: |
           cd scraper
-          python -m scraper.main
-      
-      - name: Run LLM scoring
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          cd scraper
-          python -m scraper.llm_scorer
-      
-      - name: Generate embeddings
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          cd scraper
-          python -m scraper.embedder
-      
-      - name: Update rankings
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          cd scraper
-          python -m scraper.ranker
+          python -m src.main
 ```
 
 #### Web Deploy (On Push)
 
 ```yaml
-# .github/workflows/deploy-web.yml
+# .github/workflows/deploy.yml
 name: Deploy Web
 
 on:
@@ -1147,153 +1356,114 @@ jobs:
           working-directory: ./web
 ```
 
-### First-Time Setup
-
-1. **Create Supabase Project**
-   - Go to [supabase.com](https://supabase.com)
-   - Create new project (free tier)
-   - Run SQL from Section 6 to create tables
-   - Copy URL and keys
-
-2. **Set Up GitHub Secrets**
-   - Go to repo → Settings → Secrets
-   - Add all secrets from Section 11
-
-3. **Set Up Vercel**
-   - Connect repo to Vercel
-   - Set environment variables
-   - Get `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-
-4. **Configure Google OAuth**
-   - Go to [Google Cloud Console](https://console.cloud.google.com)
-   - Create OAuth credentials
-   - Add authorized redirect: `https://your-app.vercel.app/api/auth/callback/google`
-
-5. **Run Initial Scrape**
-   - Go to Actions → Daily Scrape → Run workflow
-   - Monitor logs for any issues
-
 ---
 
-## 13. Design Decisions
+## 15. Design Decisions
 
 ### Decision Log
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **Compute** | GitHub Actions | Free 2,000 min/month, Playwright support |
+| **Repository** | Monorepo | Simpler for solo/small team |
+| **Compute** | GitHub Actions | Free, Playwright support |
 | **Database** | Supabase Free | PostgreSQL + pgvector, 500MB free |
-| **LLM Model** | Claude Haiku | 20x cheaper than Sonnet, fast enough |
-| **Embeddings** | OpenAI | $0.02/1M tokens, proven quality |
-| **Secrets** | GitHub Secrets | Free, integrated with Actions |
+| **LLM Model** | Claude Haiku | 20x cheaper than Sonnet |
+| **Embeddings** | OpenAI | Cheap, proven quality |
+| **Secrets** | GitHub Secrets | Free, integrated |
 | **Frontend Host** | Vercel Free | Best Next.js support |
-| **Auth** | NextAuth + Google | Simple, secure, free |
-| **Session Storage** | Supabase (encrypted) | No need for separate storage |
-| **HTML Backups** | Skip | Not worth storage cost for MVP |
-| **Monitoring** | GitHub Actions logs | Free, sufficient for low volume |
+| **Auth** | NextAuth + Google | Simple, secure |
+| **Sports Facts** | Claude Haiku on-demand | Fun feature, negligible cost |
 
 ### Trade-offs Accepted
 
 | Trade-off | Impact | Mitigation |
 |-----------|--------|------------|
-| GitHub Actions limit | 2,000 min/month | Only need ~150 min/month |
-| Supabase 500MB | ~62K posts max | Years of runway at 500/month |
-| Haiku vs Sonnet | Slightly less nuanced | Good enough for scoring humor |
-| No CloudWatch | Less observability | GitHub logs + manual monitoring |
-| No HTML backups | Can't debug old scrapes | Accept the risk for cost savings |
-
-### Future Upgrades (If Needed)
-
-| Trigger | Upgrade Path | New Cost |
-|---------|--------------|----------|
-| Hit 500MB | Supabase Pro | +$25/mo |
-| Need better LLM | Claude Sonnet | +$10/mo |
-| More scraping | Railway or EC2 spot | +$5-15/mo |
-| Team access | Vercel Pro | +$20/mo |
+| Monorepo | Larger clone | Still small project |
+| GitHub Actions limit | 2,000 min/month | Only need ~150 |
+| Supabase 500MB | ~62K posts max | Years of runway |
+| Haiku vs Sonnet | Less nuanced | Good enough |
 
 ---
 
-## 14. Implementation Checklist
+## 16. Implementation Checklist
 
 ### Phase 1: Foundation
 
 - [ ] **1.1** Initialize repository structure
-  - [ ] Create `/scraper`, `/web` directories
-  - [ ] Set up Python project with `pyproject.toml` and `requirements.txt`
+  - [ ] Create directory structure per Section 5
+  - [ ] Set up Python project with `pyproject.toml`
   - [ ] Set up Next.js project with TypeScript
-  - [ ] Create `docker-compose.yml` for local dev
+  - [ ] Create `docker-compose.yml`
   - [ ] Create `.env.example` files
+  - [ ] Create `Makefile`
 
 - [ ] **1.2** Supabase setup
   - [ ] Create Supabase project (free tier)
   - [ ] Enable pgvector extension
-  - [ ] Run SQL to create all tables
-  - [ ] Create seed script with test neighborhood
+  - [ ] Run SQL migrations (Section 7)
+  - [ ] Create seed data
   - [ ] Note down URL and keys
 
 - [ ] **1.3** GitHub setup
-  - [ ] Create repository
-  - [ ] Add all secrets (see Section 11)
-  - [ ] Test secret access with simple workflow
+  - [ ] Add all secrets (Section 11)
+  - [ ] Test with simple workflow
 
 ### Phase 2: Scraper
 
-- [ ] **2.1** Core scraper implementation
-  - [ ] Session manager with Supabase storage
-  - [ ] Cookie encryption/decryption
-  - [ ] Playwright browser setup (headless)
-  - [ ] Post extractor (DOM parsing)
-  - [ ] Deduplication logic (hash-based)
+- [ ] **2.1** Core scraper
+  - [ ] Session manager with Supabase
+  - [ ] Playwright setup (headless)
+  - [ ] Post extractor
+  - [ ] Deduplication
 
-- [ ] **2.2** Scraper reliability
-  - [ ] Retry logic with exponential backoff
-  - [ ] Error classification
+- [ ] **2.2** Reliability
+  - [ ] Retry logic
+  - [ ] Error handling
   - [ ] Logging
-  - [ ] Dry-run mode for testing
+  - [ ] Dry-run mode
 
-- [ ] **2.3** GitHub Actions workflow
-  - [ ] Create `.github/workflows/scrape.yml`
-  - [ ] Test with manual trigger
-  - [ ] Verify data appears in Supabase
+- [ ] **2.3** GitHub Actions
+  - [ ] Create `scrape.yml`
+  - [ ] Test manual trigger
+  - [ ] Verify data in Supabase
 
 ### Phase 3: LLM Integration
 
-- [ ] **3.1** Claude Haiku scoring worker
+- [ ] **3.1** Claude Haiku scoring
   - [ ] Prompt template
-  - [ ] JSON response parsing
+  - [ ] JSON parsing
   - [ ] Batch processing
-  - [ ] Error handling
 
-- [ ] **3.2** OpenAI embeddings worker
+- [ ] **3.2** OpenAI embeddings
   - [ ] Embedding generation
   - [ ] Batch API calls
   - [ ] Store in pgvector
 
-- [ ] **3.3** Ranking calculation
-  - [ ] Implement ranking formula
-  - [ ] Read weights from settings table
+- [ ] **3.3** Ranking
+  - [ ] Ranking formula
+  - [ ] Weight configuration
   - [ ] Update rankings table
 
 ### Phase 4: Web UI
 
 - [ ] **4.1** Authentication
-  - [ ] NextAuth.js setup
-  - [ ] Google OAuth provider
-  - [ ] Email whitelist protection
+  - [ ] NextAuth.js + Google OAuth
+  - [ ] Email whitelist
   - [ ] Protected routes
 
 - [ ] **4.2** Core pages
   - [ ] Post feed with pagination
   - [ ] Post detail page
-  - [ ] Search page (keyword + semantic)
-  - [ ] Settings page (ranking weights)
+  - [ ] Search page
+  - [ ] Settings page
 
-- [ ] **4.3** UI components
-  - [ ] PostCard component
-  - [ ] RankingSliders component
-  - [ ] TagFilter component
-  - [ ] NeighborhoodFilter component
-  - [ ] SearchBar with semantic toggle
+- [ ] **4.3** Components
+  - [ ] PostCard
+  - [ ] RankingSliders
+  - [ ] TagFilter
+  - [ ] NeighborhoodFilter
+  - [ ] SearchBar
+  - [ ] **SportsFact** (for Matt)
 
 - [ ] **4.4** API routes
   - [ ] GET /api/posts
@@ -1301,36 +1471,32 @@ jobs:
   - [ ] POST /api/posts/:id/use
   - [ ] GET /api/search
   - [ ] PUT /api/settings
+  - [ ] **GET /api/sports-fact**
 
 ### Phase 5: Deployment
 
 - [ ] **5.1** Vercel setup
-  - [ ] Connect repo to Vercel
-  - [ ] Configure environment variables
-  - [ ] Set up custom domain (optional)
+  - [ ] Connect repo
+  - [ ] Environment variables
+  - [ ] Custom domain (optional)
 
-- [ ] **5.2** GitHub Actions finalization
-  - [ ] Deploy workflow for web
-  - [ ] Enable scheduled scrape workflow
-  - [ ] Test full pipeline end-to-end
-
-- [ ] **5.3** Documentation
-  - [ ] README with setup instructions
-  - [ ] Document environment variables
-  - [ ] Runbook for common issues
+- [ ] **5.2** Finalize
+  - [ ] Deploy workflow
+  - [ ] Enable schedule
+  - [ ] Test end-to-end
 
 ### Phase 6: Launch
 
-- [ ] **6.1** Final testing
-  - [ ] Run scraper manually, verify data
-  - [ ] Test all UI features
-  - [ ] Test auth flow
-  - [ ] Test semantic search
+- [ ] **6.1** Testing
+  - [ ] Run scraper
+  - [ ] Test UI features
+  - [ ] Test auth
+  - [ ] Test Matt's sports facts
 
 - [ ] **6.2** Go live
   - [ ] Enable daily schedule
-  - [ ] Monitor first 3 days of runs
-  - [ ] Check API costs in dashboards
+  - [ ] Monitor first week
+  - [ ] Check API costs
 
 ---
 
@@ -1343,28 +1509,26 @@ jobs:
 make db-up                    # Start local Postgres
 make dev-web                  # Start Next.js dev server
 make dev-scraper              # Run scraper in dry-run mode
-
-# Generate encryption key
-make gen-key
+make gen-key                  # Generate encryption key
 
 # Manual workflow trigger
-gh workflow run scrape.yml    # Requires GitHub CLI
+gh workflow run scrape.yml
 ```
 
 ### Important URLs
 
 | Service | URL |
 |---------|-----|
-| Supabase Dashboard | https://app.supabase.com |
-| Vercel Dashboard | https://vercel.com/dashboard |
+| Supabase | https://app.supabase.com |
+| Vercel | https://vercel.com/dashboard |
 | GitHub Actions | https://github.com/YOUR_USER/YOUR_REPO/actions |
-| Anthropic Console | https://console.anthropic.com |
-| OpenAI Dashboard | https://platform.openai.com |
+| Anthropic | https://console.anthropic.com |
+| OpenAI | https://platform.openai.com |
 
 ### Cost Monitoring
 
-Check these monthly:
-- **Anthropic Console** → Usage → Check Haiku costs
-- **OpenAI Dashboard** → Usage → Check embeddings costs
-- **Supabase** → Project → Usage → Check storage
-- **Vercel** → Project → Usage → Check bandwidth
+Check monthly:
+- **Anthropic** → Usage → Haiku costs
+- **OpenAI** → Usage → Embeddings costs
+- **Supabase** → Usage → Storage
+- **Vercel** → Usage → Bandwidth

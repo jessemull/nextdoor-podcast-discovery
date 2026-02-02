@@ -1,0 +1,146 @@
+# Nextdoor Podcast Discovery Platform — Cursor Rules
+
+## Project Overview
+
+This is a monorepo with two main components:
+- `/scraper` — Python 3.11+ scraper and LLM workers (runs in GitHub Actions)
+- `/web` — Next.js 14+ TypeScript frontend (deploys to Vercel)
+
+Database: Supabase (PostgreSQL + pgvector)
+LLM: Claude Haiku for scoring, OpenAI for embeddings
+
+---
+
+## General Principles
+
+- Prefer simple solutions over clever ones
+- Don't over-engineer; this is a small project
+- Respect the cost-optimized architecture (free tiers + pay-per-use APIs)
+- All secrets come from environment variables, never hardcode them
+
+---
+
+## Python Guidelines (`/scraper`)
+
+### Structure
+- Use `src/` layout with `__init__.py` files
+- Entry point: `src/main.py`
+- One class/function per responsibility
+
+### Style
+- Follow PEP 8
+- Use type hints for all function signatures
+- Use `snake_case` for functions and variables
+- Use `PascalCase` for classes
+- Constants in `UPPER_SNAKE_CASE`
+
+### Imports
+- Order: stdlib → third-party → local
+- Use absolute imports: `from src.scraper import NextdoorScraper`
+
+### Error Handling
+- Use custom exceptions (defined in `src/exceptions.py`)
+- Always use `tenacity` for API retry logic
+- Log errors with `logging` module, include context
+
+### Dependencies
+- Playwright for browser automation (headless mode only)
+- `anthropic` for Claude API
+- `openai` for embeddings
+- `supabase` for database
+- `cryptography` for session encryption
+
+### Testing
+- Use `pytest`
+- Test files: `tests/test_*.py`
+- Mock external APIs (Claude, OpenAI, Supabase)
+
+---
+
+## TypeScript/Next.js Guidelines (`/web`)
+
+### Structure
+- Use Next.js App Router (`app/` directory)
+- API routes in `app/api/`
+- Components in `components/`
+- Utilities in `lib/`
+
+### Style
+- Use TypeScript strict mode
+- Use `camelCase` for functions and variables
+- Use `PascalCase` for components and types
+- Prefer `interface` over `type` for object shapes
+- Use named exports, not default exports
+
+### Components
+- Use functional components with hooks
+- Colocate component-specific types in the same file
+- Use React Query (TanStack) for server state
+- Use Tailwind CSS for styling
+
+### API Routes
+- Validate request data before processing
+- Return consistent JSON responses: `{ data }` or `{ error }`
+- Use `getServerSession` for auth checks
+
+### Database
+- Use Supabase client from `lib/supabase.ts`
+- Use `supabaseAdmin` for server-side operations
+- Never expose service keys to client
+
+### Auth
+- NextAuth.js with Google OAuth
+- Email whitelist in `lib/auth.ts`
+- Protect routes with middleware or `getServerSession`
+
+---
+
+## Database Conventions
+
+- UUIDs for all primary keys
+- `created_at` and `updated_at` timestamps on mutable tables
+- Use `TIMESTAMPTZ` not `TIMESTAMP`
+- JSONB for flexible data (tags, image_urls)
+- Index columns used in WHERE clauses
+
+---
+
+## Git Conventions
+
+- Branch naming: `feature/description`, `fix/description`
+- Commit messages: imperative mood ("Add feature", not "Added feature")
+- Keep PRs focused on one change
+
+---
+
+## When Writing Code
+
+1. Check if similar code exists before creating new files
+2. Follow existing patterns in the codebase
+3. Add type hints (Python) or types (TypeScript)
+4. Handle errors gracefully with informative messages
+5. Don't add dependencies unless necessary
+6. Keep functions small and focused
+7. Write code that's easy to test
+
+---
+
+## Project-Specific Notes
+
+### Claude API Usage
+- Model: `claude-3-haiku-20240307` (not Sonnet — cost optimization)
+- Always request JSON responses for structured data
+- Batch posts when possible to reduce API calls
+
+### OpenAI API Usage
+- Model: `text-embedding-3-small` (1536 dimensions)
+- Batch up to 100 texts per request
+
+### Supabase
+- Free tier: 500MB storage limit
+- Use HNSW index for vector similarity
+- Store session cookies encrypted (Fernet)
+
+### Special Features
+- Pittsburgh sports facts: Only for user with MATT_EMAIL env var
+- Uses Claude Haiku, called on login
