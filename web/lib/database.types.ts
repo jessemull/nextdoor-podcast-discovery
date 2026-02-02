@@ -6,6 +6,13 @@
  *
  * For now, these are manually defined to match the schema in
  * database/migrations/001_initial_schema.sql
+ *
+ * IMPORTANT: These types reflect the raw database schema where fields can be null.
+ * The UI types in `types.ts` also allow nulls but are kept separate for clarity.
+ * When updating the database schema, update BOTH files:
+ *   1. database/migrations/*.sql - the source of truth
+ *   2. lib/database.types.ts - for Supabase client type safety
+ *   3. lib/types.ts - for UI components (subset of fields, same null handling)
  */
 
 export type Json =

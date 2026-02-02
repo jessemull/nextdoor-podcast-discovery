@@ -1,3 +1,5 @@
+import { SportsFact } from "@/components/SportsFact";
+
 export default function Home() {
   return (
     <main className="min-h-screen p-8">
@@ -8,10 +10,11 @@ export default function Home() {
         <p className="text-lg text-gray-400 mb-8">
           Discover and curate interesting Nextdoor posts for your podcast.
         </p>
-        
-        {/* TODO: Add SportsFact component for Matt */}
+
+        {/* Sports fact banner for Matt */}
+        <SportsFact />
+
         {/* TODO: Add PostFeed component */}
-        
         <div className="bg-gray-800 rounded-lg p-6">
           <p className="text-gray-300">
             🚧 Dashboard coming soon...

@@ -1,4 +1,6 @@
-// Database types
+// Database types for UI layer
+// NOTE: These types are used in the UI and may differ slightly from database.types.ts
+// The database types allow nulls, but these represent the expected shape after validation
 
 export interface Neighborhood {
   id: string;
@@ -26,13 +28,13 @@ export interface Post {
 export interface LLMScore {
   id: string;
   post_id: string;
-  absurdity: number;
-  humor: number;
-  drama: number;
-  relatability: number;
-  podcast_score: number;
+  absurdity: number | null;
+  humor: number | null;
+  drama: number | null;
+  relatability: number | null;
+  podcast_score: number | null;
   tags: string[];
-  summary: string;
+  summary: string | null;
   processed_at: string;
 }
 

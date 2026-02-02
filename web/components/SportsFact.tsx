@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { clientEnv } from "@/lib/env";
 import type { SportsFactResponse } from "@/lib/types";
@@ -9,7 +10,8 @@ import type { SportsFactResponse } from "@/lib/types";
 export function SportsFact() {
   const { data: session } = useSession();
 
-  const mattEmail = clientEnv.MATT_EMAIL;
+  // Memoize to avoid re-evaluating getter on every render
+  const mattEmail = useMemo(() => clientEnv.MATT_EMAIL, []);
   const isMatt = session?.user?.email === mattEmail;
 
   const { data, isLoading } = useQuery<SportsFactResponse>({
@@ -30,7 +32,7 @@ export function SportsFact() {
   return (
     <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-3 rounded-lg mb-6 shadow-md">
       <div className="flex items-center gap-3">
-        <span className="text-2xl">🏈</span>
+        <span className="text-2xl" role="img" aria-label="Football">🏈</span>
         <div>
           <p className="font-bold">Hey Matt!</p>
           <p className="text-sm">{data.fact}</p>

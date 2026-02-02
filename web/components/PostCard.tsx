@@ -58,9 +58,9 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
       {/* Tags */}
       {scores?.tags && scores.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
-          {scores.tags.map((tag) => (
+          {scores.tags.map((tag, index) => (
             <span
-              key={tag}
+              key={`${tag}-${index}`}
               className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded"
             >
               {tag}
@@ -104,8 +104,17 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
 /**
  * Internal component for displaying individual score metrics.
  * Color-coded based on score value (green=high, red=low).
+ * Handles null values gracefully.
  */
-function ScoreBadge({ label, value }: { label: string; value: number }) {
+function ScoreBadge({ label, value }: { label: string; value: number | null }) {
+  if (value === null) {
+    return (
+      <span className="text-xs text-gray-400">
+        {label}: <span className="text-gray-500">—</span>
+      </span>
+    );
+  }
+
   const colorClass = cn(
     value >= 8 && "text-green-400",
     value >= 6 && value < 8 && "text-yellow-400",
