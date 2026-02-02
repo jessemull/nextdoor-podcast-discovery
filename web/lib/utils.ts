@@ -13,7 +13,7 @@ export function cn(...inputs: ClassValue[]): string {
  * Format a date for relative display (e.g., "2 days ago").
  * Handles both past and future dates.
  */
-export function formatRelativeTime(date: string | null): string {
+export function formatRelativeTime(date: null | string): string {
   if (!date) return "Unknown";
 
   const now = new Date();

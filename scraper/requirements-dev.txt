@@ -1,6 +1,15 @@
 # Development dependencies
+
+# Testing
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+pytest-cov>=4.0.0
+
+# Formatting & Linting
 black>=24.0.0
-ruff>=0.2.0
 mypy>=1.8.0
+ruff>=0.2.0
+
+# Security
+bandit>=1.7.0
+pip-audit>=2.7.0

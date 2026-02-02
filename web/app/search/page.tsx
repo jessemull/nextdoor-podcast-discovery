@@ -1,9 +1,6 @@
 /**
  * Search Page - Semantic search for posts
  *
- * TODO: Implement this page
- * GitHub Issue: Create issue titled "Implement semantic search page"
- *
  * Features to implement:
  * - Search input with debouncing (use useDeferredValue or custom hook)
  * - Call Supabase RPC function for vector similarity search

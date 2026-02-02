@@ -1,9 +1,6 @@
 /**
  * Settings Page - Configure ranking weights
  *
- * TODO: Implement this page
- * GitHub Issue: Create issue titled "Implement settings page"
- *
  * Features to implement:
  * - Display current ranking weights from Supabase settings table
  * - Slider controls for each weight (absurdity, humor, drama, relatability)

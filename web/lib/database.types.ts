@@ -16,198 +16,198 @@
  */
 
 export type Json =
-  | string
-  | number
-  | boolean
-  | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | boolean
+  | Json[]
+  | null
+  | number
+  | string;
 
 export interface Database {
   public: {
     Tables: {
-      neighborhoods: {
-        Row: {
-          id: string;
-          name: string;
-          slug: string;
-          is_active: boolean;
-          weight_modifier: number;
-          created_at: string;
-          updated_at: string;
-        };
+      llm_scores: {
         Insert: {
+          absurdity?: null | number;
+          drama?: null | number;
+          humor?: null | number;
           id?: string;
+          podcast_score?: null | number;
+          post_id: string;
+          processed_at?: string;
+          relatability?: null | number;
+          summary?: null | string;
+          tags?: Json;
+        };
+        Row: {
+          absurdity: null | number;
+          drama: null | number;
+          humor: null | number;
+          id: string;
+          podcast_score: null | number;
+          post_id: string;
+          processed_at: string;
+          relatability: null | number;
+          summary: null | string;
+          tags: Json;
+        };
+        Update: {
+          absurdity?: null | number;
+          drama?: null | number;
+          humor?: null | number;
+          podcast_score?: null | number;
+          relatability?: null | number;
+          summary?: null | string;
+          tags?: Json;
+        };
+      };
+      neighborhoods: {
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
           name: string;
           slug: string;
-          is_active?: boolean;
-          weight_modifier?: number;
-          created_at?: string;
           updated_at?: string;
+          weight_modifier?: number;
+        };
+        Row: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          slug: string;
+          updated_at: string;
+          weight_modifier: number;
         };
         Update: {
           id?: string;
+          is_active?: boolean;
           name?: string;
           slug?: string;
-          is_active?: boolean;
+          updated_at?: string;
           weight_modifier?: number;
-          updated_at?: string;
-        };
-      };
-      sessions: {
-        Row: {
-          id: string;
-          neighborhood_id: string | null;
-          cookies_encrypted: string;
-          expires_at: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          neighborhood_id?: string | null;
-          cookies_encrypted: string;
-          expires_at?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          neighborhood_id?: string | null;
-          cookies_encrypted?: string;
-          expires_at?: string | null;
-          updated_at?: string;
-        };
-      };
-      posts: {
-        Row: {
-          id: string;
-          neighborhood_id: string;
-          post_id_ext: string;
-          user_id_hash: string | null;
-          text: string;
-          hash: string;
-          url: string | null;
-          image_urls: Json;
-          posted_at: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          neighborhood_id: string;
-          post_id_ext: string;
-          user_id_hash?: string | null;
-          text: string;
-          hash: string;
-          url?: string | null;
-          image_urls?: Json;
-          posted_at?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          neighborhood_id?: string;
-          post_id_ext?: string;
-          user_id_hash?: string | null;
-          text?: string;
-          hash?: string;
-          url?: string | null;
-          image_urls?: Json;
-          posted_at?: string | null;
-        };
-      };
-      llm_scores: {
-        Row: {
-          id: string;
-          post_id: string;
-          absurdity: number | null;
-          humor: number | null;
-          drama: number | null;
-          relatability: number | null;
-          podcast_score: number | null;
-          tags: Json;
-          summary: string | null;
-          processed_at: string;
-        };
-        Insert: {
-          id?: string;
-          post_id: string;
-          absurdity?: number | null;
-          humor?: number | null;
-          drama?: number | null;
-          relatability?: number | null;
-          podcast_score?: number | null;
-          tags?: Json;
-          summary?: string | null;
-          processed_at?: string;
-        };
-        Update: {
-          absurdity?: number | null;
-          humor?: number | null;
-          drama?: number | null;
-          relatability?: number | null;
-          podcast_score?: number | null;
-          tags?: Json;
-          summary?: string | null;
         };
       };
       post_embeddings: {
-        Row: {
-          id: string;
-          post_id: string;
-          embedding: number[] | null;
-          model: string;
-          created_at: string;
-        };
         Insert: {
-          id?: string;
-          post_id: string;
-          embedding?: number[] | null;
-          model?: string;
           created_at?: string;
+          embedding?: null | number[];
+          id?: string;
+          model?: string;
+          post_id: string;
+        };
+        Row: {
+          created_at: string;
+          embedding: null | number[];
+          id: string;
+          model: string;
+          post_id: string;
         };
         Update: {
-          embedding?: number[] | null;
+          embedding?: null | number[];
           model?: string;
         };
       };
-      rankings: {
-        Row: {
-          id: string;
-          post_id: string;
-          final_score: number;
-          used_on_episode: boolean;
-          episode_date: string | null;
-          updated_at: string;
-        };
+      posts: {
         Insert: {
+          created_at?: string;
+          hash: string;
           id?: string;
-          post_id: string;
-          final_score?: number;
-          used_on_episode?: boolean;
-          episode_date?: string | null;
-          updated_at?: string;
+          image_urls?: Json;
+          neighborhood_id: string;
+          post_id_ext: string;
+          posted_at?: null | string;
+          text: string;
+          url?: null | string;
+          user_id_hash?: null | string;
+        };
+        Row: {
+          created_at: string;
+          hash: string;
+          id: string;
+          image_urls: Json;
+          neighborhood_id: string;
+          post_id_ext: string;
+          posted_at: null | string;
+          text: string;
+          url: null | string;
+          user_id_hash: null | string;
         };
         Update: {
+          hash?: string;
+          image_urls?: Json;
+          neighborhood_id?: string;
+          post_id_ext?: string;
+          posted_at?: null | string;
+          text?: string;
+          url?: null | string;
+          user_id_hash?: null | string;
+        };
+      };
+      rankings: {
+        Insert: {
+          episode_date?: null | string;
           final_score?: number;
+          id?: string;
+          post_id: string;
+          updated_at?: string;
           used_on_episode?: boolean;
-          episode_date?: string | null;
+        };
+        Row: {
+          episode_date: null | string;
+          final_score: number;
+          id: string;
+          post_id: string;
+          updated_at: string;
+          used_on_episode: boolean;
+        };
+        Update: {
+          episode_date?: null | string;
+          final_score?: number;
+          updated_at?: string;
+          used_on_episode?: boolean;
+        };
+      };
+      sessions: {
+        Insert: {
+          cookies_encrypted: string;
+          expires_at?: null | string;
+          id?: string;
+          neighborhood_id?: null | string;
+          updated_at?: string;
+        };
+        Row: {
+          cookies_encrypted: string;
+          expires_at: null | string;
+          id: string;
+          neighborhood_id: null | string;
+          updated_at: string;
+        };
+        Update: {
+          cookies_encrypted?: string;
+          expires_at?: null | string;
+          neighborhood_id?: null | string;
           updated_at?: string;
         };
       };
       settings: {
-        Row: {
-          id: string;
-          key: string;
-          value: Json;
-          updated_at: string;
-        };
         Insert: {
           id?: string;
           key: string;
-          value: Json;
           updated_at?: string;
+          value: Json;
+        };
+        Row: {
+          id: string;
+          key: string;
+          updated_at: string;
+          value: Json;
         };
         Update: {
           key?: string;
-          value?: Json;
           updated_at?: string;
+          value?: Json;
         };
       };
     };

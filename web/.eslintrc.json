@@ -1,7 +1,51 @@
 {
-  "extends": ["next/core-web-vitals"],
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:jsx-a11y/recommended",
+    "plugin:perfectionist/recommended-alphabetical"
+  ],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ],
+  "plugins": [
+    "jsx-a11y",
+    "perfectionist"
+  ],
   "rules": {
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/anchor-is-valid": "error",
+    "perfectionist/sort-imports": [
+      "error",
+      {
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          ["parent", "sibling", "index"],
+          "object",
+          "type"
+        ],
+        "internal-pattern": ["@/**"],
+        "newlines-between": "always",
+        "type": "alphabetical"
+      }
+    ],
+    "perfectionist/sort-jsx-props": [
+      "error",
+      {
+        "custom-groups": {
+          "callback": "on*",
+          "key": "key"
+        },
+        "groups": ["key", "unknown", "callback"],
+        "type": "alphabetical"
+      }
+    ],
     "prefer-const": "error"
   }
 }

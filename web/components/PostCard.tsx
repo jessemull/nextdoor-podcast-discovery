@@ -1,15 +1,15 @@
 "use client";
 
 import { PostWithScores } from "@/lib/types";
-import { cn, formatRelativeTime, truncate, POST_PREVIEW_LENGTH } from "@/lib/utils";
+import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
 interface PostCardProps {
-  post: PostWithScores;
   onMarkUsed?: (postId: string) => void;
   onViewDetails?: (postId: string) => void;
+  post: PostWithScores;
 }
 
-export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
+export function PostCard({ onMarkUsed, onViewDetails, post }: PostCardProps) {
   const scores = post.llm_scores;
   const ranking = post.rankings;
 
@@ -80,18 +80,18 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
       <div className="flex gap-2">
         {onViewDetails && (
           <button
-            onClick={() => onViewDetails(post.id)}
             aria-label={`View details for post from ${post.neighborhood?.name || "unknown neighborhood"}`}
             className="text-xs text-gray-400 hover:text-white transition-colors"
+            onClick={() => onViewDetails(post.id)}
           >
             View Details
           </button>
         )}
         {!ranking?.used_on_episode && onMarkUsed && (
           <button
-            onClick={() => onMarkUsed(post.id)}
             aria-label="Mark this post as used in an episode"
             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            onClick={() => onMarkUsed(post.id)}
           >
             Mark as Used
           </button>
@@ -106,7 +106,7 @@ export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
  * Color-coded based on score value (green=high, red=low).
  * Handles null values gracefully.
  */
-function ScoreBadge({ label, value }: { label: string; value: number | null }) {
+function ScoreBadge({ label, value }: { label: string; value: null | number }) {
   if (value === null) {
     return (
       <span className="text-xs text-gray-400">

@@ -38,7 +38,6 @@ export default function LoginPage() {
         </div>
 
         <button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
           aria-label="Sign in with your Google account"
           className={cn(
             "w-full flex items-center justify-center gap-3",
@@ -47,6 +46,7 @@ export default function LoginPage() {
             "hover:bg-gray-50 hover:border-gray-300",
             "transition-all duration-200"
           )}
+          onClick={() => signIn("google", { callbackUrl: "/" })}
         >
           <GoogleIcon />
           Sign in with Google

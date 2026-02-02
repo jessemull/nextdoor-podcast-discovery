@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
 import { Navbar } from "@/components/Navbar";
 
+import "./globals.css";
+import { Providers } from "./providers";
+
+import type { Metadata } from "next";
+
 export const metadata: Metadata = {
-  title: "Nextdoor Podcast Discovery",
   description: "Discover and curate interesting Nextdoor posts for your podcast",
+  title: "Nextdoor Podcast Discovery",
 };
 
 export default function RootLayout({

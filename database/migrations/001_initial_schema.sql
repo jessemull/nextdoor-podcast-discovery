@@ -4,6 +4,15 @@
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Function to auto-update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 -- Neighborhoods table
 CREATE TABLE neighborhoods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,6 +24,11 @@ CREATE TABLE neighborhoods (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TRIGGER update_neighborhoods_updated_at
+    BEFORE UPDATE ON neighborhoods
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Sessions table (for storing encrypted Nextdoor cookies)
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,6 +39,11 @@ CREATE TABLE sessions (
 );
 
 CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+
+CREATE TRIGGER update_sessions_updated_at
+    BEFORE UPDATE ON sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- Posts table
 CREATE TABLE posts (
@@ -88,6 +107,11 @@ CREATE TABLE rankings (
 CREATE INDEX idx_rankings_score ON rankings(final_score DESC);
 CREATE INDEX idx_rankings_unused ON rankings(used_on_episode, final_score DESC);
 
+CREATE TRIGGER update_rankings_updated_at
+    BEFORE UPDATE ON rankings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Settings table
 CREATE TABLE settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -96,6 +120,11 @@ CREATE TABLE settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TRIGGER update_settings_updated_at
+    BEFORE UPDATE ON settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Insert default ranking weights
 INSERT INTO settings (key, value) VALUES 
-    ('ranking_weights', '{"absurdity": 1.0, "humor": 1.0, "drama": 1.0, "relatability": 1.0}');
+    ('ranking_weights', '{"absurdity": 1.0, "drama": 1.0, "humor": 1.0, "relatability": 1.0}');

@@ -20,6 +20,73 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 
 ---
 
+## Alphabetization Rules
+
+Always alphabetize the following when possible:
+
+### Python
+- **Imports within groups:** After grouping by stdlib → third-party → local, sort alphabetically within each group
+- **Dictionary keys:** Sort keys alphabetically when defining dict literals
+- **List items:** Sort string lists alphabetically when order doesn't matter (e.g., `REQUIRED_ENV_VARS`)
+- **Class methods:** Sort methods alphabetically (after `__init__` and special methods)
+
+### TypeScript/React
+- **Imports:** Sort by package name (external first, then @/ internal, then relative)
+- **Named imports:** Sort members alphabetically: `import { A, B, C } from 'x'`
+- **Object keys:** Sort object literal keys alphabetically
+- **Interface/Type properties:** Sort alphabetically
+- **JSX props:** Sort alphabetically, with `key` first and callbacks (`on*`) last
+- **Union types:** Sort alphabetically: `null | number | string`
+- **CSS classes in className:** Sort alphabetically when practical
+
+**Enforced by:** `eslint-plugin-perfectionist` for TypeScript (configured in `.eslintrc.json`)
+
+---
+
+## Comment Spacing Rules
+
+### General Comments in Code
+- **Empty line above and below:** Standalone comments should have an empty line above and below them for readability
+- **Block start exception:** If a comment is at the start of a code block (e.g., first line of a function body), it should only have an empty line below it, not above
+- **Block end exception:** If a comment is at the end of a code block, it should only have an empty line above it, not below
+
+### JSX Comments
+- **No empty lines:** Comments inside JSX should NOT have empty lines above or below them (keeps JSX compact)
+
+### Function/Class Documentation
+- **Docstrings (Python):** Triple-quoted docstrings directly below the function/class signature, no blank line between
+- **JSDoc (TypeScript):** Block comments directly above the function/component, no blank line between comment and declaration
+
+### Examples
+
+**Good (Python):**
+```python
+def process_data():
+    # Validate input first
+
+    validated = validate(data)
+
+    # Transform the data
+
+    return transform(validated)
+```
+
+**Good (TypeScript):**
+```typescript
+function Component() {
+  return (
+    <div>
+      {/* Header section */}
+      <header>...</header>
+      {/* Content section */}
+      <main>...</main>
+    </div>
+  );
+}
+```
+
+---
+
 ## Python Guidelines (`/scraper`)
 
 ### Structure
@@ -36,6 +103,7 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 
 ### Imports
 - Order: stdlib → third-party → local
+- Alphabetize within each group
 - Use absolute imports: `from src.scraper import NextdoorScraper`
 
 ### Error Handling
@@ -63,7 +131,8 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 - Use Next.js App Router (`app/` directory)
 - API routes in `app/api/`
 - Components in `components/`
-- Utilities in `lib/`
+- Server-only utilities in `lib/*.server.ts`
+- Client utilities in `lib/*.client.ts`
 
 ### Style
 - Use TypeScript strict mode
@@ -84,8 +153,8 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 - Use `getServerSession` for auth checks
 
 ### Database
-- Use Supabase client from `lib/supabase.ts`
-- Use `supabaseAdmin` for server-side operations
+- Use `getSupabase()` from `lib/supabase.client.ts` for client-side
+- Use `getSupabaseAdmin()` from `lib/supabase.server.ts` for server-side
 - Never expose service keys to client
 
 ### Auth
@@ -102,6 +171,7 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 - Use `TIMESTAMPTZ` not `TIMESTAMP`
 - JSONB for flexible data (tags, image_urls)
 - Index columns used in WHERE clauses
+- Triggers maintain `updated_at` automatically
 
 ---
 
@@ -122,6 +192,8 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 5. Don't add dependencies unless necessary
 6. Keep functions small and focused
 7. Write code that's easy to test
+8. **Alphabetize** imports, object keys, props, and list items
+9. **Space comments** appropriately (see Comment Spacing Rules)
 
 ---
 
@@ -140,7 +212,26 @@ LLM: Claude Haiku for scoring, OpenAI for embeddings
 - Free tier: 500MB storage limit
 - Use HNSW index for vector similarity
 - Store session cookies encrypted (Fernet)
+- Environment variable: `SUPABASE_SERVICE_KEY` (consistent across Python and TypeScript)
 
 ### Special Features
 - Pittsburgh sports facts: Only for user with MATT_EMAIL env var
 - Uses Claude Haiku, called on login
+
+---
+
+## Quality Commands
+
+```bash
+# Run all linters
+make lint
+
+# Run all tests
+make test
+
+# Run security scans
+make security
+
+# Format code
+make format
+```

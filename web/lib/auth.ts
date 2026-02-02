@@ -1,7 +1,7 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-import { env } from "./env";
+import { env } from "./env.server";
 
 // Allowed emails - add users here
 const ALLOWED_EMAILS = [
@@ -18,13 +18,14 @@ if (ALLOWED_EMAILS.length === 0) {
 }
 
 export const authOptions: AuthOptions = {
-  providers: [
-    GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-    }),
-  ],
   callbacks: {
+    async session({ session, token }) {
+      // Add user email to session for easy access
+      if (session.user && token.email) {
+        session.user.email = token.email as string;
+      }
+      return session;
+    },
     async signIn({ user }) {
       // Only allow whitelisted emails
       if (!user.email) return false;
@@ -37,16 +38,15 @@ export const authOptions: AuthOptions = {
       
       return ALLOWED_EMAILS.includes(user.email);
     },
-    async session({ session, token }) {
-      // Add user email to session for easy access
-      if (session.user && token.email) {
-        session.user.email = token.email as string;
-      }
-      return session;
-    },
   },
   pages: {
-    signIn: "/login",
     error: "/login",
+    signIn: "/login",
   },
+  providers: [
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
 };

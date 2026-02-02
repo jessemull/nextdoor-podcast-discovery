@@ -1,4 +1,4 @@
-.PHONY: help db-up db-down dev-scraper dev-web test gen-key install install-scraper install-web clean venv
+.PHONY: help db-up db-down dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
 
 # Default target
 help:
@@ -19,6 +19,17 @@ help:
 	@echo "Development:"
 	@echo "  dev-scraper      Run scraper in dry-run mode"
 	@echo "  dev-web          Start Next.js dev server"
+	@echo ""
+	@echo "Quality:"
+	@echo "  lint             Run all linters"
+	@echo "  lint-scraper     Run Python linters (ruff, mypy)"
+	@echo "  lint-web         Run TypeScript linter (eslint)"
+	@echo "  format           Format all code"
+	@echo ""
+	@echo "Security:"
+	@echo "  security         Run all security scans"
+	@echo "  security-scraper Run Python security scans (bandit, pip-audit)"
+	@echo "  security-web     Run TypeScript security scan (npm audit)"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test             Run all tests"
@@ -71,11 +82,39 @@ dev-scraper:
 dev-web:
 	cd web && npm run dev
 
+# Linting
+lint: lint-scraper lint-web
+
+lint-scraper:
+	cd scraper && ruff check src/
+	cd scraper && mypy src/
+
+lint-web:
+	cd web && npm run lint
+
+format:
+	cd scraper && ruff format src/
+	cd scraper && ruff check --fix src/
+
+# Security
+security: security-scraper security-web
+
+security-scraper:
+	@echo "Running bandit (Python security linter)..."
+	cd scraper && bandit -r src/ -ll
+	@echo ""
+	@echo "Running pip-audit (dependency vulnerabilities)..."
+	cd scraper && pip-audit
+
+security-web:
+	@echo "Running npm audit (dependency vulnerabilities)..."
+	cd web && npm audit
+
 # Testing
 test: test-scraper test-web
 
 test-scraper:
-	cd scraper && pytest
+	cd scraper && pytest -v
 
 test-web:
 	cd web && npm test
