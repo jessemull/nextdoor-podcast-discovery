@@ -53,8 +53,8 @@ make db-up
 
 # Copy environment variables
 cp scraper/.env.example scraper/.env
-cp web/.env.example web/.env
-# Edit both .env files with your API keys
+cp web/.env.example web/.env.local
+# Edit both files with your API keys
 
 # Run the scraper (dry run)
 make dev-scraper

@@ -4,8 +4,14 @@ import argparse
 import logging
 import sys
 
+from dotenv import load_dotenv
+
 from src.config import validate_env
 from src.exceptions import ScraperError
+
+# Load environment variables from .env file
+
+load_dotenv()
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

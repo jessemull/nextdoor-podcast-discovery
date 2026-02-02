@@ -21,17 +21,22 @@ pip install -r requirements-dev.txt
 
 ## Environment Variables
 
-Create a `.env` file (see `.env.example` in project root):
+Copy the example file and fill in your values:
 
 ```bash
-NEXTDOOR_EMAIL=your-email@example.com
-NEXTDOOR_PASSWORD=your-password
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_KEY=eyJ...
-SESSION_ENCRYPTION_KEY=your-fernet-key
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
+cp .env.example .env
+# Edit .env with your values
 ```
+
+Required variables (see `.env.example` for details):
+
+- `NEXTDOOR_EMAIL` — Your Nextdoor account email
+- `NEXTDOOR_PASSWORD` — Your Nextdoor account password
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_SERVICE_KEY` — Supabase service role key (not anon key)
+- `SESSION_ENCRYPTION_KEY` — Fernet key for cookie encryption
+- `ANTHROPIC_API_KEY` — Claude API key for scoring
+- `OPENAI_API_KEY` — OpenAI API key for embeddings
 
 ## Usage
 
@@ -55,17 +60,12 @@ pytest
 scraper/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py              # Entry point
-│   ├── config.py            # Configuration
-│   ├── exceptions.py        # Custom exceptions
-│   ├── scraper.py           # Browser automation
-│   ├── session_manager.py   # Cookie management
-│   ├── post_extractor.py    # DOM parsing
-│   ├── llm_scorer.py        # Claude scoring
-│   ├── embedder.py          # OpenAI embeddings
-│   └── ranker.py            # Score calculation
+│   ├── main.py           # Entry point
+│   ├── config.py         # Configuration
+│   └── exceptions.py     # Custom exceptions
 ├── tests/
 │   └── test_*.py
+├── .env.example          # Example environment variables
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
