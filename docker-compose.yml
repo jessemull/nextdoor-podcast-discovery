@@ -1,0 +1,26 @@
+version: '3.8'
+
+# Local development database
+# Note: In production, we use Supabase. This is for local dev only.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: nextdoor-db
+    environment:
+      POSTGRES_USER: nextdoor
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: nextdoor
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextdoor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
