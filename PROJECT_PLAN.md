@@ -1389,20 +1389,20 @@ jobs:
 
 ### Phase 1: Foundation
 
-- [ ] **1.1** Initialize repository structure
-  - [ ] Create directory structure per Section 5
-  - [ ] Set up Python project with `pyproject.toml`
-  - [ ] Set up Next.js project with TypeScript
-  - [ ] Create `docker-compose.yml`
-  - [ ] Create `.env.example` files
-  - [ ] Create `Makefile`
+- [x] **1.1** Initialize repository structure
+  - [x] Create directory structure per Section 5
+  - [x] Set up Python project with `pyproject.toml`
+  - [x] Set up Next.js project with TypeScript
+  - [x] Create `docker-compose.yml`
+  - [x] Create `.env.example` files
+  - [x] Create `Makefile`
 
-- [ ] **1.2** Supabase setup
-  - [ ] Create Supabase project (free tier)
-  - [ ] Enable pgvector extension
-  - [ ] Run SQL migrations (Section 7)
+- [x] **1.2** Supabase setup
+  - [x] Create Supabase project (free tier)
+  - [x] Enable pgvector extension
+  - [ ] Run SQL migrations (Section 7) — need to run in Supabase SQL Editor
   - [ ] Create seed data
-  - [ ] Note down URL and keys
+  - [x] Note down URL and keys
 
 - [ ] **1.3** GitHub setup
   - [ ] Add all secrets (Section 11)
@@ -1416,11 +1416,11 @@ jobs:
   - [ ] Post extractor
   - [ ] Deduplication
 
-- [ ] **2.2** Reliability
-  - [ ] Retry logic
-  - [ ] Error handling
-  - [ ] Logging
-  - [ ] Dry-run mode
+- [x] **2.2** Reliability (scaffold only)
+  - [x] Retry logic (tenacity configured)
+  - [x] Error handling (custom exceptions)
+  - [x] Logging (configured)
+  - [x] Dry-run mode (working)
 
 - [ ] **2.3** GitHub Actions
   - [ ] Create `scrape.yml`
@@ -1446,24 +1446,26 @@ jobs:
 
 ### Phase 4: Web UI
 
-- [ ] **4.1** Authentication
-  - [ ] NextAuth.js + Google OAuth
-  - [ ] Email whitelist
-  - [ ] Protected routes
+- [x] **4.1** Authentication
+  - [x] NextAuth.js + Google OAuth
+  - [x] Email whitelist
+  - [x] Protected routes (middleware)
 
-- [ ] **4.2** Core pages
+- [ ] **4.2** Core pages (scaffolds exist, need implementation)
   - [ ] Post feed with pagination
   - [ ] Post detail page
-  - [ ] Search page
-  - [ ] Settings page
+  - [x] Search page (placeholder)
+  - [x] Settings page (placeholder)
 
-- [ ] **4.3** Components
-  - [ ] PostCard
+- [x] **4.3** Components (core done)
+  - [x] PostCard
   - [ ] RankingSliders
   - [ ] TagFilter
   - [ ] NeighborhoodFilter
   - [ ] SearchBar
-  - [ ] **SportsFact** (for Matt)
+  - [x] **SportsFact** (for special user)
+  - [x] Navbar
+  - [x] ErrorBoundary
 
 - [ ] **4.4** API routes
   - [ ] GET /api/posts
@@ -1471,7 +1473,7 @@ jobs:
   - [ ] POST /api/posts/:id/use
   - [ ] GET /api/search
   - [ ] PUT /api/settings
-  - [ ] **GET /api/sports-fact**
+  - [x] **GET /api/sports-fact**
 
 ### Phase 5: Deployment
 
@@ -1489,9 +1491,9 @@ jobs:
 
 - [ ] **6.1** Testing
   - [ ] Run scraper
-  - [ ] Test UI features
-  - [ ] Test auth
-  - [ ] Test Matt's sports facts
+  - [x] Test UI features (basic navigation working)
+  - [x] Test auth (Google OAuth working)
+  - [ ] Test sports facts (API ready, needs debugging)
 
 - [ ] **6.2** Go live
   - [ ] Enable daily schedule
