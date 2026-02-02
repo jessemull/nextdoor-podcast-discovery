@@ -21,14 +21,19 @@ pip install -r requirements-dev.txt
 
 ## Environment Variables
 
-Copy the example file and fill in your values:
+Create a `.env` file and fill in your values:
 
 ```bash
-cp .env.example .env
+touch .env
 # Edit .env with your values
+
+# Load variables into your shell (zsh/bash)
+set -a
+source .env
+set +a
 ```
 
-Required variables (see `.env.example` for details):
+Required variables:
 
 - `NEXTDOOR_EMAIL` — Your Nextdoor account email
 - `NEXTDOOR_PASSWORD` — Your Nextdoor account password
@@ -65,7 +70,7 @@ scraper/
 │   └── exceptions.py     # Custom exceptions
 ├── tests/
 │   └── test_*.py
-├── .env.example          # Example environment variables
+├── .env                 # Environment variables (local only)
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md

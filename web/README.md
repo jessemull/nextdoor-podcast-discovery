@@ -8,8 +8,8 @@ Next.js frontend for the Podcast Discovery Platform.
 # Install dependencies
 npm install
 
-# Copy environment variables
-cp .env.example .env.local
+# Create environment variables file
+touch .env.local
 # Edit .env.local with your values
 
 # Run development server
@@ -20,13 +20,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
 
-Copy the example file and fill in your values:
+Create a `.env.local` file and add your values:
 
 ```bash
-cp .env.example .env.local
+touch .env.local
 ```
 
-See `.env.example` for all required variables including:
+Required variables include:
 
 - Supabase URLs and keys (public and server-side)
 - NextAuth.js configuration
@@ -45,7 +45,6 @@ web/
 │   └── providers.tsx     # React Query + NextAuth providers
 ├── components/           # React components
 ├── lib/                  # Utilities and clients
-├── .env.example          # Example environment variables
 └── public/               # Static assets
 ```
 

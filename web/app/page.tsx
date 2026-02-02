@@ -10,10 +10,8 @@ export default function Home() {
         <p className="text-lg text-gray-400 mb-8">
           Discover and curate interesting Nextdoor posts for your podcast.
         </p>
-
         {/* Sports fact banner for Matt */}
         <SportsFact />
-
         {/* TODO: Add PostFeed component */}
         <div className="bg-gray-800 rounded-lg p-6">
           <p className="text-gray-300">

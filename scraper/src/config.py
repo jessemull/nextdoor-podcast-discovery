@@ -33,7 +33,9 @@ SCRAPER_CONFIG = {
     "headless": True,
     "max_posts_per_run": 100,
     "scroll_delay_ms": (2000, 5000),
-    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    "user_agent": (
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+    ),
 }
 
 

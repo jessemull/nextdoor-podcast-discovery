@@ -51,10 +51,15 @@ make install
 # Start local database
 make db-up
 
-# Copy environment variables
-cp scraper/.env.example scraper/.env
-cp web/.env.example web/.env.local
+# Create environment variable files
+touch scraper/.env
+touch web/.env.local
 # Edit both files with your API keys
+
+# Load scraper env vars into your shell (zsh/bash)
+set -a
+source scraper/.env
+set +a
 
 # Run the scraper (dry run)
 make dev-scraper
