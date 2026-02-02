@@ -1,17 +1,19 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
+import { env } from "./env";
+
 // Allowed emails - add users here
 const ALLOWED_EMAILS = [
-  process.env.ALLOWED_EMAIL_1,
-  process.env.MATT_EMAIL, // Matt gets Pittsburgh sports facts!
+  env.ALLOWED_EMAIL_1,
+  env.MATT_EMAIL,
 ].filter(Boolean) as string[];
 
 export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),
   ],
   callbacks: {

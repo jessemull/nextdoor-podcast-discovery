@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "echo \"No tests yet\""
+    "test": "echo 'No tests configured yet' && exit 1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

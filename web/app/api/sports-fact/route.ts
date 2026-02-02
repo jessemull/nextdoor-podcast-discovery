@@ -3,12 +3,18 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
-import { CLAUDE_MODEL } from "@/lib/env";
+import { env, CLAUDE_MODEL } from "@/lib/env";
 import type { SportsFactResponse, ErrorResponse } from "@/lib/types";
 
-const anthropic = new Anthropic();
+// Lazy-initialized Anthropic client
+let _anthropic: Anthropic | null = null;
 
-const MATT_EMAIL = process.env.MATT_EMAIL;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic();
+  }
+  return _anthropic;
+}
 
 const SPORTS_FACT_PROMPT = `Give me one random, interesting, and lesser-known fact about Pittsburgh sports teams (Steelers, Pirates, or Penguins). 
 
@@ -23,13 +29,14 @@ Return ONLY the fact, no preamble.`;
 
 export async function GET(): Promise<NextResponse<SportsFactResponse | ErrorResponse>> {
   const session = await getServerSession(authOptions);
+  const mattEmail = env.MATT_EMAIL;
 
-  if (!session?.user?.email || session.user.email !== MATT_EMAIL) {
+  if (!session?.user?.email || session.user.email !== mattEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 150,
       messages: [

@@ -3,14 +3,14 @@
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 
+import { clientEnv } from "@/lib/env";
 import type { SportsFactResponse } from "@/lib/types";
-
-const MATT_EMAIL = process.env.NEXT_PUBLIC_MATT_EMAIL;
 
 export function SportsFact() {
   const { data: session } = useSession();
 
-  const isMatt = session?.user?.email === MATT_EMAIL;
+  const mattEmail = clientEnv.MATT_EMAIL;
+  const isMatt = session?.user?.email === mattEmail;
 
   const { data, isLoading } = useQuery<SportsFactResponse>({
     queryKey: ["sports-fact"],

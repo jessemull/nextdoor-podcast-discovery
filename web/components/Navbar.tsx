@@ -14,12 +14,14 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
+          {/* TODO: Create /search page with semantic search */}
           <Link
             href="/search"
             className="text-gray-400 hover:text-white transition-colors"
           >
             Search
           </Link>
+          {/* TODO: Create /settings page for ranking weights */}
           <Link
             href="/settings"
             className="text-gray-400 hover:text-white transition-colors"

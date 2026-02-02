@@ -4,6 +4,8 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
+import { env, clientEnv } from "./env";
+
 // Lazy-initialized client instances
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
@@ -14,14 +16,7 @@ let _supabaseAdmin: SupabaseClient | null = null;
  */
 export function getSupabase(): SupabaseClient {
   if (!_supabase) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!url || !anonKey) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    _supabase = createClient(url, anonKey);
+    _supabase = createClient(clientEnv.SUPABASE_URL, clientEnv.SUPABASE_ANON_KEY);
   }
   return _supabase;
 }
@@ -33,14 +28,7 @@ export function getSupabase(): SupabaseClient {
  */
 export function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
-    const url = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-
-    if (!url || !serviceKey) {
-      throw new Error("Missing Supabase admin environment variables");
-    }
-
-    _supabaseAdmin = createClient(url, serviceKey);
+    _supabaseAdmin = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
   }
   return _supabaseAdmin;
 }

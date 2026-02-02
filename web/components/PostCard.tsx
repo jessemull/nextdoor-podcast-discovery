@@ -6,9 +6,10 @@ import { formatRelativeTime, truncate } from "@/lib/utils";
 interface PostCardProps {
   post: PostWithScores;
   onMarkUsed?: (postId: string) => void;
+  onViewDetails?: (postId: string) => void;
 }
 
-export function PostCard({ post, onMarkUsed }: PostCardProps) {
+export function PostCard({ post, onMarkUsed, onViewDetails }: PostCardProps) {
   const scores = post.llm_scores;
   const ranking = post.rankings;
 
@@ -69,15 +70,20 @@ export function PostCard({ post, onMarkUsed }: PostCardProps) {
       {/* Summary */}
       {scores?.summary && (
         <p className="text-sm text-gray-400 italic mb-3">
-          "{scores.summary}"
+          &ldquo;{scores.summary}&rdquo;
         </p>
       )}
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button className="text-xs text-gray-400 hover:text-white transition-colors">
-          View Details
-        </button>
+        {onViewDetails && (
+          <button
+            onClick={() => onViewDetails(post.id)}
+            className="text-xs text-gray-400 hover:text-white transition-colors"
+          >
+            View Details
+          </button>
+        )}
         {!ranking?.used_on_episode && onMarkUsed && (
           <button
             onClick={() => onMarkUsed(post.id)}

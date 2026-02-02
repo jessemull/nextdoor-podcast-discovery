@@ -36,6 +36,11 @@ export interface LLMScore {
   processed_at: string;
 }
 
+/**
+ * Post embedding record.
+ * NOTE: The `embedding` field contains 1536 floats and should NOT be
+ * fetched in normal queries. Use Supabase RPC for similarity search.
+ */
 export interface PostEmbedding {
   id: string;
   post_id: string;

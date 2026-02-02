@@ -23,11 +23,10 @@ def main(dry_run: bool = False) -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    logger.info("Starting scraper pipeline", extra={"dry_run": dry_run})
+    logger.info("Starting scraper pipeline (dry_run=%s)", dry_run)
 
-    # Validate environment variables first
-    if not dry_run:
-        validate_env()
+    # Always validate environment variables
+    validate_env()
 
     try:
         # TODO: Implement scraper pipeline
@@ -46,10 +45,10 @@ def main(dry_run: bool = False) -> int:
         return 0
 
     except ScraperError as e:
-        logger.error(f"Scraper error: {e}")
+        logger.error("Scraper error: %s", e)
         return 1
     except Exception as e:
-        logger.exception(f"Unexpected error ({type(e).__name__}): {e}")
+        logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
         return 1
 
 

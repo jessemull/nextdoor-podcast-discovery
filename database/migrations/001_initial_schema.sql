@@ -24,6 +24,8 @@ CREATE TABLE sessions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+
 -- Posts table
 CREATE TABLE posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -25,6 +25,16 @@ jobs:
         run: |
           cd scraper
           pip install -r requirements.txt
+      
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('scraper/requirements.txt') }}
+      
+      - name: Install Playwright browsers
+        run: |
+          cd scraper
           playwright install chromium
       
       - name: Run scraper pipeline
