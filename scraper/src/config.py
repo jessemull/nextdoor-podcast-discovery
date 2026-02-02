@@ -4,16 +4,19 @@ import os
 import sys
 
 # Claude settings
+
 CLAUDE_MAX_TOKENS = 500
 CLAUDE_MODEL = "claude-3-haiku-20240307"
 
 # OpenAI settings
+
 EMBEDDING_BATCH_SIZE = 100
 EMBEDDING_DIMENSIONS = 1536
 EMBEDDING_MODEL = "text-embedding-3-small"
 
 # Required environment variables
 # NOTE: Both scraper and web use SUPABASE_SERVICE_KEY for consistency
+
 REQUIRED_ENV_VARS = [
     "ANTHROPIC_API_KEY",
     "NEXTDOOR_EMAIL",
@@ -25,10 +28,11 @@ REQUIRED_ENV_VARS = [
 ]
 
 # Scraper settings
+
 SCRAPER_CONFIG = {
-    "headless": True,  # GitHub Actions = headless only
+    "headless": True,
     "max_posts_per_run": 100,
-    "scroll_delay_ms": (2000, 5000),  # Random delay range
+    "scroll_delay_ms": (2000, 5000),
     "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
 }
 

@@ -23,6 +23,7 @@ describe("truncate", () => {
 
   it("should truncate long text with ellipsis within limit", () => {
     // maxLength includes the "..." so 8 chars means 5 content + 3 dots
+
     expect(truncate("hello world", 8)).toBe("hello...");
   });
 
@@ -35,6 +36,7 @@ describe("truncate", () => {
     const result = truncate(longText, POST_PREVIEW_LENGTH);
 
     // maxLength includes "..." so result should be exactly POST_PREVIEW_LENGTH
+
     expect(result.length).toBe(POST_PREVIEW_LENGTH);
   });
 });

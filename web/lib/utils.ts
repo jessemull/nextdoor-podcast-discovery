@@ -22,6 +22,7 @@ export function formatRelativeTime(date: null | string): string {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   // Handle future dates
+
   if (diffDays < 0) {
     const futureDays = Math.abs(diffDays);
     if (futureDays === 1) return "Tomorrow";
@@ -31,6 +32,7 @@ export function formatRelativeTime(date: null | string): string {
   }
 
   // Handle past dates
+
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
@@ -48,4 +50,5 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 // UI Constants
+
 export const POST_PREVIEW_LENGTH = 300;

@@ -59,11 +59,14 @@ class TestValidateEnv:
 
         with mock.patch.dict(os.environ, env_vars, clear=True):
             # Should not raise
+
             validate_env()
 
     def test_validate_env_with_missing_var(self) -> None:
         """Should exit when a required var is missing."""
+
         # Set all but one
+
         env_vars = {var: "test_value" for var in REQUIRED_ENV_VARS[:-1]}
 
         with mock.patch.dict(os.environ, env_vars, clear=True):

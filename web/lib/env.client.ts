@@ -1,6 +1,6 @@
 /**
  * Client-side environment variables.
- * 
+ *
  * These are safe to use in client components.
  * All variables must be prefixed with NEXT_PUBLIC_.
  */

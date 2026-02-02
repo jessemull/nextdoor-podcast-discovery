@@ -12,6 +12,7 @@ export function SportsFact() {
   const { data: session } = useSession();
 
   // Memoize to avoid re-evaluating getter on every render
+
   const mattEmail = useMemo(() => clientEnv.MATT_EMAIL, []);
   const isMatt = session?.user?.email === mattEmail;
 

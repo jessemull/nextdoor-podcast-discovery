@@ -8,8 +8,8 @@ from src.config import validate_env
 from src.exceptions import ScraperError
 
 logging.basicConfig(
-    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ def main(dry_run: bool = False) -> int:
     logger.info("Starting scraper pipeline (dry_run=%s)", dry_run)
 
     # Always validate environment variables
+
     validate_env()
 
     try:

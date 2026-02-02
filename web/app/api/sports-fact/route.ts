@@ -8,6 +8,7 @@ import { CLAUDE_MODEL, env } from "@/lib/env.server";
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
 
 // Lazy-initialized Anthropic client
+
 let _anthropic: Anthropic | null = null;
 
 function getAnthropic(): Anthropic {
@@ -56,6 +57,7 @@ export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResp
     console.error("Failed to generate sports fact:", error);
 
     // Return fallback with a flag indicating it's not from the API
+
     return NextResponse.json({
       fact: "The Steelers have won 6 Super Bowls, more than any other NFL team!",
       source: "fallback",
