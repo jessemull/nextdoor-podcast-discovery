@@ -31,9 +31,9 @@ Return ONLY the fact, no preamble.`;
 
 export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
   const session = await getServerSession(authOptions);
-  const mattEmail = env.MATT_EMAIL;
+  const userEmail = env.USER_EMAIL;
 
-  if (!session?.user?.email || session.user.email !== mattEmail) {
+  if (!session?.user?.email || session.user.email !== userEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

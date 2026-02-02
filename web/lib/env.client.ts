@@ -14,13 +14,13 @@ function getEnvVar(name: string, required: boolean = true): string {
 }
 
 export const clientEnv = {
-  get MATT_EMAIL() {
-    return getEnvVar("NEXT_PUBLIC_MATT_EMAIL", false);
-  },
   get SUPABASE_ANON_KEY() {
     return getEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   },
   get SUPABASE_URL() {
     return getEnvVar("NEXT_PUBLIC_SUPABASE_URL");
+  },
+  get USER_EMAIL() {
+    return getEnvVar("NEXT_PUBLIC_USER_EMAIL", false);
   },
 };

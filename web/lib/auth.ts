@@ -6,8 +6,8 @@ import { env } from "./env.server";
 // Allowed emails - add users here
 
 const ALLOWED_EMAILS = [
-  env.ALLOWED_EMAIL_1,
-  env.MATT_EMAIL,
+  env.ALLOWED_EMAIL,
+  env.USER_EMAIL,
 ].filter(Boolean) as string[];
 
 // Warn if no users are whitelisted
@@ -15,7 +15,7 @@ const ALLOWED_EMAILS = [
 if (ALLOWED_EMAILS.length === 0) {
   console.warn(
     "⚠️  WARNING: No allowed emails configured. " +
-    "Set ALLOWED_EMAIL_1 or MATT_EMAIL environment variables to allow sign-in."
+    "Set ALLOWED_EMAIL or USER_EMAIL environment variables to allow sign-in."
   );
 }
 

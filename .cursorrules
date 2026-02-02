@@ -276,7 +276,7 @@ it("should [expected behavior] when [condition]", () => {
 - Environment variable: `SUPABASE_SERVICE_KEY` (consistent across Python and TypeScript)
 
 ### Special Features
-- Pittsburgh sports facts: Only for user with MATT_EMAIL env var
+- Pittsburgh sports facts: Only for user with USER_EMAIL env var
 - Uses Claude Haiku, called on login
 
 ---

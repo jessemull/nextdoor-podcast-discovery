@@ -900,7 +900,7 @@ import { authOptions } from '@/lib/auth';
 const anthropic = new Anthropic();
 
 // Matt's email (configure in env or hardcode)
-const MATT_EMAIL = process.env.MATT_EMAIL || 'matt@example.com';
+const USER_EMAIL = process.env.USER_EMAIL || 'matt@example.com';
 
 const SPORTS_FACT_PROMPT = `Give me one random, interesting, and lesser-known fact about Pittsburgh sports teams (Steelers, Pirates, or Penguins). 
 
@@ -917,7 +917,7 @@ export async function GET() {
   // Verify user is Matt
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.email || session.user.email !== MATT_EMAIL) {
+  if (!session?.user?.email || session.user.email !== USER_EMAIL) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -954,7 +954,7 @@ import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-const MATT_EMAIL = 'matt@example.com'; // Or from env
+const USER_EMAIL = 'matt@example.com'; // Or from env
 
 export function SportsFact() {
   const { data: session } = useSession();
@@ -962,7 +962,7 @@ export function SportsFact() {
 
   // Only fetch for Matt
   useEffect(() => {
-    if (session?.user?.email === MATT_EMAIL) {
+    if (session?.user?.email === USER_EMAIL) {
       setShouldFetch(true);
     }
   }, [session]);
@@ -1134,7 +1134,7 @@ All secrets in GitHub repository settings:
 | `GOOGLE_CLIENT_ID` | OAuth for web UI |
 | `GOOGLE_CLIENT_SECRET` | OAuth for web UI |
 | `NEXTAUTH_SECRET` | NextAuth session encryption |
-| `MATT_EMAIL` | Matt's email for sports facts |
+| `USER_EMAIL` | Matt's email for sports facts |
 
 ### Data Privacy
 
