@@ -35,12 +35,96 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 
 | Capability | Description |
 |------------|-------------|
-| **Automated Scraping** | Daily collection of posts from configured neighborhoods |
+| **Automated Scraping** | Twice-daily collection from Recent + Trending feeds |
 | **LLM Analysis** | Score posts on humor, absurdity, drama, relatability |
 | **Semantic Search** | Find related posts by meaning, not just keywords |
 | **Curation Dashboard** | Private web UI for browsing, filtering, and selecting posts |
 | **Episode Tracking** | Mark posts as used, prevent duplicates |
 | **Pittsburgh Sports Facts** | Random facts for Matt on each login (powered by Claude) |
+
+---
+
+## 1.1 How Nextdoor Feed Works
+
+### Feed Tabs
+
+Nextdoor's news feed has 4 tabs (discovered via DOM inspection):
+
+| Tab | URL Pattern | Content Type | Value for Podcast |
+|-----|-------------|--------------|-------------------|
+| **For You** | `/news_feed/` (default) | Algorithmic recommendations | Mixed quality, personalized |
+| **Recent** | `/news_feed/?ordering=recent` | Chronological, newest first | Fresh content, high volume |
+| **Nearby** | `/news_feed/?ordering=nearby` | Proximity-based | Location-specific |
+| **Trending** | `/news_feed/?ordering=trending` | High-engagement posts | **Best for absurd/viral content** |
+
+### Why We Scrape Both Recent AND Trending
+
+| Feed | Pros | Cons |
+|------|------|------|
+| **Recent** | Fresh content, comprehensive coverage | Lots of mundane posts |
+| **Trending** | High-engagement, often dramatic/absurd | May miss new gems |
+
+**Our Strategy**: Scrape both to maximize coverage. Deduplication prevents double-counting.
+
+### Feed Behavior
+
+- **Infinite Scroll**: Posts load dynamically as you scroll down
+- **No Pagination**: Must scroll to load more content
+- **Mobile-Optimized**: We use iPhone user agent for cleaner DOM
+- **Rate Limiting**: Human-like delays prevent detection (2-5s between scrolls)
+
+---
+
+## 1.2 Scraping Strategy
+
+### Daily Scraping (Production)
+
+We run **two cron jobs** at different times to capture both feed types:
+
+| Job | Schedule (UTC) | Feed | Posts | Purpose |
+|-----|----------------|------|-------|---------|
+| **Morning Scrape** | 6:00 AM | Recent | 250 | Catch overnight posts |
+| **Evening Scrape** | 6:00 PM | Trending | 250 | Catch viral/engaging content |
+
+**Target**: ~500 posts/day (with ~10-20% overlap after deduplication)
+
+### Deduplication
+
+Posts are deduplicated using SHA256 hash of normalized content:
+
+```python
+def generate_hash(text: str, author_id: str) -> str:
+    """Generate unique hash for post deduplication."""
+    normalized = text.strip().lower()
+    content = f"{author_id}:{normalized}"
+    return hashlib.sha256(content.encode()).hexdigest()
+```
+
+The `posts` table has a unique constraint on `(neighborhood_id, hash)` so duplicates are rejected at the database level.
+
+### Backfill Strategy (Optional)
+
+For initial data population, we can run manual backfill jobs:
+
+```bash
+# Run with higher post count to gather historical data
+python -m src.main --feed-type recent --max-posts 500
+python -m src.main --feed-type trending --max-posts 500
+```
+
+Each run scrolls deeper into the feed, capturing older posts. Run a few times manually before enabling scheduled jobs to build initial corpus.
+
+### Bot Detection Mitigation
+
+| Technique | Implementation |
+|-----------|----------------|
+| Human-like typing | Random delays 50-150ms per character |
+| Scroll delays | Random 2-5 seconds between scrolls |
+| Mobile user agent | iPhone iOS 17 Safari |
+| Session reuse | Encrypted cookies stored in Supabase |
+| Viewport | iPhone 14 Pro dimensions (375×812) |
+
+---
 
 ### Cost-Optimized Approach
 
@@ -423,26 +507,49 @@ Numbered SQL files, run in order:
 
 ## 6. Data Flow
 
-### Daily Pipeline (GitHub Actions)
+### Dual-Feed Pipeline (GitHub Actions)
+
+We run **two separate cron jobs** to capture different types of content:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  SCHEDULED WORKFLOW: Daily @ 2:00 AM UTC                                │
+│  WORKFLOW 1: RECENT FEED @ 6:00 AM UTC                                  │
+│  ────────────────────────────────────────────────────────────────────── │
+│  Feed: Recent (chronological)                                           │
+│  Target: 250 posts                                                      │
+│  Purpose: Catch fresh overnight content                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  WORKFLOW 2: TRENDING FEED @ 6:00 PM UTC                                │
+│  ────────────────────────────────────────────────────────────────────── │
+│  Feed: Trending (high-engagement)                                       │
+│  Target: 250 posts                                                      │
+│  Purpose: Catch viral/absurd/dramatic posts                             │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Pipeline Steps (Each Run)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  SCRAPE JOB (~3 minutes)                                                │
 │  ────────────────────────────────────────────────────────────────────── │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │  JOB 1: SCRAPE (~3 minutes)                                        │  │
+│  │  STEP 1: SCRAPE                                                    │  │
 │  │  ──────────────────────────────────────────────────────────────── │  │
-│  │  1. Install Playwright + browsers                                 │  │
+│  │  1. Install Playwright + Chromium                                 │  │
 │  │  2. Load session cookies from Supabase (or login fresh)           │  │
-│  │  3. For each active neighborhood:                                 │  │
-│  │     a. Navigate to feed (mobile view)                             │  │
-│  │     b. Scroll and extract posts                                   │  │
-│  │     c. Compute SHA256 hash                                        │  │
-│  │     d. Skip if hash exists (dedup)                                │  │
-│  │     e. Insert new posts                                           │  │
-│  │  4. Save updated session cookies to Supabase                      │  │
-│  │  5. Output: List of new post IDs                                  │  │
+│  │  3. Navigate to feed (Recent or Trending based on --feed-type)    │  │
+│  │  4. Scroll and extract posts:                                     │  │
+│  │     a. Parse post container for text, author, timestamp, images   │  │
+│  │     b. Compute SHA256 hash of content                             │  │
+│  │     c. Skip if hash exists in DB (dedup)                          │  │
+│  │     d. Insert new posts into Supabase                             │  │
+│  │  5. Stop when reaching max_posts (250) or no new content          │  │
+│  │  6. Save updated session cookies to Supabase                      │  │
+│  │  7. Output: Count of new posts inserted                           │  │
 │  └────────────────────────────────────────────────────────────────────┘  │
 │                                    │                                     │
 │                                    ▼                                     │
@@ -747,15 +854,46 @@ class SessionManager:
         }).execute()
 ```
 
-**Configuration**:
+**CLI Arguments**:
+
+```bash
+# Basic usage
+python -m src.main                              # Default: recent feed, 250 posts
+
+# Feed type selection
+python -m src.main --feed-type recent           # Scrape Recent tab (chronological)
+python -m src.main --feed-type trending         # Scrape Trending tab (high-engagement)
+
+# Post limits
+python -m src.main --max-posts 500              # Scrape up to 500 posts (for backfill)
+python -m src.main --max-posts 100              # Quick test run
+
+# Development flags
+python -m src.main --dry-run                    # Don't save to database
+python -m src.main --visible                    # Show browser (not headless)
+
+# Combined example (backfill trending)
+python -m src.main --feed-type trending --max-posts 500 --visible
+```
+
+**Configuration** (in `scraper/src/config.py`):
 
 ```python
-# scraper/src/config.py
 SCRAPER_CONFIG = {
-    "headless": True,                    # GitHub Actions = headless only
-    "scroll_delay_ms": (2000, 5000),     # Random delay range
-    "max_posts_per_run": 100,
+    "headless": True,                    # Default: headless (GitHub Actions)
+    "login_timeout_ms": 15000,           # Wait for login redirect
+    "max_posts_per_run": 250,            # Default posts per scrape
+    "navigation_timeout_ms": 10000,      # Page load timeout
+    "scroll_delay_ms": (2000, 5000),     # Random delay between scrolls
+    "typing_delay_ms": (50, 150),        # Human-like typing speed
     "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    "viewport": {"width": 375, "height": 812},  # iPhone 14 Pro
+}
+
+# Feed URLs
+FEED_URLS = {
+    "recent": "https://nextdoor.com/news_feed/?ordering=recent",
+    "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
 ```
 
@@ -1284,16 +1422,22 @@ gen-key:
 
 ### GitHub Actions Workflows
 
-#### Scraper (Daily Schedule)
+#### Scraper (Dual-Feed Strategy)
+
+We use **two scheduled workflows** to scrape different feeds at different times:
 
 ```yaml
-# .github/workflows/scrape.yml
-name: Daily Scrape
+# .github/workflows/scrape-recent.yml
+name: Scrape Recent Feed
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 2:00 AM UTC daily
+    - cron: '0 6 * * *'  # 6:00 AM UTC daily
   workflow_dispatch:
+    inputs:
+      max_posts:
+        description: 'Maximum posts to scrape'
+        default: '250'
 
 jobs:
   scrape:
@@ -1314,7 +1458,7 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
       
-      - name: Run pipeline
+      - name: Scrape Recent Feed
         env:
           NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
           NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
@@ -1325,8 +1469,56 @@ jobs:
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
         run: |
           cd scraper
-          python -m src.main
+          python -m src.main --feed-type recent --max-posts ${{ inputs.max_posts || '250' }}
 ```
+
+```yaml
+# .github/workflows/scrape-trending.yml
+name: Scrape Trending Feed
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # 6:00 PM UTC daily
+  workflow_dispatch:
+    inputs:
+      max_posts:
+        description: 'Maximum posts to scrape'
+        default: '250'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd scraper
+          pip install -r requirements.txt
+          playwright install chromium
+      
+      - name: Scrape Trending Feed
+        env:
+          NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
+          NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
+        run: |
+          cd scraper
+          python -m src.main --feed-type trending --max-posts ${{ inputs.max_posts || '250' }}
+```
+
+**Manual Backfill**: Use `workflow_dispatch` to trigger manual runs with higher `max_posts` for initial data population.
 
 #### Web Deploy (On Push)
 
@@ -1410,21 +1602,34 @@ jobs:
 
 ### Phase 2: Scraper
 
-- [ ] **2.1** Core scraper
-  - [ ] Session manager with Supabase
-  - [ ] Playwright setup (headless)
-  - [ ] Post extractor
-  - [ ] Deduplication
+- [x] **2.1** Login & Session Management ✅ COMPLETE
+  - [x] Session manager with Supabase (encrypted cookies)
+  - [x] Playwright setup (headless + visible mode via `--visible`)
+  - [x] Login flow with human-like typing delays
+  - [x] CAPTCHA detection
+  - [x] Login error handling
+  - [x] Cookie persistence and reuse
 
-- [x] **2.2** Reliability (scaffold only)
-  - [x] Retry logic (tenacity configured)
-  - [x] Error handling (custom exceptions)
-  - [x] Logging (configured)
+- [ ] **2.2** Post Extraction (NEXT UP)
+  - [ ] Add `--feed-type` CLI argument (recent/trending)
+  - [ ] Navigate to correct feed tab
+  - [ ] Scroll and load posts (infinite scroll handling)
+  - [ ] Parse post DOM structure (text, author, timestamp, images)
+  - [ ] SHA256 deduplication hash
+  - [ ] Insert new posts to Supabase
+  - [ ] Add `--max-posts` CLI argument (default 250)
+
+- [x] **2.3** Reliability ✅ COMPLETE
+  - [x] Retry logic (tenacity for transient failures)
+  - [x] Custom exceptions (CaptchaRequiredError, LoginFailedError, etc.)
+  - [x] Structured logging
   - [x] Dry-run mode (working)
+  - [x] Context manager for browser cleanup
 
-- [ ] **2.3** GitHub Actions
-  - [ ] Create `scrape.yml`
-  - [ ] Test manual trigger
+- [ ] **2.4** GitHub Actions
+  - [ ] Create `scrape-recent.yml` (6:00 AM UTC)
+  - [ ] Create `scrape-trending.yml` (6:00 PM UTC)
+  - [ ] Test manual trigger (workflow_dispatch)
   - [ ] Verify data in Supabase
 
 ### Phase 3: LLM Integration
