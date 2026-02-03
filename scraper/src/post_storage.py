@@ -78,14 +78,14 @@ class PostStorage:
             return "error"
 
         # Prepare post data
-        # NOTE: post_id_ext is None until we implement Share modal extraction
+        # NOTE: Using content_hash as post_id_ext until we implement Share modal extraction
         # NOTE: url is None until we implement Share modal extraction
 
         post_data = {
             "hash": post.content_hash,
             "image_urls": post.image_urls,
             "neighborhood_id": neighborhood_id,
-            "post_id_ext": None,
+            "post_id_ext": post.content_hash[:32],  # Temporary: use hash prefix
             "text": post.content,
             "url": None,
             "user_id_hash": post.author_id,
