@@ -1,7 +1,25 @@
 """Configuration constants for the scraper."""
 
 import os
-import sys
+
+# Re-exported for convenience (defined in exceptions.py)
+
+from src.exceptions import ConfigurationError
+
+__all__ = [
+    "CLAUDE_MAX_TOKENS",
+    "CLAUDE_MODEL",
+    "ConfigurationError",
+    "EMBEDDING_BATCH_SIZE",
+    "EMBEDDING_DIMENSIONS",
+    "EMBEDDING_MODEL",
+    "LOGIN_URL",
+    "NEWS_FEED_URL",
+    "REQUIRED_ENV_VARS",
+    "SCRAPER_CONFIG",
+    "SELECTORS",
+    "validate_env",
+]
 
 # Claude settings
 
@@ -31,11 +49,39 @@ REQUIRED_ENV_VARS = [
 
 SCRAPER_CONFIG = {
     "headless": True,
+    "login_timeout_ms": 15000,
     "max_posts_per_run": 100,
+    "navigation_timeout_ms": 10000,
     "scroll_delay_ms": (2000, 5000),
+    "typing_delay_ms": (50, 150),
     "user_agent": (
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
     ),
+    "viewport": {"height": 812, "width": 375},
+}
+
+# URLs
+
+LOGIN_URL = "https://nextdoor.com/login/"
+NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
+
+# Login selectors (role-based for reliability)
+
+SELECTORS = {
+    "captcha_indicators": [
+        "iframe[src*='captcha']",
+        "iframe[src*='recaptcha']",
+        "[class*='captcha']",
+        "[id*='captcha']",
+    ],
+    "email_input": 'role=textbox[name="Email or mobile number"]',
+    "error_indicators": [
+        "[class*='error']",
+        "[class*='alert']",
+        "[role='alert']",
+    ],
+    "login_button": 'role=button[name="Log in"]',
+    "password_input": 'role=textbox[name="Password"]',
 }
 
 
@@ -43,11 +89,13 @@ def validate_env() -> None:
     """Validate all required environment variables are set.
 
     Call this at the start of the pipeline to fail fast.
+
+    Raises:
+        ConfigurationError: If any required env vars are missing.
     """
     missing = [var for var in REQUIRED_ENV_VARS if not os.environ.get(var)]
 
     if missing:
-        print("ERROR: Missing required environment variables:", file=sys.stderr)
-        for var in missing:
-            print(f"  - {var}", file=sys.stderr)
-        sys.exit(1)
+        raise ConfigurationError(
+            f"Missing required environment variables: {', '.join(missing)}"
+        )
