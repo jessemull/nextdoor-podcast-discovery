@@ -148,7 +148,9 @@ class PostStorage:
         )
 
         if result.data:
-            neighborhood_id = result.data[0]["id"]
+            # Cast to expected type (Supabase returns complex JSON union)
+            row: dict[str, str] = result.data[0]  # type: ignore[assignment]
+            neighborhood_id = row["id"]
             self._neighborhood_cache[name] = neighborhood_id
             return neighborhood_id
 
@@ -162,7 +164,8 @@ class PostStorage:
             )
 
             if result.data:
-                neighborhood_id = result.data[0]["id"]
+                row = result.data[0]  # type: ignore[assignment]
+                neighborhood_id = row["id"]
                 self._neighborhood_cache[name] = neighborhood_id
                 logger.info("Created neighborhood: %s (%s)", name, slug)
                 return neighborhood_id
@@ -181,7 +184,8 @@ class PostStorage:
             )
 
             if result.data:
-                neighborhood_id = result.data[0]["id"]
+                row = result.data[0]  # type: ignore[assignment]
+                neighborhood_id = row["id"]
                 self._neighborhood_cache[name] = neighborhood_id
                 return neighborhood_id
 

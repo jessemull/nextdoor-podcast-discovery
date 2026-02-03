@@ -50,7 +50,9 @@ def main(
     # Validate feed type
 
     if feed_type not in FEED_URLS:
-        logger.error("Invalid feed type: %s (must be 'recent' or 'trending')", feed_type)
+        logger.error(
+            "Invalid feed type: %s (must be 'recent' or 'trending')", feed_type
+        )
         return 1
 
     # Use default if not specified
@@ -189,7 +191,7 @@ if __name__ == "__main__":
         "--max-posts",
         type=int,
         default=None,
-        help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",
+        help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",  # noqa: E501
     )
     parser.add_argument(
         "--visible",

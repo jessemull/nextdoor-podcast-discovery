@@ -13,8 +13,10 @@ from playwright.sync_api import (
     Locator,
     Page,
     Playwright,
-    TimeoutError as PlaywrightTimeoutError,
     sync_playwright,
+)
+from playwright.sync_api import (
+    TimeoutError as PlaywrightTimeoutError,
 )
 from tenacity import (
     retry,
@@ -185,7 +187,7 @@ class NextdoorScraper:
             raise RuntimeError("Browser not started. Call start() first.")
 
         logger.info("Loading %d cookies", len(cookies))
-        self.context.add_cookies(cookies)
+        self.context.add_cookies(cookies)  # type: ignore[arg-type]
 
     def get_cookies(self) -> list[dict[str, Any]]:
         """Get current session cookies.
@@ -196,7 +198,7 @@ class NextdoorScraper:
         if not self.context:
             raise RuntimeError("Browser not started. Call start() first.")
 
-        return self.context.cookies()
+        return self.context.cookies()  # type: ignore[return-value]
 
     def is_logged_in(self) -> bool:
         """Check if currently logged in to Nextdoor.
@@ -245,14 +247,17 @@ class NextdoorScraper:
 
         # Wait for the feed to load by checking for the tab to be selected
 
-        tab_selector = SELECTORS.get(f"feed_tab_{feed_type}")
+        tab_selectors = {
+            "recent": SELECTORS["feed_tab_recent"],
+            "trending": SELECTORS["feed_tab_trending"],
+        }
+        tab_selector = tab_selectors.get(feed_type)
         if tab_selector:
             try:
                 self.page.wait_for_selector(tab_selector, timeout=timeout)
                 logger.info("Successfully loaded %s feed", feed_type)
             except PlaywrightTimeoutError:
                 # Tab might not be visible but page loaded - that's okay
-
                 logger.warning("Feed tab selector not found, but page loaded")
 
         # Small delay to let dynamic content start loading

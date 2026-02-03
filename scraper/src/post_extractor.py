@@ -8,7 +8,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from src.config import SCRAPER_CONFIG
 
@@ -50,80 +51,71 @@ def _get_extraction_script(min_content_length: int) -> str:
     Returns:
         JavaScript code string.
     """
+    # Selectors used in JavaScript extraction
+    author_sel = 'a[href*="/profile/"][href*="is=feed_author"]'
+    timestamp_sel = '[data-testid="post-timestamp"]'
+    content_sel = '[data-testid="styled-text"]'
+    image_sel = '[data-testid="resized-image"]'
+    reaction_sel = '[data-testid="reaction-button-text"]'
+
     return f"""
-() => {{
+(() => {{
     const posts = [];
-    const MIN_CONTENT_LENGTH = {min_content_length};
+    const MIN_LEN = {min_content_length};
+    const AUTHOR_SEL = '{author_sel}';
+    const TIMESTAMP_SEL = '{timestamp_sel}';
+    const CONTENT_SEL = '{content_sel}';
+    const IMAGE_SEL = '{image_sel}';
+    const REACTION_SEL = '{reaction_sel}';
 
-    // Find all post containers
-    const postContainers = document.querySelectorAll('div.post, div.js-media-post');
-
-    postContainers.forEach(container => {{
+    document.querySelectorAll('div.post, div.js-media-post').forEach(el => {{
         try {{
-            // Skip sponsored posts
-            if (container.textContent?.includes('Sponsored')) {{
-                return;
-            }}
+            if (el.textContent?.includes('Sponsored')) return;
 
-            // Get author info from profile link
-            const authorLink = container.querySelector('a[href*="/profile/"][href*="is=feed_author"]');
+            const authorLink = el.querySelector(AUTHOR_SEL);
             if (!authorLink) return;
 
-            const authorHref = authorLink.getAttribute('href') || '';
-            const authorMatch = authorHref.match(/\\/profile\\/([^/?]+)/);
-            const authorId = authorMatch?.[1];
+            const href = authorLink.getAttribute('href') || '';
+            const match = href.match(/\\/profile\\/([^/?]+)/);
+            const authorId = match?.[1];
             if (!authorId) return;
 
-            // Get author name (skip "Avatar for..." text)
             let authorName = '';
-            const authorLinks = container.querySelectorAll('a[href*="/profile/"][href*="is=feed_author"]');
-            for (const link of authorLinks) {{
-                const text = link.textContent?.trim() || '';
-                if (text && !text.startsWith('Avatar for') && text.length > 1) {{
-                    authorName = text;
+            for (const link of el.querySelectorAll(AUTHOR_SEL)) {{
+                const t = link.textContent?.trim() || '';
+                if (t && !t.startsWith('Avatar for') && t.length > 1) {{
+                    authorName = t;
                     break;
                 }}
             }}
 
-            // Get neighborhood
-            const hoodLink = container.querySelector('a[href*="/neighborhood/"]');
+            const hoodLink = el.querySelector('a[href*="/neighborhood/"]');
             const neighborhood = hoodLink?.textContent?.trim() || null;
 
-            // Get timestamp
-            const timestampEl = container.querySelector('[data-testid="post-timestamp"]');
-            const timestamp = timestampEl?.textContent?.trim() || null;
+            const tsEl = el.querySelector(TIMESTAMP_SEL);
+            const timestamp = tsEl?.textContent?.trim() || null;
 
-            // Get post content
-            const contentEl = container.querySelector('[data-testid="styled-text"]');
+            const contentEl = el.querySelector(CONTENT_SEL);
             const content = contentEl?.textContent?.trim() || '';
+            if (!content || content.length < MIN_LEN) return;
 
-            if (!content || content.length < MIN_CONTENT_LENGTH) return;
+            const imgs = el.querySelectorAll(IMAGE_SEL);
+            const imageUrls = Array.from(imgs).map(i => i.src).filter(Boolean);
 
-            // Get images
-            const imageEls = container.querySelectorAll('[data-testid="resized-image"]');
-            const imageUrls = Array.from(imageEls).map(img => img.src).filter(Boolean);
-
-            // Get reaction count
-            const reactionEl = container.querySelector('[data-testid="reaction-button-text"]');
-            const reactionCount = parseInt(reactionEl?.textContent || '0', 10) || 0;
+            const rxEl = el.querySelector(REACTION_SEL);
+            const reactionCount = parseInt(rxEl?.textContent || '0', 10) || 0;
 
             posts.push({{
-                authorId,
-                authorName,
-                content,
-                imageUrls,
-                neighborhood,
-                reactionCount,
-                timestamp
+                authorId, authorName, content, imageUrls,
+                neighborhood, reactionCount, timestamp
             }});
-
         }} catch (e) {{
-            console.error('Post extraction error:', e);
+            console.error('Extract error:', e);
         }}
     }});
 
     return posts;
-}}
+}})()
 """
 
 
@@ -175,7 +167,8 @@ class PostExtractor:
 
         extraction_script = _get_extraction_script(MIN_CONTENT_LENGTH)
 
-        while len(posts) < self.max_posts and scroll_attempts < self.MAX_SCROLL_ATTEMPTS:
+        max_scrolls = self.MAX_SCROLL_ATTEMPTS
+        while len(posts) < self.max_posts and scroll_attempts < max_scrolls:
             # Extract visible posts using JavaScript
 
             raw_posts = self.page.evaluate(extraction_script)
@@ -201,7 +194,8 @@ class PostExtractor:
                 no_new_posts_count += 1
                 if no_new_posts_count >= self.MAX_EMPTY_SCROLLS:
                     logger.warning(
-                        "No new posts after %d scrolls, stopping", self.MAX_EMPTY_SCROLLS
+                        "No new posts after %d scrolls, stopping",
+                        self.MAX_EMPTY_SCROLLS,
                     )
                     break
             else:
@@ -215,7 +209,9 @@ class PostExtractor:
         logger.info("Extraction complete: %d posts", len(posts))
         return posts
 
-    def _process_batch(self, raw_posts: list[dict[str, Any]], posts: list[RawPost]) -> int:
+    def _process_batch(
+        self, raw_posts: list[dict[str, Any]], posts: list[RawPost]
+    ) -> int:
         """Process a batch of raw posts and add to posts list.
 
         Args:
@@ -241,14 +237,16 @@ class PostExtractor:
 
     def _log_page_debug_info(self) -> None:
         """Log debug info about the current page state."""
-        debug_info = self.page.evaluate("""
+        debug_info = self.page.evaluate(
+            """
             () => ({
                 url: window.location.href,
-                bodyLength: document.body?.innerHTML?.length || 0,
-                postCount: document.querySelectorAll('div.post, div.js-media-post').length,
-                linkCount: document.querySelectorAll('a[href*="/profile/"]').length
+                bodyLen: document.body?.innerHTML?.length || 0,
+                posts: document.querySelectorAll('div.post').length,
+                links: document.querySelectorAll('a[href*="/profile/"]').length
             })
-        """)
+            """
+        )
         logger.info("Page debug info: %s", debug_info)
 
     def _process_raw_post(self, raw: dict[str, Any]) -> RawPost | None:

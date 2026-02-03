@@ -1,9 +1,9 @@
 """Configuration constants for the scraper."""
 
 import os
+from typing import TypedDict
 
 # Re-exported for convenience (defined in exceptions.py)
-
 from src.exceptions import ConfigurationError
 
 __all__ = [
@@ -19,6 +19,8 @@ __all__ = [
     "REQUIRED_ENV_VARS",
     "SCRAPER_CONFIG",
     "SELECTORS",
+    "Selectors",
+    "ViewportSize",
     "validate_env",
 ]
 
@@ -46,9 +48,45 @@ REQUIRED_ENV_VARS = [
     "SUPABASE_URL",
 ]
 
+
+# Type definitions for config
+
+
+class ViewportSize(TypedDict):
+    """Browser viewport dimensions."""
+
+    height: int
+    width: int
+
+
+class ScraperConfig(TypedDict):
+    """Typed configuration for the scraper."""
+
+    headless: bool
+    login_timeout_ms: int
+    max_posts_per_run: int
+    navigation_timeout_ms: int
+    scroll_delay_ms: tuple[int, int]
+    typing_delay_ms: tuple[int, int]
+    user_agent: str
+    viewport: ViewportSize
+
+
+class Selectors(TypedDict):
+    """Typed selectors for Playwright."""
+
+    captcha_indicators: list[str]
+    email_input: str
+    error_indicators: list[str]
+    feed_tab_recent: str
+    feed_tab_trending: str
+    login_button: str
+    password_input: str
+
+
 # Scraper settings
 
-SCRAPER_CONFIG = {
+SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
@@ -75,31 +113,25 @@ FEED_URLS = {
 
 # Selectors (role-based for reliability)
 
-SELECTORS = {
+SELECTORS: Selectors = {
     # CAPTCHA detection
-
     "captcha_indicators": [
         "iframe[src*='captcha']",
         "iframe[src*='recaptcha']",
         "[class*='captcha']",
         "[id*='captcha']",
     ],
-
     # Login page
-
     "email_input": 'role=textbox[name="Email or mobile number"]',
     "error_indicators": [
         "[class*='error']",
         "[class*='alert']",
         "[role='alert']",
     ],
-    "login_button": 'role=button[name="Log in"]',
-    "password_input": 'role=textbox[name="Password"]',
-
-    # Feed tabs
-
     "feed_tab_recent": 'role=radio[name="Recent"]',
     "feed_tab_trending": 'role=radio[name="Trending"]',
+    "login_button": 'role=button[name="Log in"]',
+    "password_input": 'role=textbox[name="Password"]',
 }
 
 

@@ -5,7 +5,7 @@ __all__ = ["SessionManager"]
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -25,7 +25,9 @@ class SessionManager:
         )
         self.cipher = Fernet(os.environ["SESSION_ENCRYPTION_KEY"].encode())
 
-    def get_cookies(self, neighborhood_id: str | None = None) -> list[dict[str, Any]] | None:
+    def get_cookies(
+        self, neighborhood_id: str | None = None
+    ) -> list[dict[str, Any]] | None:
         """Load and decrypt session cookies from Supabase.
 
         Args:
@@ -47,12 +49,13 @@ class SessionManager:
             logger.info("No session found")
             return None
 
-        session = result.data[0]
+        # Cast to expected type (Supabase returns complex JSON union)
+        session: dict[str, Any] = result.data[0]  # type: ignore[assignment]
 
         # Check expiration
 
         expires_at_str = session.get("expires_at")
-        if not expires_at_str:
+        if not expires_at_str or not isinstance(expires_at_str, str):
             logger.warning("Session has no expiration date, treating as expired")
             return None
 
@@ -62,16 +65,20 @@ class SessionManager:
             logger.error("Failed to parse expires_at '%s': %s", expires_at_str, e)
             return None
 
-        if expires_at < datetime.now(timezone.utc):
+        if expires_at < datetime.now(UTC):
             logger.info("Session expired at %s", expires_at)
             return None
 
         # Decrypt cookies
 
         try:
-            encrypted = session["cookies_encrypted"].encode()
+            encrypted_str = session.get("cookies_encrypted", "")
+            if not isinstance(encrypted_str, str):
+                logger.error("Invalid cookies_encrypted type")
+                return None
+            encrypted = encrypted_str.encode()
             decrypted = self.cipher.decrypt(encrypted)
-            cookies = json.loads(decrypted)
+            cookies: list[dict[str, Any]] = json.loads(decrypted)
             logger.info("Loaded %d cookies from session", len(cookies))
             return cookies
         except InvalidToken:
@@ -97,7 +104,7 @@ class SessionManager:
         # Encrypt cookies
 
         encrypted = self.cipher.encrypt(json.dumps(cookies).encode())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(days=expires_days)
 
         data: dict[str, Any] = {
