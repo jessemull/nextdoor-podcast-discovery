@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
-import { CLAUDE_MODEL, env } from "@/lib/env.server";
+import { CLAUDE_MODEL } from "@/lib/env.server";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
 
@@ -31,9 +31,10 @@ Return ONLY the fact, no preamble.`;
 
 export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
   const session = await getServerSession(authOptions);
-  const userEmail = env.USER_EMAIL;
 
-  if (!session?.user?.email || session.user.email !== userEmail) {
+  // Just require any authenticated user
+
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

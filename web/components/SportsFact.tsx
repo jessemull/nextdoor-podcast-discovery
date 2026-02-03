@@ -2,22 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { useMemo } from "react";
-
-import { clientEnv } from "@/lib/env.client";
 
 import type { SportsFactResponse } from "@/lib/types";
 
 export function SportsFact() {
   const { data: session } = useSession();
-
-  // Memoize to avoid re-evaluating getter on every render
-
-  const userEmail = useMemo(() => clientEnv.USER_EMAIL, []);
-  const isSpecialUser = session?.user?.email === userEmail;
+  const isLoggedIn = !!session?.user;
 
   const { data, isLoading } = useQuery<SportsFactResponse>({
-    enabled: isSpecialUser,
+    enabled: isLoggedIn,
     queryFn: async () => {
       const res = await fetch("/api/sports-fact");
       if (!res.ok) throw new Error("Failed to fetch");
@@ -27,7 +20,7 @@ export function SportsFact() {
     staleTime: Infinity,
   });
 
-  if (!isSpecialUser || isLoading || !data?.fact) {
+  if (!isLoggedIn || isLoading || !data?.fact) {
     return null;
   }
 

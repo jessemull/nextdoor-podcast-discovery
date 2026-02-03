@@ -3,19 +3,19 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { env } from "./env.server";
 
-// Allowed emails - add users here
+// Allowed emails - add users here (comma-separated in env var)
 
-const ALLOWED_EMAILS = [
-  env.ALLOWED_EMAIL,
-  env.USER_EMAIL,
-].filter(Boolean) as string[];
+const ALLOWED_EMAILS = (env.ALLOWED_EMAILS || "")
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
 
 // Warn if no users are whitelisted
 
 if (ALLOWED_EMAILS.length === 0) {
   console.warn(
     "⚠️  WARNING: No allowed emails configured. " +
-    "Set ALLOWED_EMAIL or USER_EMAIL environment variables to allow sign-in."
+    "Set ALLOWED_EMAILS environment variable to allow sign-in."
   );
 }
 

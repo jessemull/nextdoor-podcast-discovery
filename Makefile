@@ -1,4 +1,4 @@
-.PHONY: help db-up db-down dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
+.PHONY: help db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
 
 # Default target
 help:
@@ -15,6 +15,9 @@ help:
 	@echo "Database:"
 	@echo "  db-up            Start local Postgres database"
 	@echo "  db-down          Stop local Postgres database"
+	@echo "  db-reset         Reset local database (delete all data)"
+	@echo "  db-migrate-local Run migrations on local database"
+	@echo "  db-migrate-prod  Show how to run migrations on Supabase"
 	@echo ""
 	@echo "Development:"
 	@echo "  dev-scraper      Run scraper in dry-run mode"
@@ -57,6 +60,37 @@ db-up:
 
 db-down:
 	docker-compose down
+
+db-reset:
+	docker-compose down -v
+	docker-compose up -d db
+	@echo "Database reset complete. All data deleted."
+	@echo "Migrations will run automatically on startup."
+
+db-migrate-local:
+	@echo "Running migrations on local database..."
+	cat database/migrations/*.sql | docker-compose exec -T db psql -U nextdoor -d nextdoor
+	@echo ""
+	@echo "Running seeds..."
+	cat database/seeds/*.sql | docker-compose exec -T db psql -U nextdoor -d nextdoor
+	@echo ""
+	@echo "Done! Tables created."
+
+db-migrate-prod:
+	@echo "=============================================="
+	@echo "  SUPABASE MIGRATION INSTRUCTIONS"
+	@echo "=============================================="
+	@echo ""
+	@echo "1. Go to: https://supabase.com/dashboard"
+	@echo "2. Select your project"
+	@echo "3. Go to SQL Editor"
+	@echo "4. Copy and paste the contents of:"
+	@echo "   - database/migrations/001_initial_schema.sql"
+	@echo "5. Click 'Run'"
+	@echo ""
+	@echo "Optional: Run seeds/seed_neighborhoods.sql for test data"
+	@echo ""
+	@echo "=============================================="
 
 # Install dependencies
 install: install-scraper install-web

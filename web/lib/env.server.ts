@@ -20,8 +20,8 @@ function getEnvVar(name: string, required: boolean = true): string {
 }
 
 export const env = {
-  get ALLOWED_EMAIL() {
-    return getEnvVar("ALLOWED_EMAIL", false);
+  get ALLOWED_EMAILS() {
+    return getEnvVar("ALLOWED_EMAILS", false);
   },
   get ANTHROPIC_API_KEY() {
     return getEnvVar("ANTHROPIC_API_KEY");
@@ -43,9 +43,6 @@ export const env = {
   },
   get SUPABASE_URL() {
     return getEnvVar("SUPABASE_URL");
-  },
-  get USER_EMAIL() {
-    return getEnvVar("USER_EMAIL", false);
   },
 };
 

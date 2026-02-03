@@ -20,7 +20,4 @@ export const clientEnv = {
   get SUPABASE_URL() {
     return getEnvVar("NEXT_PUBLIC_SUPABASE_URL");
   },
-  get USER_EMAIL() {
-    return getEnvVar("NEXT_PUBLIC_USER_EMAIL", false);
-  },
 };
