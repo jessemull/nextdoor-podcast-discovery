@@ -13,6 +13,7 @@ __all__ = [
     "EMBEDDING_BATCH_SIZE",
     "EMBEDDING_DIMENSIONS",
     "EMBEDDING_MODEL",
+    "FEED_URLS",
     "LOGIN_URL",
     "NEWS_FEED_URL",
     "REQUIRED_ENV_VARS",
@@ -50,7 +51,7 @@ REQUIRED_ENV_VARS = [
 SCRAPER_CONFIG = {
     "headless": True,
     "login_timeout_ms": 15000,
-    "max_posts_per_run": 100,
+    "max_posts_per_run": 250,
     "navigation_timeout_ms": 10000,
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
@@ -65,15 +66,27 @@ SCRAPER_CONFIG = {
 LOGIN_URL = "https://nextdoor.com/login/"
 NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
 
-# Login selectors (role-based for reliability)
+# Feed URLs for different tabs
+
+FEED_URLS = {
+    "recent": "https://nextdoor.com/news_feed/?ordering=recent",
+    "trending": "https://nextdoor.com/news_feed/?ordering=trending",
+}
+
+# Selectors (role-based for reliability)
 
 SELECTORS = {
+    # CAPTCHA detection
+
     "captcha_indicators": [
         "iframe[src*='captcha']",
         "iframe[src*='recaptcha']",
         "[class*='captcha']",
         "[id*='captcha']",
     ],
+
+    # Login page
+
     "email_input": 'role=textbox[name="Email or mobile number"]',
     "error_indicators": [
         "[class*='error']",
@@ -82,6 +95,11 @@ SELECTORS = {
     ],
     "login_button": 'role=button[name="Log in"]',
     "password_input": 'role=textbox[name="Password"]',
+
+    # Feed tabs
+
+    "feed_tab_recent": 'role=radio[name="Recent"]',
+    "feed_tab_trending": 'role=radio[name="Trending"]',
 }
 
 

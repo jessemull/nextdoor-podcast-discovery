@@ -23,8 +23,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.config import LOGIN_URL, NEWS_FEED_URL, SCRAPER_CONFIG, SELECTORS
+from src.config import FEED_URLS, LOGIN_URL, NEWS_FEED_URL, SCRAPER_CONFIG, SELECTORS
 from src.exceptions import CaptchaRequiredError, LoginFailedError
+from src.post_extractor import PostExtractor, RawPost
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +220,63 @@ class NextdoorScraper:
             return "/login" not in self.page.url
         except PlaywrightTimeoutError:
             return False
+
+    def navigate_to_feed(self, feed_type: str) -> None:
+        """Navigate to a specific feed tab.
+
+        Args:
+            feed_type: Which feed to navigate to ("recent" or "trending").
+
+        Raises:
+            ValueError: If feed_type is invalid.
+            RuntimeError: If browser not started.
+        """
+        if not self.page:
+            raise RuntimeError("Browser not started. Call start() first.")
+
+        if feed_type not in FEED_URLS:
+            raise ValueError(f"Invalid feed type: {feed_type}")
+
+        feed_url = FEED_URLS[feed_type]
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+
+        logger.info("Navigating to %s feed: %s", feed_type, feed_url)
+        self.page.goto(feed_url, timeout=timeout)
+
+        # Wait for the feed to load by checking for the tab to be selected
+
+        tab_selector = SELECTORS.get(f"feed_tab_{feed_type}")
+        if tab_selector:
+            try:
+                self.page.wait_for_selector(tab_selector, timeout=timeout)
+                logger.info("Successfully loaded %s feed", feed_type)
+            except PlaywrightTimeoutError:
+                # Tab might not be visible but page loaded - that's okay
+
+                logger.warning("Feed tab selector not found, but page loaded")
+
+        # Small delay to let dynamic content start loading
+
+        self._random_delay()
+
+    def extract_posts(self, max_posts: int | None = None) -> list[RawPost]:
+        """Extract posts from the current feed page.
+
+        Args:
+            max_posts: Maximum number of posts to extract.
+                Defaults to SCRAPER_CONFIG["max_posts_per_run"].
+
+        Returns:
+            List of extracted posts.
+        """
+        if not self.page:
+            raise RuntimeError("Browser not started. Call start() first.")
+
+        if max_posts is None:
+            max_posts = SCRAPER_CONFIG["max_posts_per_run"]
+
+        extractor = PostExtractor(self.page, max_posts=max_posts)
+        return extractor.extract_posts()
 
     def _check_for_captcha(self) -> bool:
         """Check if CAPTCHA is present on page.

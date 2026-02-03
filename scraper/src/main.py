@@ -8,13 +8,14 @@ import sys
 
 from dotenv import load_dotenv
 
-from src.config import SCRAPER_CONFIG, validate_env
+from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
 from src.exceptions import (
     CaptchaRequiredError,
     ConfigurationError,
     LoginFailedError,
     ScraperError,
 )
+from src.post_storage import PostStorage
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
 
@@ -29,17 +30,41 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main(dry_run: bool = False, visible: bool = False) -> int:
+def main(
+    dry_run: bool = False,
+    feed_type: str = "recent",
+    max_posts: int | None = None,
+    visible: bool = False,
+) -> int:
     """Run the full scraper pipeline.
 
     Args:
         dry_run: If True, don't make any changes to the database.
+        feed_type: Which feed to scrape ("recent" or "trending").
+        max_posts: Maximum number of posts to scrape (default from config).
         visible: If True, run browser in visible mode (not headless).
 
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    logger.info("Starting scraper pipeline (dry_run=%s, visible=%s)", dry_run, visible)
+    # Validate feed type
+
+    if feed_type not in FEED_URLS:
+        logger.error("Invalid feed type: %s (must be 'recent' or 'trending')", feed_type)
+        return 1
+
+    # Use default if not specified
+
+    if max_posts is None:
+        max_posts = SCRAPER_CONFIG["max_posts_per_run"]
+
+    logger.info(
+        "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, visible=%s)",
+        feed_type,
+        max_posts,
+        dry_run,
+        visible,
+    )
 
     try:
         # Validate environment variables
@@ -84,17 +109,48 @@ def main(dry_run: bool = False, visible: bool = False) -> int:
                     session_manager.save_cookies(new_cookies)
                     logger.info("Saved new session")
 
+            # Step 3: Navigate to the correct feed
+
+            logger.info("Navigating to %s feed", feed_type)
+            scraper.navigate_to_feed(feed_type)
+
+            # Step 4: Extract posts
+
+            logger.info("Extracting up to %d posts from %s feed", max_posts, feed_type)
+            posts = scraper.extract_posts(max_posts=max_posts)
+            logger.info("Extracted %d posts", len(posts))
+
+            # Step 5: Store posts in Supabase
+
+            if dry_run:
+                logger.info("Dry run mode - skipping storage")
+
+                # Log sample of extracted posts
+
+                for i, post in enumerate(posts[:5]):
+                    logger.info(
+                        "Sample post %d: [%s] %s... (%d chars)",
+                        i + 1,
+                        post.author_name,
+                        post.content[:80],
+                        len(post.content),
+                    )
+            else:
+                logger.info("Storing %d posts in Supabase", len(posts))
+                storage = PostStorage(session_manager.supabase)
+                stats = storage.store_posts(posts)
+                logger.info(
+                    "Storage complete: %d inserted, %d duplicates skipped",
+                    stats["inserted"],
+                    stats["skipped"],
+                )
+
             # TODO: Implement remaining pipeline steps
-            # - Scrape posts from each neighborhood
-            # - Deduplicate and store new posts
             # - Run LLM scoring
             # - Generate embeddings
             # - Update rankings
 
-            if dry_run:
-                logger.info("Dry run mode - no changes made")
-            else:
-                logger.info("Pipeline complete")
+            logger.info("Pipeline complete (feed=%s, posts=%d)", feed_type, len(posts))
 
         return 0
 
@@ -124,10 +180,29 @@ if __name__ == "__main__":
         help="Run without making changes to the database",
     )
     parser.add_argument(
+        "--feed-type",
+        choices=["recent", "trending"],
+        default="recent",
+        help="Which feed to scrape (default: recent)",
+    )
+    parser.add_argument(
+        "--max-posts",
+        type=int,
+        default=None,
+        help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",
+    )
+    parser.add_argument(
         "--visible",
         action="store_true",
         help="Run browser in visible mode (not headless)",
     )
     args = parser.parse_args()
 
-    sys.exit(main(dry_run=args.dry_run, visible=args.visible))
+    sys.exit(
+        main(
+            dry_run=args.dry_run,
+            feed_type=args.feed_type,
+            max_posts=args.max_posts,
+            visible=args.visible,
+        )
+    )

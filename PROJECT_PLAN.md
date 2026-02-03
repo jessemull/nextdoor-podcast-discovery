@@ -124,6 +124,19 @@ Each run scrolls deeper into the feed, capturing older posts. Run a few times ma
 | Session reuse | Encrypted cookies stored in Supabase |
 | Viewport | iPhone 14 Pro dimensions (375×812) |
 
+### Known Limitations & TODOs
+
+| Issue | Current Behavior | Future Improvement |
+|-------|------------------|-------------------|
+| **Stopping Logic** | Stops after 5 scrolls with no new unique posts | Add timestamp-based stopping (e.g., "stop at yesterday's posts") |
+| **Post Links** | Not currently extracted | Extract shareable links via Share modal for easy viewing |
+| **Volume Uncertainty** | 250 is a cap, not a guarantee | Add metrics to track actual daily volume |
+
+**TODO**: The current stopping logic relies on in-memory deduplication during extraction. If all visible posts have been seen, it stops. This works but doesn't guarantee we've captured "all of today's posts" or any specific time range. Consider adding:
+1. Timestamp parsing to stop at a specific cutoff (e.g., 24 hours ago)
+2. Database dedup check to stop when encountering already-stored posts
+3. Post permalink extraction for easy viewing in Nextdoor
+
 ---
 
 ### Cost-Optimized Approach
@@ -1610,23 +1623,28 @@ jobs:
   - [x] Login error handling
   - [x] Cookie persistence and reuse
 
-- [ ] **2.2** Post Extraction (NEXT UP)
-  - [ ] Add `--feed-type` CLI argument (recent/trending)
-  - [ ] Navigate to correct feed tab
-  - [ ] Scroll and load posts (infinite scroll handling)
-  - [ ] Parse post DOM structure (text, author, timestamp, images)
-  - [ ] SHA256 deduplication hash
-  - [ ] Insert new posts to Supabase
-  - [ ] Add `--max-posts` CLI argument (default 250)
+- [x] **2.2** Post Extraction ✅ COMPLETE
+  - [x] Add `--feed-type` CLI argument (recent/trending)
+  - [x] Navigate to correct feed tab
+  - [x] Scroll and load posts (infinite scroll handling)
+  - [x] Parse post DOM structure (text, author, timestamp, images)
+  - [x] SHA256 deduplication hash
+  - [x] Insert new posts to Supabase
+  - [x] Add `--max-posts` CLI argument (default 250)
 
-- [x] **2.3** Reliability ✅ COMPLETE
+- [ ] **2.3** Post Extraction Improvements (TODO)
+  - [ ] Extract post permalink (via Share modal) for easy viewing
+  - [ ] Improve stopping logic (timestamp-based or DB dedup check)
+  - [ ] Add metrics/logging for actual post volume per run
+
+- [x] **2.4** Reliability ✅ COMPLETE
   - [x] Retry logic (tenacity for transient failures)
   - [x] Custom exceptions (CaptchaRequiredError, LoginFailedError, etc.)
   - [x] Structured logging
   - [x] Dry-run mode (working)
   - [x] Context manager for browser cleanup
 
-- [ ] **2.4** GitHub Actions
+- [ ] **2.5** GitHub Actions
   - [ ] Create `scrape-recent.yml` (6:00 AM UTC)
   - [ ] Create `scrape-trending.yml` (6:00 PM UTC)
   - [ ] Test manual trigger (workflow_dispatch)
