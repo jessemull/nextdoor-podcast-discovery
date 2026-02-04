@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 def main(
     dry_run: bool = False,
+    extract_permalinks: bool = False,
     feed_type: str = "recent",
     max_posts: int | None = None,
     visible: bool = False,
@@ -40,6 +41,7 @@ def main(
 
     Args:
         dry_run: If True, don't make any changes to the database.
+        extract_permalinks: If True, click Share on each post to get permalink.
         feed_type: Which feed to scrape ("recent" or "trending").
         max_posts: Maximum number of posts to scrape (default from config).
         visible: If True, run browser in visible mode (not headless).
@@ -61,11 +63,13 @@ def main(
         max_posts = SCRAPER_CONFIG["max_posts_per_run"]
 
     logger.info(
-        "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, visible=%s)",
+        "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
+        "visible=%s, extract_permalinks=%s)",
         feed_type,
         max_posts,
         dry_run,
         visible,
+        extract_permalinks,
     )
 
     try:
@@ -119,7 +123,10 @@ def main(
             # Step 4: Extract posts
 
             logger.info("Extracting up to %d posts from %s feed", max_posts, feed_type)
-            posts = scraper.extract_posts(max_posts=max_posts)
+            posts = scraper.extract_posts(
+                max_posts=max_posts,
+                extract_permalinks=extract_permalinks,
+            )
             logger.info("Extracted %d posts", len(posts))
 
             # Step 5: Store posts in Supabase
@@ -182,6 +189,11 @@ if __name__ == "__main__":
         help="Run without making changes to the database",
     )
     parser.add_argument(
+        "--extract-permalinks",
+        action="store_true",
+        help="Click Share on each post to extract permalink URL (slower)",
+    )
+    parser.add_argument(
         "--feed-type",
         choices=["recent", "trending"],
         default="recent",
@@ -203,6 +215,7 @@ if __name__ == "__main__":
     sys.exit(
         main(
             dry_run=args.dry_run,
+            extract_permalinks=args.extract_permalinks,
             feed_type=args.feed_type,
             max_posts=args.max_posts,
             visible=args.visible,

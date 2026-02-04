@@ -884,9 +884,10 @@ python -m src.main --max-posts 100              # Quick test run
 # Development flags
 python -m src.main --dry-run                    # Don't save to database
 python -m src.main --visible                    # Show browser (not headless)
+python -m src.main --extract-permalinks         # Extract post URLs (slower)
 
-# Combined example (backfill trending)
-python -m src.main --feed-type trending --max-posts 500 --visible
+# Combined example (backfill trending with permalinks)
+python -m src.main --feed-type trending --max-posts 100 --extract-permalinks --visible
 ```
 
 **Configuration** (in `scraper/src/config.py`):
@@ -1632,10 +1633,10 @@ jobs:
   - [x] Insert new posts to Supabase
   - [x] Add `--max-posts` CLI argument (default 250)
 
-- [ ] **2.3** Post Extraction Improvements (TODO)
-  - [ ] Extract post permalink (via Share modal) for easy viewing
-  - [ ] Improve stopping logic (timestamp-based or DB dedup check)
-  - [ ] Add metrics/logging for actual post volume per run
+- [x] **2.3** Post Extraction Improvements ✅ COMPLETE
+  - [x] Store image URLs (already implemented in JSONB array)
+  - [x] Extract post permalink (via Share modal) - use `--extract-permalinks` flag
+  - [ ] Improve stopping logic (timestamp-based or DB dedup check) - moved to 2.5
 
 - [x] **2.4** Reliability ✅ COMPLETE
   - [x] Retry logic (tenacity for transient failures)
@@ -1644,13 +1645,18 @@ jobs:
   - [x] Dry-run mode (working)
   - [x] Context manager for browser cleanup
 
-- [ ] **2.5** GitHub Actions
+- [ ] **2.5** Stopping Logic Improvements (OPTIONAL - nice to have)
+  - [ ] Timestamp-based stopping (stop when posts are >24h old)
+  - [ ] DB dedup check before processing (skip posts already in DB)
+  - [ ] Note: Current logic stops after MAX_EMPTY_SCROLLS with no new posts
+
+- [ ] **2.6** GitHub Actions (DEPLOY LAST - after local testing complete)
   - [ ] Create `scrape-recent.yml` (6:00 AM UTC)
   - [ ] Create `scrape-trending.yml` (6:00 PM UTC)
   - [ ] Test manual trigger (workflow_dispatch)
   - [ ] Verify data in Supabase
 
-### Phase 3: LLM Integration
+### Phase 3: LLM Integration (DO BEFORE DEPLOYMENT)
 
 - [ ] **3.1** Claude Haiku scoring
   - [ ] Prompt template

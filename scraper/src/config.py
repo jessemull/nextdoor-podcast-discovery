@@ -65,6 +65,8 @@ class ScraperConfig(TypedDict):
     headless: bool
     login_timeout_ms: int
     max_posts_per_run: int
+    modal_close_delay_ms: int
+    modal_timeout_ms: int
     navigation_timeout_ms: int
     scroll_delay_ms: tuple[int, int]
     typing_delay_ms: tuple[int, int]
@@ -90,6 +92,8 @@ SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
+    "modal_close_delay_ms": 300,
+    "modal_timeout_ms": 5000,
     "navigation_timeout_ms": 10000,
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),

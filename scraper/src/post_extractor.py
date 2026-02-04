@@ -7,6 +7,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -38,6 +39,7 @@ class RawPost:
 
     image_urls: list[str] = field(default_factory=list)
     neighborhood: str | None = None
+    post_url: str | None = None
     reaction_count: int = 0
     timestamp_relative: str | None = None
 
@@ -107,7 +109,8 @@ def _get_extraction_script(min_content_length: int) -> str:
 
             posts.push({{
                 authorId, authorName, content, imageUrls,
-                neighborhood, reactionCount, timestamp
+                neighborhood, reactionCount, timestamp,
+                postIndex: posts.length  // Track position for Share click
             }});
         }} catch (e) {{
             console.error('Extract error:', e);
@@ -130,13 +133,21 @@ class PostExtractor:
 
     MAX_SCROLL_ATTEMPTS = 100
 
-    def __init__(self, page: Page, max_posts: int = 250) -> None:
+    def __init__(
+        self,
+        page: Page,
+        max_posts: int = 250,
+        extract_permalinks: bool = False,
+    ) -> None:
         """Initialize the extractor.
 
         Args:
             page: Playwright page object.
             max_posts: Maximum number of posts to extract.
+            extract_permalinks: If True, click Share on each post to get permalink.
+                This is slower but provides direct links to posts.
         """
+        self.extract_permalinks_flag = extract_permalinks
         self.max_posts = max_posts
         self.page = page
         self.seen_hashes: set[str] = set()
@@ -269,6 +280,13 @@ class PostExtractor:
 
         content_hash = self._generate_hash(author_id, content)
 
+        # Extract permalink if flag is set
+
+        post_url: str | None = None
+        if self.extract_permalinks_flag:
+            post_index = raw.get("postIndex", 0)
+            post_url = self.extract_permalink(post_index)
+
         return RawPost(
             author_id=author_id,
             author_name=author_name,
@@ -276,6 +294,7 @@ class PostExtractor:
             content_hash=content_hash,
             image_urls=raw.get("imageUrls", []),
             neighborhood=raw.get("neighborhood") or None,
+            post_url=post_url,
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
@@ -318,3 +337,109 @@ class PostExtractor:
 
         delay = random.randint(min_delay, max_delay)
         self.page.wait_for_timeout(delay)
+
+    def extract_permalink(self, post_index: int) -> str | None:
+        """Extract permalink for a specific post by clicking Share.
+
+        Note: Uses DOM index which may become stale if posts shift during
+        scrolling (e.g., new posts at top, ads inserted). This is a best-effort
+        extraction - if the index is wrong, we get the wrong URL or fail gracefully.
+
+        Args:
+            post_index: Index of the post in the current view (0-based).
+
+        Returns:
+            Post URL like https://nextdoor.com/p/XXX or None if failed.
+        """
+        try:
+            # Find all post containers and get the one at the specified index
+
+            containers = self.page.locator("div.post, div.js-media-post")
+            if containers.count() <= post_index:
+                logger.warning("Post index %d out of range", post_index)
+                return None
+
+            container = containers.nth(post_index)
+
+            # Find and click the Share button within this post
+
+            share_btn = container.locator('[data-testid="share-button"]')
+            if share_btn.count() == 0:
+                logger.debug("No share button found for post %d", post_index)
+                return None
+
+            share_btn.click()
+
+            # Wait for the share modal to appear
+
+            fb_link = self.page.locator('[data-testid="share_app_button_FACEBOOK"]')
+            fb_link.wait_for(timeout=SCRAPER_CONFIG["modal_timeout_ms"])
+
+            # Extract the href and parse out the post URL
+
+            href = fb_link.get_attribute("href")
+            post_url = self._parse_post_url_from_share_link(href)
+
+            # Close the modal and wait for close animation
+
+            self.page.keyboard.press("Escape")
+            self.page.wait_for_timeout(SCRAPER_CONFIG["modal_close_delay_ms"])
+
+            return post_url
+
+        except PlaywrightTimeoutError:
+            logger.debug("Timeout extracting permalink for post %d", post_index)
+
+            # Try to close any open modal
+
+            try:
+                self.page.keyboard.press("Escape")
+            except Exception:
+                pass
+
+            return None
+        except Exception as e:
+            logger.debug("Error extracting permalink for post %d: %s", post_index, e)
+            return None
+
+    def _parse_post_url_from_share_link(self, href: str | None) -> str | None:
+        """Parse the post URL from a share link href.
+
+        Args:
+            href: The href attribute from a share link (e.g., Facebook share).
+
+        Returns:
+            Clean post URL like https://nextdoor.com/p/XXX or None.
+        """
+        if not href:
+            return None
+
+        try:
+            # Parse the Facebook share URL
+
+            parsed = urlparse(href)
+            params = parse_qs(parsed.query)
+
+            # The 'href' param contains the encoded Nextdoor URL
+
+            encoded_url = params.get("href", [None])[0]
+            if not encoded_url:
+                return None
+
+            # Decode and extract just the base post URL
+
+            decoded_url = unquote(encoded_url)
+
+            # Parse again to get just the path (remove UTM params)
+
+            post_parsed = urlparse(decoded_url)
+            if "/p/" in post_parsed.path:
+                # Return clean URL: https://nextdoor.com/p/XXX
+
+                return f"https://nextdoor.com{post_parsed.path}"
+
+            return None
+
+        except Exception as e:
+            logger.debug("Error parsing share URL: %s", e)
+            return None

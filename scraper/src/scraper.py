@@ -264,12 +264,18 @@ class NextdoorScraper:
 
         self._random_delay()
 
-    def extract_posts(self, max_posts: int | None = None) -> list[RawPost]:
+    def extract_posts(
+        self,
+        max_posts: int | None = None,
+        extract_permalinks: bool = False,
+    ) -> list[RawPost]:
         """Extract posts from the current feed page.
 
         Args:
             max_posts: Maximum number of posts to extract.
                 Defaults to SCRAPER_CONFIG["max_posts_per_run"].
+            extract_permalinks: If True, click Share on each post to get
+                permalink URL. This is slower but provides direct links.
 
         Returns:
             List of extracted posts.
@@ -280,7 +286,11 @@ class NextdoorScraper:
         if max_posts is None:
             max_posts = SCRAPER_CONFIG["max_posts_per_run"]
 
-        extractor = PostExtractor(self.page, max_posts=max_posts)
+        extractor = PostExtractor(
+            self.page,
+            max_posts=max_posts,
+            extract_permalinks=extract_permalinks,
+        )
         return extractor.extract_posts()
 
     def _check_for_captcha(self) -> bool:

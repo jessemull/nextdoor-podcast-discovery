@@ -78,16 +78,16 @@ class PostStorage:
             return "error"
 
         # Prepare post data
-        # NOTE: Using content_hash as post_id_ext until we implement Share modal extraction
-        # NOTE: url is None until we implement Share modal extraction
+        # NOTE: post_id_ext uses hash prefix if no permalink extracted
+        # NOTE: url comes from Share modal extraction (if enabled)
 
         post_data = {
             "hash": post.content_hash,
             "image_urls": post.image_urls,
             "neighborhood_id": neighborhood_id,
-            "post_id_ext": post.content_hash[:32],  # Temporary: use hash prefix
+            "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
             "text": post.content,
-            "url": None,
+            "url": post.post_url,
             "user_id_hash": post.author_id,
         }
 
@@ -207,3 +207,24 @@ class PostStorage:
         slug = re.sub(r"\s+", "-", slug)
         slug = re.sub(r"-+", "-", slug)
         return slug.strip("-")
+
+    def _extract_post_id(self, post_url: str | None, fallback_hash: str) -> str:
+        """Extract post ID from URL or use fallback.
+
+        Args:
+            post_url: URL like https://nextdoor.com/p/NCcN87kHgBCc
+            fallback_hash: Hash to use if no URL available.
+
+        Returns:
+            Post ID string.
+        """
+        if post_url:
+            # Extract ID from URL like /p/NCcN87kHgBCc
+
+            match = re.search(r"/p/([A-Za-z0-9]+)", post_url)
+            if match:
+                return match.group(1)
+
+        # Fallback to hash prefix
+
+        return fallback_hash[:32]
