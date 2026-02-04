@@ -9,6 +9,9 @@
 ## Table of Contents
 
 1. [System Overview](#1-system-overview)
+   - [1.1 How Nextdoor Feed Works](#11-how-nextdoor-feed-works)
+   - [1.2 Scraping Strategy](#12-scraping-strategy)
+   - [1.3 LLM Scoring Strategy](#13-llm-scoring-strategy)
 2. [Architecture Layers](#2-architecture-layers)
 3. [Technology Stack](#3-technology-stack)
 4. [Cost Breakdown](#4-cost-breakdown)
@@ -35,12 +38,12 @@ A platform that automatically discovers, analyzes, and curates interesting Nextd
 
 | Capability | Description |
 |------------|-------------|
-| **Automated Scraping** | Twice-daily collection from Recent + Trending feeds |
-| **LLM Analysis** | Score posts on humor, absurdity, drama, relatability |
-| **Semantic Search** | Find related posts by meaning, not just keywords |
+| **Automated Scraping** | Twice-daily collection from Recent + Trending feeds (~500 posts/day) |
+| **LLM Analysis** | Score posts on 5 dimensions (absurdity, drama, news value, discussion spark, emotional intensity) with topic categorization and novelty adjustment |
+| **Semantic Search** | Find related posts by meaning, not just keywords (OpenAI embeddings + pgvector) |
 | **Curation Dashboard** | Private web UI for browsing, filtering, and selecting posts |
 | **Episode Tracking** | Mark posts as used, prevent duplicates |
-| **Pittsburgh Sports Facts** | Random facts for Matt on each login (powered by Claude) |
+| **Pittsburgh Sports Facts** | Random facts for Matt on each login (powered by Claude Haiku) |
 
 ---
 
@@ -129,13 +132,127 @@ Each run scrolls deeper into the feed, capturing older posts. Run a few times ma
 | Issue | Current Behavior | Future Improvement |
 |-------|------------------|-------------------|
 | **Stopping Logic** | Stops after 5 scrolls with no new unique posts | Add timestamp-based stopping (e.g., "stop at yesterday's posts") |
-| **Post Links** | Not currently extracted | Extract shareable links via Share modal for easy viewing |
+| **Post Links** | ✅ Extracted via Share modal (`--extract-permalinks` flag) | Done! |
 | **Volume Uncertainty** | 250 is a cap, not a guarantee | Add metrics to track actual daily volume |
 
-**TODO**: The current stopping logic relies on in-memory deduplication during extraction. If all visible posts have been seen, it stops. This works but doesn't guarantee we've captured "all of today's posts" or any specific time range. Consider adding:
+**Note**: The current stopping logic relies on in-memory deduplication during extraction. If all visible posts have been seen, it stops. This works but doesn't guarantee we've captured "all of today's posts" or any specific time range. Consider adding:
 1. Timestamp parsing to stop at a specific cutoff (e.g., 24 hours ago)
 2. Database dedup check to stop when encountering already-stored posts
-3. Post permalink extraction for easy viewing in Nextdoor
+
+---
+
+## 1.3 LLM Scoring Strategy
+
+### Goal
+
+Identify posts that are **podcast-worthy** — not just funny, but interesting enough to discuss on air. This includes:
+
+- **Absurd/Humorous**: Classic unhinged Nextdoor behavior, Karen complaints, ridiculous drama
+- **Interesting/Newsworthy**: Something actually happened (fire, crime, unusual event)
+- **Discussion-Worthy**: Posts that spark conversation, controversy, or debate
+
+### Scoring Dimensions
+
+Claude Haiku evaluates each post on 5 dimensions (1-10 scale):
+
+| Dimension | Description | Example |
+|-----------|-------------|---------|
+| **Absurdity** | How ridiculous, unhinged, or "peak Nextdoor" is this? | Karen complaining about wind chimes at 2pm |
+| **Drama** | Conflict, tension, heated exchanges | Neighbor feud over fence height |
+| **News Value** | Something actually happened worth reporting | Fire, explosion, crime, accident |
+| **Discussion Spark** | Would listeners want to talk about this? | Controversial local opinion |
+| **Emotional Intensity** | Passion level in the writing | ALL CAPS, exclamation marks, strong language |
+
+### The Novelty Problem
+
+Frequent topics become boring. A coyote sighting might be interesting once, but not the 50th time.
+
+**Solution**: Track topic frequency and apply a novelty multiplier.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  POST: "Saw a coyote on Elm Street this morning!"          │
+│                                                              │
+│  Base Score: 6/10 (mildly interesting wildlife)             │
+│                                                              │
+│  Frequency Check (last 30 days):                            │
+│  - Coyote posts: 47                                         │
+│  - Novelty Multiplier: 0.3x (very common topic)             │
+│                                                              │
+│  Final Score: 6 × 0.3 = 1.8 (probably skip)                 │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  POST: "MOUNTAIN LION in my backyard eating my cat!!!"      │
+│                                                              │
+│  Base Score: 9/10 (dramatic, unusual, newsworthy)           │
+│                                                              │
+│  Frequency Check (last 30 days):                            │
+│  - Mountain lion posts: 0                                   │
+│  - Novelty Multiplier: 1.5x (rare topic boost)              │
+│                                                              │
+│  Final Score: 9 × 1.5 = 13.5 (definitely include!)          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Topic Categories
+
+Claude assigns one or more category tags to each post for frequency tracking:
+
+| Category | Common (penalize over time) | Rare (boost) |
+|----------|----------------------------|--------------|
+| `wildlife` | Coyotes, squirrels, raccoons | Mountain lion, bear, exotic animals |
+| `crime` | Package theft, car break-ins | Armed robbery, major incident |
+| `noise` | Barking dogs, loud music | Explosions, gunfire |
+| `lost_pet` | Standard lost cat/dog | Escaped exotic pet |
+| `drama` | HOA complaints, parking disputes | Full-blown neighbor war |
+| `local_news` | Road work, utility outage | Building collapse, major fire |
+| `humor` | Unintentionally funny posts | Intentional community humor |
+| `suspicious` | Generic "suspicious person" | Genuinely bizarre activity |
+
+### Dimension Weights
+
+Weights are configurable (stored in `settings` table). Default prioritizes humor/absurdity:
+
+```python
+DEFAULT_WEIGHTS = {
+    "absurdity": 2.0,          # 2x weight — primary podcast focus
+    "drama": 1.5,              # 1.5x — conflict is entertaining
+    "emotional_intensity": 1.2, # Passion adds entertainment value
+    "discussion_spark": 1.0,   # Baseline
+    "news_value": 1.0,         # Baseline
+}
+```
+
+### Final Score Calculation
+
+```python
+def calculate_final_score(scores: dict, weights: dict, novelty: float) -> float:
+    """Calculate weighted score with novelty adjustment."""
+    weighted_sum = sum(scores[dim] * weights[dim] for dim in scores)
+    max_possible = sum(10 * w for w in weights.values())  # Normalize to 0-10
+    normalized = (weighted_sum / max_possible) * 10
+    return normalized * novelty
+```
+
+### Threshold Strategy
+
+We **won't set a threshold initially**. Instead:
+
+1. **Phase 1 (Data Collection)**: Score all posts, store everything
+2. **Phase 2 (Analysis)**: After 1-2 weeks, analyze score distribution
+3. **Phase 3 (Tuning)**: Set threshold based on what "good" posts actually score
+
+This prevents premature optimization before we have data.
+
+### Extensibility
+
+The system is designed to be flexible:
+
+- **Add dimensions**: Just add new keys to the scores JSONB column
+- **Adjust weights**: Update `settings` table, no code changes
+- **Tune categories**: Add new topic categories as patterns emerge
+- **Adjust frequency window**: Currently 30 days, configurable
 
 ---
 
@@ -206,11 +323,11 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 │                      DATA LAYER (Supabase Free Tier)                    │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │  PostgreSQL + pgvector (500MB storage)                            │  │
-│  │  • posts              — Raw post data                             │  │
-│  │  • llm_scores         — Claude analysis results                   │  │
-│  │  • post_embeddings    — Vector representations                    │  │
-│  │  • rankings           — Calculated scores, episode usage          │  │
-│  │  • neighborhoods      — Configuration                             │  │
+│  │  • posts              — Raw post data + permalinks + images       │  │
+│  │  • llm_scores         — Claude scores (JSONB) + categories        │  │
+│  │  • topic_frequencies  — 30-day category counts for novelty calc   │  │
+│  │  • post_embeddings    — Vector representations (OpenAI)           │  │
+│  │  • neighborhoods      — Neighborhood config                       │  │
 │  │  • settings           — Ranking weights, preferences              │  │
 │  │  • sessions           — Encrypted Nextdoor session cookies        │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
@@ -315,17 +432,19 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 
 ```
 Per post (average):
-  - posts table:        ~500 bytes
-  - llm_scores:         ~200 bytes
+  - posts table:        ~600 bytes (includes URL, image_urls)
+  - llm_scores:         ~300 bytes (JSONB scores + categories)
   - post_embeddings:    ~6KB (1536 floats × 4 bytes)
-  - rankings:           ~50 bytes
   - indexes:            ~1KB
   ─────────────────────────────
   Total per post:       ~8KB
 
+topic_frequencies:      ~50 bytes × ~20 categories = ~1KB total (negligible)
+
 500MB limit ÷ 8KB = ~62,500 posts
 
-At 500 posts/month = ~10 years before hitting limit
+At 500 posts/day × 30 days = 15,000 posts/month
+At this rate: ~4 years before hitting limit (plenty of time)
 ```
 
 ---
@@ -592,7 +711,7 @@ We run **two separate cron jobs** to capture different types of content:
 │  │  ──────────────────────────────────────────────────────────────── │  │
 │  │  1. Load ranking weights from settings                            │  │
 │  │  2. Calculate: final_score = Σ(score × weight)                    │  │
-│  │  3. Upsert into rankings table                                    │  │
+│  │  3. Store final_score in llm_scores table                         │  │
 │  └────────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 │  Total runtime: ~5 minutes                                              │
@@ -608,8 +727,8 @@ We run **two separate cron jobs** to capture different types of content:
 │  ──────────────────────────────────────────────────────────────────────  │
 │                                                                          │
 │  GET /api/posts                                                          │
-│  └── Query: JOIN posts + llm_scores + rankings                          │
-│      └── Filter: neighborhood, tags, used_on_episode                    │
+│  └── Query: JOIN posts + llm_scores                                     │
+│      └── Filter: neighborhood, categories, used_on_episode              │
 │      └── Order: final_score DESC                                        │
 │      └── Paginate: offset/limit                                         │
 │                                                                          │
@@ -622,8 +741,8 @@ We run **two separate cron jobs** to capture different types of content:
 │  └── Find related: Vector similarity top 5                              │
 │                                                                          │
 │  POST /api/posts/:id/use                                                 │
-│  └── Update: rankings.used_on_episode = true                            │
-│  └── Update: rankings.episode_date = NOW()                              │
+│  └── Update: posts.used_on_episode = true                               │
+│  └── Update: posts.episode_date = NOW()                                 │
 │                                                                          │
 │  PUT /api/settings                                                       │
 │  └── Update ranking weights                                             │
@@ -648,29 +767,28 @@ We run **two separate cron jobs** to capture different types of content:
 ├─────────────────┤       ├─────────────────┤       ├─────────────────┤
 │ id          PK  │◄──┐   │ id          PK  │◄──────│ id          PK  │
 │ name            │   │   │ neighborhood_id │───────│ post_id     FK  │
-│ slug            │   └───│ post_id_ext     │       │ absurdity       │
-│ is_active       │       │ user_id_hash    │       │ humor           │
-│ weight_modifier │       │ text            │       │ drama           │
-│ created_at      │       │ hash            │       │ relatability    │
-│ updated_at      │       │ url             │       │ podcast_score   │
-└─────────────────┘       │ image_urls      │       │ tags        JSON│
-                          │ posted_at       │       │ summary         │
-┌─────────────────┐       │ created_at      │       │ processed_at    │
-│    sessions     │       └─────────────────┘       └─────────────────┘
-├─────────────────┤                │
-│ id          PK  │ ┌──────────────┼──────────────┐
-│ neighborhood_id │ │              │              │
-│ cookies_enc     │ ▼              ▼              ▼
-│ expires_at      │ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ updated_at      │ │ post_embeddings │ │    rankings     │ │   settings      │
-└─────────────────┘ ├─────────────────┤ ├─────────────────┤ ├─────────────────┤
-                    │ id          PK  │ │ id          PK  │ │ id          PK  │
-                    │ post_id     FK  │ │ post_id     FK  │ │ key             │
-                    │ embedding VECTOR│ │ final_score     │ │ value       JSON│
-                    │ model           │ │ used_on_episode │ │ updated_at      │
-                    │ created_at      │ │ episode_date    │ └─────────────────┘
-                    └─────────────────┘ │ updated_at      │
-                                        └─────────────────┘
+│ slug            │   └───│ post_id_ext     │       │ scores      JSON│
+│ is_active       │       │ user_id_hash    │       │ categories  []  │
+│ weight_modifier │       │ text            │       │ summary         │
+│ created_at      │       │ hash            │       │ final_score     │
+│ updated_at      │       │ url             │       │ model_version   │
+└─────────────────┘       │ image_urls      │       │ created_at      │
+                          │ posted_at       │       └─────────────────┘
+┌─────────────────┐       │ created_at      │
+│    sessions     │       └─────────────────┘       ┌─────────────────┐
+├─────────────────┤                │                │topic_frequencies│
+│ id          PK  │ ┌──────────────┼────────────┐   ├─────────────────┤
+│ neighborhood_id │ │              │            │   │ id          PK  │
+│ cookies_enc     │ ▼              ▼            │   │ category        │
+│ expires_at      │ ┌─────────────────┐ ┌───────┴───┤ count_30d       │
+│ updated_at      │ │ post_embeddings │ │  settings │ │ last_updated    │
+└─────────────────┘ ├─────────────────┤ ├───────────┤ └─────────────────┘
+                    │ id          PK  │ │ id     PK │
+                    │ post_id     FK  │ │ key       │
+                    │ embedding VECTOR│ │ value JSON│
+                    │ model           │ │ updated_at│
+                    │ created_at      │ └───────────┘
+                    └─────────────────┘
 ```
 
 ### Table Definitions
@@ -726,21 +844,54 @@ CREATE INDEX idx_posts_created ON posts(created_at DESC);
 
 #### `llm_scores`
 
+Stores Claude Haiku's analysis of each post. Scores are stored as JSONB for flexibility (easy to add new dimensions later).
+
 ```sql
 CREATE TABLE llm_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     post_id UUID NOT NULL UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
-    absurdity FLOAT CHECK (absurdity >= 0 AND absurdity <= 10),
-    humor FLOAT CHECK (humor >= 0 AND humor <= 10),
-    drama FLOAT CHECK (drama >= 0 AND drama <= 10),
-    relatability FLOAT CHECK (relatability >= 0 AND relatability <= 10),
-    podcast_score FLOAT,                       -- Raw LLM opinion
-    tags JSONB DEFAULT '[]',
+    
+    -- Individual dimension scores (1-10 scale)
+    -- Stored as JSONB for flexibility: {"absurdity": 8, "drama": 6, ...}
+    scores JSONB NOT NULL,
+    
+    -- Topic categories for frequency tracking: ['wildlife', 'humor', 'drama']
+    categories TEXT[] NOT NULL DEFAULT '{}',
+    
+    -- Short summary for quick reference
     summary TEXT,
-    processed_at TIMESTAMPTZ DEFAULT NOW()
+    
+    -- Computed final score (weighted + novelty adjusted)
+    final_score FLOAT,
+    
+    -- Metadata
+    model_version TEXT DEFAULT 'claude-3-haiku-20240307',
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_llm_scores_post ON llm_scores(post_id);
+CREATE INDEX idx_llm_scores_final ON llm_scores(final_score DESC);
+CREATE INDEX idx_llm_scores_categories ON llm_scores USING GIN(categories);
+```
+
+#### `topic_frequencies`
+
+Tracks how often each topic category appears (global, 30-day rolling window). Used to calculate novelty multiplier.
+
+```sql
+CREATE TABLE topic_frequencies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category TEXT NOT NULL UNIQUE,
+    count_30d INT DEFAULT 0,
+    last_updated TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Example data:
+-- | category   | count_30d | last_updated |
+-- |------------|-----------|--------------|
+-- | wildlife   | 127       | 2024-01-15   |
+-- | lost_pet   | 89        | 2024-01-15   |
+-- | crime      | 45        | 2024-01-15   |
 ```
 
 #### `post_embeddings`
@@ -762,21 +913,19 @@ CREATE INDEX idx_embeddings_vector ON post_embeddings
     USING hnsw (embedding vector_cosine_ops);
 ```
 
-#### `rankings`
+#### Episode Tracking (in `posts` table)
+
+Episode usage is tracked directly in the `posts` table:
 
 ```sql
-CREATE TABLE rankings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    post_id UUID NOT NULL UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
-    final_score FLOAT NOT NULL DEFAULT 0,
-    used_on_episode BOOLEAN DEFAULT false,
-    episode_date DATE,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Add these columns to posts table
+ALTER TABLE posts ADD COLUMN used_on_episode BOOLEAN DEFAULT false;
+ALTER TABLE posts ADD COLUMN episode_date DATE;
 
-CREATE INDEX idx_rankings_score ON rankings(final_score DESC);
-CREATE INDEX idx_rankings_unused ON rankings(used_on_episode, final_score DESC);
+CREATE INDEX idx_posts_unused ON posts(used_on_episode) WHERE used_on_episode = false;
 ```
+
+**Note**: We removed the separate `rankings` table. Final scores are stored in `llm_scores.final_score`, and episode tracking is in `posts`.
 
 #### `settings`
 
@@ -1658,20 +1807,44 @@ jobs:
 
 ### Phase 3: LLM Integration (DO BEFORE DEPLOYMENT)
 
-- [ ] **3.1** Claude Haiku scoring
-  - [ ] Prompt template
-  - [ ] JSON parsing
-  - [ ] Batch processing
+See [Section 1.3: LLM Scoring Strategy](#13-llm-scoring-strategy) for full context on dimensions, categories, and novelty.
 
-- [ ] **3.2** OpenAI embeddings
-  - [ ] Embedding generation
-  - [ ] Batch API calls
-  - [ ] Store in pgvector
+- [ ] **3.1** Database Schema Updates
+  - [ ] Create migration for updated `llm_scores` table (JSONB scores, categories array)
+  - [ ] Create `topic_frequencies` table
+  - [ ] Add `ranking_weights` to `settings` table (or create if not exists)
+  - [ ] Run migrations in Supabase
 
-- [ ] **3.3** Ranking
-  - [ ] Ranking formula
-  - [ ] Weight configuration
-  - [ ] Update rankings table
+- [ ] **3.2** Claude Haiku Scoring (`llm_scorer.py`)
+  - [ ] Create scoring prompt template (5 dimensions + categories + summary)
+  - [ ] Implement `LLMScorer` class with `score_post()` and `score_batch()` methods
+  - [ ] Parse JSON response from Claude
+  - [ ] Handle API errors and rate limits (tenacity retry)
+  - [ ] Store results in `llm_scores` table
+  - [ ] Add `--score` CLI flag to main.py (or separate script)
+
+- [ ] **3.3** Topic Frequency Tracking
+  - [ ] Update `topic_frequencies` counts when scoring posts
+  - [ ] Implement 30-day rolling window (decrement old counts or recalculate)
+  - [ ] Calculate novelty multiplier based on category frequency
+
+- [ ] **3.4** Final Score Calculation
+  - [ ] Load weights from config/settings
+  - [ ] Implement weighted score formula
+  - [ ] Apply novelty multiplier
+  - [ ] Store `final_score` in `llm_scores`
+
+- [ ] **3.5** OpenAI Embeddings (`embedder.py`)
+  - [ ] Create `Embedder` class
+  - [ ] Batch API calls (up to 100 texts per request)
+  - [ ] Store vectors in `post_embeddings` table
+  - [ ] Add `--embed` CLI flag or integrate into pipeline
+
+- [ ] **3.6** Integration & Testing
+  - [ ] Run scoring on existing posts (backfill)
+  - [ ] Analyze score distribution
+  - [ ] Tune weights if needed
+  - [ ] Document prompt and tuning decisions
 
 ### Phase 4: Web UI
 
