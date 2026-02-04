@@ -25,9 +25,9 @@ class PostStorage:
         self._neighborhood_cache: dict[str, str] = {}
 
     def store_posts(self, posts: list[RawPost]) -> dict[str, int]:
-        """Store posts in Supabase.
+        """Store posts in Supabase using batch insert.
 
-        Uses ON CONFLICT DO NOTHING to skip duplicates based on hash.
+        Uses upsert with ON CONFLICT DO NOTHING to skip duplicates based on hash.
 
         Args:
             posts: List of RawPost objects to store.
@@ -37,20 +37,73 @@ class PostStorage:
         """
         stats = {"errors": 0, "inserted": 0, "skipped": 0}
 
+        if not posts:
+            return stats
+
+        # Prepare all post data for batch insert
+
+        posts_data = []
+
         for post in posts:
-            try:
-                result = self._store_single_post(post)
-
-                if result == "inserted":
-                    stats["inserted"] += 1
-                elif result == "skipped":
-                    stats["skipped"] += 1
-                else:
-                    stats["errors"] += 1
-
-            except Exception as e:
-                logger.error("Error storing post: %s", e)
+            neighborhood_id = self._get_or_create_neighborhood(post.neighborhood)
+            if not neighborhood_id:
+                logger.warning(
+                    "Could not get neighborhood ID for: %s", post.neighborhood
+                )
                 stats["errors"] += 1
+                continue
+
+            posts_data.append({
+                "hash": post.content_hash,
+                "image_urls": post.image_urls,
+                "neighborhood_id": neighborhood_id,
+                "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
+                "text": post.content,
+                "url": post.post_url,
+                "user_id_hash": post.author_id,
+            })
+
+        if not posts_data:
+            return stats
+
+        # Batch insert with conflict handling
+
+        try:
+            result = (
+                self.supabase.table("posts")
+                .upsert(posts_data, on_conflict="hash", ignore_duplicates=True)
+                .execute()
+            )
+
+            # Count inserted (returned rows) vs skipped (total - returned)
+
+            inserted_count = len(result.data) if result.data else 0
+            stats["inserted"] = inserted_count
+            stats["skipped"] = len(posts_data) - inserted_count
+
+        except Exception as e:
+            logger.error("Batch insert error: %s", e)
+
+            # Fall back to individual inserts on batch failure
+
+            for post_data in posts_data:
+                try:
+                    result = (
+                        self.supabase.table("posts")
+                        .insert(post_data)
+                        .execute()
+                    )
+                    if result.data:
+                        stats["inserted"] += 1
+                    else:
+                        stats["skipped"] += 1
+                except Exception as inner_e:
+                    error_msg = str(inner_e).lower()
+                    if "duplicate" in error_msg or "unique" in error_msg:
+                        stats["skipped"] += 1
+                    else:
+                        logger.error("Insert error: %s", error_msg)
+                        stats["errors"] += 1
 
         logger.info(
             "Storage complete: %d inserted, %d skipped, %d errors",
@@ -60,61 +113,6 @@ class PostStorage:
         )
 
         return stats
-
-    def _store_single_post(self, post: RawPost) -> str:
-        """Store a single post.
-
-        Args:
-            post: RawPost to store.
-
-        Returns:
-            Status string: "inserted", "skipped", or "error"
-        """
-        # Get or create neighborhood
-
-        neighborhood_id = self._get_or_create_neighborhood(post.neighborhood)
-        if not neighborhood_id:
-            logger.warning("Could not get neighborhood ID for: %s", post.neighborhood)
-            return "error"
-
-        # Prepare post data
-        # NOTE: post_id_ext uses hash prefix if no permalink extracted
-        # NOTE: url comes from Share modal extraction (if enabled)
-
-        post_data = {
-            "hash": post.content_hash,
-            "image_urls": post.image_urls,
-            "neighborhood_id": neighborhood_id,
-            "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
-            "text": post.content,
-            "url": post.post_url,
-            "user_id_hash": post.author_id,
-        }
-
-        try:
-            result = (
-                self.supabase.table("posts")
-                .insert(post_data)
-                .execute()
-            )
-
-            if result.data:
-                logger.debug("Inserted post: %s", post.content_hash[:16])
-                return "inserted"
-
-            return "skipped"
-
-        except Exception as e:
-            error_msg = str(e)
-
-            # Check if it's a duplicate key error
-
-            if "duplicate key" in error_msg.lower() or "unique" in error_msg.lower():
-                logger.debug("Skipped duplicate post: %s", post.content_hash[:16])
-                return "skipped"
-
-            logger.error("Insert error: %s", error_msg)
-            return "error"
 
     def _get_or_create_neighborhood(self, name: str | None) -> str | None:
         """Get neighborhood ID by name, creating if needed.

@@ -29,7 +29,7 @@ export function PostCard({ onMarkUsed, onViewDetails, post }: PostCardProps) {
         {ranking && (
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-yellow-500">
-              {ranking.final_score.toFixed(1)}
+              {ranking.final_score?.toFixed(1) ?? "—"}
             </span>
             {ranking.used_on_episode && (
               <span className="text-xs bg-green-800 text-green-200 px-2 py-0.5 rounded">

@@ -13,6 +13,9 @@ from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
 
+# Default identifier for sessions without a specific neighborhood
+DEFAULT_SESSION_ID = "default"
+
 
 class SessionManager:
     """Manages Nextdoor login sessions stored in Supabase."""
@@ -107,25 +110,21 @@ class SessionManager:
         now = datetime.now(UTC)
         expires_at = now + timedelta(days=expires_days)
 
+        # Use provided neighborhood_id or default to avoid duplicate inserts
+        session_id = neighborhood_id or DEFAULT_SESSION_ID
+
         data: dict[str, Any] = {
             "cookies_encrypted": encrypted.decode(),
             "expires_at": expires_at.isoformat(),
+            "neighborhood_id": session_id,
             "updated_at": now.isoformat(),
         }
 
-        if neighborhood_id:
-            data["neighborhood_id"] = neighborhood_id
-
-            # Upsert with conflict on neighborhood_id
-
-            self.supabase.table("sessions").upsert(
-                data,
-                on_conflict="neighborhood_id",
-            ).execute()
-        else:
-            # Insert new session without neighborhood_id
-
-            self.supabase.table("sessions").insert(data).execute()
+        # Always upsert to prevent duplicate sessions
+        self.supabase.table("sessions").upsert(
+            data,
+            on_conflict="neighborhood_id",
+        ).execute()
 
         logger.info(
             "Saved %d cookies, expires %s",
