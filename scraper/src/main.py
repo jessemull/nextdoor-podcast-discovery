@@ -4,8 +4,10 @@ __all__ = ["main"]
 
 import argparse
 import logging
+import os
 import sys
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
@@ -15,6 +17,7 @@ from src.exceptions import (
     LoginFailedError,
     ScraperError,
 )
+from src.llm_scorer import LLMScorer
 from src.post_storage import PostStorage
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
@@ -30,11 +33,48 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _run_scoring(supabase_client: object) -> None:
+    """Run LLM scoring on unscored posts.
+
+    Args:
+        supabase_client: Supabase client instance.
+    """
+    # Initialize scorer
+
+    anthropic = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    scorer = LLMScorer(anthropic, supabase_client)  # type: ignore[arg-type]
+
+    # Get unscored posts
+
+    unscored = scorer.get_unscored_posts(limit=50)
+    if not unscored:
+        logger.info("No unscored posts found")
+        return
+
+    logger.info("Scoring %d unscored posts", len(unscored))
+
+    # Score posts
+
+    results = scorer.score_posts(unscored)
+    results = scorer.calculate_final_scores(results)
+
+    # Save scores
+
+    stats = scorer.save_scores(results)
+    logger.info(
+        "Scoring complete: %d saved, %d skipped, %d errors",
+        stats["saved"],
+        stats["skipped"],
+        stats["errors"],
+    )
+
+
 def main(
     dry_run: bool = False,
     extract_permalinks: bool = False,
     feed_type: str = "recent",
     max_posts: int | None = None,
+    score: bool = False,
     visible: bool = False,
 ) -> int:
     """Run the full scraper pipeline.
@@ -44,6 +84,7 @@ def main(
         extract_permalinks: If True, click Share on each post to get permalink.
         feed_type: Which feed to scrape ("recent" or "trending").
         max_posts: Maximum number of posts to scrape (default from config).
+        score: If True, run LLM scoring on unscored posts after scraping.
         visible: If True, run browser in visible mode (not headless).
 
     Returns:
@@ -64,12 +105,13 @@ def main(
 
     logger.info(
         "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
-        "visible=%s, extract_permalinks=%s)",
+        "visible=%s, extract_permalinks=%s, score=%s)",
         feed_type,
         max_posts,
         dry_run,
         visible,
         extract_permalinks,
+        score,
     )
 
     try:
@@ -154,10 +196,14 @@ def main(
                     stats["skipped"],
                 )
 
-            # TODO: Implement remaining pipeline steps
-            # - Run LLM scoring
-            # - Generate embeddings
-            # - Update rankings
+            # Step 6: Run LLM scoring if enabled
+
+            if score and not dry_run:
+                logger.info("Running LLM scoring on unscored posts")
+                _run_scoring(session_manager.supabase)
+
+            # TODO: Remaining pipeline steps
+            # - Generate embeddings (OpenAI)
 
             logger.info("Pipeline complete (feed=%s, posts=%d)", feed_type, len(posts))
 
@@ -206,6 +252,11 @@ if __name__ == "__main__":
         help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",  # noqa: E501
     )
     parser.add_argument(
+        "--score",
+        action="store_true",
+        help="Run LLM scoring on unscored posts after scraping",
+    )
+    parser.add_argument(
         "--visible",
         action="store_true",
         help="Run browser in visible mode (not headless)",
@@ -218,6 +269,7 @@ if __name__ == "__main__":
             extract_permalinks=args.extract_permalinks,
             feed_type=args.feed_type,
             max_posts=args.max_posts,
+            score=args.score,
             visible=args.visible,
         )
     )
