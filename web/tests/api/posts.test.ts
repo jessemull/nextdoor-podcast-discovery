@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 
 import { GET } from "@/app/api/posts/route";
 
@@ -14,10 +14,12 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 // Mock Supabase
-const mockSelect = vi.fn();
-const mockFrom = vi.fn(() => ({
-  select: mockSelect,
-}));
+// Note: Using 'any' here is acceptable for complex Supabase query chain mocks
+// The actual implementation is type-safe, but the mock structure is too complex
+// to type precisely without significant overhead
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockFrom = vi.fn() as any;
+
 const mockSupabase = {
   from: mockFrom,
 };

@@ -18,16 +18,15 @@ function getAnthropic(): Anthropic {
   return _anthropic;
 }
 
-const SPORTS_FACT_PROMPT = `Give me one random, interesting, and lesser-known fact about Pittsburgh sports teams (Steelers, Pirates, or Penguins). 
+const SPORTS_FACT_PROMPT = `Give me exactly ONE random, lesser-known fact about ONE Pittsburgh sports team (Steelers, Pirates, or Penguins).
 
-Requirements:
-- Pick a random team each time
-- Make it surprising or amusing
-- Keep it to 1-2 sentences
-- Include the year if relevant
-- Don't repeat common facts everyone knows
+Rules:
+- ONE fact only, about ONE team
+- Maximum 2 sentences
+- Make it surprising or obscure
+- No introductions, just the fact
 
-Return ONLY the fact, no preamble.`;
+Example format: "In 1995, the Pittsburgh Penguins mascot Iceburgh was once ejected from a game for spraying silly string on a referee."`;
 
 export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
   const session = await getServerSession(authOptions);

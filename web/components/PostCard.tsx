@@ -4,12 +4,18 @@ import { PostWithScores } from "@/lib/types";
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
 interface PostCardProps {
+  isMarkingUsed?: boolean;
   onMarkUsed?: (postId: string) => void;
   onViewDetails?: (postId: string) => void;
   post: PostWithScores;
 }
 
-export function PostCard({ onMarkUsed, onViewDetails, post }: PostCardProps) {
+export function PostCard({
+  isMarkingUsed = false,
+  onMarkUsed,
+  onViewDetails,
+  post,
+}: PostCardProps) {
   const scores = post.llm_scores;
   const dimensionScores = scores?.scores;
 
@@ -102,10 +108,11 @@ export function PostCard({ onMarkUsed, onViewDetails, post }: PostCardProps) {
         {!post.used_on_episode && onMarkUsed && (
           <button
             aria-label="Mark this post as used in an episode"
-            className="text-xs text-green-400 hover:text-green-300 transition-colors"
+            className="text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isMarkingUsed}
             onClick={() => onMarkUsed(post.id)}
           >
-            Mark as Used
+            {isMarkingUsed ? "Marking..." : "Mark as Used"}
           </button>
         )}
       </div>

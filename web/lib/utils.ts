@@ -52,3 +52,4 @@ export function truncate(text: string, maxLength: number): string {
 // UI Constants
 
 export const POST_PREVIEW_LENGTH = 300;
+export const POSTS_PER_PAGE = 20;
