@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS, TOPIC_CATEGORIES } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
@@ -20,12 +20,12 @@ interface Filters {
 }
 
 /**
- * PostFeed component displays a list of Nextdoor posts with filtering and pagination.
+ * PostFeed component displays a list of Nextdoor posts with filtering and infinite scroll.
  *
  * Features:
  * - Sort by score or date
  * - Filter by category, minimum score, and unused status
- * - Pagination support
+ * - Infinite scroll pagination
  * - Retry logic for failed requests
  * - Debounced filter inputs to reduce API calls
  *
@@ -42,18 +42,25 @@ export function PostFeed() {
     sort: "score",
     unusedOnly: false,
   });
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [posts, setPosts] = useState<PostWithScores[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Debounce minScore to avoid excessive API calls
   const debouncedMinScore = useDebounce(filters.minScore, DEBOUNCE_DELAY_MS);
 
   const fetchPosts = useCallback(
     async (currentOffset = 0, append = false) => {
-      setLoading(true);
+      // Only show initial loading on first load
+      if (currentOffset === 0 && !append) {
+        setInitialLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       try {
@@ -90,7 +97,8 @@ export function PostFeed() {
         console.error("Failed to fetch posts:", err);
         setError(errorMessage);
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
+        setLoadingMore(false);
       }
     },
     [debouncedMinScore, filters.category, filters.sort, filters.unusedOnly]
@@ -99,6 +107,35 @@ export function PostFeed() {
   useEffect(() => {
     fetchPosts(0, false); // Reset posts when filters change
   }, [fetchPosts]);
+
+  // Infinite scroll with Intersection Observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const hasMore = offset + POSTS_PER_PAGE < total;
+    if (!hasMore || loadingMore || initialLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingMore) {
+          const nextOffset = offset + POSTS_PER_PAGE;
+          if (nextOffset < total) {
+            fetchPosts(nextOffset, true);
+          }
+        }
+      },
+      {
+        rootMargin: "200px", // Start loading 200px before reaching bottom
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [fetchPosts, loadingMore, initialLoading, offset, total]);
 
   const handleMarkUsed = async (postId: string) => {
     if (markingUsed.has(postId)) return; // Prevent double-clicks
@@ -134,13 +171,6 @@ export function PostFeed() {
 
   const handleRetry = () => {
     fetchPosts(0, false); // Reset to first page on retry
-  };
-
-  const handleLoadMore = () => {
-    const nextOffset = offset + POSTS_PER_PAGE;
-    if (nextOffset < total) {
-      fetchPosts(nextOffset, true); // Append to existing posts
-    }
   };
 
   const hasMore = offset + POSTS_PER_PAGE < total;
@@ -233,15 +263,15 @@ export function PostFeed() {
         </div>
       )}
 
-      {/* Loading */}
-      {loading && (
+      {/* Initial Loading */}
+      {initialLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500" />
         </div>
       )}
 
       {/* Posts */}
-      {!loading && posts.length === 0 && (
+      {!initialLoading && posts.length === 0 && (
         <div className="bg-gray-800 rounded-lg p-8 text-center">
           <p className="text-gray-400">No posts found</p>
           <p className="text-sm text-gray-500 mt-2">
@@ -250,7 +280,7 @@ export function PostFeed() {
         </div>
       )}
 
-      {!loading && posts.length > 0 && (
+      {!initialLoading && posts.length > 0 && (
         <>
           <div className="space-y-4">
             {posts.map((post) => (
@@ -263,17 +293,23 @@ export function PostFeed() {
             ))}
           </div>
 
-          {/* Pagination */}
+          {/* Infinite scroll sentinel */}
           {hasMore && (
-            <div className="flex justify-center">
-              <button
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
-                disabled={loading}
-                type="button"
-                onClick={handleLoadMore}
-              >
-                {loading ? "Loading..." : "Load More"}
-              </button>
+            <div
+              ref={sentinelRef}
+              className="flex justify-center py-4"
+              data-testid="infinite-scroll-sentinel"
+            >
+              {loadingMore && (
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500" />
+              )}
+            </div>
+          )}
+
+          {/* End of results */}
+          {!hasMore && posts.length > 0 && (
+            <div className="text-center text-sm text-gray-500 py-4">
+              No more posts to load
             </div>
           )}
         </>

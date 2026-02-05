@@ -22,4 +22,5 @@
 - [x] 10. Replace emoji in StatsPanel - use icon component instead of "📊"
 - [x] 11. Improve test mocks - better typing instead of `as any` in posts.test.ts
 - [x] 17. Extract debounce delay to constant
-- [ ] 18. Add component tests for PostFeed and StatsPanel (deferred - can add later)
+- [x] 18. Add component tests for PostFeed and StatsPanel
+- [x] 19. Add tests for useDebounce hook

@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { PostWithScores } from "@/lib/types";
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
@@ -10,7 +12,7 @@ interface PostCardProps {
   post: PostWithScores;
 }
 
-export function PostCard({
+export const PostCard = memo(function PostCard({
   isMarkingUsed = false,
   onMarkUsed,
   onViewDetails,
@@ -118,7 +120,7 @@ export function PostCard({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Internal component for displaying individual score metrics.
