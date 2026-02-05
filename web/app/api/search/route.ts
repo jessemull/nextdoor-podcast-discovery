@@ -94,8 +94,22 @@ export async function POST(request: NextRequest) {
     );
 
     // Generate embedding for the query
+    let openaiApiKey: string;
+    try {
+      openaiApiKey = env.OPENAI_API_KEY;
+    } catch (err) {
+      console.error("[search] Missing OPENAI_API_KEY environment variable");
+      return NextResponse.json(
+        {
+          details: "OPENAI_API_KEY environment variable is required for semantic search",
+          error: "Configuration error",
+        },
+        { status: 500 }
+      );
+    }
+
     const openai = new OpenAI({
-      apiKey: env.OPENAI_API_KEY,
+      apiKey: openaiApiKey,
     });
 
     const embeddingResponse = await openai.embeddings.create({
@@ -113,7 +127,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Search for similar posts using RPC function
-
     const supabase = getSupabaseAdmin();
 
     const { data: searchResults, error: searchError } = await supabase.rpc(
@@ -129,10 +142,30 @@ export async function POST(request: NextRequest) {
       console.error("[search] Database search failed:", {
         code: searchError.code,
         error: searchError.message,
+        hint: searchError.hint,
         query: trimmedQuery.substring(0, 50),
       });
+
+      // Provide helpful error message if function doesn't exist
+      if (
+        searchError.message?.includes("function") &&
+        searchError.message?.includes("does not exist")
+      ) {
+        return NextResponse.json(
+          {
+            details:
+              "Database function not found. Please run migration 003_semantic_search.sql",
+            error: "Database search function missing",
+          },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
-        { details: searchError.message, error: "Database search failed" },
+        {
+          details: searchError.message || "Unknown database error",
+          error: "Database search failed",
+        },
         { status: 500 }
       );
     }
@@ -227,9 +260,23 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
       type: error instanceof Error ? error.constructor.name : typeof error,
     });
+
+    // Check if it's a missing environment variable error
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    if (errorMessage.includes("Missing required environment variable")) {
+      return NextResponse.json(
+        {
+          details: errorMessage,
+          error: "Configuration error",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: errorMessage,
         error: "Internal server error",
       },
       { status: 500 }

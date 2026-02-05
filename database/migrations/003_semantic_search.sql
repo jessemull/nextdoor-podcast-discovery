@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION search_posts_by_embedding(
 RETURNS TABLE(
     id UUID,
     text TEXT,
-    similarity FLOAT,
+    similarity DOUBLE PRECISION,
     created_at TIMESTAMPTZ,
     neighborhood_id UUID,
     post_id_ext TEXT,
@@ -33,15 +33,15 @@ BEGIN
     SELECT 
         p.id,
         p.text,
-        1 - (pe.embedding <=> query_embedding) AS similarity,
+        (1 - (pe.embedding <=> query_embedding))::DOUBLE PRECISION AS similarity,
         p.created_at,
         p.neighborhood_id,
-        p.post_id_ext,
-        p.url,
-        p.user_id_hash,
+        p.post_id_ext::TEXT,
+        p.url::TEXT,
+        p.user_id_hash::TEXT,
         p.image_urls,
-        p.hash,
-        p.used_on_episode,
+        p.hash::TEXT,
+        COALESCE(p.used_on_episode, false),
         p.episode_date
     FROM posts p
     INNER JOIN post_embeddings pe ON p.id = pe.post_id
