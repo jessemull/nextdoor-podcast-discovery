@@ -28,7 +28,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PostWithScores[]>([]);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.3);
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [total, setTotal] = useState(0);
 
   const debouncedQuery = useDebounce(query, DEBOUNCE_DELAY_MS);

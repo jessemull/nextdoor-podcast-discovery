@@ -48,6 +48,32 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
+      {/* Images */}
+      {post.image_urls && post.image_urls.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {post.image_urls.slice(0, 4).map((imageUrl, index) => (
+            <a
+              key={`${post.id}-img-${index}`}
+              href={post.url || "#"}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={`Post ${index + 1}`}
+                className="h-24 w-24 rounded object-cover border border-gray-700 hover:border-gray-600 transition-colors"
+                src={imageUrl}
+              />
+            </a>
+          ))}
+          {post.image_urls.length > 4 && (
+            <div className="flex h-24 w-24 items-center justify-center rounded border border-gray-700 bg-gray-700 text-xs text-gray-400">
+              +{post.image_urls.length - 4}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       <p className="text-gray-200 mb-3">
         {truncate(post.text, POST_PREVIEW_LENGTH)}
