@@ -296,9 +296,9 @@ export function PostFeed() {
           {/* Infinite scroll sentinel */}
           {hasMore && (
             <div
-              ref={sentinelRef}
               className="flex justify-center py-4"
               data-testid="infinite-scroll-sentinel"
+              ref={sentinelRef}
             >
               {loadingMore && (
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500" />

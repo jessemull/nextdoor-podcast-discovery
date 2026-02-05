@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useDebounce } from "@/lib/hooks";
@@ -18,7 +18,7 @@ describe("useDebounce", () => {
     expect(result.current).toBe("initial");
   });
 
-  it("should debounce value changes", async () => {
+  it("should debounce value changes", () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
@@ -40,12 +40,10 @@ describe("useDebounce", () => {
     });
 
     // Should now be updated
-    await waitFor(() => {
-      expect(result.current).toBe("updated");
-    });
+    expect(result.current).toBe("updated");
   });
 
-  it("should use custom delay", async () => {
+  it("should use custom delay", () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
@@ -67,12 +65,10 @@ describe("useDebounce", () => {
       vi.advanceTimersByTime(500);
     });
 
-    await waitFor(() => {
-      expect(result.current).toBe("updated");
-    });
+    expect(result.current).toBe("updated");
   });
 
-  it("should use default delay of 300ms when not specified", async () => {
+  it("should use default delay of 300ms when not specified", () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounce(value),
       {
@@ -94,12 +90,10 @@ describe("useDebounce", () => {
       vi.advanceTimersByTime(100);
     });
 
-    await waitFor(() => {
-      expect(result.current).toBe("updated");
-    });
+    expect(result.current).toBe("updated");
   });
 
-  it("should cancel previous timeout when value changes rapidly", async () => {
+  it("should cancel previous timeout when value changes rapidly", () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
@@ -132,12 +126,10 @@ describe("useDebounce", () => {
     });
 
     // Should be the last value
-    await waitFor(() => {
-      expect(result.current).toBe("change3");
-    });
+    expect(result.current).toBe("change3");
   });
 
-  it("should handle number values", async () => {
+  it("should handle number values", () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
@@ -153,12 +145,10 @@ describe("useDebounce", () => {
       vi.advanceTimersByTime(500);
     });
 
-    await waitFor(() => {
-      expect(result.current).toBe(42);
-    });
+    expect(result.current).toBe(42);
   });
 
-  it("should handle boolean values", async () => {
+  it("should handle boolean values", () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       {
@@ -174,8 +164,6 @@ describe("useDebounce", () => {
       vi.advanceTimersByTime(500);
     });
 
-    await waitFor(() => {
-      expect(result.current).toBe(true);
-    });
+    expect(result.current).toBe(true);
   });
 });

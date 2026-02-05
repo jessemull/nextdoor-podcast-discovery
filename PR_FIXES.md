@@ -16,7 +16,7 @@
 
 ## Nice to Have (Later)
 - [x] 6. Move categories to constants - fetch from API or shared config file
-- [x] 7. Add pagination - load more than 20 posts (infinite scroll or page controls)
+- [x] 7. Add pagination - load more than 20 posts (infinite scroll implemented)
 - [x] 8. Add JSDoc comments - document PostFeed and StatsPanel components
 - [x] 9. Server-side initial load - deferred (client-side acceptable for filters, can optimize later)
 - [x] 10. Replace emoji in StatsPanel - use icon component instead of "📊"
@@ -24,3 +24,6 @@
 - [x] 17. Extract debounce delay to constant
 - [x] 18. Add component tests for PostFeed and StatsPanel
 - [x] 19. Add tests for useDebounce hook
+- [x] 20. Implement infinite scroll (replaced "Load More" button)
+- [x] 21. Memoize PostCard component for performance
+- [x] 22. Update tests for infinite scroll changes

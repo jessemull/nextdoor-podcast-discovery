@@ -84,15 +84,10 @@ const mockPosts: PostWithScores[] = [
 describe("PostFeed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     global.fetch = vi.fn();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("should display loading state initially", async () => {
+  it("should display initial loading state", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
       () =>
         new Promise(() => {
@@ -102,7 +97,7 @@ describe("PostFeed", () => {
 
     render(<PostFeed />);
 
-    // Check for loading spinner (animate-spin class)
+    // Check for initial loading spinner (animate-spin class)
     const loadingSpinner = document.querySelector(".animate-spin");
     expect(loadingSpinner).toBeInTheDocument();
   });
@@ -142,7 +137,7 @@ describe("PostFeed", () => {
   });
 
   it("should retry fetch when retry button is clicked", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     // First call fails
     (global.fetch as ReturnType<typeof vi.fn>)
@@ -174,7 +169,7 @@ describe("PostFeed", () => {
   });
 
   it("should filter by category when category is selected", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({
@@ -201,7 +196,7 @@ describe("PostFeed", () => {
   });
 
   it("should filter by minimum score when minScore is entered", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({
@@ -220,20 +215,19 @@ describe("PostFeed", () => {
     const minScoreInput = screen.getByLabelText(/min score/i);
     await user.type(minScoreInput, "8");
 
-    // Fast-forward past debounce delay (500ms)
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("min_score=8")
-      );
-    });
+    // Wait for debounce delay (500ms) plus a small buffer
+    await waitFor(
+      () => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining("min_score=8")
+        );
+      },
+      { timeout: 1000 }
+    );
   });
 
   it("should toggle unused only filter", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({
@@ -260,7 +254,7 @@ describe("PostFeed", () => {
   });
 
   it("should change sort order when sort option is selected", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({
@@ -286,7 +280,7 @@ describe("PostFeed", () => {
     });
   });
 
-  it("should display loading indicator when loading more posts", async () => {
+  it("should display sentinel element when more posts are available", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({
         data: mockPosts,
@@ -306,30 +300,14 @@ describe("PostFeed", () => {
     expect(sentinel).toBeInTheDocument();
   });
 
-  it("should load more posts automatically when scrolling near bottom", async () => {
-    const morePosts: PostWithScores[] = [
-      {
-        ...mockPosts[0],
-        id: "post-3",
-        text: "Third post",
-      },
-    ];
-
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: mockPosts,
-          total: 50,
-        }),
-        ok: true,
-      } as Response)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: morePosts,
-          total: 50,
-        }),
-        ok: true,
-      } as Response);
+  it("should not display sentinel when all posts are loaded", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({
+        data: mockPosts,
+        total: 2, // Exactly 2 posts, no more
+      }),
+      ok: true,
+    } as Response);
 
     render(<PostFeed />);
 
@@ -337,20 +315,9 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    // Simulate intersection observer triggering
+    // Should not have sentinel when all posts are loaded
     const sentinel = document.querySelector("[data-testid='infinite-scroll-sentinel']");
-    if (sentinel) {
-      // Trigger intersection
-      const observer = new IntersectionObserver(() => {});
-      observer.observe(sentinel);
-      
-      // Manually trigger the callback by simulating intersection
-      const entries = [{ isIntersecting: true, target: sentinel } as IntersectionObserverEntry];
-      // This is a simplified test - in real scenario IntersectionObserver would handle this
-    }
-
-    // For now, just verify the sentinel exists when there are more posts
-    expect(sentinel).toBeInTheDocument();
+    expect(sentinel).not.toBeInTheDocument();
   });
 
   it("should display end message when all posts are loaded", async () => {
@@ -388,7 +355,7 @@ describe("PostFeed", () => {
   });
 
   it("should mark post as used when button is clicked", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
@@ -430,7 +397,7 @@ describe("PostFeed", () => {
   });
 
   it("should validate minScore input to only allow non-negative numbers", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({
