@@ -4,7 +4,7 @@ Automatically discover, analyze, and curate interesting Nextdoor posts for podca
 
 ## Features
 
-- 🔍 **Automated Scraping** — Daily collection of posts from configured neighborhoods
+- 🔍 **Automated Scraping** — Twice-daily collection from Recent and Trending feeds
 - 🤖 **LLM Analysis** — Score posts on humor, absurdity, drama, relatability using Claude Haiku
 - 🔎 **Semantic Search** — Find related posts by meaning using OpenAI embeddings
 - 📊 **Curation Dashboard** — Private web UI for browsing, filtering, and selecting posts
@@ -15,15 +15,18 @@ Automatically discover, analyze, and curate interesting Nextdoor posts for podca
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  GitHub Actions │────▶│    Supabase     │◀────│     Vercel      │
-│  (Daily Scrape) │     │  (PostgreSQL)   │     │   (Next.js)     │
+│  Local Linux    │────▶│    Supabase     │◀────│     Vercel      │
+│  (Cron Jobs)    │     │  (PostgreSQL)   │     │   (Next.js)     │
+│  - Scrape       │     │  + pgvector     │     │   (Web UI)      │
+│  - Score        │     │                  │     │                 │
+│  - Embed        │     │                  │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                                               │
-        ▼                                               ▼
-┌─────────────────┐                           ┌─────────────────┐
-│  Claude Haiku   │                           │   Web Dashboard │
-│  (Scoring)      │                           │   (Private)     │
-└─────────────────┘                           └─────────────────┘
+        │                       │
+        ▼                       ▼
+┌─────────────────┐   ┌─────────────────┐
+│  Claude Haiku   │   │  OpenAI         │
+│  (Scoring)      │   │  (Embeddings)   │
+└─────────────────┘   └─────────────────┘
 ```
 
 ## Quick Start
@@ -113,7 +116,7 @@ This project is designed to run on free tiers + minimal API costs:
 |---------|------|
 | Supabase | Free (500MB) |
 | Vercel | Free (Hobby) |
-| GitHub Actions | Free (2000 min/mo) |
+| Local Linux | Free (your hardware) |
 | Claude Haiku | ~$1/mo |
 | OpenAI Embeddings | ~$0.50/mo |
 | **Total** | **~$1.50/mo** |

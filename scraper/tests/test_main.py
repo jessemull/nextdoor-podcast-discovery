@@ -21,14 +21,30 @@ class TestMain:
     def test_main_dry_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in dry-run mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            result = main(dry_run=True)
+            with mock.patch("src.main.SessionManager") as mock_session:
+                with mock.patch("src.main.NextdoorScraper") as mock_scraper:
+                    # Mock the scraper context manager
+                    mock_scraper_instance = mock.MagicMock()
+                    mock_scraper_instance.extract_posts.return_value = []
+                    mock_scraper.return_value.__enter__.return_value = mock_scraper_instance
+                    mock_scraper.return_value.__exit__.return_value = None
+
+                    result = main(dry_run=True)
 
         assert result == 0
 
     def test_main_normal_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in normal mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            result = main(dry_run=False)
+            with mock.patch("src.main.SessionManager") as mock_session:
+                with mock.patch("src.main.NextdoorScraper") as mock_scraper:
+                    # Mock the scraper context manager
+                    mock_scraper_instance = mock.MagicMock()
+                    mock_scraper_instance.extract_posts.return_value = []
+                    mock_scraper.return_value.__enter__.return_value = mock_scraper_instance
+                    mock_scraper.return_value.__exit__.return_value = None
+
+                    result = main(dry_run=False)
 
         assert result == 0
 
@@ -71,12 +87,11 @@ class TestMain:
         mock_validate.assert_called_once()
 
     def test_main_exits_if_env_invalid(self) -> None:
-        """Should exit with code 1 if env vars are missing."""
+        """Should return 1 if env vars are missing."""
 
         # Clear all env vars
 
         with mock.patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(SystemExit) as exc_info:
-                main(dry_run=True)
+            result = main(dry_run=True)
 
-        assert exc_info.value.code == 1
+        assert result == 1

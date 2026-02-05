@@ -38,6 +38,9 @@ export const env = {
   get NEXTAUTH_URL() {
     return getEnvVar("NEXTAUTH_URL");
   },
+  get OPENAI_API_KEY() {
+    return getEnvVar("OPENAI_API_KEY");
+  },
   get SUPABASE_SERVICE_KEY() {
     return getEnvVar("SUPABASE_SERVICE_KEY");
   },

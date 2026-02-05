@@ -45,13 +45,45 @@ Required variables:
 
 ## Usage
 
+### Scraping
+
 ```bash
-# Run the full pipeline
+# Run the full pipeline (scrape only)
 python -m src.main
+
+# Scrape with LLM scoring
+python -m src.main --score
+
+# Combine: scrape, score, and generate embeddings
+python -m src.main --score --embed
 
 # Dry run (no database changes)
 python -m src.main --dry-run
+
+# Scrape specific feed type
+python -m src.main --feed-type trending
+python -m src.main --feed-type recent
+
+# Full options
+python -m src.main --feed-type recent --max-posts 250 --score --embed
 ```
+
+### Embeddings (Standalone)
+
+```bash
+# Generate embeddings for posts without them
+# Use this for the daily embedding cron job
+python -m src.embed
+
+# Dry run (no database changes)
+python -m src.embed --dry-run
+```
+
+**Note**: The `embed.py` script:
+- Only generates embeddings (no browser, no login, no Nextdoor access)
+- Processes all posts in the database that don't have embeddings
+- Skips posts that already have embeddings (safe to run multiple times)
+- Processes posts in batches efficiently
 
 ## Testing
 

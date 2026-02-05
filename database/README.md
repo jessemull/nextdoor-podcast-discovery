@@ -8,7 +8,8 @@ SQL migrations for the Supabase PostgreSQL database.
 2. Navigate to **SQL Editor**
 3. Run the migration files in order:
    - `001_initial_schema.sql`
-   - (future migrations...)
+   - `002_llm_scoring_schema.sql`
+   - `003_semantic_search.sql`
 
 ## Seed Data
 
@@ -33,5 +34,13 @@ After running migrations, optionally run seed data:
 - `idx_posts_hash` — Fast duplicate detection
 - `idx_posts_created` — Sort by creation date
 - `idx_embeddings_vector` — HNSW index for vector similarity search
-- `idx_rankings_score` — Sort by final score
-- `idx_rankings_unused` — Find unused posts sorted by score
+- `idx_llm_scores_final` — Sort by final score
+- `idx_llm_scores_categories` — GIN index for category filtering
+- `idx_posts_unused` — Find unused posts
+
+## RPC Functions
+
+- `search_posts_by_embedding(query_embedding, similarity_threshold, result_limit)` — Semantic search using vector similarity
+- `get_unscored_posts(limit)` — Get posts that need LLM scoring
+- `increment_topic_frequency(category, increment)` — Update topic frequency counts
+- `recount_topic_frequencies()` — Recalculate all topic frequencies (call daily)

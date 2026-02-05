@@ -63,13 +63,15 @@ class TestValidateEnv:
             validate_env()
 
     def test_validate_env_with_missing_var(self) -> None:
-        """Should exit when a required var is missing."""
+        """Should raise ConfigurationError when a required var is missing."""
 
         # Set all but one
+
+        from src.exceptions import ConfigurationError
 
         env_vars = {var: "test_value" for var in REQUIRED_ENV_VARS[:-1]}
 
         with mock.patch.dict(os.environ, env_vars, clear=True):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ConfigurationError) as exc_info:
                 validate_env()
-            assert exc_info.value.code == 1
+            assert "Missing required environment variables" in str(exc_info.value)

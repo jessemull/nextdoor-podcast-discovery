@@ -642,23 +642,33 @@ Numbered SQL files, run in order:
 
 ### Dual-Feed Pipeline (Local Cron Jobs)
 
-We run **two separate cron jobs** to capture different types of content:
+We run **two separate scraping cron jobs** plus **one embedding job** to capture different types of content:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  WORKFLOW 1: RECENT FEED @ 6:00 AM UTC                                  │
+│  WORKFLOW 1: RECENT FEED @ 8:00 AM LOCAL                                │
 │  ────────────────────────────────────────────────────────────────────── │
 │  Feed: Recent (chronological)                                           │
 │  Target: 250 posts                                                      │
 │  Purpose: Catch fresh overnight content                                 │
+│  Actions: Scrape → Store → Score                                        │
 └──────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  WORKFLOW 2: TRENDING FEED @ 6:00 PM UTC                                │
+│  WORKFLOW 2: TRENDING FEED @ 2:00 PM LOCAL                              │
 │  ────────────────────────────────────────────────────────────────────── │
 │  Feed: Trending (high-engagement)                                       │
 │  Target: 250 posts                                                      │
 │  Purpose: Catch viral/absurd/dramatic posts                             │
+│  Actions: Scrape → Store → Score                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  WORKFLOW 3: EMBEDDINGS @ 10:00 PM LOCAL                                │
+│  ────────────────────────────────────────────────────────────────────── │
+│  Purpose: Generate embeddings for semantic search                        │
+│  Target: All posts without embeddings                                   │
+│  Actions: Generate → Store (skips posts that already have embeddings)   │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1620,17 +1630,20 @@ source venv/bin/activate
 echo "Setup complete!"
 ```
 
-#### Cron Jobs (Dual-Feed Strategy)
+#### Cron Jobs (Dual-Feed Strategy + Embeddings)
 
 Add these to crontab (`crontab -e`):
 
 ```bash
 # Nextdoor Scraper - Dual Feed Strategy
-# Scrape Recent feed at 6:00 AM local time
-0 6 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh recent >> /var/log/nextdoor/recent.log 2>&1
+# Scrape Recent feed at 8:00 AM local time
+0 8 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh recent >> /var/log/nextdoor/recent.log 2>&1
 
-# Scrape Trending feed at 6:00 PM local time  
-0 18 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh trending >> /var/log/nextdoor/trending.log 2>&1
+# Scrape Trending feed at 2:00 PM local time  
+0 14 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh trending >> /var/log/nextdoor/trending.log 2>&1
+
+# Generate embeddings for all posts without them (once per day at 10:00 PM)
+0 22 * * * cd /home/user/nextdoor/scraper && ./scripts/run-embeddings.sh >> /var/log/nextdoor/embeddings.log 2>&1
 ```
 
 #### Run Script with Healthchecks.io
@@ -1663,6 +1676,37 @@ else
 fi
 ```
 
+#### Embeddings Script
+
+```bash
+#!/bin/bash
+# scraper/scripts/run-embeddings.sh
+
+set -e
+
+HEALTHCHECK_URL="https://hc-ping.com/YOUR-EMBEDDINGS-UUID-HERE"
+
+cd /home/user/nextdoor/scraper
+source venv/bin/activate
+source .env
+
+echo "$(date): Starting embedding generation..."
+
+# Generate embeddings for posts without them
+# The embedder automatically skips posts that already have embeddings
+# Uses standalone embed.py script (no browser, no scraping)
+if python -m src.embed; then
+    echo "$(date): Embedding generation successful"
+    # Ping healthcheck on success
+    curl -fsS -m 10 --retry 5 "$HEALTHCHECK_URL" > /dev/null
+else
+    echo "$(date): Embedding generation failed"
+    # Ping healthcheck with failure
+    curl -fsS -m 10 --retry 5 "$HEALTHCHECK_URL/fail" > /dev/null
+    exit 1
+fi
+```
+
 #### Environment File
 
 Create `/home/user/nextdoor/scraper/.env`:
@@ -1687,15 +1731,19 @@ SESSION_ENCRYPTION_KEY=base64-encoded-key
 #### Healthchecks.io Monitoring
 
 1. Sign up at https://healthchecks.io (free tier: 20 checks)
-2. Create two checks: "Nextdoor Recent" and "Nextdoor Trending"
-3. Set schedule to match cron (daily at 6AM / 6PM)
-4. Set grace period to 30 minutes
+2. Create three checks:
+   - "Nextdoor Recent" (8:00 AM daily)
+   - "Nextdoor Trending" (2:00 PM daily)
+   - "Nextdoor Embeddings" (10:00 PM daily)
+3. Set schedule to match cron times
+4. Set grace period to 30 minutes for scrapes, 1 hour for embeddings
 5. Configure email/Slack alerts for failures
 
 **Benefits**:
 - Get notified if scraper fails or doesn't run
 - See history of successful runs
-- No cost (free tier is sufficient)
+- Monitor embedding generation separately
+- No cost (free tier supports up to 20 checks)
 
 #### Web Deploy (On Push)
 

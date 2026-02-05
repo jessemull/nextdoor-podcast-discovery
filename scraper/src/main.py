@@ -77,7 +77,7 @@ def main(
     score: bool = False,
     visible: bool = False,
 ) -> int:
-    """Run the full scraper pipeline.
+    """Run the scraper pipeline.
 
     Args:
         dry_run: If True, don't make any changes to the database.
@@ -201,9 +201,6 @@ def main(
             if score and not dry_run:
                 logger.info("Running LLM scoring on unscored posts")
                 _run_scoring(session_manager.supabase)
-
-            # TODO: Remaining pipeline steps
-            # - Generate embeddings (OpenAI)
 
             logger.info("Pipeline complete (feed=%s, posts=%d)", feed_type, len(posts))
 
