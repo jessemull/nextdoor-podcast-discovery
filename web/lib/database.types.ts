@@ -4,15 +4,7 @@
  * NOTE: These types can be auto-generated using the Supabase CLI:
  *   npx supabase gen types typescript --project-id YOUR_PROJECT_ID > lib/database.types.ts
  *
- * For now, these are manually defined to match the schema in
- * database/migrations/001_initial_schema.sql
- *
- * IMPORTANT: These types reflect the raw database schema where fields can be null.
- * The UI types in `types.ts` also allow nulls but are kept separate for clarity.
- * When updating the database schema, update BOTH files:
- *   1. database/migrations/*.sql - the source of truth
- *   2. lib/database.types.ts - for Supabase client type safety
- *   3. lib/types.ts - for UI components (subset of fields, same null handling)
+ * Manually updated to match the schema after 002_llm_scoring_schema.sql migration.
  */
 
 export type Json =
@@ -28,145 +20,88 @@ export interface Database {
     Tables: {
       llm_scores: {
         Insert: {
-          absurdity?: null | number;
-          drama?: null | number;
-          humor?: null | number;
+          categories?: string[];
+          created_at?: string;
+          final_score?: null | number;
           id?: string;
-          podcast_score?: null | number;
+          model_version?: string;
           post_id: string;
-          processed_at?: string;
-          relatability?: null | number;
+          scores: Json;
           summary?: null | string;
-          tags?: Json;
         };
         Row: {
-          absurdity: null | number;
-          drama: null | number;
-          humor: null | number;
+          categories: string[];
+          created_at: string;
+          final_score: null | number;
           id: string;
-          podcast_score: null | number;
+          model_version: string;
           post_id: string;
-          processed_at: string;
-          relatability: null | number;
+          scores: Json;
           summary: null | string;
-          tags: Json;
         };
         Update: {
-          absurdity?: null | number;
-          drama?: null | number;
-          humor?: null | number;
-          podcast_score?: null | number;
-          relatability?: null | number;
+          categories?: string[];
+          final_score?: null | number;
+          model_version?: string;
+          scores?: Json;
           summary?: null | string;
-          tags?: Json;
         };
       };
       neighborhoods: {
         Insert: {
           created_at?: string;
           id?: string;
-          is_active?: boolean;
           name: string;
           slug: string;
-          updated_at?: string;
-          weight_modifier?: number;
         };
         Row: {
           created_at: string;
           id: string;
-          is_active: boolean;
           name: string;
           slug: string;
-          updated_at: string;
-          weight_modifier: number;
         };
         Update: {
-          id?: string;
-          is_active?: boolean;
           name?: string;
           slug?: string;
-          updated_at?: string;
-          weight_modifier?: number;
-        };
-      };
-      post_embeddings: {
-        Insert: {
-          created_at?: string;
-          embedding?: null | number[];
-          id?: string;
-          model?: string;
-          post_id: string;
-        };
-        Row: {
-          created_at: string;
-          embedding: null | number[];
-          id: string;
-          model: string;
-          post_id: string;
-        };
-        Update: {
-          embedding?: null | number[];
-          model?: string;
         };
       };
       posts: {
         Insert: {
           created_at?: string;
+          episode_date?: null | string;
           hash: string;
           id?: string;
           image_urls?: Json;
           neighborhood_id: string;
           post_id_ext: string;
-          posted_at?: null | string;
           text: string;
           url?: null | string;
+          used_on_episode?: boolean;
           user_id_hash?: null | string;
         };
         Row: {
           created_at: string;
+          episode_date: null | string;
           hash: string;
           id: string;
           image_urls: Json;
           neighborhood_id: string;
           post_id_ext: string;
-          posted_at: null | string;
           text: string;
           url: null | string;
+          used_on_episode: boolean;
           user_id_hash: null | string;
         };
         Update: {
+          episode_date?: null | string;
           hash?: string;
           image_urls?: Json;
           neighborhood_id?: string;
           post_id_ext?: string;
-          posted_at?: null | string;
           text?: string;
           url?: null | string;
+          used_on_episode?: boolean;
           user_id_hash?: null | string;
-        };
-      };
-      rankings: {
-        Insert: {
-          episode_date?: null | string;
-          final_score?: number;
-          id?: string;
-          post_id: string;
-          updated_at?: string;
-          used_on_episode?: boolean;
-        };
-        Row: {
-          episode_date: null | string;
-          final_score: number;
-          id: string;
-          post_id: string;
-          updated_at: string;
-          used_on_episode: boolean;
-        };
-        Update: {
-          episode_date?: null | string;
-          final_score?: number;
-          updated_at?: string;
-          used_on_episode?: boolean;
         };
       };
       sessions: {
@@ -208,6 +143,25 @@ export interface Database {
           key?: string;
           updated_at?: string;
           value?: Json;
+        };
+      };
+      topic_frequencies: {
+        Insert: {
+          category: string;
+          count_30d?: number;
+          id?: string;
+          last_updated?: string;
+        };
+        Row: {
+          category: string;
+          count_30d: number;
+          id: string;
+          last_updated: string;
+        };
+        Update: {
+          category?: string;
+          count_30d?: number;
+          last_updated?: string;
         };
       };
     };
