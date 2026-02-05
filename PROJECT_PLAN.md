@@ -262,10 +262,10 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 
 | Traditional Approach | Our Approach | Savings |
 |---------------------|--------------|---------|
-| EC2 ($15/mo) | GitHub Actions (free) | $15/mo |
+| EC2 ($15/mo) | Local Linux laptop (free) | $15/mo |
 | RDS ($15/mo) | Supabase Free (free) | $15/mo |
-| AWS Secrets Manager ($2/mo) | GitHub Secrets (free) | $2/mo |
-| CloudWatch ($5/mo) | GitHub Actions logs (free) | $5/mo |
+| AWS Secrets Manager ($2/mo) | .env file (free) | $2/mo |
+| CloudWatch ($5/mo) | Healthchecks.io (free) | $5/mo |
 | Claude Sonnet (~$10/mo) | Claude Haiku (~$1/mo) | $9/mo |
 
 ---
@@ -303,7 +303,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    PROCESSING LAYER (GitHub Actions)                    │
+│                  PROCESSING LAYER (Local Linux Laptop)                  │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │  Scheduled Workflow (Daily @ 2:00 AM UTC)                        │   │
 │  │                                                                  │   │
@@ -372,7 +372,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 
 | Component | Technology | Cost | Rationale |
 |-----------|------------|------|-----------|
-| Scraper Runtime | GitHub Actions | Free | 2,000 min/month free tier |
+| Scraper Runtime | Local Linux laptop | Free | Residential IP avoids bot detection |
 | Scraper | Python 3.11+ / Playwright | Free | Best browser automation |
 | LLM Scoring | Claude Haiku | ~$1/mo | 20x cheaper than Sonnet, still good |
 | Embeddings | OpenAI `text-embedding-3-small` | ~$0.50/mo | Extremely cheap, high quality |
@@ -390,7 +390,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 | Need | Alternatives Considered | Chosen | Why |
 |------|------------------------|--------|-----|
 | Database | RDS, PlanetScale, Neon | **Supabase** | pgvector included, generous free tier |
-| Compute | EC2, Lambda, Railway | **GitHub Actions** | Free, Playwright support, scheduled |
+| Compute | EC2, Lambda, Railway | **Local Linux laptop** | Free, residential IP avoids bot detection |
 | LLM | Claude Sonnet, GPT-4 | **Claude Haiku** | 20x cheaper, fast, good enough |
 | Hosting | Amplify, Netlify, Railway | **Vercel** | Best Next.js support, free tier |
 
@@ -404,7 +404,8 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 |---------|------|-------------|-------|
 | **Supabase** | Free | $0.00 | 500MB storage, 2GB bandwidth |
 | **Vercel** | Hobby | $0.00 | 100GB bandwidth, serverless |
-| **GitHub Actions** | Free | $0.00 | 2,000 min/month (need ~150) |
+| **Local Laptop** | Linux | $0.00 | Electricity only, always on |
+| **Healthchecks.io** | Free | $0.00 | 20 checks, cron monitoring |
 | **Claude Haiku** | Pay-per-use | ~$0.50–$1.00 | ~500 posts + sports facts |
 | **OpenAI Embeddings** | Pay-per-use | ~$0.10–$0.50 | ~500 posts × ~200 tokens |
 | | | | |
@@ -426,7 +427,7 @@ This architecture prioritizes **free tiers** and **pay-per-use** services:
 | Supabase | 500MB storage | Need to upgrade ($25/mo) or clean old data |
 | Supabase | 2GB bandwidth/mo | Paused project (rarely hit) |
 | Vercel | 100GB bandwidth | Need to upgrade ($20/mo) |
-| GitHub Actions | 2,000 min/mo | Jobs queue until next month |
+| Local laptop | Always-on required | Get a UPS for power outages |
 
 ### Storage Estimate
 
@@ -639,7 +640,7 @@ Numbered SQL files, run in order:
 
 ## 6. Data Flow
 
-### Dual-Feed Pipeline (GitHub Actions)
+### Dual-Feed Pipeline (Local Cron Jobs)
 
 We run **two separate cron jobs** to capture different types of content:
 
@@ -788,7 +789,7 @@ We run **two separate cron jobs** to capture different types of content:
                     │ embedding VECTOR│ │ value JSON│
                     │ model           │ │ updated_at│
                     │ created_at      │ └───────────┘
-                    └─────────────────┘
+                                        └─────────────────┘
 ```
 
 ### Table Definitions
@@ -946,11 +947,11 @@ INSERT INTO settings (key, value) VALUES
 
 ## 8. Component Specifications
 
-### 8.1 Scraper (GitHub Actions)
+### 8.1 Scraper (Local Linux Laptop)
 
 **Location**: `/scraper/`
 
-**Runs in**: GitHub Actions Ubuntu runner
+**Runs on**: Dedicated Linux laptop in basement (cron jobs)
 
 **Key Files**:
 
@@ -1043,7 +1044,7 @@ python -m src.main --feed-type trending --max-posts 100 --extract-permalinks --v
 
 ```python
 SCRAPER_CONFIG = {
-    "headless": True,                    # Default: headless (GitHub Actions)
+    "headless": True,                    # Default: headless (cron jobs)
     "login_timeout_ms": 15000,           # Wait for login redirect
     "max_posts_per_run": 250,            # Default posts per scrape
     "navigation_timeout_ms": 10000,      # Page load timeout
@@ -1068,7 +1069,7 @@ FEED_URLS = {
 
 **Why Haiku over Sonnet?**
 - 20x cheaper ($0.25 vs $3 per 1M input tokens)
-- Faster (important in GitHub Actions with time limits)
+- Faster response times
 - Good enough for humor/absurdity scoring
 
 **Prompt Template**:
@@ -1335,56 +1336,60 @@ export default function Home() {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           GITHUB                                        │
+│                     LOCAL MACHINE (Linux Laptop)                         │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Repository: nextdoor                                             │  │
-│  │  ├── /scraper (Python)                                           │  │
-│  │  ├── /web (Next.js)                                              │  │
-│  │  └── /.github/workflows                                          │  │
+│  │  Scraper Runtime                                                  │  │
+│  │  ├── Cron jobs (systemd timers or crontab)                       │  │
+│  │  ├── Python 3.11+ with Playwright                                │  │
+│  │  └── Environment variables (.env file)                           │  │
 │  │                                                                   │  │
-│  │  Secrets:                                                         │  │
-│  │  ├── NEXTDOOR_EMAIL, NEXTDOOR_PASSWORD                           │  │
-│  │  ├── ANTHROPIC_API_KEY, OPENAI_API_KEY                           │  │
-│  │  ├── SUPABASE_URL, SUPABASE_KEY                                  │  │
-│  │  ├── SESSION_ENCRYPTION_KEY                                      │  │
-│  │  └── VERCEL_TOKEN (for deploy)                                   │  │
+│  │  Schedule:                                                        │  │
+│  │  ├── 6:00 AM local: Scrape Recent (250 posts)                   │  │
+│  │  └── 6:00 PM local: Scrape Trending (250 posts)                 │  │
+│  │                                                                   │  │
+│  │  Monitoring: Healthchecks.io (free tier)                         │  │
+│  │  └── Pings on success, alerts on failure                        │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                              │                                          │
-│              ┌───────────────┴───────────────┐                          │
-│              ▼                               ▼                          │
-│  ┌─────────────────────┐         ┌─────────────────────┐               │
-│  │  Actions: Scraper   │         │  Actions: Deploy    │               │
-│  │  (scheduled, daily) │         │  (on push to main)  │               │
-│  │                     │         │                     │               │
-│  │  • Runs Playwright  │         │  • Deploys to Vercel│               │
-│  │  • Calls Claude     │         │                     │               │
-│  │  • Calls OpenAI     │         │                     │               │
-│  └──────────┬──────────┘         └──────────┬──────────┘               │
-│             │                               │                           │
-└─────────────│───────────────────────────────│───────────────────────────┘
-              │                               │
-              ▼                               ▼
-┌─────────────────────────┐       ┌─────────────────────────┐
-│       SUPABASE          │       │        VERCEL           │
-│  (Free Tier)            │       │  (Hobby Tier)           │
-│                         │       │                         │
-│  PostgreSQL + pgvector  │◄──────│  Next.js App            │
-│  • 500MB storage        │       │  • API Routes           │
-│  • 2GB bandwidth        │       │  • SSR Pages            │
-│  • Unlimited API calls  │       │  • Auth (NextAuth)      │
-│                         │       │  • Sports Facts API     │
-└─────────────────────────┘       └─────────────────────────┘
+└──────────────────────────────│──────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           CLOUD SERVICES                                 │
+│                                                                          │
+│  ┌─────────────────────────┐       ┌─────────────────────────┐          │
+│  │       SUPABASE          │       │        VERCEL           │          │
+│  │  (Free Tier)            │       │  (Hobby Tier)           │          │
+│  │                         │       │                         │          │
+│  │  PostgreSQL + pgvector  │◄──────│  Next.js App            │          │
+│  │  • 500MB storage        │       │  • API Routes           │          │
+│  │  • 2GB bandwidth        │       │  • SSR Pages            │          │
+│  │  • Unlimited API calls  │       │  • Auth (NextAuth)      │          │
+│  │                         │       │  • Sports Facts API     │          │
+│  └─────────────────────────┘       └─────────────────────────┘          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### No AWS Required!
+### Why Local Machine Instead of GitHub Actions?
 
-| Previously | Now |
-|------------|-----|
-| EC2 | GitHub Actions |
-| RDS | Supabase |
-| Secrets Manager | GitHub Secrets |
-| CloudWatch | GitHub Actions logs |
-| S3 | Not needed |
+| Approach | Pros | Cons |
+|----------|------|------|
+| **GitHub Actions** | Free, no hardware needed | Higher bot detection risk (datacenter IPs) |
+| **Local Machine** ✅ | Residential IP (lower detection risk), full control | Requires always-on machine |
+
+**Decision**: Run scraper on a dedicated Linux laptop in the basement to minimize bot detection risk. Nextdoor is more likely to flag requests from datacenter IPs (like GitHub Actions runners) than residential IPs.
+
+### Infrastructure Components
+
+| Component | Service | Cost |
+|-----------|---------|------|
+| Scraper Runtime | Local Linux laptop | $0 (electricity only) |
+| Database | Supabase Free | $0 |
+| Web Hosting | Vercel Hobby | $0 |
+| Monitoring | Healthchecks.io Free | $0 |
+| LLM Scoring | Claude Haiku | ~$1/mo |
+| Embeddings | OpenAI | ~$0.50/mo |
 
 ---
 
@@ -1479,7 +1484,7 @@ class RateLimitError(ScraperError):
     pass
 ```
 
-### GitHub Actions Notifications
+### Healthchecks.io Notifications
 
 ```yaml
 - name: Notify on failure
@@ -1583,105 +1588,114 @@ gen-key:
 
 ## 14. Deployment Pipeline
 
-### GitHub Actions Workflows
+### Local Scraper (Linux Laptop)
 
-#### Scraper (Dual-Feed Strategy)
+We run the scraper on a dedicated Linux laptop in the basement instead of GitHub Actions. This uses residential IP addresses which are less likely to be flagged by Nextdoor's bot detection.
 
-We use **two scheduled workflows** to scrape different feeds at different times:
+#### Setup Script
 
-```yaml
-# .github/workflows/scrape-recent.yml
-name: Scrape Recent Feed
+Create a setup script to configure the environment:
 
-on:
-  schedule:
-    - cron: '0 6 * * *'  # 6:00 AM UTC daily
-  workflow_dispatch:
-    inputs:
-      max_posts:
-        description: 'Maximum posts to scrape'
-        default: '250'
+```bash
+#!/bin/bash
+# scraper/scripts/setup-local.sh
 
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: |
-          cd scraper
+set -e
+
+echo "Setting up Nextdoor scraper..."
+
+# Install system dependencies
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv
+
+# Create virtual environment
+cd /home/user/nextdoor/scraper
+python3.11 -m venv venv
+source venv/bin/activate
+
+# Install Python dependencies
           pip install -r requirements.txt
           playwright install chromium
       
-      - name: Scrape Recent Feed
-        env:
-          NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
-          NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
-        run: |
-          cd scraper
-          python -m src.main --feed-type recent --max-posts ${{ inputs.max_posts || '250' }}
+echo "Setup complete!"
 ```
 
-```yaml
-# .github/workflows/scrape-trending.yml
-name: Scrape Trending Feed
+#### Cron Jobs (Dual-Feed Strategy)
 
-on:
-  schedule:
-    - cron: '0 18 * * *'  # 6:00 PM UTC daily
-  workflow_dispatch:
-    inputs:
-      max_posts:
-        description: 'Maximum posts to scrape'
-        default: '250'
+Add these to crontab (`crontab -e`):
 
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: |
-          cd scraper
-          pip install -r requirements.txt
-          playwright install chromium
-      
-      - name: Scrape Trending Feed
-        env:
-          NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
-          NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
-        run: |
-          cd scraper
-          python -m src.main --feed-type trending --max-posts ${{ inputs.max_posts || '250' }}
+```bash
+# Nextdoor Scraper - Dual Feed Strategy
+# Scrape Recent feed at 6:00 AM local time
+0 6 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh recent >> /var/log/nextdoor/recent.log 2>&1
+
+# Scrape Trending feed at 6:00 PM local time  
+0 18 * * * cd /home/user/nextdoor/scraper && ./scripts/run-scrape.sh trending >> /var/log/nextdoor/trending.log 2>&1
 ```
 
-**Manual Backfill**: Use `workflow_dispatch` to trigger manual runs with higher `max_posts` for initial data population.
+#### Run Script with Healthchecks.io
+
+```bash
+#!/bin/bash
+# scraper/scripts/run-scrape.sh
+
+set -e
+
+FEED_TYPE=${1:-recent}
+HEALTHCHECK_URL="https://hc-ping.com/YOUR-UUID-HERE"
+
+cd /home/user/nextdoor/scraper
+source venv/bin/activate
+source .env
+
+echo "$(date): Starting $FEED_TYPE scrape..."
+
+# Run scraper
+if python -m src.main --feed-type "$FEED_TYPE" --max-posts 250 --score; then
+    echo "$(date): Scrape successful"
+    # Ping healthcheck on success
+    curl -fsS -m 10 --retry 5 "$HEALTHCHECK_URL" > /dev/null
+else
+    echo "$(date): Scrape failed"
+    # Ping healthcheck with failure
+    curl -fsS -m 10 --retry 5 "$HEALTHCHECK_URL/fail" > /dev/null
+    exit 1
+fi
+```
+
+#### Environment File
+
+Create `/home/user/nextdoor/scraper/.env`:
+
+```bash
+# Nextdoor credentials
+NEXTDOOR_EMAIL=your-email@example.com
+NEXTDOOR_PASSWORD=your-password
+
+# API keys
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+
+# Supabase
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...
+
+# Session encryption
+SESSION_ENCRYPTION_KEY=base64-encoded-key
+```
+
+#### Healthchecks.io Monitoring
+
+1. Sign up at https://healthchecks.io (free tier: 20 checks)
+2. Create two checks: "Nextdoor Recent" and "Nextdoor Trending"
+3. Set schedule to match cron (daily at 6AM / 6PM)
+4. Set grace period to 30 minutes
+5. Configure email/Slack alerts for failures
+
+**Benefits**:
+- Get notified if scraper fails or doesn't run
+- See history of successful runs
+- No cost (free tier is sufficient)
 
 #### Web Deploy (On Push)
 
@@ -1720,13 +1734,14 @@ jobs:
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | **Repository** | Monorepo | Simpler for solo/small team |
-| **Compute** | GitHub Actions | Free, Playwright support |
+| **Scraper Compute** | Local Linux laptop | Residential IP avoids bot detection, unlike datacenter IPs |
 | **Database** | Supabase Free | PostgreSQL + pgvector, 500MB free |
 | **LLM Model** | Claude Haiku | 20x cheaper than Sonnet |
 | **Embeddings** | OpenAI | Cheap, proven quality |
-| **Secrets** | GitHub Secrets | Free, integrated |
+| **Secrets** | .env file (local) | Simple for local deployment |
 | **Frontend Host** | Vercel Free | Best Next.js support |
 | **Auth** | NextAuth + Google | Simple, secure |
+| **Monitoring** | Healthchecks.io | Free, alerts on cron failures |
 | **Sports Facts** | Claude Haiku on-demand | Fun feature, negligible cost |
 
 ### Trade-offs Accepted
@@ -1734,7 +1749,7 @@ jobs:
 | Trade-off | Impact | Mitigation |
 |-----------|--------|------------|
 | Monorepo | Larger clone | Still small project |
-| GitHub Actions limit | 2,000 min/month | Only need ~150 |
+| Local laptop | Requires always-on | UPS + reliable internet |
 | Supabase 500MB | ~62K posts max | Years of runway |
 | Haiku vs Sonnet | Less nuanced | Good enough |
 
@@ -1799,62 +1814,68 @@ jobs:
   - [ ] DB dedup check before processing (skip posts already in DB)
   - [ ] Note: Current logic stops after MAX_EMPTY_SCROLLS with no new posts
 
-- [ ] **2.6** GitHub Actions (DEPLOY LAST - after local testing complete)
-  - [ ] Create `scrape-recent.yml` (6:00 AM UTC)
-  - [ ] Create `scrape-trending.yml` (6:00 PM UTC)
-  - [ ] Test manual trigger (workflow_dispatch)
-  - [ ] Verify data in Supabase
+- [ ] **2.6** Local Deployment (Linux laptop in basement)
+  - [ ] Create setup script (`scripts/setup-local.sh`)
+  - [ ] Create run script with Healthchecks.io (`scripts/run-scrape.sh`)
+  - [ ] Configure cron jobs (6 AM recent, 6 PM trending)
+  - [ ] Set up `.env` file with secrets
+  - [ ] Sign up for Healthchecks.io and configure alerts
+  - [ ] Verify cron jobs running and data in Supabase
 
-### Phase 3: LLM Integration (DO BEFORE DEPLOYMENT)
+### Phase 3: LLM Integration ✅ MOSTLY COMPLETE
 
 See [Section 1.3: LLM Scoring Strategy](#13-llm-scoring-strategy) for full context on dimensions, categories, and novelty.
 
-- [ ] **3.1** Database Schema Updates
-  - [ ] Create migration for updated `llm_scores` table (JSONB scores, categories array)
-  - [ ] Create `topic_frequencies` table
-  - [ ] Add `ranking_weights` to `settings` table (or create if not exists)
-  - [ ] Run migrations in Supabase
+- [x] **3.1** Database Schema Updates ✅ COMPLETE
+  - [x] Create migration for updated `llm_scores` table (JSONB scores, categories array)
+  - [x] Create `topic_frequencies` table
+  - [x] Add `ranking_weights` to `settings` table
+  - [x] Run migrations in Supabase
 
-- [ ] **3.2** Claude Haiku Scoring (`llm_scorer.py`)
-  - [ ] Create scoring prompt template (5 dimensions + categories + summary)
-  - [ ] Implement `LLMScorer` class with `score_post()` and `score_batch()` methods
-  - [ ] Parse JSON response from Claude
-  - [ ] Handle API errors and rate limits (tenacity retry)
-  - [ ] Store results in `llm_scores` table
-  - [ ] Add `--score` CLI flag to main.py (or separate script)
+- [x] **3.2** Claude Haiku Scoring (`llm_scorer.py`) ✅ COMPLETE
+  - [x] Create scoring prompt template (5 dimensions + categories + summary)
+  - [x] Implement `LLMScorer` class with `score_posts()` method
+  - [x] Parse JSON response from Claude
+  - [x] Handle API errors and rate limits (tenacity retry)
+  - [x] Store results in `llm_scores` table
+  - [x] Add `--score` CLI flag to main.py
 
-- [ ] **3.3** Topic Frequency Tracking
-  - [ ] Update `topic_frequencies` counts when scoring posts
-  - [ ] Implement 30-day rolling window (decrement old counts or recalculate)
-  - [ ] Calculate novelty multiplier based on category frequency
+- [x] **3.3** Topic Frequency Tracking ✅ COMPLETE
+  - [x] Update `topic_frequencies` counts when scoring posts
+  - [x] Implement 30-day rolling window (recount_topic_frequencies RPC)
+  - [x] Calculate novelty multiplier based on category frequency
 
-- [ ] **3.4** Final Score Calculation
-  - [ ] Load weights from config/settings
-  - [ ] Implement weighted score formula
-  - [ ] Apply novelty multiplier
-  - [ ] Store `final_score` in `llm_scores`
+- [x] **3.4** Final Score Calculation ✅ COMPLETE
+  - [x] Load weights from config/settings
+  - [x] Implement weighted score formula
+  - [x] Apply novelty multiplier
+  - [x] Store `final_score` in `llm_scores`
 
-- [ ] **3.5** OpenAI Embeddings (`embedder.py`)
+- [ ] **3.5** OpenAI Embeddings (`embedder.py`) - OPTIONAL
   - [ ] Create `Embedder` class
   - [ ] Batch API calls (up to 100 texts per request)
   - [ ] Store vectors in `post_embeddings` table
   - [ ] Add `--embed` CLI flag or integrate into pipeline
 
-- [ ] **3.6** Integration & Testing
-  - [ ] Run scoring on existing posts (backfill)
-  - [ ] Analyze score distribution
-  - [ ] Tune weights if needed
-  - [ ] Document prompt and tuning decisions
+- [x] **3.6** Integration & Testing ✅ COMPLETE
+  - [x] Run scoring on existing posts (tested with 25 posts)
+  - [x] Scoring integrated into main pipeline (`--score` flag)
 
 ### Phase 4: Web UI
 
-- [x] **4.1** Authentication
+- [x] **4.1** Authentication ✅ COMPLETE
   - [x] NextAuth.js + Google OAuth
   - [x] Email whitelist
   - [x] Protected routes (middleware)
 
-- [ ] **4.2** Core pages (scaffolds exist, need implementation)
-  - [ ] Post feed with pagination
+- [x] **4.2** API Routes ✅ COMPLETE
+  - [x] `GET /api/posts` - List posts with scores, pagination, filtering
+  - [x] `GET /api/stats` - Dashboard statistics
+  - [x] `PATCH /api/posts/[id]/used` - Mark post as used in episode
+  - [x] API route tests (34 tests passing)
+
+- [ ] **4.3** Core Pages (scaffolds exist, need implementation)
+  - [ ] Post feed with pagination (uses `/api/posts`)
   - [ ] Post detail page
   - [x] Search page (placeholder)
   - [x] Settings page (placeholder)
@@ -1925,7 +1946,7 @@ gh workflow run scrape.yml
 |---------|-----|
 | Supabase | https://app.supabase.com |
 | Vercel | https://vercel.com/dashboard |
-| GitHub Actions | https://github.com/YOUR_USER/YOUR_REPO/actions |
+| Healthchecks.io | https://healthchecks.io/checks/ |
 | Anthropic | https://console.anthropic.com |
 | OpenAI | https://platform.openai.com |
 
