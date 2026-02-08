@@ -120,6 +120,7 @@ dev-web:
 lint: lint-scraper lint-web
 
 lint-scraper:
+	cd scraper && ruff format --check src/
 	cd scraper && ruff check src/
 	cd scraper && mypy src/
 

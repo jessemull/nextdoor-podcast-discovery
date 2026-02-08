@@ -401,6 +401,7 @@ class PostExtractor:
 
             return None
         except Exception as e:
+            # Catch any extraction error; fail gracefully for this post
             logger.debug("Error extracting permalink for post %d: %s", post_index, e)
             return None
 

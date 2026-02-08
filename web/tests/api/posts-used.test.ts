@@ -105,7 +105,7 @@ describe("PATCH /api/posts/[id]/used", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Missing required field: used (boolean)");
+    expect(data.error).toBe("Expected boolean, received string");
   });
 
   it("should return 400 for invalid episode_date format", async () => {

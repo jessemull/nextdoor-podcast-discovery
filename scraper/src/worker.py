@@ -575,6 +575,7 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
             logger.info("Worker interrupted, shutting down")
             break
         except Exception as e:
+            # Catch any error to keep poll loop running; log and continue
             logger.error("Error in worker loop: %s", e, exc_info=True)
             time.sleep(poll_interval)
 

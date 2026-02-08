@@ -60,9 +60,6 @@ python -m src.main
 # Scrape with LLM scoring
 python -m src.main --score
 
-# Combine: scrape, score, and generate embeddings
-python -m src.main --score --embed
-
 # Dry run (no database changes)
 python -m src.main --dry-run
 
@@ -71,8 +68,10 @@ python -m src.main --feed-type trending
 python -m src.main --feed-type recent
 
 # Full options
-python -m src.main --feed-type recent --max-posts 250 --score --embed
+python -m src.main --feed-type recent --max-posts 250 --score
 ```
+
+**Full pipeline (scrape + score + embeddings):** Run `python -m src.main --score` for scraping and scoring, then run `python -m src.embed` separately to generate embeddings. The embed script is standalone (no browser or Nextdoor access).
 
 ### Embeddings (Standalone)
 
@@ -100,8 +99,9 @@ pytest
 ## Scraping policy
 
 - **Rate limiting:** The scraper uses configurable delays (scroll, typing) to avoid hammering the site. See `SCRAPER_CONFIG` in `src/config.py` (`scroll_delay_ms`, `typing_delay_ms`, `navigation_timeout_ms`).
-- **robots.txt:** We do not currently fetch or enforce Nextdoor’s robots.txt. If you run this against other domains, consider adding a startup check and respecting disallow rules.
+### Known limitation: robots.txt
 
+We do not currently fetch or enforce Nextdoor's robots.txt. The scraper does not check for or respect `User-agent` disallow rules before making requests. If you run this against other domains, consider adding a startup check to fetch and parse robots.txt and respect disallow rules. See `LOGIN_URL`, `NEWS_FEED_URL`, and `FEED_URLS` in `src/config.py` for the URLs used.
 ## Project Structure
 
 ```

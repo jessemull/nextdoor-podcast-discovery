@@ -143,6 +143,7 @@ class LLMScorer:
                 results.append(score)
 
             except Exception as e:
+                # Catch any error per-post so one failure doesn't stop the batch
                 logger.error("Error scoring post %s: %s", post.get("id"), e)
                 results.append(
                     PostScore(
@@ -383,6 +384,7 @@ class LLMScorer:
                 stats["saved"] += 1
 
             except Exception as e:
+                # Supabase/DB errors; continue with remaining scores
                 logger.error("Error saving score for post %s: %s", result.post_id, e)
                 stats["errors"] += 1
 
@@ -454,6 +456,7 @@ class LLMScorer:
                     ).execute()
 
                 except Exception as e2:
+                    # Fallback update failed; log and continue
                     logger.warning(
                         "Failed to update frequency for %s: %s", category, e2
                     )
@@ -483,6 +486,7 @@ class LLMScorer:
                     return self._weights
 
         except Exception as e:
+            # Supabase/DB error; use default weights
             logger.warning("Failed to load weights: %s", e)
 
         # Default weights
@@ -522,6 +526,7 @@ class LLMScorer:
                     return self._novelty_config
 
         except Exception as e:
+            # Supabase/DB error; use default config
             logger.warning("Failed to load novelty config: %s", e)
 
         # Default config
@@ -553,6 +558,7 @@ class LLMScorer:
                 return {str(row["category"]): int(row["count_30d"]) for row in data}
 
         except Exception as e:
+            # Supabase/DB error; return empty dict
             logger.warning("Failed to load topic frequencies: %s", e)
 
         return {}
@@ -582,6 +588,7 @@ class LLMScorer:
                 return list(result.data)  # type: ignore[arg-type]
 
         except Exception as e:
+            # RPC may not exist; fall back to manual query
             logger.debug("RPC failed, using manual query: %s", e)
 
         # Fallback: manual query (oldest first for chronological processing)
@@ -615,5 +622,6 @@ class LLMScorer:
             return [dict(p) for p in posts_data if p["id"] not in scored_ids]
 
         except Exception as e:
+            # Manual query failed; return empty
             logger.error("Failed to get unscored posts: %s", e)
             return []

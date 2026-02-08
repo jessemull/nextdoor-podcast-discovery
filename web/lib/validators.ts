@@ -67,6 +67,17 @@ export const settingsPutBodySchema = z
 
 export type SettingsPutBody = z.infer<typeof settingsPutBodySchema>;
 
+/** PATCH /api/posts/[id]/used body */
+export const postsUsedBodySchema = z.object({
+  episode_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid episode_date format (expected YYYY-MM-DD)")
+    .optional(),
+  used: z.boolean({ required_error: "Missing required field: used (boolean)" }),
+});
+
+export type PostsUsedBody = z.infer<typeof postsUsedBodySchema>;
+
 /** POST /api/admin/recompute-scores body */
 export const recomputeScoresBodySchema = z.object({
   description: z.string().optional(),

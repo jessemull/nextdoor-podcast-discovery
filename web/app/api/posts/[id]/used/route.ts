@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { postsUsedBodySchema } from "@/lib/validators";
 
 // UUID v4 format validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,25 +39,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const { episode_date, used } = body;
-
-    // Validate required field
-
-    if (typeof used !== "boolean") {
-      return NextResponse.json(
-        { error: "Missing required field: used (boolean)" },
-        { status: 400 }
-      );
+    const parsed = postsUsedBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const message = first?.message ?? "Invalid request body";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-
-    // Validate episode_date format if provided
-
-    if (episode_date && !/^\d{4}-\d{2}-\d{2}$/.test(episode_date)) {
-      return NextResponse.json(
-        { error: "Invalid episode_date format (expected YYYY-MM-DD)" },
-        { status: 400 }
-      );
-    }
+    const { episode_date, used } = parsed.data;
 
     const supabase = getSupabaseAdmin();
 

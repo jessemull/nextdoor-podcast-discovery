@@ -127,10 +127,13 @@ Each run scrolls deeper into the feed, capturing older posts. Run a few times ma
 | Session reuse | Encrypted cookies stored in Supabase |
 | Viewport | iPhone 14 Pro dimensions (375×812) |
 
-### Known Limitations & TODOs
+### Known Limitations & Future Improvements
+
+Documented limitations and potential enhancements. Create GitHub issues when prioritizing implementation.
 
 | Issue | Current Behavior | Future Improvement |
 |-------|------------------|-------------------|
+| **robots.txt** | Scraper does not fetch or enforce Nextdoor's robots.txt | Add startup check to fetch and parse robots.txt, respect disallow rules |
 | **Stopping Logic** | Stops after 5 scrolls with no new unique posts | Add timestamp-based stopping (e.g., "stop at yesterday's posts") |
 | **Post Links** | ✅ Extracted via Share modal (`--extract-permalinks` flag) | Done! |
 | **Volume Uncertainty** | 250 is a cap, not a guarantee | Add metrics to track actual daily volume |

@@ -69,6 +69,7 @@ def main(dry_run: bool = False) -> int:
         logger.error("Configuration error: %s", e)
         return 1
     except Exception as e:
+        # Last-resort catch so embed script exits cleanly with code 1
         logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
         return 1
 

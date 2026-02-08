@@ -104,6 +104,7 @@ class PostStorage:
                     else:
                         stats["skipped"] += 1
                 except Exception as inner_e:
+                    # Supabase doesn't export specific exception types; inspect message
                     error_msg = str(inner_e).lower()
                     # Handle duplicate/unique constraint violations gracefully
                     if "duplicate" in error_msg or "unique" in error_msg:

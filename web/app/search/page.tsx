@@ -131,7 +131,9 @@ export default function SearchPage() {
   const handleMarkUsed = useCallback(async (postId: string) => {
     try {
       const response = await fetch(`/api/posts/${postId}/used`, {
-        method: "POST",
+        body: JSON.stringify({ used: true }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
 
       if (!response.ok) {
