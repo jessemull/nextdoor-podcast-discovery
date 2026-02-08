@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { adminJobsQuerySchema } from "@/lib/validators";
 
 /**
  * GET /api/admin/jobs
@@ -12,7 +13,7 @@ import { getSupabaseAdmin } from "@/lib/supabase.server";
  *
  * Query params:
  * - type?: string (filter by job type)
- * - id?: string (get specific job by ID)
+ * - id?: string (get specific job by ID, UUID format)
  * - limit?: number (default 10, max 50)
  */
 export async function GET(request: NextRequest) {
@@ -23,14 +24,19 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    const type = searchParams.get("type");
-    const limitParam = searchParams.get("limit");
-    const limit = Math.min(
-      limitParam ? parseInt(limitParam, 10) : 10,
-      50
-    );
+    const raw = {
+      id: searchParams.get("id") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+      type: searchParams.get("type") ?? undefined,
+    };
+    const parsed = adminJobsQuerySchema.safeParse(raw);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const message = first?.message ?? "Invalid query parameters";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
 
+    const { id, limit, type } = parsed.data;
     const supabase = getSupabaseAdmin();
 
     // Get specific job by ID

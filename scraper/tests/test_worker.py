@@ -622,10 +622,12 @@ class TestProcessRecomputeJob:
 
         # Mock a transient error (network error)
         network_error = Exception("Network timeout")
+        background_jobs_mocks: list[mock.MagicMock] = []
 
         def table_side_effect(table_name: str) -> mock.MagicMock:
             table_mock = mock.MagicMock()
             if table_name == "background_jobs":
+                background_jobs_mocks.append(table_mock)
                 # First: update to running
                 # Second: get retry_count and max_retries
                 retry_status_mock = mock.MagicMock()
@@ -645,13 +647,18 @@ class TestProcessRecomputeJob:
 
         mock_supabase.table.side_effect = table_side_effect
 
-        # Should not raise, but update job for retry
-        try:
-            process_recompute_job(mock_supabase, job)
-        except Exception:
-            pass  # Expected to catch and handle
+        process_recompute_job(mock_supabase, job)
 
-        # Verify retry logic was triggered
+        # Verify job was updated for retry (status pending, retry_count incremented)
+        all_update_payloads = []
+        for table_mock in background_jobs_mocks:
+            for call in table_mock.update.call_args_list:
+                if call[0]:
+                    all_update_payloads.append(call[0][0])
+        assert any(
+            p.get("status") == "pending" and p.get("retry_count") == 1
+            for p in all_update_payloads
+        ), "Expected an update with status=pending and retry_count=1"
         assert mock_supabase.table.call_count >= 2
 
     def test_marks_error_after_max_retries(self, mock_supabase: mock.MagicMock) -> None:
@@ -663,10 +670,12 @@ class TestProcessRecomputeJob:
         }
 
         network_error = Exception("Network timeout")
+        background_jobs_mocks: list[mock.MagicMock] = []
 
         def table_side_effect(table_name: str) -> mock.MagicMock:
             table_mock = mock.MagicMock()
             if table_name == "background_jobs":
+                background_jobs_mocks.append(table_mock)
                 # Return retry_count = max_retries (should mark as error)
                 retry_status_mock = mock.MagicMock()
                 retry_status_mock.data = {"retry_count": 3, "max_retries": 3}
@@ -684,11 +693,15 @@ class TestProcessRecomputeJob:
 
         mock_supabase.table.side_effect = table_side_effect
 
-        # Should not raise, but mark as error
-        try:
-            process_recompute_job(mock_supabase, job)
-        except Exception:
-            pass  # Expected to catch and handle
+        process_recompute_job(mock_supabase, job)
 
-        # Verify error handling was triggered
+        # Verify job was marked as error
+        all_update_payloads = []
+        for table_mock in background_jobs_mocks:
+            for call in table_mock.update.call_args_list:
+                if call[0]:
+                    all_update_payloads.append(call[0][0])
+        assert any(
+            p.get("status") == "error" for p in all_update_payloads
+        ), "Expected an update with status=error"
         assert mock_supabase.table.call_count >= 2

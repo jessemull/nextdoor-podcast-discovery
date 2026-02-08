@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { UUID_REGEX } from "@/lib/validators";
 
 /**
  * PUT /api/admin/jobs/:id/cancel
@@ -32,9 +33,7 @@ export async function PUT(
       );
     }
 
-    // Validate UUID format (basic check)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(jobId)) {
+    if (!UUID_REGEX.test(jobId)) {
       return NextResponse.json(
         {
           details: "Invalid job ID format. Expected UUID.",

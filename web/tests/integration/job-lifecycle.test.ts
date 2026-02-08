@@ -26,7 +26,7 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {},
 }));
 
-// Mock Supabase
+// Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockFrom = vi.fn() as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

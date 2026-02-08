@@ -33,10 +33,7 @@ vi.mock("openai", () => ({
   default: vi.fn(() => mockOpenAIInstance),
 }));
 
-// Mock Supabase
-// Note: Using 'any' here is acceptable for complex Supabase query chain mocks
-// The actual implementation is type-safe, but the mock structure is too complex
-// to type precisely without significant overhead
+// Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockRpc = vi.fn() as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

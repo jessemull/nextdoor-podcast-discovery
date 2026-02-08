@@ -5,6 +5,9 @@
 
 import { z } from "zod";
 
+/** UUID v4 format (shared for route param validation). */
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const VALID_WEIGHT_DIMENSIONS = [
   "absurdity",
   "drama",
@@ -115,3 +118,23 @@ export const postsQuerySchema = z.object({
 });
 
 export type PostsQuery = z.infer<typeof postsQuerySchema>;
+
+/** GET /api/admin/jobs query params. */
+export const adminJobsQuerySchema = z.object({
+  id: z
+    .string()
+    .optional()
+    .refine((v) => !v || UUID_REGEX.test(v), "Invalid job ID format"),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(10)
+    .transform((n) => Math.min(50, Math.max(1, n))),
+  type: z
+    .enum(["recompute_final_scores"])
+    .optional(),
+});
+
+export type AdminJobsQuery = z.infer<typeof adminJobsQuerySchema>;

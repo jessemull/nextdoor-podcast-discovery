@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { UUID_REGEX } from "@/lib/validators";
 
 /**
  * PUT /api/admin/weight-configs/:id/activate
@@ -28,6 +29,13 @@ export async function PUT(
     if (!configId) {
       return NextResponse.json(
         { error: "Weight config ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!UUID_REGEX.test(configId)) {
+      return NextResponse.json(
+        { error: "Invalid weight config ID format" },
         { status: 400 }
       );
     }

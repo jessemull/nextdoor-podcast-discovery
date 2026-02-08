@@ -15,7 +15,7 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {},
 }));
 
-// Mock Supabase
+// Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockFrom = vi.fn() as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,6 +47,10 @@ vi.mock("@/lib/supabase.server", () => ({
 
 import { getServerSession } from "next-auth";
 
+/** Valid UUIDs for weight config IDs (routes validate UUID format). */
+const CONFIG_1_UUID = "550e8400-e29b-41d4-a716-446655440001";
+const CONFIG_2_UUID = "550e8400-e29b-41d4-a716-446655440002";
+
 describe("GET /api/admin/weight-configs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,7 +74,7 @@ describe("GET /api/admin/weight-configs", () => {
 
     const mockConfigs = [
       {
-        id: "config-1",
+        id: CONFIG_1_UUID,
         name: "Test Config",
         weights: { absurdity: 2.0, drama: 1.5 },
         is_active: true,
@@ -78,12 +82,12 @@ describe("GET /api/admin/weight-configs", () => {
     ];
 
     const mockActiveConfigResult = {
-      data: { value: "config-1" },
+      data: { value: CONFIG_1_UUID },
       error: null,
     };
 
     const mockScoresData = [
-      { weight_config_id: "config-1" },
+      { weight_config_id: CONFIG_1_UUID },
     ];
 
     // Mock settings query
@@ -139,7 +143,7 @@ describe("GET /api/admin/weight-configs", () => {
 
     expect(response.status).toBe(200);
     expect(data.data).toBeDefined();
-    expect(data.active_config_id).toBe("config-1");
+    expect(data.active_config_id).toBe(CONFIG_1_UUID);
   });
 });
 
@@ -151,10 +155,10 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
   it("should return 401 when not authenticated", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-1", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: "config-1" } });
+    const response = await DELETE(request, { params: { id: CONFIG_1_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -169,7 +173,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const settingsSelect = vi.fn().mockReturnThis();
     const settingsEq = vi.fn().mockReturnThis();
     const settingsSingle = vi.fn().mockResolvedValue({
-      data: { value: "config-1" },
+      data: { value: CONFIG_1_UUID },
       error: null,
     });
 
@@ -184,10 +188,10 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
       select: settingsSelect,
     });
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-1", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: "config-1" } });
+    const response = await DELETE(request, { params: { id: CONFIG_1_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -200,7 +204,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     } as never);
 
     const mockConfig = {
-      id: "config-2",
+      id: CONFIG_2_UUID,
       name: "Test Config",
     };
 
@@ -208,7 +212,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const settingsSelect = vi.fn().mockReturnThis();
     const settingsEq = vi.fn().mockReturnThis();
     const settingsSingle = vi.fn().mockResolvedValue({
-      data: { value: "config-1" },
+      data: { value: CONFIG_1_UUID },
       error: null,
     });
 
@@ -265,10 +269,10 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
       return {};
     });
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-2", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_2_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: "config-2" } });
+    const response = await DELETE(request, { params: { id: CONFIG_2_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -284,7 +288,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const settingsSelect = vi.fn().mockReturnThis();
     const settingsEq = vi.fn().mockReturnThis();
     const settingsSingle = vi.fn().mockResolvedValue({
-      data: { value: "config-1" },
+      data: { value: CONFIG_1_UUID },
       error: null,
     });
 
@@ -304,7 +308,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
           id: "job-1",
           status: "pending",
           type: "recompute_final_scores",
-          params: { weight_config_id: "config-2" },
+          params: { weight_config_id: CONFIG_2_UUID },
         },
       ],
       error: null,
@@ -321,7 +325,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const configSelect = vi.fn().mockReturnThis();
     const configEq = vi.fn().mockReturnThis();
     const configSingle = vi.fn().mockResolvedValue({
-      data: { id: "config-2", name: "Test Config" },
+      data: { id: CONFIG_2_UUID, name: "Test Config" },
       error: null,
     });
 
@@ -345,10 +349,10 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
       return {};
     });
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-2", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_2_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: "config-2" } });
+    const response = await DELETE(request, { params: { id: CONFIG_2_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -365,10 +369,10 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
   it("should return 401 when not authenticated", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-1/activate", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}/activate`, {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: "config-1" } });
+    const response = await PUT(request, { params: { id: CONFIG_1_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -381,7 +385,7 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
     } as never);
 
     const mockConfig = {
-      id: "config-1",
+      id: CONFIG_1_UUID,
       name: "Test Config",
     };
 
@@ -433,14 +437,14 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
       return {};
     });
 
-    const request = new NextRequest("http://localhost:3000/api/admin/weight-configs/config-1/activate", {
+    const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}/activate`, {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: "config-1" } });
+    const response = await PUT(request, { params: { id: CONFIG_1_UUID } });
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.data.success).toBe(true);
-    expect(data.data.active_config_id).toBe("config-1");
+    expect(data.data.active_config_id).toBe(CONFIG_1_UUID);
   });
 });

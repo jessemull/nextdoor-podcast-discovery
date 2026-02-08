@@ -22,7 +22,7 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {},
 }));
 
-// Mock Supabase
+// Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockFrom = vi.fn() as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,6 +50,10 @@ vi.mock("@/lib/supabase.server", () => ({
 
 import { getServerSession } from "next-auth";
 
+/** Valid UUIDs for weight config IDs (routes validate UUID format). */
+const CONFIG_1_UUID = "550e8400-e29b-41d4-a716-446655440001";
+const CONFIG_2_UUID = "550e8400-e29b-41d4-a716-446655440002";
+
 describe("Edge Cases", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,13 +65,13 @@ describe("Edge Cases", () => {
         user: { email: "test@example.com" },
       } as never);
 
-      const configId = "config-2";
+      const configId = CONFIG_2_UUID;
 
       // Mock settings query (different active config)
       const settingsSelect = vi.fn().mockReturnThis();
       const settingsEq = vi.fn().mockReturnThis();
       const settingsSingle = vi.fn().mockResolvedValue({
-        data: { value: "config-1" },
+        data: { value: CONFIG_1_UUID },
         error: null,
       });
 
@@ -149,7 +153,7 @@ describe("Edge Cases", () => {
         user: { email: "test@example.com" },
       } as never);
 
-      const activeConfigId = "config-1";
+      const activeConfigId = CONFIG_1_UUID;
 
       const settingsSelect = vi.fn().mockReturnThis();
       const settingsEq = vi.fn().mockReturnThis();

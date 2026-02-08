@@ -115,7 +115,7 @@ describe("GET /api/admin/jobs", () => {
     } as never);
 
     const mockJob = {
-      id: "job-1",
+      id: "550e8400-e29b-41d4-a716-446655440000",
       type: "recompute_final_scores",
       status: "completed",
     };
@@ -135,7 +135,7 @@ describe("GET /api/admin/jobs", () => {
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/admin/jobs?id=job-1"
+      "http://localhost:3000/api/admin/jobs?id=550e8400-e29b-41d4-a716-446655440000"
     );
     const response = await GET(request);
     const data = await response.json();

@@ -3,10 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
-import { postsUsedBodySchema } from "@/lib/validators";
-
-// UUID v4 format validation
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { postsUsedBodySchema, UUID_REGEX } from "@/lib/validators";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
