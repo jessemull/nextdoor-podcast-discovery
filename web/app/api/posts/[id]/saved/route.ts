@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
-import { UUID_REGEX } from "@/lib/validators";
+import { postsSavedBodySchema, UUID_REGEX } from "@/lib/validators";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -31,7 +31,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const saved = typeof body.saved === "boolean" ? body.saved : false;
+    const parsed = postsSavedBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const message = first?.message ?? "Invalid request body";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    const { saved } = parsed.data;
 
     const supabase = getSupabaseAdmin();
 

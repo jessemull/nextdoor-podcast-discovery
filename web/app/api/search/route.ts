@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 import { authOptions } from "@/lib/auth";
+import {
+  getCachedEmbedding,
+  setCachedEmbedding,
+} from "@/lib/embedding-cache.server";
 import { env } from "@/lib/env.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { searchBodySchema } from "@/lib/validators";
@@ -32,49 +36,6 @@ interface SearchResult {
  * Must match the model used in the scraper (EMBEDDING_MODEL).
  */
 const EMBEDDING_MODEL = "text-embedding-3-small";
-
-/** In-memory cache for query embeddings. TTL 5 minutes. */
-const EMBEDDING_CACHE_TTL_MS = 5 * 60 * 1000;
-const embeddingCache = new Map<
-  string,
-  { embedding: number[]; expiresAt: number }
->();
-
-function getCachedEmbedding(
-  query: string,
-  similarityThreshold: number
-): null | number[] {
-  const key = `${query}:${similarityThreshold}`;
-  const entry = embeddingCache.get(key);
-  if (!entry || Date.now() > entry.expiresAt) {
-    if (entry) embeddingCache.delete(key);
-    return null;
-  }
-  return entry.embedding;
-}
-
-/** Clears the embedding cache. Used by tests for isolation. */
-export function clearEmbeddingCacheForTest(): void {
-  embeddingCache.clear();
-}
-
-function setCachedEmbedding(
-  query: string,
-  similarityThreshold: number,
-  embedding: number[]
-): void {
-  const key = `${query}:${similarityThreshold}`;
-  embeddingCache.set(key, {
-    embedding,
-    expiresAt: Date.now() + EMBEDDING_CACHE_TTL_MS,
-  });
-  if (embeddingCache.size > 100) {
-    const oldest = [...embeddingCache.entries()].sort(
-      (a, b) => a[1].expiresAt - b[1].expiresAt
-    )[0];
-    if (oldest) embeddingCache.delete(oldest[0]);
-  }
-}
 
 /**
  * GET /api/search?q=...&limit=...

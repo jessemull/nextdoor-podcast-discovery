@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS, TOPIC_CATEGORIES } from "@/lib/constants";
-import { useDebounce } from "@/lib/hooks";
+import { usePostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 
 import { PostCard } from "./PostCard";
@@ -12,22 +12,6 @@ import { PostCard } from "./PostCard";
 import type { PostsResponse, PostWithScores } from "@/lib/types";
 
 type SortOption = "date" | "score";
-
-interface Neighborhood {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface Filters {
-  category: string;
-  episodeDate: string;
-  minScore: string;
-  neighborhoodId: string;
-  savedOnly: boolean;
-  sort: SortOption;
-  unusedOnly: boolean;
-}
 
 /**
  * PostFeed component displays a list of Nextdoor posts with filtering and infinite scroll.
@@ -46,18 +30,15 @@ interface Filters {
  */
 export function PostFeed() {
   const router = useRouter();
+  const {
+    debouncedMinScore,
+    episodeDates,
+    filterLoadError,
+    filters,
+    neighborhoods,
+    setFilters,
+  } = usePostFeedFilters(DEBOUNCE_DELAY_MS);
   const [error, setError] = useState<null | string>(null);
-  const [episodeDates, setEpisodeDates] = useState<string[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    category: "",
-    episodeDate: "",
-    minScore: "",
-    neighborhoodId: "",
-    savedOnly: false,
-    sort: "score",
-    unusedOnly: false,
-  });
-  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [posts, setPosts] = useState<PostWithScores[]>([]);
@@ -66,24 +47,6 @@ export function PostFeed() {
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement>(null);
-
-  // Debounce minScore to avoid excessive API calls
-  const debouncedMinScore = useDebounce(filters.minScore, DEBOUNCE_DELAY_MS);
-
-  // Fetch neighborhoods and episode dates on mount
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/neighborhoods").then((res) =>
-        res.ok ? res.json() : { data: [] }
-      ),
-      fetch("/api/episodes").then((res) =>
-        res.ok ? res.json() : { data: [] }
-      ),
-    ]).then(([neighborhoodsResult, episodesResult]) => {
-      setNeighborhoods(neighborhoodsResult.data || []);
-      setEpisodeDates(episodesResult.data || []);
-    }).catch(() => {});
-  }, []);
 
   const fetchPosts = useCallback(
     async (currentOffset = 0, append = false) => {
@@ -249,6 +212,11 @@ export function PostFeed() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        {filterLoadError && (
+          <p className="mb-4 text-sm text-amber-400" role="alert">
+            {filterLoadError}
+          </p>
+        )}
         <div className="flex flex-wrap gap-4 items-center">
           {/* Sort */}
           <div className="flex items-center gap-2">

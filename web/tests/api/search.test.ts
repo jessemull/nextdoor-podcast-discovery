@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 
-import { clearEmbeddingCacheForTest, POST } from "@/app/api/search/route";
+import { clearEmbeddingCacheForTest } from "@/lib/embedding-cache.server";
+import { POST } from "@/app/api/search/route";
 
 // Mock next-auth
 vi.mock("next-auth", () => ({

@@ -114,6 +114,7 @@ scraper/
 │   ├── exceptions.py     # Custom exceptions
 │   ├── llm_scorer.py     # Claude scoring
 │   ├── main.py           # Entry point
+│   ├── novelty.py        # Novelty calculation (scorer + worker)
 │   ├── post_extractor.py # Feed parsing
 │   ├── post_storage.py   # Supabase storage
 │   ├── scraper.py        # Playwright browser scraper

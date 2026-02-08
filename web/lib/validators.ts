@@ -100,6 +100,13 @@ export const postsUsedBodySchema = z.object({
 
 export type PostsUsedBody = z.infer<typeof postsUsedBodySchema>;
 
+/** PATCH /api/posts/[id]/saved body */
+export const postsSavedBodySchema = z.object({
+  saved: z.boolean({ required_error: "Missing required field: saved (boolean)" }),
+});
+
+export type PostsSavedBody = z.infer<typeof postsSavedBodySchema>;
+
 /** POST /api/admin/recompute-scores body */
 export const recomputeScoresBodySchema = z.object({
   description: z.string().optional(),

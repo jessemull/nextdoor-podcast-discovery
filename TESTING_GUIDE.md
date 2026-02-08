@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. **Database migrations** - All migrations (004-009) are run
+1. **Database migrations** - All migrations in database/migrations/ are run
 2. **Worker running** - The Python worker should be running (or ready to run)
 3. **Web app running** - Next.js dev server should be running
 4. **Some test data** - At least a few posts with LLM scores in the database
