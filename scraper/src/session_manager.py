@@ -39,9 +39,7 @@ class SessionManager:
         Returns:
             List of cookie dicts, or None if no valid session.
         """
-        query = self.supabase.table("sessions").select(
-            "cookies_encrypted, expires_at"
-        )
+        query = self.supabase.table("sessions").select("cookies_encrypted, expires_at")
 
         if neighborhood_id:
             query = query.eq("neighborhood_id", neighborhood_id)

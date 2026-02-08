@@ -7,7 +7,7 @@ import pytest
 from anthropic import Anthropic
 from supabase import Client
 
-from src.llm_scorer import LLMScorer, PostScore, SCORING_DIMENSIONS, TOPIC_CATEGORIES
+from src.llm_scorer import SCORING_DIMENSIONS, LLMScorer, PostScore
 
 
 class TestLLMScorer:
@@ -30,7 +30,9 @@ class TestLLMScorer:
         """Create an LLMScorer instance."""
         return LLMScorer(mock_anthropic, mock_supabase)
 
-    def test_score_posts_returns_empty_list_for_empty_input(self, scorer: LLMScorer) -> None:
+    def test_score_posts_returns_empty_list_for_empty_input(
+        self, scorer: LLMScorer
+    ) -> None:
         """Should return empty list for empty posts."""
         result = scorer.score_posts([])
 
@@ -41,17 +43,19 @@ class TestLLMScorer:
         post = {"id": "post1", "text": "This is a test post about a lost dog"}
         mock_response = mock.MagicMock()
         mock_content = mock.MagicMock()
-        mock_content.text = json.dumps({
-            "scores": {
-                "absurdity": 5.0,
-                "drama": 3.0,
-                "discussion_spark": 7.0,
-                "emotional_intensity": 4.0,
-                "news_value": 6.0,
-            },
-            "categories": ["lost_pet"],
-            "summary": "A post about a lost dog",
-        })
+        mock_content.text = json.dumps(
+            {
+                "scores": {
+                    "absurdity": 5.0,
+                    "drama": 3.0,
+                    "discussion_spark": 7.0,
+                    "emotional_intensity": 4.0,
+                    "news_value": 6.0,
+                },
+                "categories": ["lost_pet"],
+                "summary": "A post about a lost dog",
+            }
+        )
         mock_response.content = [mock_content]
         scorer.anthropic.messages.create.return_value = mock_response
 
@@ -66,7 +70,9 @@ class TestLLMScorer:
         # Mock topic frequencies
         freq_result = mock.MagicMock()
         freq_result.data = [{"category": "lost_pet", "count_30d": 10}]
-        scorer.supabase.table.return_value.select.return_value.execute.return_value = freq_result
+        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
+            freq_result
+        )
 
         results = scorer.score_posts([post])
 
@@ -138,7 +144,9 @@ class TestLLMScorer:
         }
         freq_result = mock.MagicMock()
         freq_result.data = [{"category": "drama", "count_30d": 10}]
-        scorer.supabase.table.return_value.select.return_value.execute.return_value = freq_result
+        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
+            freq_result
+        )
 
         scorer.calculate_final_scores(results)
 
@@ -147,11 +155,6 @@ class TestLLMScorer:
 
     def test_calculate_novelty_boosts_rare_topics(self, scorer: LLMScorer) -> None:
         """Should boost score for rare topics."""
-        config = {
-            "min_multiplier": 0.2,
-            "max_multiplier": 1.5,
-            "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
-        }
         frequencies = {"rare_topic": 2}  # Below rare threshold
 
         novelty = scorer._calculate_novelty(["rare_topic"], frequencies)
@@ -160,11 +163,6 @@ class TestLLMScorer:
 
     def test_calculate_novelty_penalizes_common_topics(self, scorer: LLMScorer) -> None:
         """Should penalize score for very common topics."""
-        config = {
-            "min_multiplier": 0.2,
-            "max_multiplier": 1.5,
-            "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
-        }
         frequencies = {"common_topic": 150}  # Above very_common threshold
 
         novelty = scorer._calculate_novelty(["common_topic"], frequencies)
@@ -184,7 +182,9 @@ class TestLLMScorer:
         ]
 
         upsert_result = mock.MagicMock()
-        scorer.supabase.table.return_value.upsert.return_value.execute.return_value = upsert_result
+        scorer.supabase.table.return_value.upsert.return_value.execute.return_value = (
+            upsert_result
+        )
 
         # Mock topic frequency update
         scorer.supabase.rpc.return_value.execute.return_value = None
@@ -226,10 +226,14 @@ class TestLLMScorer:
         assert len(posts) == 2
         assert posts[0]["id"] == "post1"
 
-    def test_get_unscored_posts_falls_back_to_manual_query(self, scorer: LLMScorer) -> None:
+    def test_get_unscored_posts_falls_back_to_manual_query(
+        self, scorer: LLMScorer
+    ) -> None:
         """Should fall back to manual query when RPC fails."""
         # RPC fails
-        scorer.supabase.rpc.return_value.execute.side_effect = Exception("RPC not found")
+        scorer.supabase.rpc.return_value.execute.side_effect = Exception(
+            "RPC not found"
+        )
 
         # Mock manual query
         posts_result = mock.MagicMock()
@@ -240,9 +244,13 @@ class TestLLMScorer:
         def table_side_effect(table_name: str) -> mock.MagicMock:
             table_mock = mock.MagicMock()
             if table_name == "posts":
-                table_mock.select.return_value.order.return_value.limit.return_value.execute.return_value = posts_result
+                table_mock.select.return_value.order.return_value.limit.return_value.execute.return_value = (
+                    posts_result
+                )
             elif table_name == "llm_scores":
-                table_mock.select.return_value.in_.return_value.execute.return_value = scored_result
+                table_mock.select.return_value.in_.return_value.execute.return_value = (
+                    scored_result
+                )
             return table_mock
 
         scorer.supabase.table.side_effect = table_side_effect

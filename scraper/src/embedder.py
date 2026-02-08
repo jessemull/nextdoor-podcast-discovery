@@ -3,6 +3,7 @@
 __all__ = ["Embedder"]
 
 import logging
+from typing import Any, cast
 
 from openai import APIError, OpenAI
 from supabase import Client
@@ -92,16 +93,17 @@ class Embedder:
         embeddings_result = (
             self.supabase.table("post_embeddings").select("post_id").execute()
         )
-
-        existing_post_ids = {row["post_id"] for row in embeddings_result.data}
+        embeddings_data = cast(list[dict[str, Any]], embeddings_result.data or [])
+        existing_post_ids = {row["post_id"] for row in embeddings_data}
 
         # Filter out posts that already have embeddings or have no text
+        posts_data = cast(list[dict[str, Any]], posts_result.data or [])
         posts_to_embed = [
             post
-            for post in posts_result.data
+            for post in posts_data
             if post["id"] not in existing_post_ids
             and post.get("text")
-            and len(post["text"].strip()) > 0
+            and len(str(post.get("text", "")).strip()) > 0
         ]
 
         if not posts_to_embed:
@@ -113,21 +115,19 @@ class Embedder:
         # Process in batches
         for i in range(0, len(posts_to_embed), EMBEDDING_BATCH_SIZE):
             batch = posts_to_embed[i : i + EMBEDDING_BATCH_SIZE]
-            batch_texts = [post["text"] for post in batch]
+            batch_texts = [str(post["text"]) for post in batch]
 
             try:
                 # Generate embeddings
                 embeddings = self._generate_embeddings(batch_texts)
 
                 if dry_run:
-                    logger.info(
-                        "DRY RUN: Would store %d embeddings", len(embeddings)
-                    )
+                    logger.info("DRY RUN: Would store %d embeddings", len(embeddings))
                     stats["processed"] += len(embeddings)
                     continue
 
                 # Store embeddings
-                embeddings_data = [
+                to_store = [
                     {
                         "embedding": embedding,
                         "model": EMBEDDING_MODEL,
@@ -138,11 +138,11 @@ class Embedder:
 
                 result = (
                     self.supabase.table("post_embeddings")
-                    .upsert(embeddings_data, on_conflict="post_id")
+                    .upsert(to_store, on_conflict="post_id")
                     .execute()
                 )
 
-                stored_count = len(result.data) if result.data else 0
+                stored_count = len(cast(list[Any], result.data)) if result.data else 0
                 stats["stored"] += stored_count
                 stats["processed"] += len(embeddings)
 

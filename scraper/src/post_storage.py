@@ -53,15 +53,19 @@ class PostStorage:
                 stats["errors"] += 1
                 continue
 
-            posts_data.append({
-                "hash": post.content_hash,
-                "image_urls": post.image_urls,
-                "neighborhood_id": neighborhood_id,
-                "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
-                "text": post.content,
-                "url": post.post_url,
-                "user_id_hash": post.author_id,
-            })
+            posts_data.append(
+                {
+                    "hash": post.content_hash,
+                    "image_urls": post.image_urls,
+                    "neighborhood_id": neighborhood_id,
+                    "post_id_ext": self._extract_post_id(
+                        post.post_url, post.content_hash
+                    ),
+                    "text": post.content,
+                    "url": post.post_url,
+                    "user_id_hash": post.author_id,
+                }
+            )
 
         if not posts_data:
             return stats
@@ -94,11 +98,7 @@ class PostStorage:
 
             for post_data in posts_data:
                 try:
-                    result = (
-                        self.supabase.table("posts")
-                        .insert(post_data)
-                        .execute()
-                    )
+                    result = self.supabase.table("posts").insert(post_data).execute()
                     if result.data:
                         stats["inserted"] += 1
                     else:

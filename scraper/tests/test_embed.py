@@ -20,7 +20,7 @@ class TestEmbed:
     def test_main_dry_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in dry-run mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            with mock.patch("src.embed.SessionManager") as mock_session:
+            with mock.patch("src.embed.SessionManager") as _mock_session:
                 with mock.patch("src.embed.Embedder") as mock_embedder:
                     mock_embedder_instance = mock.MagicMock()
                     mock_embedder_instance.generate_and_store_embeddings.return_value = {
@@ -37,7 +37,7 @@ class TestEmbed:
     def test_main_normal_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in normal mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            with mock.patch("src.embed.SessionManager") as mock_session:
+            with mock.patch("src.embed.SessionManager") as _mock_session:
                 with mock.patch("src.embed.Embedder") as mock_embedder:
                     mock_embedder_instance = mock.MagicMock()
                     mock_embedder_instance.generate_and_store_embeddings.return_value = {

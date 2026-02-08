@@ -21,12 +21,14 @@ class TestMain:
     def test_main_dry_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in dry-run mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            with mock.patch("src.main.SessionManager") as mock_session:
+            with mock.patch("src.main.SessionManager") as _mock_session:
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
                     # Mock the scraper context manager
                     mock_scraper_instance = mock.MagicMock()
                     mock_scraper_instance.extract_posts.return_value = []
-                    mock_scraper.return_value.__enter__.return_value = mock_scraper_instance
+                    mock_scraper.return_value.__enter__.return_value = (
+                        mock_scraper_instance
+                    )
                     mock_scraper.return_value.__exit__.return_value = None
 
                     result = main(dry_run=True)
@@ -36,12 +38,14 @@ class TestMain:
     def test_main_normal_run_returns_zero(self, mock_env: dict[str, str]) -> None:
         """Should return 0 in normal mode with valid env."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
-            with mock.patch("src.main.SessionManager") as mock_session:
+            with mock.patch("src.main.SessionManager") as _mock_session:
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
                     # Mock the scraper context manager
                     mock_scraper_instance = mock.MagicMock()
                     mock_scraper_instance.extract_posts.return_value = []
-                    mock_scraper.return_value.__enter__.return_value = mock_scraper_instance
+                    mock_scraper.return_value.__enter__.return_value = (
+                        mock_scraper_instance
+                    )
                     mock_scraper.return_value.__exit__.return_value = None
 
                     result = main(dry_run=False)

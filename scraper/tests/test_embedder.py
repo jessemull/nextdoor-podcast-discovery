@@ -107,9 +107,7 @@ class TestEmbedder:
 
         # Mock OpenAI response for post-2
         mock_response = mock.MagicMock()
-        mock_response.data = [
-            mock.MagicMock(embedding=[0.1] * EMBEDDING_DIMENSIONS)
-        ]
+        mock_response.data = [mock.MagicMock(embedding=[0.1] * EMBEDDING_DIMENSIONS)]
         embedder.openai.embeddings.create.return_value = mock_response
 
         # Mock upsert response
@@ -128,9 +126,7 @@ class TestEmbedder:
             input=["Second post"], model=EMBEDDING_MODEL
         )
 
-    def test_generate_and_store_embeddings_dry_run(
-        self, embedder: Embedder
-    ) -> None:
+    def test_generate_and_store_embeddings_dry_run(self, embedder: Embedder) -> None:
         """Should not store embeddings in dry run mode."""
         posts_data = [{"id": "post-1", "text": "Test post"}]
         embedder.supabase.table.return_value.select.return_value.not_.is_.return_value.execute.return_value.data = (
@@ -141,9 +137,7 @@ class TestEmbedder:
         )
 
         mock_response = mock.MagicMock()
-        mock_response.data = [
-            mock.MagicMock(embedding=[0.1] * EMBEDDING_DIMENSIONS)
-        ]
+        mock_response.data = [mock.MagicMock(embedding=[0.1] * EMBEDDING_DIMENSIONS)]
         embedder.openai.embeddings.create.return_value = mock_response
 
         stats = embedder.generate_and_store_embeddings(dry_run=True)
@@ -152,9 +146,7 @@ class TestEmbedder:
         assert stats["stored"] == 0
         embedder.supabase.table.return_value.upsert.assert_not_called()
 
-    def test_generate_and_store_embeddings_batches(
-        self, embedder: Embedder
-    ) -> None:
+    def test_generate_and_store_embeddings_batches(self, embedder: Embedder) -> None:
         """Should process posts in batches."""
         # Create more posts than batch size
         posts_data = [
@@ -183,7 +175,7 @@ class TestEmbedder:
             mock_upsert_response
         )
 
-        stats = embedder.generate_and_store_embeddings()
+        _stats = embedder.generate_and_store_embeddings()
 
         # Should have called OpenAI at least twice (batch + remainder)
         assert embedder.openai.embeddings.create.call_count >= 2

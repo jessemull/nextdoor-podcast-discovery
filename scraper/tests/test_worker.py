@@ -1,6 +1,5 @@
 """Tests for worker module."""
 
-from datetime import UTC, datetime
 from unittest import mock
 
 import pytest
@@ -47,8 +46,20 @@ class TestCalculateFinalScore:
 
     def test_applies_novelty_multiplier(self) -> None:
         """Should apply novelty multiplier to final score."""
-        scores = {"absurdity": 5.0, "drama": 5.0, "discussion_spark": 5.0, "emotional_intensity": 5.0, "news_value": 5.0}
-        weights = {"absurdity": 1.0, "drama": 1.0, "discussion_spark": 1.0, "emotional_intensity": 1.0, "news_value": 1.0}
+        scores = {
+            "absurdity": 5.0,
+            "drama": 5.0,
+            "discussion_spark": 5.0,
+            "emotional_intensity": 5.0,
+            "news_value": 5.0,
+        }
+        weights = {
+            "absurdity": 1.0,
+            "drama": 1.0,
+            "discussion_spark": 1.0,
+            "emotional_intensity": 1.0,
+            "news_value": 1.0,
+        }
 
         score_without_novelty = calculate_final_score(scores, weights, 1.0)
         score_with_novelty = calculate_final_score(scores, weights, 1.5)
@@ -128,10 +139,14 @@ class TestLoadWeightConfig:
         assert result["absurdity"] == 2.0
         assert result["drama"] == 1.5
 
-    def test_raises_error_if_config_not_found(self, mock_supabase: mock.MagicMock) -> None:
+    def test_raises_error_if_config_not_found(
+        self, mock_supabase: mock.MagicMock
+    ) -> None:
         """Should raise ValueError if config not found."""
         config_id = "non-existent-id"
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = None
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = (
+            None
+        )
 
         with pytest.raises(ValueError, match="Weight config .* not found"):
             load_weight_config(mock_supabase, config_id)
@@ -162,7 +177,9 @@ class TestLoadNoveltyConfig:
 
     def test_returns_defaults_if_not_found(self, mock_supabase: mock.MagicMock) -> None:
         """Should return default config if not found in settings."""
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = None
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = (
+            None
+        )
 
         result = load_novelty_config(mock_supabase)
 
@@ -210,7 +227,9 @@ class TestLoadJobDependencies:
                 "news_value": 1.0,
             }
         }
-        supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = weight_result
+        supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+            weight_result
+        )
 
         # Mock novelty config
         novelty_result = mock.MagicMock()
@@ -230,9 +249,13 @@ class TestLoadJobDependencies:
         def table_side_effect(table_name: str) -> mock.MagicMock:
             table_mock = mock.MagicMock()
             if table_name == "weight_configs":
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = weight_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    weight_result
+                )
             elif table_name == "settings":
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = novelty_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    novelty_result
+                )
             elif table_name == "topic_frequencies":
                 table_mock.select.return_value.execute.return_value = frequencies_result
             return table_mock
@@ -242,7 +265,9 @@ class TestLoadJobDependencies:
 
     def test_loads_all_dependencies(self, mock_supabase: mock.MagicMock) -> None:
         """Should load weights, novelty config, and frequencies."""
-        weights, novelty_config, frequencies = _load_job_dependencies(mock_supabase, "test-config-id")
+        weights, novelty_config, frequencies = _load_job_dependencies(
+            mock_supabase, "test-config-id"
+        )
 
         assert weights["absurdity"] == 2.0
         assert novelty_config["min_multiplier"] == 0.2
@@ -262,16 +287,34 @@ class TestProcessBatch:
         batch_data = [
             {
                 "post_id": "post-1",
-                "scores": {"absurdity": 5.0, "drama": 3.0, "discussion_spark": 7.0, "emotional_intensity": 4.0, "news_value": 6.0},
+                "scores": {
+                    "absurdity": 5.0,
+                    "drama": 3.0,
+                    "discussion_spark": 7.0,
+                    "emotional_intensity": 4.0,
+                    "news_value": 6.0,
+                },
                 "categories": ["pets"],
             },
             {
                 "post_id": "post-2",
-                "scores": {"absurdity": 8.0, "drama": 2.0, "discussion_spark": 5.0, "emotional_intensity": 6.0, "news_value": 4.0},
+                "scores": {
+                    "absurdity": 8.0,
+                    "drama": 2.0,
+                    "discussion_spark": 5.0,
+                    "emotional_intensity": 6.0,
+                    "news_value": 4.0,
+                },
                 "categories": ["crime"],
             },
         ]
-        weights = {"absurdity": 2.0, "drama": 1.5, "discussion_spark": 1.0, "emotional_intensity": 1.2, "news_value": 1.0}
+        weights = {
+            "absurdity": 2.0,
+            "drama": 1.5,
+            "discussion_spark": 1.0,
+            "emotional_intensity": 1.2,
+            "news_value": 1.0,
+        }
         novelty_config = {
             "min_multiplier": 0.2,
             "max_multiplier": 1.5,
@@ -279,7 +322,9 @@ class TestProcessBatch:
         }
         frequencies = {"pets": 10, "crime": 5}
 
-        result = _process_batch(mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies)
+        result = _process_batch(
+            mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies
+        )
 
         assert len(result) == 2
         assert result[0]["post_id"] == "post-1"
@@ -293,11 +338,23 @@ class TestProcessBatch:
             {"post_id": None, "scores": {}, "categories": []},  # Invalid: no post_id
             {
                 "post_id": "post-2",
-                "scores": {"absurdity": 5.0, "drama": 3.0, "discussion_spark": 7.0, "emotional_intensity": 4.0, "news_value": 6.0},
+                "scores": {
+                    "absurdity": 5.0,
+                    "drama": 3.0,
+                    "discussion_spark": 7.0,
+                    "emotional_intensity": 4.0,
+                    "news_value": 6.0,
+                },
                 "categories": ["pets"],
             },
         ]
-        weights = {"absurdity": 2.0, "drama": 1.5, "discussion_spark": 1.0, "emotional_intensity": 1.2, "news_value": 1.0}
+        weights = {
+            "absurdity": 2.0,
+            "drama": 1.5,
+            "discussion_spark": 1.0,
+            "emotional_intensity": 1.2,
+            "news_value": 1.0,
+        }
         novelty_config = {
             "min_multiplier": 0.2,
             "max_multiplier": 1.5,
@@ -305,7 +362,9 @@ class TestProcessBatch:
         }
         frequencies: dict[str, int] = {}
 
-        result = _process_batch(mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies)
+        result = _process_batch(
+            mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies
+        )
 
         assert len(result) == 1
         assert result[0]["post_id"] == "post-2"
@@ -325,7 +384,9 @@ class TestUpdateJobProgress:
 
         mock_supabase.table.assert_called_with("background_jobs")
         mock_supabase.table.return_value.update.assert_called_once()
-        mock_supabase.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-id")
+        mock_supabase.table.return_value.update.return_value.eq.assert_called_once_with(
+            "id", "job-id"
+        )
         mock_supabase.table.return_value.update.return_value.eq.return_value.execute.assert_called_once()
 
 
@@ -339,12 +400,16 @@ class TestProcessRecomputeJob:
 
         # Mock job update responses
         update_mock = mock.MagicMock()
-        supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = update_mock
+        supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+            update_mock
+        )
 
         # Mock count query
         count_mock = mock.MagicMock()
         count_mock.count = 2
-        supabase.table.return_value.select.return_value.execute.return_value = count_mock
+        supabase.table.return_value.select.return_value.execute.return_value = (
+            count_mock
+        )
 
         # Mock batch query
         batch_mock = mock.MagicMock()
@@ -352,13 +417,25 @@ class TestProcessRecomputeJob:
             {
                 "id": "score-1",
                 "post_id": "post-1",
-                "scores": {"absurdity": 5.0, "drama": 3.0, "discussion_spark": 7.0, "emotional_intensity": 4.0, "news_value": 6.0},
+                "scores": {
+                    "absurdity": 5.0,
+                    "drama": 3.0,
+                    "discussion_spark": 7.0,
+                    "emotional_intensity": 4.0,
+                    "news_value": 6.0,
+                },
                 "categories": ["pets"],
             },
             {
                 "id": "score-2",
                 "post_id": "post-2",
-                "scores": {"absurdity": 8.0, "drama": 2.0, "discussion_spark": 5.0, "emotional_intensity": 6.0, "news_value": 4.0},
+                "scores": {
+                    "absurdity": 8.0,
+                    "drama": 2.0,
+                    "discussion_spark": 5.0,
+                    "emotional_intensity": 6.0,
+                    "news_value": 4.0,
+                },
                 "categories": ["crime"],
             },
         ]
@@ -367,7 +444,9 @@ class TestProcessRecomputeJob:
         def table_side_effect(table_name: str) -> mock.MagicMock:
             table_mock = mock.MagicMock()
             if table_name == "background_jobs":
-                table_mock.update.return_value.eq.return_value.execute.return_value = update_mock
+                table_mock.update.return_value.eq.return_value.execute.return_value = (
+                    update_mock
+                )
             elif table_name == "llm_scores":
                 select_mock = mock.MagicMock()
                 select_mock.count = 2
@@ -387,20 +466,31 @@ class TestProcessRecomputeJob:
                         "news_value": 1.0,
                     }
                 }
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = weight_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    weight_result
+                )
             elif table_name == "settings":
                 novelty_result = mock.MagicMock()
                 novelty_result.data = {
                     "value": {
                         "min_multiplier": 0.2,
                         "max_multiplier": 1.5,
-                        "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
+                        "frequency_thresholds": {
+                            "rare": 5,
+                            "common": 30,
+                            "very_common": 100,
+                        },
                     }
                 }
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = novelty_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    novelty_result
+                )
             elif table_name == "topic_frequencies":
                 frequencies_result = mock.MagicMock()
-                frequencies_result.data = [{"category": "pets", "count_30d": 10}, {"category": "crime", "count_30d": 5}]
+                frequencies_result.data = [
+                    {"category": "pets", "count_30d": 10},
+                    {"category": "crime", "count_30d": 5},
+                ]
                 table_mock.select.return_value.execute.return_value = frequencies_result
             return table_mock
 
@@ -422,7 +512,9 @@ class TestProcessRecomputeJob:
         # Verify job was marked as completed
         assert mock_supabase.table.call_count >= 3
 
-    def test_raises_error_for_missing_weight_config_id(self, mock_supabase: mock.MagicMock) -> None:
+    def test_raises_error_for_missing_weight_config_id(
+        self, mock_supabase: mock.MagicMock
+    ) -> None:
         """Should raise ValueError if weight_config_id is missing."""
         job = {
             "id": "job-1",
@@ -463,8 +555,12 @@ class TestProcessRecomputeJob:
                 # Second call: check status (returns cancelled)
                 # Third call: update completed_at
                 status_select = mock.MagicMock()
-                status_select.eq.return_value.single.return_value.execute.return_value = cancelled_status_mock
-                table_mock.update.return_value.eq.return_value.execute.return_value = mock.MagicMock()
+                status_select.eq.return_value.single.return_value.execute.return_value = (
+                    cancelled_status_mock
+                )
+                table_mock.update.return_value.eq.return_value.execute.return_value = (
+                    mock.MagicMock()
+                )
                 table_mock.select.return_value = status_select
             elif table_name == "weight_configs":
                 weight_result = mock.MagicMock()
@@ -477,17 +573,25 @@ class TestProcessRecomputeJob:
                         "news_value": 1.0,
                     }
                 }
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = weight_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    weight_result
+                )
             elif table_name == "settings":
                 novelty_result = mock.MagicMock()
                 novelty_result.data = {
                     "value": {
                         "min_multiplier": 0.2,
                         "max_multiplier": 1.5,
-                        "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
+                        "frequency_thresholds": {
+                            "rare": 5,
+                            "common": 30,
+                            "very_common": 100,
+                        },
                     }
                 }
-                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = novelty_result
+                table_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = (
+                    novelty_result
+                )
             elif table_name == "topic_frequencies":
                 frequencies_result = mock.MagicMock()
                 frequencies_result.data = []
@@ -527,8 +631,12 @@ class TestProcessRecomputeJob:
                 retry_status_mock = mock.MagicMock()
                 retry_status_mock.data = {"retry_count": 0, "max_retries": 3}
                 status_select = mock.MagicMock()
-                status_select.eq.return_value.single.return_value.execute.return_value = retry_status_mock
-                table_mock.update.return_value.eq.return_value.execute.return_value = mock.MagicMock()
+                status_select.eq.return_value.single.return_value.execute.return_value = (
+                    retry_status_mock
+                )
+                table_mock.update.return_value.eq.return_value.execute.return_value = (
+                    mock.MagicMock()
+                )
                 table_mock.select.return_value = status_select
             elif table_name == "weight_configs":
                 # Raise error when loading weights (simulating transient failure)
@@ -563,8 +671,12 @@ class TestProcessRecomputeJob:
                 retry_status_mock = mock.MagicMock()
                 retry_status_mock.data = {"retry_count": 3, "max_retries": 3}
                 status_select = mock.MagicMock()
-                status_select.eq.return_value.single.return_value.execute.return_value = retry_status_mock
-                table_mock.update.return_value.eq.return_value.execute.return_value = mock.MagicMock()
+                status_select.eq.return_value.single.return_value.execute.return_value = (
+                    retry_status_mock
+                )
+                table_mock.update.return_value.eq.return_value.execute.return_value = (
+                    mock.MagicMock()
+                )
                 table_mock.select.return_value = status_select
             elif table_name == "weight_configs":
                 raise network_error

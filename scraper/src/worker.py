@@ -12,7 +12,7 @@ import logging
 import sys
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from supabase import Client
 
@@ -43,7 +43,13 @@ def calculate_final_score(
     # Calculate weighted sum
     weighted_sum = sum(
         scores.get(dim, 5.0) * weights.get(dim, 1.0)
-        for dim in ["absurdity", "drama", "discussion_spark", "emotional_intensity", "news_value"]
+        for dim in [
+            "absurdity",
+            "drama",
+            "discussion_spark",
+            "emotional_intensity",
+            "news_value",
+        ]
     )
 
     # Normalize to 0-10
@@ -200,12 +206,12 @@ def load_topic_frequencies(supabase: Client) -> dict[str, int]:
     result = supabase.table("topic_frequencies").select("category, count_30d").execute()
 
     frequencies: dict[str, int] = {}
-    if result.data:
-        for row in result.data:
-            category = row.get("category")
-            count = row.get("count_30d", 0)
-            if isinstance(category, str) and isinstance(count, (int, float)):
-                frequencies[category] = int(count)
+    rows = cast(list[dict[str, Any]], result.data or [])
+    for row in rows:
+        category = row.get("category")
+        count = row.get("count_30d", 0)
+        if isinstance(category, str) and isinstance(count, (int, float)):
+            frequencies[category] = int(count)
 
     return frequencies
 
@@ -263,7 +269,11 @@ def _process_batch(
         scores = score_row.get("scores", {})
         categories = score_row.get("categories", [])
 
-        if not post_id or not isinstance(scores, dict) or not isinstance(categories, list):
+        if (
+            not post_id
+            or not isinstance(scores, dict)
+            or not isinstance(categories, list)
+        ):
             logger.warning("Skipping invalid score row: post_id=%s", post_id)
             continue
 
@@ -273,12 +283,14 @@ def _process_batch(
         # Calculate final score
         final_score = calculate_final_score(scores, weights, novelty)
 
-        post_scores_to_upsert.append({
-            "post_id": post_id,
-            "weight_config_id": weight_config_id,
-            "final_score": final_score,
-            "computed_at": datetime.now(UTC).isoformat(),
-        })
+        post_scores_to_upsert.append(
+            {
+                "post_id": post_id,
+                "weight_config_id": weight_config_id,
+                "final_score": final_score,
+                "computed_at": datetime.now(UTC).isoformat(),
+            }
+        )
 
     return post_scores_to_upsert
 
@@ -295,16 +307,16 @@ def _update_job_progress(
         total: Total number of posts to process.
     """
     progress_pct = int((processed / total) * 100) if total > 0 else 0
-    supabase.table("background_jobs").update({
-        "progress": processed,
-    }).eq("id", job_id).execute()
+    supabase.table("background_jobs").update(
+        {
+            "progress": processed,
+        }
+    ).eq("id", job_id).execute()
 
     logger.info("Processed %d / %d posts (%d%%)", processed, total, progress_pct)
 
 
-def _handle_transient_error(
-    supabase: Client, job_id: str, error_msg: str
-) -> None:
+def _handle_transient_error(supabase: Client, job_id: str, error_msg: str) -> None:
     """Handle a transient error by retrying the job if retries are available.
 
     Args:
@@ -325,38 +337,38 @@ def _handle_transient_error(
     max_retries = 3  # Default
 
     if job_status_result.data:
-        current_retry_count = job_status_result.data.get("retry_count", 0) or 0
-        max_retries = job_status_result.data.get("max_retries", 3) or 3
+        job_data = cast(dict[str, Any], job_status_result.data)
+        current_retry_count = job_data.get("retry_count", 0) or 0
+        max_retries = job_data.get("max_retries", 3) or 3
 
     if current_retry_count < max_retries:
         # Retry: reset to pending and increment retry count
         new_retry_count = current_retry_count + 1
         logger.info(
-            "Retrying job %s (attempt %d/%d)",
-            job_id,
-            new_retry_count,
-            max_retries
+            "Retrying job %s (attempt %d/%d)", job_id, new_retry_count, max_retries
         )
 
-        supabase.table("background_jobs").update({
-            "error_message": error_msg,
-            "last_retry_at": datetime.now(UTC).isoformat(),
-            "retry_count": new_retry_count,
-            "status": "pending",  # Reset to pending for retry
-        }).eq("id", job_id).execute()
+        supabase.table("background_jobs").update(
+            {
+                "error_message": error_msg,
+                "last_retry_at": datetime.now(UTC).isoformat(),
+                "retry_count": new_retry_count,
+                "status": "pending",  # Reset to pending for retry
+            }
+        ).eq("id", job_id).execute()
     else:
         # Max retries exceeded: mark as error
         logger.error(
-            "Job %s failed after %d retries, marking as error",
-            job_id,
-            max_retries
+            "Job %s failed after %d retries, marking as error", job_id, max_retries
         )
 
-        supabase.table("background_jobs").update({
-            "completed_at": datetime.now(UTC).isoformat(),
-            "error_message": f"{error_msg} (Failed after {max_retries} retries)",
-            "status": "error",
-        }).eq("id", job_id).execute()
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": f"{error_msg} (Failed after {max_retries} retries)",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
 
 
 def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
@@ -382,13 +394,17 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             "This job was created before versioning. Please delete it and create a new one."
         )
 
-    logger.info("Processing recompute job %s for weight config %s", job_id, weight_config_id)
+    logger.info(
+        "Processing recompute job %s for weight config %s", job_id, weight_config_id
+    )
 
     # Update job status to running
-    supabase.table("background_jobs").update({
-        "started_at": datetime.now(UTC).isoformat(),
-        "status": "running",
-    }).eq("id", job_id).execute()
+    supabase.table("background_jobs").update(
+        {
+            "started_at": datetime.now(UTC).isoformat(),
+            "status": "running",
+        }
+    ).eq("id", job_id).execute()
 
     try:
         # Load dependencies
@@ -397,15 +413,21 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         )
 
         # Get total count of posts with scores
-        count_result = supabase.table("llm_scores").select("id", count="exact").execute()
+        count_result = (
+            supabase.table("llm_scores")
+            .select("id", count=cast(Any, "exact"))
+            .execute()
+        )
         total = count_result.count or 0
 
         logger.info("Found %d posts to process", total)
 
         # Update job with total
-        supabase.table("background_jobs").update({
-            "total": total,
-        }).eq("id", job_id).execute()
+        supabase.table("background_jobs").update(
+            {
+                "total": total,
+            }
+        ).eq("id", job_id).execute()
 
         # Process in batches
         offset = 0
@@ -421,12 +443,19 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 .execute()
             )
 
-            if job_status_result.data and job_status_result.data.get("status") == "cancelled":
+            job_data = (
+                cast(dict[str, Any], job_status_result.data)
+                if job_status_result.data
+                else None
+            )
+            if job_data and job_data.get("status") == "cancelled":
                 logger.info("Job %s was cancelled, stopping processing", job_id)
-                supabase.table("background_jobs").update({
-                    "completed_at": datetime.now(UTC).isoformat(),
-                    "progress": processed,
-                }).eq("id", job_id).execute()
+                supabase.table("background_jobs").update(
+                    {
+                        "completed_at": datetime.now(UTC).isoformat(),
+                        "progress": processed,
+                    }
+                ).eq("id", job_id).execute()
                 return
 
             # Fetch batch of scores
@@ -440,10 +469,11 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             if not batch_result.data:
                 break
 
+            batch_data = cast(list[dict[str, Any]], batch_result.data)
             # Process batch
             post_scores_to_upsert = _process_batch(
                 supabase,
-                batch_result.data,
+                batch_data,
                 weight_config_id,
                 weights,
                 novelty_config,
@@ -453,8 +483,7 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             # Bulk upsert to post_scores
             if post_scores_to_upsert:
                 supabase.table("post_scores").upsert(
-                    post_scores_to_upsert,
-                    on_conflict="post_id,weight_config_id"
+                    post_scores_to_upsert, on_conflict="post_id,weight_config_id"
                 ).execute()
 
                 processed += len(post_scores_to_upsert)
@@ -463,31 +492,39 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             offset += BATCH_SIZE
 
         # Mark job as completed
-        supabase.table("background_jobs").update({
-            "completed_at": datetime.now(UTC).isoformat(),
-            "progress": processed,
-            "status": "completed",
-        }).eq("id", job_id).execute()
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "progress": processed,
+                "status": "completed",
+            }
+        ).eq("id", job_id).execute()
 
         logger.info("Job %s completed successfully", job_id)
 
     except ValueError as e:
         # Permanent failure: invalid config or params (don't retry)
         error_msg = str(e)
-        logger.error("Permanent error processing job %s: %s", job_id, error_msg, exc_info=True)
+        logger.error(
+            "Permanent error processing job %s: %s", job_id, error_msg, exc_info=True
+        )
 
-        supabase.table("background_jobs").update({
-            "completed_at": datetime.now(UTC).isoformat(),
-            "error_message": error_msg,
-            "status": "error",
-        }).eq("id", job_id).execute()
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": error_msg,
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
 
         raise  # Re-raise to signal permanent failure
 
     except (ConnectionError, TimeoutError, OSError) as e:
         # Network/system errors: likely transient (retry)
         error_msg = f"Network/system error: {str(e)}"
-        logger.error("Transient error processing job %s: %s", job_id, error_msg, exc_info=True)
+        logger.error(
+            "Transient error processing job %s: %s", job_id, error_msg, exc_info=True
+        )
         _handle_transient_error(supabase, job_id, error_msg)
 
     except Exception as e:
@@ -523,8 +560,7 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
             )
 
             if result.data and len(result.data) > 0:
-                job = result.data[0]
-
+                job = cast(dict[str, Any], result.data[0])
                 if job_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
                 else:
@@ -599,7 +635,7 @@ def main() -> int:
             )
 
             if result.data and len(result.data) > 0:
-                job = result.data[0]
+                job = cast(dict[str, Any], result.data[0])
                 if args.job_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
                 else:

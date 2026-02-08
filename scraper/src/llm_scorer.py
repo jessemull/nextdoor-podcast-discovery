@@ -550,10 +550,7 @@ class LLMScorer:
 
             if result.data:
                 data = cast(list[dict[str, Any]], result.data)
-                return {
-                    str(row["category"]): int(row["count_30d"])
-                    for row in data
-                }
+                return {str(row["category"]): int(row["count_30d"]) for row in data}
 
         except Exception as e:
             logger.warning("Failed to load topic frequencies: %s", e)
@@ -576,12 +573,10 @@ class LLMScorer:
         try:
             # Get posts without llm_scores
 
-            result = (
-                self.supabase.rpc(
-                    "get_unscored_posts",
-                    {"p_limit": limit},
-                ).execute()
-            )
+            result = self.supabase.rpc(
+                "get_unscored_posts",
+                {"p_limit": limit},
+            ).execute()
 
             if result.data:
                 return list(result.data)  # type: ignore[arg-type]
@@ -617,9 +612,7 @@ class LLMScorer:
             scored_data = cast(list[dict[str, Any]], scored_result.data or [])
             scored_ids = {r["post_id"] for r in scored_data}
 
-            return [
-                dict(p) for p in posts_data if p["id"] not in scored_ids
-            ]
+            return [dict(p) for p in posts_data if p["id"] not in scored_ids]
 
         except Exception as e:
             logger.error("Failed to get unscored posts: %s", e)

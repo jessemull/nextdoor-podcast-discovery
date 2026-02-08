@@ -248,16 +248,14 @@ class PostExtractor:
 
     def _log_page_debug_info(self) -> None:
         """Log debug info about the current page state."""
-        debug_info = self.page.evaluate(
-            """
+        debug_info = self.page.evaluate("""
             () => ({
                 url: window.location.href,
                 bodyLen: document.body?.innerHTML?.length || 0,
                 posts: document.querySelectorAll('div.post').length,
                 links: document.querySelectorAll('a[href*="/profile/"]').length
             })
-            """
-        )
+            """)
         logger.info("Page debug info: %s", debug_info)
 
     def _process_raw_post(self, raw: dict[str, Any]) -> RawPost | None:
@@ -274,6 +272,8 @@ class PostExtractor:
         content = raw.get("content", "")
 
         if not author_id or not content:
+            return None
+        if len(content) < MIN_CONTENT_LENGTH:
             return None
 
         # Generate content hash for deduplication

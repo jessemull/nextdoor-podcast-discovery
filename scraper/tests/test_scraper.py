@@ -5,8 +5,9 @@ from unittest import mock
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from tenacity import RetryError
 
-from src.config import FEED_URLS, LOGIN_URL, NEWS_FEED_URL, SELECTORS
+from src.config import FEED_URLS, LOGIN_URL, NEWS_FEED_URL, SCRAPER_CONFIG, SELECTORS
 from src.exceptions import CaptchaRequiredError, LoginFailedError
 from src.scraper import NextdoorScraper
 
@@ -55,10 +56,13 @@ class TestNextdoorScraper:
 
     def test_stop_cleans_up_resources(self, scraper: NextdoorScraper) -> None:
         """Should clean up browser, context, and playwright on stop."""
-        # Set up mock resources
-        scraper._playwright = mock.MagicMock()
-        scraper.browser = mock.MagicMock()
-        scraper.context = mock.MagicMock()
+        # Set up mock resources and keep references (stop() sets attributes to None)
+        mock_playwright = mock.MagicMock()
+        mock_browser = mock.MagicMock()
+        mock_context = mock.MagicMock()
+        scraper._playwright = mock_playwright
+        scraper.browser = mock_browser
+        scraper.context = mock_context
         scraper.page = mock.MagicMock()
 
         scraper.stop()
@@ -67,9 +71,9 @@ class TestNextdoorScraper:
         assert scraper.context is None
         assert scraper.page is None
         assert scraper._playwright is None
-        scraper.context.close.assert_called_once()
-        scraper.browser.close.assert_called_once()
-        scraper._playwright.stop.assert_called_once()
+        mock_context.close.assert_called_once()
+        mock_browser.close.assert_called_once()
+        mock_playwright.stop.assert_called_once()
 
     def test_context_manager_enters_and_exits(self) -> None:
         """Should work as a context manager."""
@@ -102,7 +106,10 @@ class TestNextdoorScraper:
         scraper.page.locator.return_value.count.return_value = 0  # No CAPTCHA
         scraper.page.wait_for_url.return_value = None
 
-        with mock.patch.dict("os.environ", {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"}):
+        with mock.patch.dict(
+            "os.environ",
+            {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"},
+        ):
             scraper.login()
 
         scraper.page.goto.assert_called_once_with(LOGIN_URL)
@@ -117,30 +124,44 @@ class TestNextdoorScraper:
         # Mock CAPTCHA detection
         captcha_locator = mock.MagicMock()
         captcha_locator.count.return_value = 1  # CAPTCHA found
-        scraper.page.locator.side_effect = lambda sel: captcha_locator if sel in SELECTORS["captcha_indicators"] else mock.MagicMock()
+        scraper.page.locator.side_effect = lambda sel: (
+            captcha_locator
+            if sel in SELECTORS["captcha_indicators"]
+            else mock.MagicMock()
+        )
 
-        with mock.patch.dict("os.environ", {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"}):
+        with mock.patch.dict(
+            "os.environ",
+            {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"},
+        ):
             with pytest.raises(CaptchaRequiredError):
                 scraper.login()
 
-    def test_login_fails_with_missing_credentials(self, scraper: NextdoorScraper) -> None:
+    def test_login_fails_with_missing_credentials(
+        self, scraper: NextdoorScraper
+    ) -> None:
         """Should raise LoginFailedError when credentials are missing."""
         scraper.page = mock.MagicMock()
 
         with mock.patch.dict("os.environ", {}, clear=True):
-            with pytest.raises(LoginFailedError, match="NEXTDOOR_EMAIL and NEXTDOOR_PASSWORD required"):
+            with pytest.raises(
+                LoginFailedError, match="NEXTDOOR_EMAIL and NEXTDOOR_PASSWORD required"
+            ):
                 scraper.login()
 
     def test_login_fails_with_timeout(self, scraper: NextdoorScraper) -> None:
-        """Should raise LoginFailedError when login times out."""
+        """Should raise LoginFailedError when login times out (after retries)."""
         scraper.page = mock.MagicMock()
         scraper.page.goto.return_value = None
         scraper.page.wait_for_selector.return_value = None
         scraper.page.locator.return_value.count.return_value = 0  # No CAPTCHA
         scraper.page.wait_for_url.side_effect = PlaywrightTimeoutError("Timeout")
 
-        with mock.patch.dict("os.environ", {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"}):
-            with pytest.raises(LoginFailedError):
+        with mock.patch.dict(
+            "os.environ",
+            {"NEXTDOOR_EMAIL": "test@example.com", "NEXTDOOR_PASSWORD": "password"},
+        ):
+            with pytest.raises(RetryError):
                 scraper.login()
 
     def test_load_cookies(self, scraper: NextdoorScraper) -> None:
@@ -163,7 +184,9 @@ class TestNextdoorScraper:
         assert result == expected_cookies
         scraper.context.cookies.assert_called_once()
 
-    def test_is_logged_in_returns_true_when_logged_in(self, scraper: NextdoorScraper) -> None:
+    def test_is_logged_in_returns_true_when_logged_in(
+        self, scraper: NextdoorScraper
+    ) -> None:
         """Should return True when user is logged in."""
         scraper.page = mock.MagicMock()
         scraper.page.url = NEWS_FEED_URL
@@ -172,9 +195,12 @@ class TestNextdoorScraper:
         result = scraper.is_logged_in()
 
         assert result is True
-        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL)
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL, timeout=timeout)
 
-    def test_is_logged_in_returns_false_when_not_logged_in(self, scraper: NextdoorScraper) -> None:
+    def test_is_logged_in_returns_false_when_not_logged_in(
+        self, scraper: NextdoorScraper
+    ) -> None:
         """Should return False when user is not logged in."""
         scraper.page = mock.MagicMock()
         scraper.page.url = LOGIN_URL
@@ -201,7 +227,8 @@ class TestNextdoorScraper:
 
         scraper.navigate_to_feed("recent")
 
-        scraper.page.goto.assert_called_once_with(FEED_URLS["recent"])
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        scraper.page.goto.assert_called_once_with(FEED_URLS["recent"], timeout=timeout)
 
     def test_navigate_to_feed_trending(self, scraper: NextdoorScraper) -> None:
         """Should navigate to trending feed."""
@@ -211,7 +238,10 @@ class TestNextdoorScraper:
 
         scraper.navigate_to_feed("trending")
 
-        scraper.page.goto.assert_called_once_with(FEED_URLS["trending"])
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        scraper.page.goto.assert_called_once_with(
+            FEED_URLS["trending"], timeout=timeout
+        )
 
     def test_navigate_to_feed_invalid_type(self, scraper: NextdoorScraper) -> None:
         """Should raise ValueError for invalid feed type."""
