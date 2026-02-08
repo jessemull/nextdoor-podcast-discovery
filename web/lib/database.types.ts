@@ -18,6 +18,54 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      background_jobs: {
+        Insert: {
+          cancelled_at?: null | string;
+          cancelled_by?: null | string;
+          completed_at?: null | string;
+          created_at?: string;
+          created_by?: null | string;
+          error_message?: null | string;
+          id?: string;
+          params?: Json;
+          progress?: null | number;
+          started_at?: null | string;
+          status: string;
+          total?: null | number;
+          type: string;
+          updated_at?: string;
+        };
+        Row: {
+          cancelled_at: null | string;
+          cancelled_by: null | string;
+          completed_at: null | string;
+          created_at: string;
+          created_by: null | string;
+          error_message: null | string;
+          id: string;
+          params: Json;
+          progress: null | number;
+          started_at: null | string;
+          status: string;
+          total: null | number;
+          type: string;
+          updated_at: string;
+        };
+        Update: {
+          cancelled_at?: null | string;
+          cancelled_by?: null | string;
+          completed_at?: null | string;
+          created_at?: string;
+          created_by?: null | string;
+          error_message?: null | string;
+          params?: Json;
+          progress?: null | number;
+          started_at?: null | string;
+          status?: string;
+          total?: null | number;
+          updated_at?: string;
+        };
+      };
       llm_scores: {
         Insert: {
           categories?: string[];
@@ -162,6 +210,34 @@ export interface Database {
           category?: string;
           count_30d?: number;
           last_updated?: string;
+        };
+      };
+      weight_configs: {
+        Insert: {
+          created_at?: string;
+          created_by?: null | string;
+          description?: null | string;
+          id?: string;
+          is_active?: boolean;
+          name?: null | string;
+          weights: Json;
+        };
+        Row: {
+          created_at: string;
+          created_by: null | string;
+          description: null | string;
+          id: string;
+          is_active: boolean;
+          name: null | string;
+          weights: Json;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: null | string;
+          description?: null | string;
+          is_active?: boolean;
+          name?: null | string;
+          weights?: Json;
         };
       };
     };

@@ -8,7 +8,7 @@ from openai import APIError, OpenAI
 from supabase import Client
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import EMBEDDING_BATCH_SIZE, EMBEDDING_DIMENSIONS, EMBEDDING_MODEL
+from src.config import EMBEDDING_BATCH_SIZE, EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -153,18 +153,31 @@ class Embedder:
                     (len(posts_to_embed) + EMBEDDING_BATCH_SIZE - 1)
                     // EMBEDDING_BATCH_SIZE,
                 )
-            except Exception as e:
+            except (APIError, ValueError) as e:
+                # OpenAI API errors or validation errors - log and continue
                 logger.error(
-                    "Error processing embedding batch (batch %d/%d): %s",
+                    "Error processing embedding batch (batch %d/%d): %s (type: %s)",
                     (i // EMBEDDING_BATCH_SIZE) + 1,
                     (len(posts_to_embed) + EMBEDDING_BATCH_SIZE - 1)
                     // EMBEDDING_BATCH_SIZE,
                     e,
+                    type(e).__name__,
                 )
                 stats["errors"] += len(batch)
                 stats["processed"] += len(batch)
+            except Exception as e:
+                # Catch-all for Supabase database errors and other unexpected errors
                 # Continue processing remaining batches even if one fails
-                # This catches both OpenAI API errors and Supabase database errors
+                logger.error(
+                    "Unexpected error processing batch (batch %d/%d): %s (type: %s)",
+                    (i // EMBEDDING_BATCH_SIZE) + 1,
+                    (len(posts_to_embed) + EMBEDDING_BATCH_SIZE - 1)
+                    // EMBEDDING_BATCH_SIZE,
+                    e,
+                    type(e).__name__,
+                )
+                stats["errors"] += len(batch)
+                stats["processed"] += len(batch)
 
         logger.info(
             "Embedding generation complete: %d processed, %d stored, %d errors",

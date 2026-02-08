@@ -1,4 +1,4 @@
-import type { JobParams } from "@/lib/types";
+import type { JobParams, RankingWeights } from "@/lib/types";
 
 interface WeightConfig {
   created_at: string;
@@ -8,19 +8,19 @@ interface WeightConfig {
   id: string;
   is_active: boolean;
   name: null | string;
-  weights: Record<string, number>;
+  weights: RankingWeights;
 }
 
 interface Job {
-  params: null | JobParams;
+  params: JobParams | null;
   status: string;
 }
 
 interface WeightConfigsListProps {
   activeConfigId: null | string;
   configs: WeightConfig[];
-  isActivating: boolean;
   deletingConfigId: null | string;
+  isActivating: boolean;
   jobs: Job[];
   onActivate: (configId: string) => void;
   onDelete: (configId: string) => void;
@@ -34,8 +34,8 @@ interface WeightConfigsListProps {
 export function WeightConfigsList({
   activeConfigId,
   configs,
-  isActivating,
   deletingConfigId,
+  isActivating,
   jobs,
   onActivate,
   onDelete,
@@ -67,7 +67,7 @@ export function WeightConfigsList({
           const canActivate = (hasCompletedJob || config.has_scores) && !isActive;
 
           return (
-            <div className="rounded border border-gray-700 bg-gray-900 p-4" key={config.id}>
+            <div key={config.id} className="rounded border border-gray-700 bg-gray-900 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-300">
@@ -114,7 +114,7 @@ export function WeightConfigsList({
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 {Object.entries(config.weights).map(([dim, weight]) => (
-                  <span className="text-gray-400" key={dim}>
+                  <span key={dim} className="text-gray-400">
                     {dim.replace(/_/g, " ")}: {weight.toFixed(1)}
                   </span>
                 ))}

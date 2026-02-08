@@ -41,23 +41,59 @@ export async function GET() {
     // Check for errors
 
     if (postsResult.error) {
-      console.error("Error fetching posts count:", postsResult.error);
-      return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+      console.error("[stats] Error fetching posts count:", {
+        code: postsResult.error.code,
+        error: postsResult.error.message,
+      });
+      return NextResponse.json(
+        {
+          details: postsResult.error.message || "Failed to fetch posts count",
+          error: "Database error",
+        },
+        { status: 500 }
+      );
     }
 
     if (scoresResult.error) {
-      console.error("Error fetching scores count:", scoresResult.error);
-      return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+      console.error("[stats] Error fetching scores count:", {
+        code: scoresResult.error.code,
+        error: scoresResult.error.message,
+      });
+      return NextResponse.json(
+        {
+          details: scoresResult.error.message || "Failed to fetch scores count",
+          error: "Database error",
+        },
+        { status: 500 }
+      );
     }
 
     if (usedResult.error) {
-      console.error("Error fetching used count:", usedResult.error);
-      return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+      console.error("[stats] Error fetching used count:", {
+        code: usedResult.error.code,
+        error: usedResult.error.message,
+      });
+      return NextResponse.json(
+        {
+          details: usedResult.error.message || "Failed to fetch used posts count",
+          error: "Database error",
+        },
+        { status: 500 }
+      );
     }
 
     if (frequenciesResult.error) {
-      console.error("Error fetching frequencies:", frequenciesResult.error);
-      return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+      console.error("[stats] Error fetching frequencies:", {
+        code: frequenciesResult.error.code,
+        error: frequenciesResult.error.message,
+      });
+      return NextResponse.json(
+        {
+          details: frequenciesResult.error.message || "Failed to fetch topic frequencies",
+          error: "Database error",
+        },
+        { status: 500 }
+      );
     }
 
     const postsTotal = postsResult.count || 0;
@@ -74,9 +110,17 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Unexpected error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
+    console.error("[stats] Unexpected error:", {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        details: errorDetails,
+        error: "Internal server error",
+      },
       { status: 500 }
     );
   }

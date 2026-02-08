@@ -86,9 +86,9 @@ export async function PUT(
 
     return NextResponse.json({
       data: {
-        success: true,
         active_config_id: configId,
         config_name: config.name,
+        success: true,
       },
     });
   } catch (error) {

@@ -220,7 +220,10 @@ describe("Edge Cases", () => {
 
       const mockSelect = vi.fn().mockReturnThis();
       const mockOrder = vi.fn().mockReturnThis();
-      const mockLimit = vi.fn().mockResolvedValue({ data: mockJobs, error: null });
+      const mockEq = vi.fn().mockResolvedValue({ data: mockJobs, error: null });
+      const mockLimit = vi.fn().mockReturnValue({
+        eq: mockEq,
+      });
 
       mockSelect.mockReturnValue({
         order: mockOrder,

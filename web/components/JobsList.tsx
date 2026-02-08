@@ -1,6 +1,6 @@
-import type { JobParams } from "@/lib/types";
-
 import { JobStats } from "./JobStats";
+
+import type { JobParams } from "@/lib/types";
 
 interface Job {
   cancelled_at: null | string;
@@ -12,7 +12,7 @@ interface Job {
   id: string;
   last_retry_at: null | string;
   max_retries: null | number;
-  params: null | JobParams;
+  params: JobParams | null;
   progress: null | number;
   retry_count: null | number;
   started_at: null | string;
@@ -55,7 +55,7 @@ export function JobsList({ cancellingJobId, jobs, onCancel }: JobsListProps) {
             job.status === "pending" ? pendingJobs.findIndex((j) => j.id === job.id) + 1 : null;
 
           return (
-            <div className="rounded border border-gray-700 bg-gray-900 p-4" key={job.id}>
+            <div key={job.id} className="rounded border border-gray-700 bg-gray-900 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-300">

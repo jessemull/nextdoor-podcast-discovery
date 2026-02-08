@@ -82,7 +82,13 @@ class PostStorage:
             stats["skipped"] = len(posts_data) - inserted_count
 
         except Exception as e:
-            logger.error("Batch insert error: %s", e)
+            # Batch insert failed - fall back to individual inserts
+            # This handles network errors, database constraint violations, etc.
+            logger.warning(
+                "Batch insert failed (%s), falling back to individual inserts: %s",
+                type(e).__name__,
+                e,
+            )
 
             # Fall back to individual inserts on batch failure
 
@@ -99,10 +105,16 @@ class PostStorage:
                         stats["skipped"] += 1
                 except Exception as inner_e:
                     error_msg = str(inner_e).lower()
+                    # Handle duplicate/unique constraint violations gracefully
                     if "duplicate" in error_msg or "unique" in error_msg:
                         stats["skipped"] += 1
                     else:
-                        logger.error("Insert error: %s", error_msg)
+                        # Other errors (network, validation, etc.) are logged as errors
+                        logger.error(
+                            "Individual insert error (%s): %s",
+                            type(inner_e).__name__,
+                            error_msg,
+                        )
                         stats["errors"] += 1
 
         logger.info(

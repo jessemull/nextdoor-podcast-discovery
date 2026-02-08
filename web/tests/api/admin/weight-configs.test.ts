@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DELETE, GET } from "@/app/api/admin/weight-configs/route";
+import { GET } from "@/app/api/admin/weight-configs/route";
+import { DELETE } from "@/app/api/admin/weight-configs/[id]/route";
 import { PUT } from "@/app/api/admin/weight-configs/[id]/activate/route";
 
 // Mock next-auth
@@ -233,6 +234,16 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
       single: configSingle,
     });
 
+    // Mock background_jobs (no pending jobs for this config)
+    const jobsSelect = vi.fn().mockReturnThis();
+    const jobsEq = vi.fn().mockReturnThis();
+    const jobsIn = vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+    });
+    jobsSelect.mockReturnValue({ eq: jobsEq });
+    jobsEq.mockReturnValue({ in: jobsIn });
+
     // Mock delete
     const deleteEq = vi.fn().mockResolvedValue({
       error: null,
@@ -241,6 +252,9 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "settings") {
         return { select: settingsSelect };
+      }
+      if (table === "background_jobs") {
+        return { select: jobsSelect };
       }
       if (table === "weight_configs") {
         return {

@@ -85,8 +85,10 @@ describe("GET /api/admin/jobs", () => {
 
     const mockSelect = vi.fn().mockReturnThis();
     const mockOrder = vi.fn().mockReturnThis();
-    const mockEq = vi.fn().mockReturnThis();
-    const mockLimit = vi.fn().mockResolvedValue({ data: [], error: null });
+    const mockEq = vi.fn().mockResolvedValue({ data: [], error: null });
+    const mockLimit = vi.fn().mockReturnValue({
+      eq: mockEq,
+    });
 
     mockSelect.mockReturnValue({
       order: mockOrder,
@@ -94,12 +96,8 @@ describe("GET /api/admin/jobs", () => {
     mockOrder.mockReturnValue({
       limit: mockLimit,
     });
-    mockEq.mockReturnValue({
-      order: mockOrder,
-    });
     mockFrom.mockReturnValue({
       select: mockSelect,
-      eq: mockEq,
     });
 
     const request = new NextRequest(

@@ -4,8 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { JobsList } from "@/components/JobsList";
+import { RankingWeightsEditor } from "@/components/RankingWeightsEditor";
+import { SearchDefaultsEditor } from "@/components/SearchDefaultsEditor";
 import { WeightConfigsList } from "@/components/WeightConfigsList";
-import type { JobParams, RankingWeights } from "@/lib/types";
+import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
+
+import type { RankingWeights } from "@/lib/types";
 
 interface SettingsResponse {
   data: {
@@ -56,11 +60,6 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   news_value: 1.0,
 };
 
-// Polling configuration constants
-const POLL_INTERVAL_MS = 5000; // Initial polling interval (5 seconds)
-const MAX_POLL_INTERVAL_MS = 60000; // Maximum polling interval (60 seconds)
-const POLL_BACKOFF_MULTIPLIER = 1.5; // Exponential backoff multiplier
-
 interface WeightConfig {
   created_at: string;
   created_by: null | string;
@@ -92,17 +91,24 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRecomputing, setIsRecomputing] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
   const [searchDefaults, setSearchDefaults] = useState({
     similarity_threshold: 0.2,
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
-  const [weightConfigs, setWeightConfigs] = useState<WeightConfig[]>([]);
-  const [activeConfigId, setActiveConfigId] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
   const [deletingConfigId, setDeletingConfigId] = useState<null | string>(null);
   const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
+
+  // Use polling hook for jobs and weight configs
+  const {
+    activeConfigId,
+    jobs,
+    setActiveConfigId,
+    setJobs,
+    setWeightConfigs,
+    weightConfigs,
+  } = useSettingsPolling();
 
   // Load settings and configs on mount (combined to avoid race conditions)
   useEffect(() => {
@@ -146,101 +152,8 @@ export default function SettingsPage() {
     };
 
     void loadSettingsAndConfigs();
-  }, []);
+  }, [setActiveConfigId, setWeightConfigs]);
 
-  // Poll for job status and refresh configs with exponential backoff on errors
-  // Pauses when tab is hidden (Page Visibility API)
-  useEffect(() => {
-    let pollInterval = POLL_INTERVAL_MS;
-    let consecutiveErrors = 0;
-    const maxInterval = MAX_POLL_INTERVAL_MS;
-    const backoffMultiplier = POLL_BACKOFF_MULTIPLIER;
-    let timeoutId: NodeJS.Timeout | null = null;
-    let isPolling = true;
-
-    const pollJobs = async () => {
-      if (!isPolling) return;
-
-      try {
-        const [jobsResponse, configsResponse] = await Promise.all([
-          fetch("/api/admin/jobs?type=recompute_final_scores&limit=20"),
-          fetch("/api/admin/weight-configs"),
-        ]);
-
-        if (jobsResponse.ok && configsResponse.ok) {
-          // Reset on success
-          consecutiveErrors = 0;
-          pollInterval = POLL_INTERVAL_MS;
-
-          if (jobsResponse.ok) {
-            const jobsData: JobsResponse = await jobsResponse.json();
-            setJobs(jobsData.data || []);
-          }
-
-          if (configsResponse.ok) {
-            const configsData: WeightConfigsResponse = await configsResponse.json();
-            setWeightConfigs(configsData.data || []);
-            setActiveConfigId(configsData.active_config_id);
-          }
-        } else {
-          // Increment error count and apply backoff
-          consecutiveErrors++;
-          pollInterval = Math.min(
-            Math.floor(POLL_INTERVAL_MS * Math.pow(backoffMultiplier, consecutiveErrors)),
-            maxInterval
-          );
-          console.warn(`Polling error (${consecutiveErrors}), backing off to ${pollInterval}ms`);
-        }
-      } catch (err) {
-        // Increment error count and apply backoff
-        consecutiveErrors++;
-        pollInterval = Math.min(
-          Math.floor(POLL_INTERVAL_MS * Math.pow(backoffMultiplier, consecutiveErrors)),
-          maxInterval
-        );
-        console.error("Error polling:", err);
-        console.warn(`Polling error (${consecutiveErrors}), backing off to ${pollInterval}ms`);
-      }
-
-      // Schedule next poll if still active
-      if (isPolling && !document.hidden) {
-        timeoutId = setTimeout(pollJobs, pollInterval);
-      }
-    };
-
-    // Handle visibility change
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Tab hidden: stop polling
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        isPolling = false;
-      } else {
-        // Tab visible: resume polling
-        isPolling = true;
-        consecutiveErrors = 0; // Reset errors on resume
-        pollInterval = POLL_INTERVAL_MS;
-        void pollJobs();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // Start polling if tab is visible
-    if (!document.hidden) {
-      void pollJobs();
-    }
-
-    return () => {
-      isPolling = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   const handleSaveWeights = useCallback(async () => {
     setIsSaving(true);
@@ -280,7 +193,7 @@ export default function SettingsPage() {
       setIsSaving(false);
       setIsRecomputing(false);
     }
-  }, [rankingWeights]);
+  }, [rankingWeights, setWeightConfigs]);
 
   const handleActivateConfig = useCallback(async (configId: string) => {
     setIsActivating(true);
@@ -312,7 +225,7 @@ export default function SettingsPage() {
     } finally {
       setIsActivating(false);
     }
-  }, []);
+  }, [setActiveConfigId, setWeightConfigs]);
 
   const handleCancelJob = useCallback(async (jobId: string) => {
     if (!confirm("Are you sure you want to cancel this job? The worker will stop processing it.")) {
@@ -347,7 +260,7 @@ export default function SettingsPage() {
     } finally {
       setCancellingJobId(null);
     }
-  }, []);
+  }, [setJobs]);
 
   const handleDeleteConfig = useCallback(async (configId: string) => {
     if (!confirm("Are you sure you want to delete this weight configuration? This will also delete all associated scores and cannot be undone.")) {
@@ -383,7 +296,7 @@ export default function SettingsPage() {
     } finally {
       setDeletingConfigId(null);
     }
-  }, []);
+  }, [setActiveConfigId, setWeightConfigs]);
 
   const handleSaveSearchDefaults = useCallback(async () => {
     setIsSaving(true);
@@ -457,118 +370,24 @@ export default function SettingsPage() {
         )}
 
         {/* Ranking Weights Section */}
-        <div className="mb-8 rounded-lg bg-gray-800 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Ranking Weights</h2>
-          <p className="mb-6 text-sm text-gray-400">
-            Adjust how important each scoring dimension is when calculating the final score.
-          </p>
-
-          {Object.entries(rankingWeights).map(([dimension, value]) => (
-            <div className="mb-4" key={dimension}>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="text-sm font-medium capitalize text-gray-300">
-                  {dimension.replace(/_/g, " ")}
-                </label>
-                <span className="text-sm text-gray-400">{value.toFixed(1)}</span>
-              </div>
-              <input
-                className="w-full"
-                max={5}
-                min={0}
-                step={0.1}
-                type="range"
-                value={value}
-                onChange={(e) =>
-                  setRankingWeights({
-                    ...rankingWeights,
-                    [dimension]: parseFloat(e.target.value),
-                  })
-                }
-              />
-            </div>
-          ))}
-
-          <div className="mt-6">
-            <div className="flex gap-4">
-              <button
-                className="rounded bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
-                onClick={() => setRankingWeights(DEFAULT_WEIGHTS)}
-                type="button"
-              >
-                Reset to Defaults
-              </button>
-              <button
-                className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isSaving || isRecomputing || isJobRunning}
-                onClick={handleSaveWeights}
-              >
-                {isRecomputing
-                  ? "Starting..."
-                  : isJobRunning
-                    ? "Job Running..."
-                    : "Save & Recompute Scores"}
-              </button>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              This will update the weights and recalculate final scores for all posts.
-              The dashboard will reflect the new rankings once the job completes.
-              {pendingJobs.length > 0 && (
-                <span className="block mt-1">
-                  {pendingJobs.length} job{pendingJobs.length > 1 ? "s" : ""} queued
-                  {runningJob && " (1 running)"}
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
+        <RankingWeightsEditor
+          isJobRunning={isJobRunning}
+          isRecomputing={isRecomputing}
+          isSaving={isSaving}
+          pendingJobsCount={pendingJobs.length}
+          rankingWeights={rankingWeights}
+          setRankingWeights={setRankingWeights}
+          onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
+          onSave={handleSaveWeights}
+        />
 
         {/* Search Defaults Section */}
-        <div className="mb-8 rounded-lg bg-gray-800 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Search Defaults</h2>
-          <p className="mb-6 text-sm text-gray-400">
-            Configure default settings for semantic search.
-          </p>
-
-          <div className="mb-4">
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300">
-                Similarity Threshold
-              </label>
-              <span className="text-sm text-gray-400">
-                {searchDefaults.similarity_threshold.toFixed(2)}
-              </span>
-            </div>
-            <input
-              className="w-full"
-              max={1}
-              min={0}
-              step={0.05}
-              type="range"
-              value={searchDefaults.similarity_threshold}
-              onChange={(e) =>
-                setSearchDefaults({
-                  ...searchDefaults,
-                  similarity_threshold: parseFloat(e.target.value),
-                })
-              }
-            />
-            <div className="mt-1 flex justify-between text-xs text-gray-500">
-              <span>Broader (0.0)</span>
-              <span>Precise (1.0)</span>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Lower values return more results, higher values are more precise.
-            </p>
-          </div>
-
-          <button
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isSaving}
-            onClick={handleSaveSearchDefaults}
-          >
-            {isSaving ? "Saving..." : "Save Search Defaults"}
-          </button>
-        </div>
+        <SearchDefaultsEditor
+          isSaving={isSaving}
+          searchDefaults={searchDefaults}
+          setSearchDefaults={setSearchDefaults}
+          onSave={handleSaveSearchDefaults}
+        />
 
         {/* Weight Configs Section */}
         <WeightConfigsList

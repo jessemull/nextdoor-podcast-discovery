@@ -8,8 +8,8 @@ interface ErrorBoundaryProps {
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
   error: Error | null;
+  hasError: boolean;
 }
 
 /**
@@ -28,12 +28,12 @@ interface ErrorBoundaryState {
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { error: null, hasError: false };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI
-    return { hasError: true, error };
+    return { error, hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <button
             className="mt-4 rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
             onClick={() => {
-              this.setState({ hasError: false, error: null });
+              this.setState({ error: null, hasError: false });
               window.location.reload();
             }}
           >

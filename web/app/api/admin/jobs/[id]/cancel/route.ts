@@ -112,9 +112,9 @@ export async function PUT(
 
     return NextResponse.json({
       data: {
-        success: true,
         job_id: jobId,
         status: "cancelled",
+        success: true,
       },
     });
   } catch (error) {

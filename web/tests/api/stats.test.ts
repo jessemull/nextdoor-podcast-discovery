@@ -165,7 +165,7 @@ describe("GET /api/stats", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch stats");
+    expect(data.error).toBe("Database error");
   });
 
   it("should return 500 when scores query fails", async () => {
@@ -216,7 +216,7 @@ describe("GET /api/stats", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch stats");
+    expect(data.error).toBe("Database error");
   });
 
   it("should calculate unscored correctly", async () => {

@@ -80,8 +80,8 @@ export interface Settings {
  * Each job type may have different params structure.
  */
 export interface JobParams {
-  weight_config_id?: string;
   [key: string]: unknown;
+  weight_config_id?: string;
 }
 
 // API response types

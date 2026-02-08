@@ -72,7 +72,8 @@ export async function GET() {
           };
 
     const searchDefaults =
-      searchDefaultsResult.data?.value && typeof searchDefaultsResult.data.value === "object"
+      searchDefaultsResult.data?.value &&
+      typeof searchDefaultsResult.data.value === "object"
         ? (searchDefaultsResult.data.value as Record<string, unknown>)
         : {
             similarity_threshold: 0.2,
@@ -127,7 +128,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    const updates: Promise<unknown>[] = [];
+    // Supabase query builders are thenable; Promise.all accepts them
+    const updates: unknown[] = [];
 
     // Validate and update ranking_weights
     if (ranking_weights) {

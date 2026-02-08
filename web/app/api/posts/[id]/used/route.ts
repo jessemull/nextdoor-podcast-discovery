@@ -81,19 +81,45 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (error) {
-      console.error("Error updating post:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[posts/used] Error updating post:", {
+        code: error.code,
+        error: error.message,
+        hint: error.hint,
+        postId: id,
+      });
+      return NextResponse.json(
+        {
+          details: error.message || "Failed to update post",
+          error: "Database error",
+        },
+        { status: 500 }
+      );
     }
 
     if (!data) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          details: `Post with ID ${id} not found`,
+          error: "Not found",
+        },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
+    console.error("[posts/used] Unexpected error:", {
+      error: errorMessage,
+      postId: id,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        details: errorDetails,
+        error: "Internal server error",
+      },
       { status: 500 }
     );
   }

@@ -77,8 +77,8 @@ export async function DELETE(
     }
 
     // Check if any job references this config
-    const jobsReferencingConfig = (jobs || []).filter((job) => {
-      const params = job.params as Record<string, unknown> | null;
+    const jobsReferencingConfig = (jobs || []).filter((job: { params: unknown; status: string }) => {
+      const params = job.params as null | Record<string, unknown>;
       return params?.weight_config_id === configId;
     });
 
@@ -132,9 +132,9 @@ export async function DELETE(
 
     return NextResponse.json({
       data: {
-        success: true,
-        deleted_config_id: configId,
         config_name: config.name,
+        deleted_config_id: configId,
+        success: true,
       },
     });
   } catch (error) {

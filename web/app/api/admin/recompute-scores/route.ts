@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     // Create weight config
-    const { data: weightConfig, error: configError } = await supabase
+    const { data: weightConfigRow, error: configError } = await supabase
       .from("weight_configs")
       .insert({
         created_by: session.user?.email || "unknown",
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (configError || !weightConfig) {
+    if (configError || !weightConfigRow) {
       console.error("[admin/recompute-scores] Failed to create weight config:", {
         error: configError?.message || "Unknown error",
       });
@@ -121,12 +121,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create background job with weight_config_id
-    const { data: job, error: jobError } = await supabase
+    const { data: jobRow, error: jobError } = await supabase
       .from("background_jobs")
       .insert({
         created_by: session.user?.email || "unknown",
         max_retries: 3, // Default: retry up to 3 times on transient failures
-        params: { weight_config_id: weightConfig.id },
+        params: { weight_config_id: weightConfigRow.id },
         retry_count: 0,
         status: "pending",
         type: "recompute_final_scores",
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (jobError || !job) {
+    if (jobError || !jobRow) {
       console.error("[admin/recompute-scores] Failed to create job:", {
         error: jobError?.message || "Unknown error",
       });
@@ -149,10 +149,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       data: {
-        job_id: job.id,
-        status: job.status,
-        weight_config_id: weightConfig.id,
-        weight_config_name: weightConfig.name,
+        job_id: jobRow.id,
+        status: jobRow.status,
+        weight_config_id: weightConfigRow.id,
+        weight_config_name: weightConfigRow.name,
       },
     });
   } catch (error) {

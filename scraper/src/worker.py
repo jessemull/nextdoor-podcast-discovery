@@ -64,6 +64,11 @@ def calculate_novelty(
 ) -> float:
     """Calculate novelty multiplier based on category frequency.
 
+    Why: Boost rare topics and penalize overused ones to keep the feed diverse.
+    This prevents the same topics (e.g., "lost pet") from dominating the rankings
+    when they appear frequently. The multiplier creates dynamic scoring that adapts
+    to recent post history.
+
     Args:
         categories: List of topic categories for this post.
         frequencies: Dict of category -> count_30d.

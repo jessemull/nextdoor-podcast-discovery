@@ -49,8 +49,9 @@ export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResp
       model: CLAUDE_MODEL,
     });
 
+    const firstBlock = response.content?.[0];
     const fact =
-      response.content[0].type === "text" ? response.content[0].text : "";
+      firstBlock?.type === "text" ? (firstBlock as { text: string; type: "text" }).text : "";
 
     return NextResponse.json({ fact });
   } catch (error) {

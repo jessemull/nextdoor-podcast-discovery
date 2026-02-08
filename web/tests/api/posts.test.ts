@@ -172,33 +172,21 @@ describe("GET /api/posts", () => {
     });
 
     // Mock weight_configs query - no active configs
-    const configsSelect = vi.fn().mockReturnThis();
-    const configsEq = vi.fn().mockReturnThis();
-    const configsLimit = vi.fn().mockReturnThis();
-    const configsSingle = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: "Not found" },
+    // Chain: .select("id").eq("is_active", true).limit(1).single()
+    const configsLimit = vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Not found" },
+      }),
     });
-
-    configsSelect.mockReturnValue({
-      eq: configsEq,
-    });
-    configsEq.mockReturnValue({
+    const configsEq = vi.fn().mockReturnValue({
       limit: configsLimit,
     });
-    configsLimit.mockReturnValue({
-      single: configsSingle,
-    });
 
-    // Mock check for any configs
-    const allConfigsSelect = vi.fn().mockReturnThis();
+    // Mock check for any configs: .select("id, name").limit(1)
     const allConfigsLimit = vi.fn().mockResolvedValue({
       data: [],
       error: null,
-    });
-
-    allConfigsSelect.mockReturnValue({
-      limit: allConfigsLimit,
     });
 
     mockFrom.mockImplementation((table: string) => {
@@ -209,9 +197,13 @@ describe("GET /api/posts", () => {
         return {
           select: (arg?: string) => {
             if (arg === "id, name") {
-              return allConfigsSelect;
+              return { limit: allConfigsLimit };
             }
-            return configsSelect;
+            // .select("id").eq("is_active", true).limit(1).single()
+            if (arg === "id") {
+              return { eq: configsEq };
+            }
+            return { eq: configsEq };
           },
         };
       }
@@ -222,7 +214,7 @@ describe("GET /api/posts", () => {
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(data.error).toBe("No weight configs found");
     expect(data.details).toContain("create a weight configuration");
   });
@@ -247,7 +239,7 @@ describe("GET /api/posts", () => {
       }),
     }));
 
-    const request = new NextRequest("http://localhost:3000/api/posts?limit=invalid");
+    const request = new NextRequest("http://localhost:3000/api/posts?limit=invalid&sort=date");
     await GET(request);
 
     // Falls back to default 20
@@ -274,7 +266,7 @@ describe("GET /api/posts", () => {
       }),
     }));
 
-    const request = new NextRequest("http://localhost:3000/api/posts?limit=500");
+    const request = new NextRequest("http://localhost:3000/api/posts?limit=500&sort=date");
     await GET(request);
 
     // Capped at 100
@@ -299,7 +291,7 @@ describe("GET /api/posts", () => {
       }),
     }));
 
-    const request = new NextRequest("http://localhost:3000/api/posts");
+    const request = new NextRequest("http://localhost:3000/api/posts?sort=date");
     const response = await GET(request);
     const data = await response.json();
 
@@ -326,11 +318,11 @@ describe("GET /api/posts", () => {
       }),
     }));
 
-    const request = new NextRequest("http://localhost:3000/api/posts");
+    const request = new NextRequest("http://localhost:3000/api/posts?sort=date");
     const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Database connection failed");
+    expect(data.error).toBe("Database error");
   });
 });

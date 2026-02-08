@@ -170,7 +170,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!searchResults || searchResults.length === 0) {
+    const searchResultsList = searchResults ?? [];
+    if (searchResultsList.length === 0) {
       return NextResponse.json({
         data: [],
         total: 0,
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch LLM scores and neighborhoods for the found posts
 
-    const postIds = searchResults.map((post: SearchResult) => post.id);
+    const postIds = searchResultsList.map((post: SearchResult) => post.id);
 
     const { data: scores, error: scoresError } = await supabase
       .from("llm_scores")
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
       // Continue without scores - posts will have null llm_scores
     }
 
-    const neighborhoodIds = searchResults.map(
+    const neighborhoodIds = searchResultsList.map(
       (post: SearchResult) => post.neighborhood_id
     );
 
@@ -216,10 +217,10 @@ export async function POST(request: NextRequest) {
     // Build a map for quick lookups
 
     const scoresMap = new Map(
-      (scores || []).map((score) => [score.post_id, score])
+      (scores || []).map((score: { post_id: string }) => [score.post_id, score])
     );
     const neighborhoodsMap = new Map(
-      (neighborhoods || []).map((neighborhood) => [
+      (neighborhoods || []).map((neighborhood: { id: string }) => [
         neighborhood.id,
         neighborhood,
       ])
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
 
     // Combine results with scores and neighborhoods
 
-    const posts: PostWithScores[] = searchResults.map((result: SearchResult) => ({
+    const posts = searchResultsList.map((result: SearchResult) => ({
         created_at: result.created_at,
         episode_date: result.episode_date,
         hash: result.hash,
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
         used_on_episode: result.used_on_episode,
         user_id_hash: result.user_id_hash,
       })
-    );
+    ) as unknown as PostWithScores[];
 
     return NextResponse.json({
       data: posts,

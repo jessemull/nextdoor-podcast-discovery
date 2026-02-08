@@ -202,7 +202,7 @@ describe("PATCH /api/posts/[id]/used", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe("Post not found");
+    expect(data.error).toBe("Not found");
   });
 
   it("should return 500 on database error", async () => {

@@ -67,16 +67,24 @@ describe("Job Lifecycle Integration", () => {
     const mockJobId = "123e4567-e89b-12d3-a456-426614174000";
     const mockConfigId = "config-123";
 
-    // Mock weight_configs insert
-    const configInsert = vi.fn().mockResolvedValue({
-      data: { id: mockConfigId },
-      error: null,
+    // Mock weight_configs insert().select().single()
+    const configInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: mockConfigId },
+          error: null,
+        }),
+      }),
     });
 
-    // Mock background_jobs insert
-    const jobInsert = vi.fn().mockResolvedValue({
-      data: { id: mockJobId },
-      error: null,
+    // Mock background_jobs insert().select().single()
+    const jobInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: mockJobId },
+          error: null,
+        }),
+      }),
     });
 
     mockFrom.mockImplementation((table: string) => {
@@ -185,7 +193,10 @@ describe("Job Lifecycle Integration", () => {
 
     const mockSelect = vi.fn().mockReturnThis();
     const mockOrder = vi.fn().mockReturnThis();
-    const mockLimit = vi.fn().mockResolvedValue({ data: mockJobs, error: null });
+    const mockEq = vi.fn().mockResolvedValue({ data: mockJobs, error: null });
+    const mockLimit = vi.fn().mockReturnValue({
+      eq: mockEq,
+    });
 
     mockSelect.mockReturnValue({
       order: mockOrder,

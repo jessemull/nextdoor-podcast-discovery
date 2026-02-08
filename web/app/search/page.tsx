@@ -56,18 +56,17 @@ export default function SearchPage() {
           ) {
             setSimilarityThreshold(data.data.search_defaults.similarity_threshold);
           }
+        } else {
+          setLoadDefaultsError("Failed to load search defaults. Using default threshold.");
         }
-      } else {
-        setLoadDefaultsError("Failed to load search defaults. Using default threshold.");
+      } catch (err) {
+        console.error("Error loading search defaults:", err);
+        setLoadDefaultsError(
+          err instanceof Error
+            ? `Error loading search defaults: ${err.message}`
+            : "Failed to load search defaults. Using default threshold."
+        );
       }
-    } catch (err) {
-      console.error("Error loading search defaults:", err);
-      setLoadDefaultsError(
-        err instanceof Error
-          ? `Error loading search defaults: ${err.message}`
-          : "Failed to load search defaults. Using default threshold."
-      );
-    }
     };
 
     void loadDefaults();

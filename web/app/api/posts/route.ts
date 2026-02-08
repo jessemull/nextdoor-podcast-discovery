@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
+import type { Database } from "@/lib/database.types";
 import type { PostsResponse, PostWithScores } from "@/lib/types";
 
 /**
@@ -67,9 +68,17 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Unexpected error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
+    console.error("[posts] Unexpected error:", {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        details: errorDetails,
+        error: "Internal server error",
+      },
       { status: 500 }
     );
   }
@@ -83,8 +92,20 @@ interface QueryParams {
   unusedOnly: boolean;
 }
 
-// Generic record type for Supabase results before casting
-type DbRecord = Record<string, unknown>;
+/**
+ * Type for RPC result from get_posts_with_scores function.
+ * This matches the return shape of the database RPC function.
+ */
+interface PostScoreRow {
+  categories: string[];
+  final_score: number;
+  llm_created_at: string;
+  llm_score_id: string;
+  model_version: string;
+  post_id: string;
+  scores: Record<string, number>;
+  summary: null | string;
+}
 
 /**
  * Get posts sorted by score (highest first).
@@ -131,7 +152,7 @@ async function getPostsByScore(
    * - Migration created configs but didn't set active_weight_config_id
    * - User deleted the active config without setting a new one
    */
-  let activeConfigId: string | null =
+  let activeConfigId: null | string =
     activeConfigResult.data?.value &&
     typeof activeConfigResult.data.value === "string"
       ? activeConfigResult.data.value
@@ -200,8 +221,18 @@ async function getPostsByScore(
   );
 
   if (scoresError) {
-    console.error("Error calling get_posts_with_scores:", scoresError);
-    return NextResponse.json({ error: scoresError.message }, { status: 500 });
+    console.error("[posts] Error calling get_posts_with_scores:", {
+      code: scoresError.code,
+      error: scoresError.message,
+      hint: scoresError.hint,
+    });
+    return NextResponse.json(
+      {
+        details: scoresError.message || "Database query failed",
+        error: "Database error",
+      },
+      { status: 500 }
+    );
   }
 
   // Get total count for pagination (call once, used for both empty and non-empty results)
@@ -222,10 +253,10 @@ async function getPostsByScore(
   }
 
   // Get post IDs to fetch posts and neighborhoods
-  const postIds = scoresData.map((s: DbRecord) => s.post_id as string);
+  const postIds = (scoresData as PostScoreRow[]).map((s) => s.post_id);
 
   // Fetch posts with neighborhoods
-  let postsQuery = supabase
+  const postsQuery = supabase
     .from("posts")
     .select("*, neighborhood:neighborhoods(*)")
     .in("id", postIds);
@@ -233,32 +264,48 @@ async function getPostsByScore(
   const { data: posts, error: postsError } = await postsQuery;
 
   if (postsError) {
-    console.error("Error fetching posts:", postsError);
-    return NextResponse.json({ error: postsError.message }, { status: 500 });
+    console.error("[posts] Error fetching posts:", {
+      code: postsError.code,
+      error: postsError.message,
+      postCount: postIds.length,
+    });
+    return NextResponse.json(
+      {
+        details: postsError.message || "Failed to fetch posts",
+        error: "Database error",
+      },
+      { status: 500 }
+    );
   }
 
-  // Create posts lookup map
-  const postsMap = new Map(
-    (posts || []).map((p: DbRecord) => [p.id as string, p])
+  // Create posts lookup map with proper typing
+  type PostRow = {
+    neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
+  } & Database["public"]["Tables"]["posts"]["Row"];
+
+  const postsMap = new Map<string, PostRow>(
+    (posts || []).map((p) => [p.id, p as PostRow])
   );
 
   // Merge scores with posts, maintaining score order
-  const results = scoresData
-    .map((scoreRow: DbRecord) => {
-      const postId = scoreRow.post_id as string;
-      const post = postsMap.get(postId);
-      if (!post) return null;
+  const results = (scoresData as PostScoreRow[])
+    .map((scoreRow) => {
+      const post = postsMap.get(scoreRow.post_id);
+      if (!post) {
+        console.warn("[posts] Post not found for score:", scoreRow.post_id);
+        return null;
+      }
 
       // Build llm_scores object from RPC result
       const llmScores = {
-        categories: scoreRow.categories as string[],
-        created_at: (scoreRow.llm_created_at as string) || new Date().toISOString(),
-        final_score: scoreRow.final_score as number,
-        id: scoreRow.llm_score_id as string,
-        model_version: (scoreRow.model_version as string) || "claude-3-haiku-20240307",
-        post_id: postId,
-        scores: scoreRow.scores as Record<string, number>,
-        summary: (scoreRow.summary as string) || null,
+        categories: scoreRow.categories,
+        created_at: scoreRow.llm_created_at || new Date().toISOString(),
+        final_score: scoreRow.final_score,
+        id: scoreRow.llm_score_id,
+        model_version: scoreRow.model_version || "claude-3-haiku-20240307",
+        post_id: scoreRow.post_id,
+        scores: scoreRow.scores,
+        summary: scoreRow.summary,
       };
 
       return {
@@ -267,7 +314,7 @@ async function getPostsByScore(
         neighborhood: post.neighborhood || null,
       };
     })
-    .filter((r): r is PostWithScores => r !== null);
+    .filter((r) => r !== null) as unknown as PostWithScores[];
 
   return NextResponse.json({
     data: results,
@@ -300,8 +347,19 @@ async function getPostsByDate(
     .range(offset, offset + limit - 1);
 
   if (postsError) {
-    console.error("Error fetching posts:", postsError);
-    return NextResponse.json({ error: postsError.message }, { status: 500 });
+    console.error("[posts] Error fetching posts:", {
+      code: postsError.code,
+      error: postsError.message,
+      limit,
+      offset,
+    });
+    return NextResponse.json(
+      {
+        details: postsError.message || "Failed to fetch posts",
+        error: "Database error",
+      },
+      { status: 500 }
+    );
   }
 
   if (!posts || posts.length === 0) {
@@ -309,8 +367,11 @@ async function getPostsByDate(
   }
 
   // Fetch scores for these posts
+  type PostRow = {
+    neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
+  } & Database["public"]["Tables"]["posts"]["Row"];
 
-  const postIds = posts.map((p: DbRecord) => p.id as string);
+  const postIds = (posts as PostRow[]).map((p) => p.id);
 
   const { data: scores, error: scoresError } = await supabase
     .from("llm_scores")
@@ -318,21 +379,25 @@ async function getPostsByDate(
     .in("post_id", postIds);
 
   if (scoresError) {
-    console.error("Error fetching scores:", scoresError);
+    console.error("[posts] Error fetching scores:", {
+      code: scoresError.code,
+      error: scoresError.message,
+      postCount: postIds.length,
+    });
     // Continue without scores rather than failing entirely
   }
 
   // Create scores lookup map
+  type LLMScoreRow = Database["public"]["Tables"]["llm_scores"]["Row"];
 
-  const scoresMap = new Map(
-    (scores || []).map((s: DbRecord) => [s.post_id as string, s])
+  const scoresMap = new Map<string, LLMScoreRow>(
+    (scores || []).map((s) => [(s as LLMScoreRow).post_id, s as LLMScoreRow])
   );
 
-  // Merge posts with scores
-
-  let results = posts.map((post: DbRecord) => ({
+  // Merge posts with scores (cast: DB Row has scores as Json, we use DimensionScores in types)
+  let results = (posts as PostRow[]).map((post) => ({
     ...post,
-    llm_scores: scoresMap.get(post.id as string) || null,
+    llm_scores: scoresMap.get(post.id) || null,
     neighborhood: post.neighborhood || null,
   })) as unknown as PostWithScores[];
 

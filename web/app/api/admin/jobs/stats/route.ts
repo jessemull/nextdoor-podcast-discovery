@@ -2,8 +2,8 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
-import { calculateSuccessRate } from "@/lib/utils";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { calculateSuccessRate } from "@/lib/utils";
 
 /**
  * GET /api/admin/jobs/stats
@@ -45,37 +45,38 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    if (!jobs || jobs.length === 0) {
+    const jobsList = jobs ?? [];
+    if (jobsList.length === 0) {
       return NextResponse.json({
         data: {
-          total_jobs: 0,
+          average_duration_seconds: 0,
           by_status: {},
           by_type: {},
-          average_duration_seconds: 0,
           success_rate: 0,
+          total_jobs: 0,
         },
       });
     }
 
     // Calculate statistics
-    const totalJobs = jobs.length;
+    const totalJobs = jobsList.length;
 
     // Count by status
     const byStatus: Record<string, number> = {};
-    for (const job of jobs) {
+    for (const job of jobsList) {
       const status = typeof job.status === "string" ? job.status : String(job.status ?? "unknown");
       byStatus[status] = (byStatus[status] || 0) + 1;
     }
 
     // Count by type
     const byType: Record<string, number> = {};
-    for (const job of jobs) {
+    for (const job of jobsList) {
       const type = typeof job.type === "string" ? job.type : String(job.type ?? "unknown");
       byType[type] = (byType[type] || 0) + 1;
     }
 
     // Calculate average duration for completed jobs
-    const completedJobs = jobs.filter(
+    const completedJobs = jobsList.filter(
       (job) =>
         job.status === "completed" &&
         job.started_at &&
