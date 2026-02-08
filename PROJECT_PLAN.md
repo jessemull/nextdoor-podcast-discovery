@@ -256,6 +256,204 @@ The system is designed to be flexible:
 
 ---
 
+### Global Weight Updates & Background Jobs
+
+Changing the **global** ranking weights (not just per-user sliders) should be:
+
+- **Initiated from the UI** (settings page)
+- **Executed as a background job** (on the scraper machine)
+- **Observable** (with status + history in the database)
+
+#### Background Job Model
+
+We introduce a generic `background_jobs` table in Supabase:
+
+```sql
+CREATE TABLE background_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL,            -- e.g. 'recompute_final_scores'
+    status TEXT NOT NULL,          -- 'pending' | 'running' | 'completed' | 'error' | 'cancelled'
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_by TEXT,               -- user email/id (from NextAuth)
+    params JSONB,                  -- e.g. { "weights": { ... } }
+    progress INTEGER,              -- 0–100 or records processed
+    total INTEGER,                 -- total records to process (optional)
+    error_message TEXT             -- error details when status = 'error'
+);
+```
+
+This table is reusable for:
+
+- Final score recompute jobs
+- Topic frequency recount jobs
+- Future maintenance tasks (cleanup, migrations, etc.)
+
+#### Flow: Changing Global Ranking Weights
+
+1. **User adjusts sliders on the Settings page**  
+   - Frontend shows current weights for:
+     - absurdity
+     - drama
+     - discussion_spark
+     - emotional_intensity
+     - news_value
+
+2. **User clicks “Save & Recompute Scores”**  
+   - `PUT /api/settings` (or `POST /api/admin/ranking-weights`) is called:
+     - Validates that the user is an admin (email whitelist).
+     - Updates `settings.ranking_weights` with the new weights.
+     - Inserts a new `background_jobs` row:
+
+```sql
+INSERT INTO background_jobs (type, status, created_by, params)
+VALUES (
+  'recompute_final_scores',
+  'pending',
+  :user_email,
+  :params_json      -- includes a snapshot of the new weights
+)
+RETURNING id;
+```
+
+3. **UI Feedback on Settings Page**  
+   - The API returns `{ jobId }`.
+   - Settings page shows:
+     - “Recompute started (Job #XYZ). This may take a few minutes.”
+     - Polls `/api/admin/jobs/:id` or `/api/admin/jobs?type=recompute_final_scores&limit=1`
+       for `status`, `progress`, and `error_message`.
+
+4. **Background Worker (Python) Picks Up the Job**  
+   - Runs on the same Linux laptop as the scraper.
+   - Periodically looks for:
+
+```sql
+SELECT * FROM background_jobs
+WHERE type = 'recompute_final_scores' AND status = 'pending'
+ORDER BY created_at
+LIMIT 1;
+```
+
+   - When it finds a job:
+     - Sets `status = 'running'`, `started_at = NOW()`.
+     - Reads weights from `settings.ranking_weights` (or from the `params` snapshot).
+     - Pages through posts/llm_scores in batches:
+       - Example: 500–1,000 posts per batch.
+       - For each batch:
+         - Load `scores` JSON for each post.
+         - Re-run `calculate_final_scores` in Python.
+         - `UPDATE llm_scores.final_score` in bulk.
+         - Update `progress` and `total` in `background_jobs`.
+     - On success:
+       - `status = 'completed'`, `completed_at = NOW()`.
+     - On error:
+       - `status = 'error'`, `error_message = <details>`.
+
+5. **User Visibility & History**  
+   - Settings page shows:
+     - Status: `Pending`, `Running (23%)`, `Completed`, or `Error`.
+     - Timestamps for `created_at`, `started_at`, `completed_at`.
+     - `created_by` (who triggered the job) and `error_message` if failed.
+   - This serves as a **log of all global weight changes** and recomputes.
+
+#### Scaling Considerations
+
+- **Per-record work is cheap**: recompute is just a handful of multiplies/adds.
+- **Batching**:
+  - 10,000 posts → 10–20 batches → ~1–3 seconds total.
+  - 1,000,000 posts → 1,000–2,000 batches → a few minutes.
+  - 10,000,000 posts → tens of minutes: treat as a nightly/low-traffic job.
+- The job runs off the web request path; UI remains responsive.
+
+#### Per-User / Per-Session Weights
+
+Even with a global `final_score`, the UI can still support:
+
+- **Interactive sliders** that compute a *view-only* score per post using the stored `scores` JSON.
+- Sorting locally in the browser or via an API without touching `final_score`.
+
+This gives:
+
+- A simple, fast **default ranking** via `final_score`.
+- Flexible **personal tuning** without any background job.
+
+---
+
+### Search Defaults (Semantic Search Threshold)
+
+The semantic search experience should have a **configurable global default** that can be tuned from the Settings page and used by the `/search` UI on first load.
+
+#### Storage: `search_defaults` in `settings`
+
+We will store search-related defaults in the existing `settings` table as a JSON blob:
+
+```sql
+INSERT INTO settings (key, value) VALUES
+  ('search_defaults', '{
+    "similarity_threshold": 0.2
+  }')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+```
+
+Current fields (extensible over time):
+
+- `similarity_threshold` (float, 0.0–1.0)  
+  - Default: `0.2` (looser, better recall for broad queries like “animals”).
+
+#### API Integration
+
+- **GET /api/settings**
+  - Returns both:
+    - `ranking_weights`
+    - `search_defaults`
+  - Used by the Settings page and the Search page (for initial defaults).
+
+- **PUT /api/settings**
+  - Accepts a payload such as:
+
+```json
+{
+  "ranking_weights": {
+    "absurdity": 2.0,
+    "drama": 1.5,
+    "discussion_spark": 1.0,
+    "emotional_intensity": 1.2,
+    "news_value": 1.0
+  },
+  "search_defaults": {
+    "similarity_threshold": 0.2
+  }
+}
+```
+
+  - Validates input ranges (e.g. `0.0 <= similarity_threshold <= 1.0`).
+  - Persists both configs to `settings`.
+
+#### Search Page Behavior
+
+- On initial load of `/search`:
+  - Fetch `search_defaults` from the server (or via `GET /api/settings`).
+  - Initialize the `similarityThreshold` React state to `search_defaults.similarity_threshold` (fallback to `0.2` if missing).
+
+- During a session:
+  - The user can adjust a **Similarity Threshold** slider:
+    - Range: `0.0`–`1.0` (step `0.1`).
+    - Label: “lower = more results, higher = more precise”.
+  - The slider value is sent as `similarity_threshold` in the `/api/search` request body.
+
+- From Settings page:
+  - Admin can set the **global default similarity threshold**.
+  - Clicking “Save”:
+    - Calls `PUT /api/settings` with updated `search_defaults`.
+    - No background job is needed; this is a simple config change.
+
+This gives:
+
+- A tunable **global default** for semantic search behavior.
+- Per-session control via the slider on the Search page.
+- Clear separation between **global defaults** (Settings) and **per-user tweaks** (Search UI).
+
 ### Cost-Optimized Approach
 
 This architecture prioritizes **free tiers** and **pay-per-use** services:
