@@ -20,6 +20,7 @@ export function PodcastPicks() {
   const [picksDefaults, setPicksDefaults] = useState<{
     picks_limit: number;
     picks_min: number;
+    picks_min_podcast?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -31,6 +32,12 @@ export function PodcastPicks() {
           setPicksDefaults({
             picks_limit: Math.min(20, Math.max(1, pd.picks_limit)),
             picks_min: Math.min(10, Math.max(0, pd.picks_min)),
+            picks_min_podcast:
+              typeof pd.picks_min_podcast === "number" &&
+              pd.picks_min_podcast >= 0 &&
+              pd.picks_min_podcast <= 10
+                ? pd.picks_min_podcast
+                : undefined,
           });
         } else {
           setPicksDefaults({
@@ -49,6 +56,8 @@ export function PodcastPicks() {
 
   const defaultMinScore = picksDefaults?.picks_min ?? FALLBACK_PICKS_MIN_SCORE;
   const defaultLimit = picksDefaults?.picks_limit ?? FALLBACK_PICKS_LIMIT;
+  const defaultMinPodcast =
+    picksDefaults?.picks_min_podcast != null ? picksDefaults.picks_min_podcast : null;
 
   const picksMinScore = useMemo(() => {
     const v = searchParams.get("picks_min");
@@ -63,8 +72,9 @@ export function PodcastPicks() {
   const picksMinPodcast = useMemo(() => {
     const v = searchParams.get("picks_min_podcast");
     const n = v != null ? parseFloat(v) : NaN;
-    return Number.isFinite(n) && n >= 0 && n <= 10 ? n : null;
-  }, [searchParams]);
+    if (Number.isFinite(n) && n >= 0 && n <= 10) return n;
+    return defaultMinPodcast;
+  }, [searchParams, defaultMinPodcast]);
   const [loading, setLoading] = useState(true);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());

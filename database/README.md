@@ -26,6 +26,7 @@ SQL migrations for the Supabase PostgreSQL database.
    - `017_posts_by_date_rpc.sql`
    - `018_embedding_backlog_count.sql`
    - `019_podcast_worthy_filter.sql`
+   - `020_min_reaction_count_filter.sql`
 
 **Note:** The Python worker, web app settings/weight config flows, and TESTING_GUIDE assume migrations 004–009 are applied. Run all migrations for full functionality.
 
@@ -66,10 +67,10 @@ After running migrations, optionally run seed data:
 
 - `search_posts_by_embedding(query_embedding, similarity_threshold, result_limit)` — Semantic search using vector similarity
 - `get_unscored_posts(p_limit)` — Get posts that need LLM scoring
-- `get_posts_with_scores(p_weight_config_id, p_limit, p_offset, p_min_score, p_category, p_unused_only, p_neighborhood_id, p_saved_only, p_episode_date, p_min_podcast_worthy, p_order_by)` — Posts joined with scores for feed; `p_order_by` = 'score' or 'podcast_worthy'; returns `why_podcast_worthy` (migrations 016, 019)
-- `get_posts_with_scores_count(p_weight_config_id, p_min_score, p_category, p_unused_only, p_neighborhood_id, p_saved_only, p_episode_date, p_min_podcast_worthy)` — Count for score-sorted feed pagination (migration 019)
-- `get_posts_by_date(p_limit, p_offset, p_category, p_min_score, p_neighborhood_id, p_saved_only, p_episode_date, p_unused_only, p_min_podcast_worthy)` — Posts by date with filters in DB (migrations 017, 019)
-- `get_posts_by_date_count(p_category, p_min_score, p_neighborhood_id, p_saved_only, p_episode_date, p_unused_only, p_min_podcast_worthy)` — Count for date-sorted feed pagination (migration 019)
+- `get_posts_with_scores(..., p_min_podcast_worthy, p_order_by, p_min_reaction_count)` — Posts joined with scores for feed; `p_order_by` = 'score' or 'podcast_worthy'; returns `why_podcast_worthy` (migrations 016, 019, 020)
+- `get_posts_with_scores_count(..., p_min_podcast_worthy, p_min_reaction_count)` — Count for score-sorted feed pagination (migrations 019, 020)
+- `get_posts_by_date(..., p_min_podcast_worthy, p_min_reaction_count)` — Posts by date with filters in DB (migrations 017, 019, 020)
+- `get_posts_by_date_count(..., p_min_podcast_worthy, p_min_reaction_count)` — Count for date-sorted feed pagination (migrations 019, 020)
 - `get_embedding_backlog_count()` — Count of posts with LLM scores but no embedding (migration 018)
 - `increment_topic_frequency(p_category, p_increment)` — Update topic frequency counts
 - `recount_topic_frequencies()` — Recalculate all topic frequencies (call daily)

@@ -20,7 +20,11 @@ interface NoveltyConfig {
 interface SettingsResponse {
   data: {
     novelty_config?: NoveltyConfig;
-    picks_defaults?: { picks_limit: number; picks_min: number };
+    picks_defaults?: {
+      picks_limit: number;
+      picks_min: number;
+      picks_min_podcast?: number;
+    };
     ranking_weights: RankingWeights;
     search_defaults: {
       similarity_threshold: number;
@@ -85,6 +89,7 @@ export default function SettingsPage() {
   const [picksDefaults, setPicksDefaults] = useState({
     picks_limit: 5,
     picks_min: 7,
+    picks_min_podcast: undefined as number | undefined,
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);

@@ -122,6 +122,8 @@ Example crontab:
 0 22 * * * cd /path/to/nextdoor && ./scripts/run-embeddings.sh
 ```
 
+**Topic frequency recount (novelty):** `run-scrape.sh` runs `python -m src.recount_topics` after each successful scrape. That calls the `recount_topic_frequencies()` RPC so the 30-day topic counts stay accurate for novelty scoring. With the crontab above, recount runs at least twice daily (after recent and trending). You can also run it standalone: `python -m src.recount_topics` (requires `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`).
+
 ## Testing
 
 ```bash
@@ -149,6 +151,7 @@ scraper/
 │   ├── novelty.py        # Novelty calculation (scorer + worker)
 │   ├── post_extractor.py # Feed parsing
 │   ├── post_storage.py   # Supabase storage
+│   ├── recount_topics.py # Topic frequency recount for novelty (run after scrape)
 │   ├── scraper.py        # Playwright browser scraper
 │   ├── session_manager.py
 │   └── worker.py         # Background job worker

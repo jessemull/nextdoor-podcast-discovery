@@ -10,6 +10,7 @@ export interface PostFeedFilters {
   category: string;
   episodeDate: string;
   minPodcastWorthy: string;
+  minReactionCount: string;
   minScore: string;
   neighborhoodId: string;
   savedOnly: boolean;
@@ -25,6 +26,7 @@ export interface Neighborhood {
 
 export interface UsePostFeedFiltersResult {
   debouncedMinPodcastWorthy: string;
+  debouncedMinReactionCount: string;
   debouncedMinScore: string;
   episodeDates: string[];
   filterLoadError: null | string;
@@ -37,6 +39,7 @@ const DEFAULT_FILTERS: PostFeedFilters = {
   category: "",
   episodeDate: "",
   minPodcastWorthy: "",
+  minReactionCount: "",
   minScore: "",
   neighborhoodId: "",
   savedOnly: false,
@@ -59,6 +62,10 @@ export function usePostFeedFilters(
   const debouncedMinScore = useDebounce(filters.minScore, debounceDelayMs);
   const debouncedMinPodcastWorthy = useDebounce(
     filters.minPodcastWorthy,
+    debounceDelayMs
+  );
+  const debouncedMinReactionCount = useDebounce(
+    filters.minReactionCount,
     debounceDelayMs
   );
 
@@ -84,6 +91,7 @@ export function usePostFeedFilters(
 
   return {
     debouncedMinPodcastWorthy,
+    debouncedMinReactionCount,
     debouncedMinScore,
     episodeDates,
     filterLoadError,

@@ -16,6 +16,7 @@ const DIMENSION_LABELS: Record<string, string> = {
   drama: "Drama",
   emotional_intensity: "Intensity",
   news_value: "News",
+  podcast_worthy: "Podcast",
   readability: "Readability",
 };
 

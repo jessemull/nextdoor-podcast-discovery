@@ -95,6 +95,7 @@ export async function GET() {
         : {
             picks_limit: 5,
             picks_min: 7,
+            picks_min_podcast: undefined,
           };
 
     return NextResponse.json({

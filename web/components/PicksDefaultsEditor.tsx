@@ -3,6 +3,7 @@
 interface PicksDefaults {
   picks_limit: number;
   picks_min: number;
+  picks_min_podcast?: number;
 }
 
 interface PicksDefaultsEditorProps {
@@ -28,10 +29,42 @@ export function PicksDefaultsEditor({
       <h2 className="mb-4 text-xl font-semibold">Podcast Picks Defaults</h2>
       <p className="mb-6 text-sm text-gray-400">
         Configure default minimum score and limit for the Podcast Picks section.
-        URL params (?picks_min=7&picks_limit=5) override these when present.
+        URL params (?picks_min=7&picks_limit=5&picks_min_podcast=7) override these when present.
       </p>
 
       <div className="mb-6 space-y-4">
+        <div>
+          <label
+            className="mb-1 block text-sm font-medium text-gray-300"
+            htmlFor="picks-min-podcast"
+          >
+            Min Podcast Score (optional)
+          </label>
+          <input
+            className="w-24 rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+            id="picks-min-podcast"
+            max={10}
+            min={0}
+            placeholder=""
+            step={0.5}
+            type="number"
+            value={picksDefaults.picks_min_podcast ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const num = raw === "" ? undefined : parseFloat(raw);
+              setPicksDefaults({
+                ...picksDefaults,
+                picks_min_podcast:
+                  num === undefined || Number.isNaN(num)
+                    ? undefined
+                    : Math.min(10, Math.max(0, num)),
+              });
+            }}
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            If set, Picks sort by podcast score and only show posts with podcast_worthy ≥ this (0–10). Leave empty to use Minimum Score instead.
+          </p>
+        </div>
         <div>
           <label
             className="mb-1 block text-sm font-medium text-gray-300"

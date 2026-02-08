@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     episode_date: searchParams.get("episode_date") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
+    min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
     neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
     episode_date: episodeDate,
     limit,
     min_podcast_worthy: minPodcastWorthyParam,
+    min_reaction_count: minReactionCountParam,
     min_score: minScoreParam,
     neighborhood_id: neighborhoodId,
     offset,
@@ -68,6 +70,8 @@ export async function GET(request: NextRequest) {
     minScoreParam != null ? String(minScoreParam) : null;
   const minPodcastWorthy =
     minPodcastWorthyParam != null ? minPodcastWorthyParam : null;
+  const minReactionCount =
+    minReactionCountParam != null ? minReactionCountParam : null;
 
   const supabase = getSupabaseAdmin();
 
@@ -80,6 +84,7 @@ export async function GET(request: NextRequest) {
         episodeDate: episodeDate ?? null,
         limit,
         minPodcastWorthy,
+        minReactionCount,
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
@@ -96,6 +101,7 @@ export async function GET(request: NextRequest) {
         episodeDate: episodeDate ?? null,
         limit,
         minPodcastWorthy,
+        minReactionCount,
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
@@ -126,6 +132,7 @@ interface QueryParams {
   episodeDate: null | string;
   limit: number;
   minPodcastWorthy: null | number;
+  minReactionCount: null | number;
   minScore: null | string;
   neighborhoodId: null | string;
   offset: number;
@@ -175,6 +182,7 @@ async function getPostsByScore(
     episodeDate,
     limit,
     minPodcastWorthy,
+    minReactionCount,
     minScore,
     neighborhoodId,
     offset,
@@ -269,6 +277,7 @@ async function getPostsByScore(
       p_episode_date: episodeDate || null,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
+      p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
@@ -301,6 +310,7 @@ async function getPostsByScore(
       p_category: category || null,
       p_episode_date: episodeDate || null,
       p_min_podcast_worthy: minPodcastWorthy,
+      p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,
@@ -399,6 +409,7 @@ async function getPostsByDate(
     episodeDate,
     limit,
     minPodcastWorthy,
+    minReactionCount,
     minScore,
     neighborhoodId,
     offset,
@@ -416,6 +427,7 @@ async function getPostsByDate(
       p_episode_date: episodeDate || null,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
+      p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
@@ -444,6 +456,7 @@ async function getPostsByDate(
       p_category: category || null,
       p_episode_date: episodeDate || null,
       p_min_podcast_worthy: minPodcastWorthy,
+      p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,

@@ -95,6 +95,7 @@ export const settingsPutBodySchema = z
       .object({
         picks_limit: z.number().int().min(1).max(20).optional(),
         picks_min: z.number().min(0).max(10).optional(),
+        picks_min_podcast: z.number().min(0).max(10).optional(),
       })
       .optional(),
     ranking_weights: rankingWeightsSchema.optional(),
@@ -157,6 +158,7 @@ export const postsQuerySchema = z.object({
     .default(20)
     .transform((n) => Math.min(100, Math.max(1, n))),
   min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
+  min_reaction_count: z.coerce.number().int().min(0).optional(),
   min_score: z.coerce.number().min(0).optional(),
   neighborhood_id: z
     .string()

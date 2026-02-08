@@ -68,6 +68,43 @@ export function FeedFilters({
         </button>
         <button
           className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.minPodcastWorthy === "7" && filters.sort === "podcast_score"
+              ? "bg-yellow-600 text-yellow-900"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => {
+              const isPodcastChipActive =
+                prev.minPodcastWorthy === "7" && prev.sort === "podcast_score";
+              return {
+                ...prev,
+                minPodcastWorthy: isPodcastChipActive ? "" : "7",
+                sort: isPodcastChipActive ? "score" : "podcast_score",
+              };
+            })
+          }
+        >
+          Podcast ≥7
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.minReactionCount !== ""
+              ? "bg-emerald-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({
+              ...prev,
+              minReactionCount: prev.minReactionCount !== "" ? "" : "5",
+            }))
+          }
+        >
+          High engagement
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
             filters.category === "drama"
               ? "bg-purple-600 text-white"
               : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -311,6 +348,32 @@ export function FeedFilters({
                       parseFloat(value) <= 10)
                   ) {
                     setFilters({ ...filters, minPodcastWorthy: value });
+                  }
+                }}
+              />
+            </div>
+            {/* Min Reactions */}
+            <div className="flex items-center gap-2">
+              <label
+                className="text-sm text-gray-400"
+                htmlFor="minReactionCount"
+              >
+                Min reactions:
+              </label>
+              <input
+                className="w-16 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                id="minReactionCount"
+                min="0"
+                placeholder="0"
+                type="number"
+                value={filters.minReactionCount}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (
+                    value === "" ||
+                    (!isNaN(parseInt(value, 10)) && parseInt(value, 10) >= 0)
+                  ) {
+                    setFilters({ ...filters, minReactionCount: value });
                   }
                 }}
               />

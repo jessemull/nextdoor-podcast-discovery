@@ -33,6 +33,7 @@ export function PostFeed() {
   const router = useRouter();
   const {
     debouncedMinPodcastWorthy,
+    debouncedMinReactionCount,
     debouncedMinScore,
     episodeDates,
     filterLoadError,
@@ -110,6 +111,14 @@ export function PostFeed() {
           }
         }
 
+        // Validate and parse minReactionCount (integer >= 0)
+        if (debouncedMinReactionCount) {
+          const minReaction = parseInt(debouncedMinReactionCount, 10);
+          if (!isNaN(minReaction) && minReaction >= 0) {
+            params.set("min_reaction_count", String(minReaction));
+          }
+        }
+
         if (filters.unusedOnly) params.set("unused_only", "true");
 
         const response = await fetch(`/api/posts?${params.toString()}`);
@@ -134,6 +143,7 @@ export function PostFeed() {
     },
     [
       debouncedMinPodcastWorthy,
+      debouncedMinReactionCount,
       debouncedMinScore,
       filters.category,
       filters.episodeDate,

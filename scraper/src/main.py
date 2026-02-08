@@ -38,18 +38,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _run_scoring(supabase_client: Client) -> None:
+def _run_scoring(
+    supabase_client: Client,
+    unscored_batch_limit: int = 50,
+) -> None:
     """Run LLM scoring on unscored posts.
 
     Args:
         supabase_client: Supabase client instance.
+        unscored_batch_limit: Max number of unscored posts to fetch and score (default 50).
     """
     anthropic = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     scorer = LLMScorer(anthropic, supabase_client)
 
     # Get unscored posts
 
-    unscored = scorer.get_unscored_posts(limit=50)
+    unscored = scorer.get_unscored_posts(limit=unscored_batch_limit)
     if not unscored:
         logger.info("No unscored posts found")
         return
@@ -80,6 +84,7 @@ def main(
     feed_type: str = "recent",
     max_posts: int | None = None,
     score: bool = False,
+    unscored_batch_limit: int = 50,
     visible: bool = False,
 ) -> int:
     """Run the scraper pipeline.
@@ -92,6 +97,7 @@ def main(
         feed_type: Which feed to scrape ("recent" or "trending").
         max_posts: Maximum number of posts to scrape (default from config).
         score: If True, run LLM scoring on unscored posts after scraping.
+        unscored_batch_limit: Max unscored posts to score per run (default 50; use env UNSCORED_BATCH_LIMIT or --unscored-limit for backfills).
         visible: If True, run browser in visible mode (not headless).
 
     Returns:
@@ -217,8 +223,14 @@ def main(
             # Step 6: Run LLM scoring if enabled
 
             if score and not dry_run:
-                logger.info("Running LLM scoring on unscored posts")
-                _run_scoring(session_manager.supabase)
+                logger.info(
+                    "Running LLM scoring on unscored posts (limit=%d)",
+                    unscored_batch_limit,
+                )
+                _run_scoring(
+                    session_manager.supabase,
+                    unscored_batch_limit=unscored_batch_limit,
+                )
 
             if embed and not dry_run:
                 logger.info("Running embedding generation for posts without embeddings")
@@ -314,11 +326,24 @@ if __name__ == "__main__":
         help="Run LLM scoring on unscored posts after scraping",
     )
     parser.add_argument(
+        "--unscored-limit",
+        dest="unscored_batch_limit",
+        type=int,
+        default=None,
+        help="Max unscored posts to score per run (default: 50 or UNSCORED_BATCH_LIMIT env)",
+    )
+    parser.add_argument(
         "--visible",
         action="store_true",
         help="Run browser in visible mode (not headless)",
     )
     args = parser.parse_args()
+
+    unscored_limit = args.unscored_batch_limit
+    if unscored_limit is None:
+        env_limit = os.environ.get("UNSCORED_BATCH_LIMIT")
+        unscored_limit = int(env_limit) if env_limit else 50
+    unscored_limit = max(1, min(1000, unscored_limit))
 
     sys.exit(
         main(
@@ -329,6 +354,7 @@ if __name__ == "__main__":
             feed_type=args.feed_type,
             max_posts=args.max_posts,
             score=args.score,
+            unscored_batch_limit=unscored_limit,
             visible=args.visible,
         )
     )
