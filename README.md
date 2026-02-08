@@ -2,8 +2,6 @@
 
 Automatically discover, analyze, and curate interesting Nextdoor posts for podcast content. This monorepo contains the **scraper** (Python), **web dashboard** (Next.js), **database migrations**, and **scripts**—all designed to run on free tiers and minimal API cost (~$1–2/month).
 
----
-
 ## Table of Contents
 
 - [Project goal & podcast](#project-goal--podcast-context)
@@ -37,8 +35,6 @@ Automatically discover, analyze, and curate interesting Nextdoor posts for podca
 - [Scraping policy](#scraping-policy)
 - [Related documentation](#related-documentation)
 
----
-
 ## Project goal & podcast context
 
 The platform exists to **find podcast-worthy Nextdoor posts**: absurd, dramatic, newsworthy, or discussion-sparking content for use on a podcast. It is cost-optimized for a small team or solo use.
@@ -50,8 +46,6 @@ The platform exists to **find podcast-worthy Nextdoor posts**: absurd, dramatic,
 - **Pittsburgh sports facts** — Random fact for a specific user (e.g. Matt) on login, powered by Claude Haiku.
 
 The **podcast** consumes this data: hosts pick posts from the dashboard to discuss on air; the system tracks which posts were used and on which episode date.
-
----
 
 ## Features
 
@@ -89,8 +83,6 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 - **Role** — Polls Supabase for `recompute_final_scores` jobs; processes one at a time; writes `post_scores` for that weight config; cancel/retry and progress updates.
 - **Run** — Same machine as scraper (or any with Supabase access): `python -m src.worker --job-type recompute_final_scores` or `--once`.
 
----
-
 ## Technologies used
 
 Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized imports and object keys; eslint-plugin-perfectionist (TypeScript); comment spacing; no secrets in code.
@@ -100,8 +92,6 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 **Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), NextAuth.js, Zod, Vitest + Testing Library.
 
 **Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby), GitHub Actions.
-
----
 
 ## Architecture
 
@@ -127,8 +117,6 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
 - **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require NextAuth session; `ALLOWED_EMAILS` in env.
 - **Vercel** — Hosts Next.js only. Scraper and worker run in GitHub Actions and/or your own machine.
-
----
 
 ## Repository structure
 
@@ -165,8 +153,6 @@ nextdoor/
 └── README.md
 ```
 
----
-
 ## Scripts
 
 | Script | Purpose |
@@ -175,8 +161,6 @@ nextdoor/
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`; pings `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL`. |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
-
----
 
 ## Makefile
 
@@ -243,8 +227,6 @@ Run **`make help`** for the short list. Targets by section:
 
 The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper` warns if `VIRTUAL_ENV` is not set.
 
----
-
 ## Environment variables
 
 Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so sessions and data live in one project.
@@ -260,8 +242,6 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 - **Config file:** `web/.env.local` (copy from `.env.example`)
 - **Required:** Supabase URL/keys (public + service), NextAuth secret/URL, Google OAuth id/secret, `ALLOWED_EMAILS`
 - **Optional:** `USER_EMAIL`, `NEXT_PUBLIC_USER_EMAIL`, `ANTHROPIC_API_KEY` (sports fact)
-
----
 
 ## Setup & quick start
 
@@ -288,8 +268,6 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 6. **Worker (optional)** — With scraper env loaded: `cd scraper && python -m src.worker --job-type recompute_final_scores` (or `--once`).
 
----
-
 ## Database
 
 **Production:** Supabase. Run `database/migrations/001_initial_schema.sql` through `020_*.sql` in numeric order in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`.
@@ -299,8 +277,6 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 **Main tables:** `neighborhoods`, `sessions` (encrypted cookies), `posts`, `llm_scores`, `post_embeddings`, `post_scores`, `weight_configs`, `background_jobs`, `topic_frequencies`, `settings`.
 
 **Key RPCs:** `get_posts_with_scores`, `get_posts_by_date`, `search_posts_by_embedding`, `get_unscored_posts`, `recount_topic_frequencies`, `get_embedding_backlog_count`, and others used by web and scraper. See `database/migrations/` for full schema and RPC definitions.
-
----
 
 ## Scraper (Python)
 
@@ -316,8 +292,6 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at least once.
 
----
-
 ## Web UI (Next.js)
 
 **Pages:** `/` (feed), `/posts/[id]` (post detail), `/search`, `/settings`, `/login`.
@@ -328,15 +302,11 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 **Data:** Server components and API routes use the Supabase server client; the client uses React Query against the API. Helpers and embedding cache live in `lib/`.
 
----
-
 ## Worker (background jobs)
 
 Processes `recompute_final_scores` jobs created when a user clicks “Save & Recompute Scores” in Settings. Each job has a `weight_config_id`; the worker recomputes final scores (weights + novelty) for all posts with LLM scores and writes `post_scores`. The user can then “Activate” that config so the feed uses the new rankings.
 
 **Run:** `python -m src.worker --job-type recompute_final_scores` (continuous) or `--once`. Same env as scraper (Supabase only). Jobs support cancel and retry; the worker processes one job at a time.
-
----
 
 ## Testing & linting
 
@@ -344,16 +314,12 @@ Processes `recompute_final_scores` jobs created when a user clicks “Save & Rec
 - **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase and NextAuth.
 - **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. See `FIX_SCRAPER.md` for current data gaps.
 
----
-
 ## Security
 
 - **Secrets** — Environment variables and GitHub Secrets only; never committed.
 - **Scraper** — `make security-scraper` runs bandit and pip-audit.
 - **Web** — `make security-web` runs npm audit.
 - **Auth** — Email whitelist; server-side session checks on all mutation and admin API routes.
-
----
 
 ## CI/CD & deployment
 
@@ -364,8 +330,6 @@ Processes `recompute_final_scores` jobs created when a user clicks “Save & Rec
 | **scrape-trending.yml** | Daily 6:00 PM UTC (or manual) | Trending feed → same pipeline; same failure handling. |
 
 Both scrape workflows use GitHub Secrets (Nextdoor, Supabase, Anthropic, OpenAI, session encryption). **No worker in Actions**—recompute jobs run when you run the worker locally (or on a machine you control).
-
----
 
 ## Cost
 
@@ -382,8 +346,6 @@ Target **~$1–2/month**:
 
 More posts → more tokens; stay within Supabase 500MB (roughly tens of thousands of posts with embeddings).
 
----
-
 ## Design decisions
 
 | Decision | Rationale |
@@ -396,15 +358,11 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **Session cookies in Supabase** | Reuse login across runs → fewer CAPTCHAs; Fernet encryption at rest |
 | **Mobile viewport for scraper** | Nextdoor mobile UI; feed selection and selectors differ from desktop (see FIX_SCRAPER.md) |
 
----
-
 ## Scraping policy
 
 - **Rate limiting** — Configurable scroll and typing delays in `scraper/src/config.py`; no aggressive throttling by default.
 - **robots.txt** — Not enforced by default. Use `--check-robots` to exit with an error if our paths are disallowed (`src/robots.py`, config URLs).
 - **Data use** — For personal/podcast curation only; comply with Nextdoor’s terms and your own ethics.
-
----
 
 ## Related documentation
 
