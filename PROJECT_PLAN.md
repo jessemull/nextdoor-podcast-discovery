@@ -2175,29 +2175,32 @@ See [Section 1.3: LLM Scoring Strategy](#13-llm-scoring-strategy) for full conte
   - [x] `PATCH /api/posts/[id]/used` - Mark post as used in episode
   - [x] API route tests (34 tests passing)
 
-- [ ] **4.3** Core Pages (scaffolds exist, need implementation)
-  - [ ] Post feed with pagination (uses `/api/posts`)
+- [x] **4.3** Core Pages ✅ COMPLETE
+  - [x] Post feed with pagination (uses `/api/posts`)
   - [ ] Post detail page
-  - [x] Search page (placeholder)
-  - [x] Settings page (placeholder)
+  - [x] Search page (semantic search implemented)
+  - [x] Settings page (weight configs, jobs, search defaults)
 
-- [x] **4.3** Components (core done)
+- [x] **4.4** Components ✅ COMPLETE
   - [x] PostCard
-  - [ ] RankingSliders
-  - [ ] TagFilter
-  - [ ] NeighborhoodFilter
-  - [ ] SearchBar
+  - [x] PostFeed
+  - [x] StatsPanel
+  - [x] JobStats
+  - [x] JobsList
+  - [x] WeightConfigsList
   - [x] **SportsFact** (for special user)
-  - [x] Navbar
   - [x] ErrorBoundary
 
-- [ ] **4.4** API routes
-  - [ ] GET /api/posts
-  - [ ] GET /api/posts/:id
-  - [ ] POST /api/posts/:id/use
-  - [ ] GET /api/search
-  - [ ] PUT /api/settings
-  - [x] **GET /api/sports-fact**
+- [ ] **4.5** UI Polish & Styling
+  - [ ] Review and improve CSS/Tailwind styling across all pages
+  - [ ] Ensure consistent design system (colors, spacing, typography)
+  - [ ] Improve mobile responsiveness
+  - [ ] Polish component animations and transitions
+  - [ ] Improve loading states and skeletons
+  - [ ] Enhance error states and empty states
+  - [ ] Review accessibility (ARIA labels, keyboard navigation)
+  - [ ] Test UI on different screen sizes
+  - [ ] Ensure dark mode theme is consistent
 
 ### Phase 5: Deployment
 
