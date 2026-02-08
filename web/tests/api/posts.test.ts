@@ -20,8 +20,12 @@ vi.mock("@/lib/auth", () => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockFrom = vi.fn() as any;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockRpc = vi.fn() as any;
+
 const mockSupabase = {
   from: mockFrom,
+  rpc: mockRpc,
 };
 
 vi.mock("@/lib/supabase.server", () => ({
@@ -46,15 +50,33 @@ describe("GET /api/posts", () => {
     expect(data.error).toBe("Unauthorized");
   });
 
-  it("should return posts when authenticated", async () => {
+  it("should return posts when authenticated using RPC", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
 
-    const mockScores = [
-      { post_id: "post-1", final_score: 10, categories: ["humor"] },
-      { post_id: "post-2", final_score: 8, categories: ["drama"] },
+    const mockScoresData = [
+      {
+        post_id: "post-1",
+        final_score: 10,
+        llm_score_id: "score-1",
+        scores: { absurdity: 5.0, drama: 3.0 },
+        categories: ["humor"],
+        summary: "Test summary",
+        model_version: "claude-3-haiku-20240307",
+        llm_created_at: "2024-01-01T00:00:00Z",
+      },
+      {
+        post_id: "post-2",
+        final_score: 8,
+        llm_score_id: "score-2",
+        scores: { absurdity: 4.0, drama: 5.0 },
+        categories: ["drama"],
+        summary: null,
+        model_version: "claude-3-haiku-20240307",
+        llm_created_at: "2024-01-01T00:00:00Z",
+      },
     ];
 
     const mockPosts = [
@@ -62,73 +84,147 @@ describe("GET /api/posts", () => {
       { id: "post-2", text: "Post 2", neighborhood: { name: "Test" } },
     ];
 
-    // Mock scores query chain
-    const scoresChain = {
-      contains: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      range: vi.fn().mockResolvedValue({
-        count: 2,
-        data: mockScores,
-        error: null,
-      }),
-      select: vi.fn().mockReturnThis(),
-    };
+    // Mock settings query for active config
+    const settingsSelect = vi.fn().mockReturnThis();
+    const settingsEq = vi.fn().mockReturnThis();
+    const settingsSingle = vi.fn().mockResolvedValue({
+      data: { value: "config-1" },
+      error: null,
+    });
 
-    // Mock posts query chain
-    const postsChain = {
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-    };
+    settingsSelect.mockReturnValue({
+      eq: settingsEq,
+    });
+    settingsEq.mockReturnValue({
+      single: settingsSingle,
+    });
 
-    // Set up final resolution for posts
-    postsChain.in.mockResolvedValue({
+    // Mock RPC calls
+    mockRpc.mockImplementation((fnName: string) => {
+      if (fnName === "get_posts_with_scores") {
+        return Promise.resolve({
+          data: mockScoresData,
+          error: null,
+        });
+      }
+      if (fnName === "get_posts_with_scores_count") {
+        return Promise.resolve({
+          data: 2,
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    // Mock posts query
+    const postsSelect = vi.fn().mockReturnThis();
+    const postsIn = vi.fn().mockResolvedValue({
       data: mockPosts,
       error: null,
     });
 
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "llm_scores") {
-        return { select: () => scoresChain };
-      }
-      return { select: () => postsChain };
+    postsSelect.mockReturnValue({
+      in: postsIn,
     });
 
-    const request = new NextRequest("http://localhost:3000/api/posts?limit=10");
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "settings") {
+        return { select: settingsSelect };
+      }
+      if (table === "posts") {
+        return { select: postsSelect };
+      }
+      return {};
+    });
+
+    const request = new NextRequest("http://localhost:3000/api/posts?limit=10&sort=score");
     const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.data).toHaveLength(2);
     expect(data.total).toBe(2);
+    expect(mockRpc).toHaveBeenCalledWith("get_posts_with_scores", expect.objectContaining({
+      p_weight_config_id: "config-1",
+      p_limit: 10,
+    }));
   });
 
-  it("should use default limit and offset when not provided", async () => {
+  it("should return error when no active config found", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
 
-    const rangeMock = vi.fn().mockResolvedValue({
-      count: 0,
+    // Mock settings query - no active config
+    const settingsSelect = vi.fn().mockReturnThis();
+    const settingsEq = vi.fn().mockReturnThis();
+    const settingsSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    settingsSelect.mockReturnValue({
+      eq: settingsEq,
+    });
+    settingsEq.mockReturnValue({
+      single: settingsSingle,
+    });
+
+    // Mock weight_configs query - no active configs
+    const configsSelect = vi.fn().mockReturnThis();
+    const configsEq = vi.fn().mockReturnThis();
+    const configsLimit = vi.fn().mockReturnThis();
+    const configsSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "Not found" },
+    });
+
+    configsSelect.mockReturnValue({
+      eq: configsEq,
+    });
+    configsEq.mockReturnValue({
+      limit: configsLimit,
+    });
+    configsLimit.mockReturnValue({
+      single: configsSingle,
+    });
+
+    // Mock check for any configs
+    const allConfigsSelect = vi.fn().mockReturnThis();
+    const allConfigsLimit = vi.fn().mockResolvedValue({
       data: [],
       error: null,
     });
 
-    mockFrom.mockImplementation(() => ({
-      select: () => ({
-        order: () => ({
-          range: rangeMock,
-        }),
-      }),
-    }));
+    allConfigsSelect.mockReturnValue({
+      limit: allConfigsLimit,
+    });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "settings") {
+        return { select: settingsSelect };
+      }
+      if (table === "weight_configs") {
+        return {
+          select: (arg?: string) => {
+            if (arg === "id, name") {
+              return allConfigsSelect;
+            }
+            return configsSelect;
+          },
+        };
+      }
+      return {};
+    });
 
     const request = new NextRequest("http://localhost:3000/api/posts");
-    await GET(request);
+    const response = await GET(request);
+    const data = await response.json();
 
-    // Default limit is 20, offset is 0
-    expect(rangeMock).toHaveBeenCalledWith(0, 19);
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("No weight configs found");
+    expect(data.details).toContain("create a weight configuration");
   });
 
   it("should handle invalid limit gracefully", async () => {

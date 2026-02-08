@@ -258,11 +258,46 @@ The system is designed to be flexible:
 
 ### Global Weight Updates & Background Jobs
 
-Changing the **global** ranking weights (not just per-user sliders) should be:
+**Why Materialized `final_score` + Background Jobs + Versioning?**
+
+At scale (millions of posts), we need fast queries. The only performant approach is:
+- **Materialized `final_score`**: Store pre-calculated scores in the database with an index
+- **Fast queries**: Simple `ORDER BY final_score DESC` with indexed column
+- **Tradeoff**: Weight changes require full recompute (background job)
+
+**Why Versioning is Essential:**
+
+Without versioning, you get:
+- **Half-baked rankings**: While recompute runs, some rows have new scores, some don't → inconsistent results
+- **No rollback**: Can't easily undo a bad weight change without full recompute
+- **Heavy UX**: Weight changes feel expensive → fewer experiments
+- **Corrupted state on failure**: Partial updates are hard to detect/clean up
+
+With versioning:
+- **Atomic switch**: Old scores stay intact, new scores build in parallel, flip `active_weight_config_id` → instant clean switch
+- **Safe rollback**: Just point back to previous config, zero recompute
+- **Decoupled compute**: Weight change is cheap (insert row), compute can run async/throttled/partial
+- **Analytics**: Compare rankings between versions, A/B test weight configs
+- **Clean failures**: Incomplete versions are invisible, cleanup is trivial
+
+**Alternative approaches don't scale:**
+- Dynamic calculation in API: Would require calculating scores for all posts on every query
+- PostgreSQL functions: Can't use indexes on calculated values, slow at scale
+- Hybrid approaches: Still require materialization for performance
+
+**The architecture:**
+- `weight_configs` table: Stores different weight configurations (versioned)
+- `post_scores` table: Stores `final_score` per post per weight config (allows multiple versions)
+- `settings.active_weight_config_id`: Points to active config (atomic switch)
+- Background jobs compute scores for a specific config version
+- Queries use active config's scores (fast, indexed)
+
+Changing the **global** ranking weights should be:
 
 - **Initiated from the UI** (settings page)
 - **Executed as a background job** (on the scraper machine)
 - **Observable** (with status + history in the database)
+- **Queueable** (multiple jobs can queue, processed one at a time)
 
 #### Background Job Model
 
@@ -300,11 +335,11 @@ This table is reusable for:
      - emotional_intensity
      - news_value
 
-2. **User clicks “Save & Recompute Scores”**  
-   - `PUT /api/settings` (or `POST /api/admin/ranking-weights`) is called:
+2. **User clicks "Save & Recompute Scores"**  
+   - `POST /api/admin/recompute-scores` is called:
      - Validates that the user is an admin (email whitelist).
-     - Updates `settings.ranking_weights` with the new weights.
-     - Inserts a new `background_jobs` row:
+     - Creates a new `weight_configs` row with the new weights.
+     - Inserts a new `background_jobs` row with `weight_config_id` in params:
 
 ```sql
 INSERT INTO background_jobs (type, status, created_by, params)
@@ -320,9 +355,11 @@ RETURNING id;
 3. **UI Feedback on Settings Page**  
    - The API returns `{ jobId }`.
    - Settings page shows:
-     - “Recompute started (Job #XYZ). This may take a few minutes.”
-     - Polls `/api/admin/jobs/:id` or `/api/admin/jobs?type=recompute_final_scores&limit=1`
-       for `status`, `progress`, and `error_message`.
+     - "Recompute started (Job #XYZ). This may take a few minutes."
+     - **Displays ALL jobs** (not just latest) with status, progress, timestamps
+     - Polls `/api/admin/jobs?type=recompute_final_scores&limit=10` for all recent jobs
+     - **Button behavior**: Only disabled when a job is `running` (not when `pending` in queue)
+     - Users can queue multiple jobs; they'll process sequentially
 
 4. **Background Worker (Python) Picks Up the Job**  
    - Runs on the same Linux laptop as the scraper.
@@ -331,31 +368,49 @@ RETURNING id;
 ```sql
 SELECT * FROM background_jobs
 WHERE type = 'recompute_final_scores' AND status = 'pending'
-ORDER BY created_at
+ORDER BY created_at ASC
 LIMIT 1;
 ```
 
+   - **Processes jobs one at a time** (FIFO queue)
    - When it finds a job:
      - Sets `status = 'running'`, `started_at = NOW()`.
-     - Reads weights from `settings.ranking_weights` (or from the `params` snapshot).
+     - Reads `weight_config_id` from job params.
+     - Loads weights from `weight_configs` table.
      - Pages through posts/llm_scores in batches:
        - Example: 500–1,000 posts per batch.
        - For each batch:
-         - Load `scores` JSON for each post.
-         - Re-run `calculate_final_scores` in Python.
-         - `UPDATE llm_scores.final_score` in bulk.
+         - Load `scores` JSON and `categories` for each post.
+         - Calculate `final_score` using weights + novelty.
+         - `INSERT INTO post_scores (post_id, weight_config_id, final_score)` (upsert).
          - Update `progress` and `total` in `background_jobs`.
      - On success:
        - `status = 'completed'`, `completed_at = NOW()`.
+       - **Optionally**: Set `is_active = true` for this config and update `settings.active_weight_config_id` (atomic switch).
      - On error:
        - `status = 'error'`, `error_message = <details>`.
+       - Incomplete `post_scores` rows remain but are invisible (only active config is queried).
 
 5. **User Visibility & History**  
    - Settings page shows:
+     - **All jobs** (not just latest) in a scrollable list
      - Status: `Pending`, `Running (23%)`, `Completed`, or `Error`.
      - Timestamps for `created_at`, `started_at`, `completed_at`.
      - `created_by` (who triggered the job) and `error_message` if failed.
+     - **Queue position** (if pending, show how many jobs ahead)
+     - **Weight config name/description** for each job
+   - Shows **all weight configs** with ability to:
+     - View config details
+     - Switch active config (instant, no recompute)
+     - Compare rankings between configs
    - This serves as a **log of all global weight changes** and recomputes.
+   - Users can see job history and understand the queue state.
+
+6. **Atomic Switch (After Job Completes)**
+   - When job completes, user can click "Activate" to switch to new config
+   - Or: Auto-activate on completion (configurable)
+   - Switch is instant: `UPDATE settings SET value = :new_config_id WHERE key = 'active_weight_config_id'`
+   - Queries immediately use new scores (no downtime, no inconsistency)
 
 #### Scaling Considerations
 

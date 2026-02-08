@@ -23,6 +23,15 @@ interface SearchResponse {
  * - Loading and error states
  * - Empty state when no results found
  */
+interface SettingsResponse {
+  data: {
+    ranking_weights: Record<string, number>;
+    search_defaults: {
+      similarity_threshold: number;
+    };
+  };
+}
+
 export default function SearchPage() {
   const [error, setError] = useState<null | string>(null);
   const [loading, setLoading] = useState(false);
@@ -30,8 +39,39 @@ export default function SearchPage() {
   const [results, setResults] = useState<PostWithScores[]>([]);
   const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [total, setTotal] = useState(0);
+  const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
 
   const debouncedQuery = useDebounce(query, DEBOUNCE_DELAY_MS);
+
+  // Load default similarity threshold from settings on mount
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const data: SettingsResponse = await response.json();
+          if (
+            data.data.search_defaults?.similarity_threshold !== undefined &&
+            typeof data.data.search_defaults.similarity_threshold === "number"
+          ) {
+            setSimilarityThreshold(data.data.search_defaults.similarity_threshold);
+          }
+        }
+      } else {
+        setLoadDefaultsError("Failed to load search defaults. Using default threshold.");
+      }
+    } catch (err) {
+      console.error("Error loading search defaults:", err);
+      setLoadDefaultsError(
+        err instanceof Error
+          ? `Error loading search defaults: ${err.message}`
+          : "Failed to load search defaults. Using default threshold."
+      );
+    }
+    };
+
+    void loadDefaults();
+  }, []);
 
   const handleSearch = useCallback(
     async (searchQuery: string) => {
@@ -118,6 +158,13 @@ export default function SearchPage() {
           Find similar posts using semantic search. Search by meaning, not just
           keywords.
         </p>
+
+        {/* Load Defaults Error */}
+        {loadDefaultsError && (
+          <div className="mb-6 rounded-lg border border-yellow-800 bg-yellow-900/20 p-4">
+            <p className="text-yellow-400 text-sm">{loadDefaultsError}</p>
+          </div>
+        )}
 
         {/* Search Input */}
         <div className="mb-6">

@@ -1,62 +1,81 @@
 "use client";
 
-import { Component, ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
 }
 
-interface State {
-  error: Error | null;
+interface ErrorBoundaryState {
   hasError: boolean;
+  error: Error | null;
 }
 
 /**
- * Error boundary component for graceful error handling.
- * Catches JavaScript errors in child components and displays a fallback UI.
+ * ErrorBoundary Component
+ *
+ * Catches JavaScript errors anywhere in the child component tree,
+ * logs those errors, and displays a fallback UI instead of crashing the whole app.
+ *
+ * Usage:
+ * ```tsx
+ * <ErrorBoundary>
+ *   <YourComponent />
+ * </ErrorBoundary>
+ * ```
  */
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { error: null, hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { error, hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Error caught by boundary:", error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    // Log error to console for debugging
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
+      // Render custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
+      // Default fallback UI
       return (
-        <div className="min-h-[400px] flex items-center justify-center">
-          <div className="bg-red-900/20 border border-red-800 rounded-lg p-6 max-w-md text-center">
-            <h2 className="text-xl font-bold text-red-400 mb-2">
-              Something went wrong
-            </h2>
-            <p className="text-gray-400 mb-4">
-              An error occurred while rendering this component.
-            </p>
-            <button
-              className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded-md text-sm transition-colors"
-              onClick={() => this.setState({ error: null, hasError: false })}
-            >
-              Try Again
-            </button>
-            {process.env.NODE_ENV === "development" && this.state.error && (
-              <pre className="mt-4 text-left text-xs text-red-300 bg-red-900/30 p-2 rounded overflow-auto">
+        <div className="rounded-lg bg-red-900/20 border border-red-500 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-red-400">Something went wrong</h2>
+          <p className="mb-4 text-sm text-gray-300">
+            An error occurred while rendering this component. Please refresh the page or contact
+            support if the problem persists.
+          </p>
+          {this.state.error && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-300">
+                Error details
+              </summary>
+              <pre className="mt-2 overflow-auto rounded bg-gray-900 p-2 text-xs text-red-300">
                 {this.state.error.message}
+                {this.state.error.stack && `\n\n${this.state.error.stack}`}
               </pre>
-            )}
-          </div>
+            </details>
+          )}
+          <button
+            className="mt-4 rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Reload Page
+          </button>
         </div>
       );
     }

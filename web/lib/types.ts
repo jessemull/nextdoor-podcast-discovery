@@ -75,6 +75,15 @@ export interface Settings {
   value: Record<string, unknown>;
 }
 
+/**
+ * Job parameters for background jobs.
+ * Each job type may have different params structure.
+ */
+export interface JobParams {
+  weight_config_id?: string;
+  [key: string]: unknown;
+}
+
 // API response types
 
 export interface SportsFactResponse {

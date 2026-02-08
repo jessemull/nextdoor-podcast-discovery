@@ -49,6 +49,26 @@ export function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 3) + "...";
 }
 
+/**
+ * Calculate success rate as a percentage (0-100) rounded to 2 decimal places.
+ *
+ * @param completed - Number of completed items
+ * @param errors - Number of error items
+ * @returns Success rate percentage (0-100) rounded to 2 decimal places, or 0 if no finished items
+ *
+ * @example
+ * calculateSuccessRate(8, 2) // Returns 80.00 (80% success rate)
+ * calculateSuccessRate(0, 0) // Returns 0 (no finished items)
+ */
+export function calculateSuccessRate(completed: number, errors: number): number {
+  const totalFinished = completed + errors;
+  if (totalFinished === 0) {
+    return 0;
+  }
+  const successRatePercent = (completed / totalFinished) * 100;
+  return Number(successRatePercent.toFixed(2));
+}
+
 // UI Constants
 
 export const POST_PREVIEW_LENGTH = 300;
