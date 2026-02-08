@@ -135,10 +135,10 @@ security: security-scraper security-web
 
 security-scraper:
 	@echo "Running bandit (Python security linter)..."
-	cd scraper && bandit -r src/ -ll
+	.venv/bin/bandit -r scraper/src/ -ll
 	@echo ""
 	@echo "Running pip-audit (dependency vulnerabilities)..."
-	cd scraper && pip-audit
+	.venv/bin/pip-audit
 
 security-web:
 	@echo "Running npm audit (dependency vulnerabilities)..."
