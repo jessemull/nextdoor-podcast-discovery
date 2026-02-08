@@ -1,6 +1,10 @@
 # Web Tests
 
-This directory will contain tests for the Next.js web application.
+This directory contains tests for the Next.js web application.
+
+## Supabase mocks
+
+API route tests mock the Supabase client with chainable builders (e.g. `from().select().eq()`). Those mocks are typed as `vi.fn() as any` so the chain can be built fluently. Prefer asserting on **behavior** (response status, JSON body, error messages) rather than on mock call shapes or internal implementation. This keeps tests stable when refactoring.
 
 ## Setup
 

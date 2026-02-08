@@ -20,19 +20,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
 
-Create a `.env.local` file and add your values:
+Copy `.env.example` to `.env.local` and fill in your values:
 
 ```bash
-touch .env.local
+cp .env.example .env.local
 ```
 
-Required variables include:
+See `.env.example` for the full list. Required variables include:
 
-- Supabase URLs and keys (public and server-side)
-- NextAuth.js configuration
-- Google OAuth credentials
-- Email whitelist for access control
-- Anthropic API key for sports facts
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase (client-safe)
+- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` — Supabase (server-side; keep secret)
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL` — NextAuth.js
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google OAuth
+- `ALLOWED_EMAILS` — Comma-separated emails that can sign in (or set in env)
+- `ANTHROPIC_API_KEY` — For Pittsburgh sports facts (and optional `USER_EMAIL` / `NEXT_PUBLIC_USER_EMAIL`)
 
 ## Project Structure
 

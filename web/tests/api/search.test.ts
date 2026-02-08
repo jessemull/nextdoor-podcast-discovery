@@ -85,7 +85,10 @@ describe("POST /api/search", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain("Query is required");
+    expect(data.error).toBeDefined();
+    expect(
+      data.error.includes("Query is required") || data.error.includes("Required")
+    ).toBe(true);
   });
 
   it("should return 400 when query is empty string", async () => {

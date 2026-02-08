@@ -78,9 +78,17 @@ nextdoor/
 ├── scraper/                # Python scraper + LLM workers
 │   ├── src/
 │   │   ├── __init__.py
-│   │   ├── main.py         # Entry point
 │   │   ├── config.py       # Configuration
-│   │   └── exceptions.py   # Custom exceptions
+│   │   ├── embed.py        # Standalone embedding script
+│   │   ├── embedder.py     # OpenAI embeddings
+│   │   ├── exceptions.py   # Custom exceptions
+│   │   ├── llm_scorer.py   # Claude scoring
+│   │   ├── main.py         # Entry point
+│   │   ├── post_extractor.py
+│   │   ├── post_storage.py
+│   │   ├── scraper.py      # Playwright scraper
+│   │   ├── session_manager.py
+│   │   └── worker.py       # Background job worker
 │   ├── tests/
 │   ├── requirements.txt
 │   └── pyproject.toml

@@ -86,8 +86,8 @@ class PostStorage:
             stats["skipped"] = len(posts_data) - inserted_count
 
         except Exception as e:
-            # Batch insert failed - fall back to individual inserts
-            # This handles network errors, database constraint violations, etc.
+            # Intentionally broad: batch insert can fail for network, constraints, etc.
+            # Fall back to individual inserts so we don't lose all posts.
             logger.warning(
                 "Batch insert failed (%s), falling back to individual inserts: %s",
                 type(e).__name__,

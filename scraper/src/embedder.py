@@ -64,9 +64,6 @@ class Embedder:
         except (APIError, ValueError) as e:
             logger.error("Failed to generate embeddings: %s", e)
             raise
-        except Exception as e:
-            logger.error("Unexpected error generating embeddings: %s", e)
-            raise
 
     def generate_and_store_embeddings(self, dry_run: bool = False) -> dict[str, int]:
         """Generate embeddings for posts without them and store in database.
@@ -165,9 +162,20 @@ class Embedder:
                 )
                 stats["errors"] += len(batch)
                 stats["processed"] += len(batch)
+            except (OSError, ConnectionError) as e:
+                # Network/Supabase connection errors - continue with remaining batches
+                logger.error(
+                    "Connection error processing batch (batch %d/%d): %s (type: %s)",
+                    (i // EMBEDDING_BATCH_SIZE) + 1,
+                    (len(posts_to_embed) + EMBEDDING_BATCH_SIZE - 1)
+                    // EMBEDDING_BATCH_SIZE,
+                    e,
+                    type(e).__name__,
+                )
+                stats["errors"] += len(batch)
+                stats["processed"] += len(batch)
             except Exception as e:
-                # Catch-all for Supabase database errors and other unexpected errors
-                # Continue processing remaining batches even if one fails
+                # Supabase/DB or other unexpected errors - continue with remaining batches
                 logger.error(
                     "Unexpected error processing batch (batch %d/%d): %s (type: %s)",
                     (i // EMBEDDING_BATCH_SIZE) + 1,

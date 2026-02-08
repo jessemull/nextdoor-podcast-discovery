@@ -314,7 +314,7 @@ async function getPostsByScore(
         neighborhood: post.neighborhood || null,
       };
     })
-    .filter((r) => r !== null) as unknown as PostWithScores[];
+    .filter((r) => r !== null) as unknown as PostWithScores[]; // RPC/DB row shape matches PostWithScores
 
   return NextResponse.json({
     data: results,
@@ -399,7 +399,7 @@ async function getPostsByDate(
     ...post,
     llm_scores: scoresMap.get(post.id) || null,
     neighborhood: post.neighborhood || null,
-  })) as unknown as PostWithScores[];
+  })) as unknown as PostWithScores[]; // DB Row types; we use PostWithScores in API
 
   // Apply post-query filters
 

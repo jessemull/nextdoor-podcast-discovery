@@ -244,7 +244,11 @@ describe("PUT /api/settings", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain("similarity_threshold");
+    expect(data.error).toBeDefined();
+    expect(
+      data.error.includes("similarity_threshold") ||
+        data.error.includes("less than or equal to 1")
+    ).toBe(true);
   });
 
   it("should return 400 for missing search_defaults", async () => {

@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { env } from "@/lib/env.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { searchBodySchema } from "@/lib/validators";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -33,11 +34,6 @@ interface SearchResult {
 const EMBEDDING_MODEL = "text-embedding-3-small";
 
 /**
- * Maximum query length for search (to prevent expensive API calls).
- */
-const MAX_QUERY_LENGTH = 1000;
-
-/**
  * POST /api/search
  *
  * Semantic search for posts using vector embeddings. Requires authentication.
@@ -56,42 +52,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { limit = 10, query, similarity_threshold = 0.5 } = body;
-
-    if (!query || typeof query !== "string" || query.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Query is required and must be a non-empty string" },
-        { status: 400 }
-      );
+    const parsed = searchBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const message = first?.message ?? "Invalid request body";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-
-    // Validate query length
-
-    const trimmedQuery = query.trim();
-    if (trimmedQuery.length > MAX_QUERY_LENGTH) {
-      return NextResponse.json(
-        {
-          error: `Query too long (max ${MAX_QUERY_LENGTH} characters)`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate limit
-
-    const parsedLimit = parseInt(String(limit));
-    const validLimit = Math.min(
-      isNaN(parsedLimit) ? 10 : parsedLimit,
-      50
-    );
-
-    // Validate similarity threshold
-
-    const parsedThreshold = parseFloat(String(similarity_threshold));
-    const validThreshold = Math.max(
-      0,
-      Math.min(1, isNaN(parsedThreshold) ? 0.5 : parsedThreshold)
-    );
+    const { limit: validLimit, query: trimmedQuery, similarity_threshold: validThreshold } =
+      parsed.data;
 
     // Generate embedding for the query
     let openaiApiKey: string;
@@ -228,6 +196,7 @@ export async function POST(request: NextRequest) {
 
     // Combine results with scores and neighborhoods
 
+    // RPC return shape matches PostWithScores structurally; DB types are hand-maintained
     const posts = searchResultsList.map((result: SearchResult) => ({
         created_at: result.created_at,
         episode_date: result.episode_date,

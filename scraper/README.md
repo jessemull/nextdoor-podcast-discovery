@@ -4,18 +4,24 @@ Python-based scraper for collecting and analyzing Nextdoor posts.
 
 ## Setup
 
+The root Makefile uses a virtual environment at `.venv`. From the repo root:
+
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+make venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+make install-scraper
+```
 
-# Install dependencies
+Or from the `scraper/` directory:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
-
-# Install Playwright browsers
 playwright install chromium
 
-# For development
+# For development (lint, test, type-check)
 pip install -r requirements-dev.txt
 ```
 
@@ -91,18 +97,31 @@ python -m src.embed --dry-run
 pytest
 ```
 
+## Scraping policy
+
+- **Rate limiting:** The scraper uses configurable delays (scroll, typing) to avoid hammering the site. See `SCRAPER_CONFIG` in `src/config.py` (`scroll_delay_ms`, `typing_delay_ms`, `navigation_timeout_ms`).
+- **robots.txt:** We do not currently fetch or enforce Nextdoor’s robots.txt. If you run this against other domains, consider adding a startup check and respecting disallow rules.
+
 ## Project Structure
 
 ```
 scraper/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py           # Entry point
 │   ├── config.py         # Configuration
-│   └── exceptions.py     # Custom exceptions
+│   ├── embed.py          # Standalone embedding script
+│   ├── embedder.py       # OpenAI embeddings
+│   ├── exceptions.py     # Custom exceptions
+│   ├── llm_scorer.py     # Claude scoring
+│   ├── main.py           # Entry point
+│   ├── post_extractor.py # Feed parsing
+│   ├── post_storage.py   # Supabase storage
+│   ├── scraper.py        # Playwright browser scraper
+│   ├── session_manager.py
+│   └── worker.py         # Background job worker
 ├── tests/
 │   └── test_*.py
-├── .env                 # Environment variables (local only)
+├── .env                  # Environment variables (local only)
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md

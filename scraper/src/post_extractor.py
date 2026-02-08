@@ -256,7 +256,7 @@ class PostExtractor:
                 links: document.querySelectorAll('a[href*="/profile/"]').length
             })
             """)
-        logger.info("Page debug info: %s", debug_info)
+        logger.debug("Page debug info: %s", debug_info)
 
     def _process_raw_post(self, raw: dict[str, Any]) -> RawPost | None:
         """Process raw post data from JavaScript.
@@ -396,6 +396,7 @@ class PostExtractor:
             try:
                 self.page.keyboard.press("Escape")
             except Exception:
+                # Intentionally swallow so modal close failure doesn't mask timeout
                 pass
 
             return None
@@ -441,6 +442,6 @@ class PostExtractor:
 
             return None
 
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             logger.debug("Error parsing share URL: %s", e)
             return None

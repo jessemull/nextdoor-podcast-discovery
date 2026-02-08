@@ -10,6 +10,14 @@ SQL migrations for the Supabase PostgreSQL database.
    - `001_initial_schema.sql`
    - `002_llm_scoring_schema.sql`
    - `003_semantic_search.sql`
+   - `004_background_jobs.sql`
+   - `005_weight_config_versioning.sql`
+   - `006_posts_with_scores_rpc.sql`
+   - `007_has_scores_optimization.sql`
+   - `008_job_cancellation.sql`
+   - `009_job_retry.sql`
+
+**Note:** The Python worker, web app settings/weight config flows, and TESTING_GUIDE assume migrations 004–009 are applied. Run all migrations for full functionality.
 
 ## Seed Data
 
@@ -25,8 +33,13 @@ After running migrations, optionally run seed data:
 | `posts` | Raw post data from Nextdoor |
 | `llm_scores` | Claude analysis results (scores, tags, summary) |
 | `post_embeddings` | OpenAI embedding vectors for semantic search |
-| `rankings` | Calculated final scores, episode usage tracking |
-| `settings` | Application settings (ranking weights, etc.) |
+| `post_scores` | Final scores per post per weight config (versioned) |
+| `weight_configs` | Named weight configurations and active flag |
+| `background_jobs` | Long-running jobs (recompute scores, etc.) |
+| `topic_frequencies` | Category counts for novelty scoring |
+| `settings` | Application settings (active_weight_config_id, search_defaults, etc.) |
+
+(Older tables such as `rankings` may exist from 001; post_scores/weight_configs supersede for versioned ranking.)
 
 ## Indexes
 
@@ -37,10 +50,13 @@ After running migrations, optionally run seed data:
 - `idx_llm_scores_final` — Sort by final score
 - `idx_llm_scores_categories` — GIN index for category filtering
 - `idx_posts_unused` — Find unused posts
+- `idx_background_jobs_type_status`, `idx_background_jobs_status`, `idx_background_jobs_created` — Job polling and listing
 
 ## RPC Functions
 
 - `search_posts_by_embedding(query_embedding, similarity_threshold, result_limit)` — Semantic search using vector similarity
 - `get_unscored_posts(limit)` — Get posts that need LLM scoring
+- `get_posts_with_scores(weight_config_id, limit, offset, min_score, category, unused_only)` — Posts joined with scores for feed
+- `get_posts_with_scores_count(weight_config_id, min_score, category, unused_only)` — Count for pagination
 - `increment_topic_frequency(category, increment)` — Update topic frequency counts
 - `recount_topic_frequencies()` — Recalculate all topic frequencies (call daily)

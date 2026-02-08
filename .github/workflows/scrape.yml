@@ -42,7 +42,7 @@ jobs:
           NEXTDOOR_EMAIL: ${{ secrets.NEXTDOOR_EMAIL }}
           NEXTDOOR_PASSWORD: ${{ secrets.NEXTDOOR_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

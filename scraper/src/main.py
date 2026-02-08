@@ -9,6 +9,7 @@ import sys
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from supabase import Client
 
 from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
 from src.exceptions import (
@@ -33,16 +34,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _run_scoring(supabase_client: object) -> None:
+def _run_scoring(supabase_client: Client) -> None:
     """Run LLM scoring on unscored posts.
 
     Args:
         supabase_client: Supabase client instance.
     """
-    # Initialize scorer
-
     anthropic = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    scorer = LLMScorer(anthropic, supabase_client)  # type: ignore[arg-type]
+    scorer = LLMScorer(anthropic, supabase_client)
 
     # Get unscored posts
 

@@ -3,18 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
-
-// Valid weight dimensions (must match scraper/src/worker.py)
-const VALID_WEIGHT_DIMENSIONS = [
-  "absurdity",
-  "drama",
-  "discussion_spark",
-  "emotional_intensity",
-  "news_value",
-] as const;
-
-const MIN_WEIGHT = 0;
-const MAX_WEIGHT = 10;
+import { settingsPutBodySchema } from "@/lib/validators";
 
 /**
  * GET /api/settings
@@ -118,70 +107,18 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { ranking_weights, search_defaults } = body;
-
-    if (!ranking_weights && !search_defaults) {
-      return NextResponse.json(
-        { error: "At least one of ranking_weights or search_defaults must be provided" },
-        { status: 400 }
-      );
+    const parsed = settingsPutBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const message = first?.message ?? "Invalid request body";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    const { ranking_weights, search_defaults } = parsed.data;
 
     const supabase = getSupabaseAdmin();
-    // Supabase query builders are thenable; Promise.all accepts them
     const updates: unknown[] = [];
 
-    // Validate and update ranking_weights
     if (ranking_weights) {
-      if (typeof ranking_weights !== "object" || Array.isArray(ranking_weights)) {
-        return NextResponse.json(
-          { error: "ranking_weights must be an object" },
-          { status: 400 }
-        );
-      }
-
-      // Validate all values are numbers within bounds
-      for (const [key, value] of Object.entries(ranking_weights)) {
-        if (typeof value !== "number") {
-          return NextResponse.json(
-            { error: `ranking_weights.${key} must be a number` },
-            { status: 400 }
-          );
-        }
-        if (value < MIN_WEIGHT || value > MAX_WEIGHT) {
-          return NextResponse.json(
-            { error: `ranking_weights.${key} must be between ${MIN_WEIGHT} and ${MAX_WEIGHT}` },
-            { status: 400 }
-          );
-        }
-      }
-
-      // Validate only valid dimensions are present
-      const invalidDimensions = Object.keys(ranking_weights).filter(
-        (key) => !VALID_WEIGHT_DIMENSIONS.includes(key as typeof VALID_WEIGHT_DIMENSIONS[number])
-      );
-      if (invalidDimensions.length > 0) {
-        return NextResponse.json(
-          {
-            error: `Invalid weight dimensions: ${invalidDimensions.join(", ")}. Valid dimensions are: ${VALID_WEIGHT_DIMENSIONS.join(", ")}`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Validate all required dimensions are present
-      const missingDimensions = VALID_WEIGHT_DIMENSIONS.filter(
-        (dim) => !(dim in ranking_weights)
-      );
-      if (missingDimensions.length > 0) {
-        return NextResponse.json(
-          {
-            error: `Missing required weight dimensions: ${missingDimensions.join(", ")}`,
-          },
-          { status: 400 }
-        );
-      }
-
       updates.push(
         supabase
           .from("settings")
@@ -189,28 +126,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Validate and update search_defaults
     if (search_defaults) {
-      if (typeof search_defaults !== "object" || Array.isArray(search_defaults)) {
-        return NextResponse.json(
-          { error: "search_defaults must be an object" },
-          { status: 400 }
-        );
-      }
-
-      // Validate similarity_threshold if present
-      if (
-        "similarity_threshold" in search_defaults &&
-        (typeof search_defaults.similarity_threshold !== "number" ||
-          search_defaults.similarity_threshold < 0 ||
-          search_defaults.similarity_threshold > 1)
-      ) {
-        return NextResponse.json(
-          { error: "search_defaults.similarity_threshold must be a number between 0 and 1" },
-          { status: 400 }
-        );
-      }
-
       updates.push(
         supabase
           .from("settings")
