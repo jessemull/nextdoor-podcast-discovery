@@ -76,6 +76,7 @@ export interface RankingWeights {
   drama: number;
   emotional_intensity: number;
   news_value: number;
+  podcast_worthy?: number;
   readability?: number;
 }
 

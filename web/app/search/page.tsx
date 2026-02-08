@@ -9,6 +9,17 @@ import { useDebounce } from "@/lib/hooks";
 
 import type { PostWithScores } from "@/lib/types";
 
+const SEARCH_SUGGESTIONS = [
+  "coyote",
+  "lost dog",
+  "lost cat",
+  "HOA",
+  "noisy neighbors",
+  "suspicious",
+  "package stolen",
+  "wildlife",
+];
+
 interface SearchResponse {
   data: PostWithScores[];
   total: number;
@@ -52,24 +63,45 @@ function SearchPageContent() {
   const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [total, setTotal] = useState(0);
   const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
+  const [embeddingBacklog, setEmbeddingBacklog] = useState(0);
 
   const debouncedQuery = useDebounce(query, DEBOUNCE_DELAY_MS);
 
-  // Load default similarity threshold from settings on mount
+  // Load default similarity threshold from settings, and sync with URL
+  useEffect(() => {
+    const thresholdParam = searchParams.get("threshold");
+    if (thresholdParam != null) {
+      const n = parseFloat(thresholdParam);
+      if (!isNaN(n) && n >= 0 && n <= 1) {
+        setSimilarityThreshold(n);
+      }
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const loadDefaults = async () => {
       try {
-        const response = await fetch("/api/settings");
-        if (response.ok) {
-          const data: SettingsResponse = await response.json();
+        const [settingsRes, statsRes] = await Promise.all([
+          fetch("/api/settings"),
+          fetch("/api/stats"),
+        ]);
+        if (settingsRes.ok) {
+          const data: SettingsResponse = await settingsRes.json();
           if (
             data.data.search_defaults?.similarity_threshold !== undefined &&
             typeof data.data.search_defaults.similarity_threshold === "number"
           ) {
-            setSimilarityThreshold(data.data.search_defaults.similarity_threshold);
+            const urlThreshold = searchParams.get("threshold");
+            if (!urlThreshold) {
+              setSimilarityThreshold(data.data.search_defaults.similarity_threshold);
+            }
           }
         } else {
           setLoadDefaultsError("Failed to load search defaults. Using default threshold.");
+        }
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setEmbeddingBacklog(stats.embedding_backlog ?? 0);
         }
       } catch (err) {
         console.error("Error loading search defaults:", err);
@@ -82,7 +114,17 @@ function SearchPageContent() {
     };
 
     void loadDefaults();
-  }, []);
+  }, [searchParams]);
+
+  const updateUrlThreshold = useCallback(
+    (value: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("threshold", value.toFixed(1));
+      const newUrl = `/search${params.toString() ? `?${params.toString()}` : ""}`;
+      router.replace(newUrl, { scroll: false });
+    },
+    [router, searchParams]
+  );
 
   const handleSearch = useCallback(
     async (searchQuery: string) => {
@@ -210,19 +252,45 @@ function SearchPageContent() {
         )}
 
         {/* Search Input */}
-        <div className="mb-6">
+        <div className="mb-4">
           <input
             aria-label="Search posts"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="e.g., noisy neighbors, lost pet, suspicious activity..."
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           {loading && (
-            <p className="text-sm text-gray-500 mt-2">Searching...</p>
+            <p className="mt-2 text-sm text-gray-500">Searching...</p>
           )}
         </div>
+
+        {/* Search suggestions */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="self-center text-xs text-gray-500">
+            Try:
+          </span>
+          {SEARCH_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion}
+              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+              type="button"
+              onClick={() => setQuery(suggestion)}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+
+        {/* Embedding backlog note */}
+        {embeddingBacklog > 0 && (
+          <p className="mb-4 text-xs text-amber-400">
+            {embeddingBacklog} post{embeddingBacklog !== 1 ? "s" : ""} still
+            need embeddings. Semantic search may miss some recent posts until
+            the daily embed job runs.
+          </p>
+        )}
 
         {/* Search mode toggle */}
         <div className="mb-4 flex items-center gap-4">
@@ -279,9 +347,11 @@ function SearchPageContent() {
               step={0.1}
               type="range"
               value={similarityThreshold}
-              onChange={(e) =>
-                setSimilarityThreshold(parseFloat(e.target.value))
-              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setSimilarityThreshold(v);
+                updateUrlThreshold(v);
+              }}
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
               <span>0.0 (loose)</span>

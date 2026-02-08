@@ -75,10 +75,21 @@ describe("PodcastPicks", () => {
   });
 
   it("should display empty state when no picks returned", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ data: [], total: 0 }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/settings")) {
+          return Promise.resolve({
+            json: async () => ({ data: {} }),
+            ok: true,
+          } as Response);
+        }
+        return Promise.resolve({
+          json: async () => ({ data: [], total: 0 }),
+          ok: true,
+        } as Response);
+      }
+    );
 
     render(<WrappedPodcastPicks />);
 
@@ -90,10 +101,21 @@ describe("PodcastPicks", () => {
   });
 
   it("should display picks after successful fetch", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ data: [mockPost], total: 1 }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/settings")) {
+          return Promise.resolve({
+            json: async () => ({ data: {} }),
+            ok: true,
+          } as Response);
+        }
+        return Promise.resolve({
+          json: async () => ({ data: [mockPost], total: 1 }),
+          ok: true,
+        } as Response);
+      }
+    );
 
     render(<WrappedPodcastPicks />);
 

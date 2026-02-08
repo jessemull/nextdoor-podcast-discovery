@@ -32,6 +32,7 @@ import type { PostsResponse, PostWithScores } from "@/lib/types";
 export function PostFeed() {
   const router = useRouter();
   const {
+    debouncedMinPodcastWorthy,
     debouncedMinScore,
     episodeDates,
     filterLoadError,
@@ -101,6 +102,14 @@ export function PostFeed() {
           }
         }
 
+        // Validate and parse minPodcastWorthy
+        if (debouncedMinPodcastWorthy) {
+          const minPw = parseFloat(debouncedMinPodcastWorthy);
+          if (!isNaN(minPw) && minPw >= 0 && minPw <= 10) {
+            params.set("min_podcast_worthy", String(minPw));
+          }
+        }
+
         if (filters.unusedOnly) params.set("unused_only", "true");
 
         const response = await fetch(`/api/posts?${params.toString()}`);
@@ -124,6 +133,7 @@ export function PostFeed() {
       }
     },
     [
+      debouncedMinPodcastWorthy,
       debouncedMinScore,
       filters.category,
       filters.episodeDate,

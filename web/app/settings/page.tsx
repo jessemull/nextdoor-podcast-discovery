@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { JobsList } from "@/components/JobsList";
 import { NoveltyConfigEditor } from "@/components/NoveltyConfigEditor";
+import { NoveltyPreview } from "@/components/NoveltyPreview";
+import { PicksDefaultsEditor } from "@/components/PicksDefaultsEditor";
 import { RankingWeightsEditor } from "@/components/RankingWeightsEditor";
 import { SearchDefaultsEditor } from "@/components/SearchDefaultsEditor";
 import { WeightConfigsList } from "@/components/WeightConfigsList";
@@ -22,6 +24,7 @@ interface NoveltyConfig {
 interface SettingsResponse {
   data: {
     novelty_config?: NoveltyConfig;
+    picks_defaults?: { picks_limit: number; picks_min: number };
     ranking_weights: RankingWeights;
     search_defaults: {
       similarity_threshold: number;
@@ -60,13 +63,14 @@ interface JobsResponse {
   total: number;
 }
 
-// Original default weights (from PROJECT_PLAN.md and migration 002)
+// Default weights (includes podcast_worthy for direct podcast suitability signal)
 const DEFAULT_WEIGHTS: RankingWeights = {
   absurdity: 2.0,
   discussion_spark: 1.0,
   drama: 1.5,
   emotional_intensity: 1.2,
   news_value: 1.0,
+  podcast_worthy: 2.0,
   readability: 1.2,
 };
 
@@ -101,6 +105,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRecomputing, setIsRecomputing] = useState(false);
+  const [configName, setConfigName] = useState("");
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
   const [noveltyConfig, setNoveltyConfig] = useState<NoveltyConfig>({
     frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
@@ -110,6 +115,10 @@ export default function SettingsPage() {
   });
   const [searchDefaults, setSearchDefaults] = useState({
     similarity_threshold: 0.2,
+  });
+  const [picksDefaults, setPicksDefaults] = useState({
+    picks_limit: 5,
+    picks_min: 7,
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
@@ -144,6 +153,9 @@ export default function SettingsPage() {
           if (settingsData.data.search_defaults) {
             setSearchDefaults(settingsData.data.search_defaults);
           }
+          if (settingsData.data.picks_defaults) {
+            setPicksDefaults(settingsData.data.picks_defaults);
+          }
         }
 
         if (configsResponse.ok) {
@@ -156,10 +168,10 @@ export default function SettingsPage() {
             (config) => config.id === configsData.active_config_id
           );
           if (activeConfig?.weights) {
-            setRankingWeights(activeConfig.weights);
+            setRankingWeights({ ...DEFAULT_WEIGHTS, ...activeConfig.weights });
           } else if (configsData.data.length > 0 && configsData.data[0].weights) {
             // Fallback to first config if no active
-            setRankingWeights(configsData.data[0].weights);
+            setRankingWeights({ ...DEFAULT_WEIGHTS, ...configsData.data[0].weights });
           }
         }
       } catch (err) {
@@ -183,7 +195,10 @@ export default function SettingsPage() {
     try {
       // Save weights and trigger recompute
       const response = await fetch("/api/admin/recompute-scores", {
-        body: JSON.stringify({ ranking_weights: rankingWeights }),
+        body: JSON.stringify({
+          name: configName.trim() || undefined,
+          ranking_weights: rankingWeights,
+        }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -212,7 +227,7 @@ export default function SettingsPage() {
       setIsSaving(false);
       setIsRecomputing(false);
     }
-  }, [rankingWeights, setWeightConfigs]);
+  }, [configName, rankingWeights, setWeightConfigs]);
 
   const handleActivateConfig = useCallback(async (configId: string) => {
     setIsActivating(true);
@@ -343,6 +358,36 @@ export default function SettingsPage() {
     }
   }, [noveltyConfig]);
 
+  const handleSavePicksDefaults = useCallback(async () => {
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/settings", {
+        body: JSON.stringify({
+          picks_defaults: picksDefaults,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || "Failed to save picks defaults");
+      }
+
+      setSuccessMessage("Podcast Picks defaults saved successfully");
+    } catch (err) {
+      console.error("Error saving picks defaults:", err);
+      setError(err instanceof Error ? err.message : "Failed to save picks defaults");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [picksDefaults]);
+
   const handleSaveSearchDefaults = useCallback(async () => {
     setIsSaving(true);
     setError(null);
@@ -416,11 +461,13 @@ export default function SettingsPage() {
 
         {/* Ranking Weights Section */}
         <RankingWeightsEditor
+          configName={configName}
           isJobRunning={isJobRunning}
           isRecomputing={isRecomputing}
           isSaving={isSaving}
           pendingJobsCount={pendingJobs.length}
           rankingWeights={rankingWeights}
+          setConfigName={setConfigName}
           setRankingWeights={setRankingWeights}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
@@ -432,6 +479,15 @@ export default function SettingsPage() {
           noveltyConfig={noveltyConfig}
           setNoveltyConfig={setNoveltyConfig}
           onSave={handleSaveNoveltyConfig}
+        />
+        <NoveltyPreview noveltyConfig={noveltyConfig} />
+
+        {/* Podcast Picks Defaults Section */}
+        <PicksDefaultsEditor
+          isSaving={isSaving}
+          picksDefaults={picksDefaults}
+          setPicksDefaults={setPicksDefaults}
+          onSave={handleSavePicksDefaults}
         />
 
         {/* Search Defaults Section */}

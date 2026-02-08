@@ -3,6 +3,7 @@
 import type { RankingWeights } from "@/lib/types";
 
 interface RankingWeightsEditorProps {
+  configName: string;
   isJobRunning: boolean;
   isRecomputing: boolean;
   isSaving: boolean;
@@ -10,6 +11,7 @@ interface RankingWeightsEditorProps {
   onSave: () => void;
   pendingJobsCount: number;
   rankingWeights: RankingWeights;
+  setConfigName: (name: string) => void;
   setRankingWeights: (weights: RankingWeights) => void;
 }
 
@@ -19,15 +21,27 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   drama: 1.5,
   emotional_intensity: 1.2,
   news_value: 1.0,
+  podcast_worthy: 2.0,
+  readability: 1.2,
 };
 
 const PRESETS: Record<string, RankingWeights> = {
+  Balanced: {
+    absurdity: 1.5,
+    discussion_spark: 1.0,
+    drama: 1.0,
+    emotional_intensity: 1.0,
+    news_value: 1.0,
+    podcast_worthy: 2.0,
+    readability: 1.2,
+  },
   Comedy: {
     absurdity: 3.0,
     discussion_spark: 1.0,
     drama: 1.5,
     emotional_intensity: 1.5,
     news_value: 0.5,
+    podcast_worthy: 2.0,
     readability: 1.2,
   },
   Drama: {
@@ -36,7 +50,17 @@ const PRESETS: Record<string, RankingWeights> = {
     drama: 3.0,
     emotional_intensity: 2.0,
     news_value: 1.0,
+    podcast_worthy: 1.5,
     readability: 1.2,
+  },
+  "Max Absurdity": {
+    absurdity: 4.0,
+    discussion_spark: 0.5,
+    drama: 1.0,
+    emotional_intensity: 1.5,
+    news_value: 0.5,
+    podcast_worthy: 2.0,
+    readability: 1.0,
   },
   News: {
     absurdity: 0.5,
@@ -44,6 +68,7 @@ const PRESETS: Record<string, RankingWeights> = {
     drama: 1.0,
     emotional_intensity: 1.0,
     news_value: 3.0,
+    podcast_worthy: 1.5,
     readability: 1.2,
   },
 };
@@ -54,6 +79,7 @@ const PRESETS: Record<string, RankingWeights> = {
  * Allows users to adjust ranking weights using sliders and save/recompute scores.
  */
 export function RankingWeightsEditor({
+  configName,
   isJobRunning,
   isRecomputing,
   isSaving,
@@ -61,6 +87,7 @@ export function RankingWeightsEditor({
   onSave,
   pendingJobsCount,
   rankingWeights,
+  setConfigName,
   setRankingWeights,
 }: RankingWeightsEditorProps) {
   return (
@@ -69,6 +96,23 @@ export function RankingWeightsEditor({
       <p className="mb-4 text-sm text-gray-400">
         Adjust how important each scoring dimension is when calculating the final score.
       </p>
+
+      <div className="mb-4">
+        <label
+          className="mb-1 block text-sm font-medium text-gray-300"
+          htmlFor="config-name"
+        >
+          Config name (optional)
+        </label>
+        <input
+          className="w-full max-w-md rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
+          id="config-name"
+          placeholder="e.g. Episode 5 Prep, Comedy Focus"
+          type="text"
+          value={configName}
+          onChange={(e) => setConfigName(e.target.value)}
+        />
+      </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
         <span className="text-xs text-gray-500">Presets:</span>

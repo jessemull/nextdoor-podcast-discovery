@@ -36,8 +36,13 @@ export async function GET() {
         ? activeConfigResult.data.value
         : null;
 
-    // Fetch active weight config, search defaults, and novelty config in parallel
-    const [configResult, searchDefaultsResult, noveltyConfigResult] = await Promise.all([
+    // Fetch active weight config, search defaults, novelty config, picks defaults in parallel
+    const [
+      configResult,
+      searchDefaultsResult,
+      noveltyConfigResult,
+      picksDefaultsResult,
+    ] = await Promise.all([
       activeConfigId
         ? supabase
             .from("weight_configs")
@@ -47,6 +52,7 @@ export async function GET() {
         : Promise.resolve({ data: null, error: null }),
       supabase.from("settings").select("value").eq("key", "search_defaults").single(),
       supabase.from("settings").select("value").eq("key", "novelty_config").single(),
+      supabase.from("settings").select("value").eq("key", "picks_defaults").single(),
     ]);
 
     // Get ranking weights from active config, or fallback to defaults
@@ -59,6 +65,8 @@ export async function GET() {
             drama: 1.5,
             emotional_intensity: 1.2,
             news_value: 1.0,
+            podcast_worthy: 2.0,
+            readability: 1.2,
           };
 
     const searchDefaults =
@@ -80,9 +88,19 @@ export async function GET() {
             window_days: 30,
           };
 
+    const picksDefaults =
+      picksDefaultsResult.data?.value &&
+      typeof picksDefaultsResult.data.value === "object"
+        ? (picksDefaultsResult.data.value as Record<string, unknown>)
+        : {
+            picks_limit: 5,
+            picks_min: 7,
+          };
+
     return NextResponse.json({
       data: {
         novelty_config: noveltyConfig,
+        picks_defaults: picksDefaults,
         ranking_weights: rankingWeights,
         search_defaults: searchDefaults,
       },
@@ -126,7 +144,8 @@ export async function PUT(request: NextRequest) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { novelty_config, ranking_weights, search_defaults } = parsed.data;
+    const { novelty_config, picks_defaults, ranking_weights, search_defaults } =
+      parsed.data;
 
     const supabase = getSupabaseAdmin();
     const updates: unknown[] = [];
@@ -152,6 +171,14 @@ export async function PUT(request: NextRequest) {
         supabase
           .from("settings")
           .upsert({ key: "search_defaults", value: search_defaults }, { onConflict: "key" })
+      );
+    }
+
+    if (picks_defaults) {
+      updates.push(
+        supabase
+          .from("settings")
+          .upsert({ key: "picks_defaults", value: picks_defaults }, { onConflict: "key" })
       );
     }
 

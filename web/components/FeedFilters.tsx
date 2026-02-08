@@ -5,7 +5,7 @@ import { TOPIC_CATEGORIES } from "@/lib/constants";
 import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
 
-type SortOption = "date" | "score";
+type SortOption = "date" | "podcast_score" | "score";
 
 export interface FeedFiltersProps {
   episodeDates: string[];
@@ -98,6 +98,70 @@ export function FeedFilters({
         >
           Humor
         </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.category === "wildlife"
+              ? "bg-green-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({
+              ...prev,
+              category: prev.category === "wildlife" ? "" : "wildlife",
+            }))
+          }
+        >
+          Wildlife
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.category === "crime"
+              ? "bg-red-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({
+              ...prev,
+              category: prev.category === "crime" ? "" : "crime",
+            }))
+          }
+        >
+          Crime
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.category === "lost_pet"
+              ? "bg-orange-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({
+              ...prev,
+              category: prev.category === "lost_pet" ? "" : "lost_pet",
+            }))
+          }
+        >
+          Lost Pet
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.category === "local_news"
+              ? "bg-cyan-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({
+              ...prev,
+              category: prev.category === "local_news" ? "" : "local_news",
+            }))
+          }
+        >
+          Local News
+        </button>
       </div>
       {/* Refine filters (collapsible) */}
       <div>
@@ -127,6 +191,7 @@ export function FeedFilters({
                 }
               >
                 <option value="score">Highest Score</option>
+                <option value="podcast_score">Podcast Score</option>
                 <option value="date">Most Recent</option>
               </select>
             </div>
@@ -217,6 +282,35 @@ export function FeedFilters({
                     (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)
                   ) {
                     setFilters({ ...filters, minScore: value });
+                  }
+                }}
+              />
+            </div>
+            {/* Min Podcast Worthy */}
+            <div className="flex items-center gap-2">
+              <label
+                className="text-sm text-gray-400"
+                htmlFor="minPodcastWorthy"
+              >
+                Min Podcast:
+              </label>
+              <input
+                className="w-16 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                id="minPodcastWorthy"
+                max="10"
+                min="0"
+                placeholder="0"
+                type="number"
+                value={filters.minPodcastWorthy}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (
+                    value === "" ||
+                    (!isNaN(parseFloat(value)) &&
+                      parseFloat(value) >= 0 &&
+                      parseFloat(value) <= 10)
+                  ) {
+                    setFilters({ ...filters, minPodcastWorthy: value });
                   }
                 }}
               />

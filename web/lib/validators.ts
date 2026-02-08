@@ -14,6 +14,7 @@ const VALID_WEIGHT_DIMENSIONS = [
   "drama",
   "emotional_intensity",
   "news_value",
+  "podcast_worthy",
   "readability",
 ] as const;
 
@@ -72,6 +73,12 @@ const noveltyConfigSchema = z.object({
 export const settingsPutBodySchema = z
   .object({
     novelty_config: noveltyConfigSchema.optional(),
+    picks_defaults: z
+      .object({
+        picks_limit: z.number().int().min(1).max(20).optional(),
+        picks_min: z.number().min(0).max(10).optional(),
+      })
+      .optional(),
     ranking_weights: rankingWeightsSchema.optional(),
     search_defaults: z
       .object({
@@ -83,8 +90,9 @@ export const settingsPutBodySchema = z
     (data) =>
       data.ranking_weights !== undefined ||
       data.search_defaults !== undefined ||
-      data.novelty_config !== undefined,
-    "At least one of ranking_weights, search_defaults, or novelty_config must be provided"
+      data.novelty_config !== undefined ||
+      data.picks_defaults !== undefined,
+    "At least one of ranking_weights, search_defaults, novelty_config, or picks_defaults must be provided"
   );
 
 export type SettingsPutBody = z.infer<typeof settingsPutBodySchema>;
@@ -130,6 +138,7 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(20)
     .transform((n) => Math.min(100, Math.max(1, n))),
+  min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   min_score: z.coerce.number().min(0).optional(),
   neighborhood_id: z
     .string()
@@ -147,7 +156,7 @@ export const postsQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   sort: z
-    .enum(["date", "score"])
+    .enum(["date", "podcast_score", "score"])
     .optional()
     .default("score"),
   unused_only: z

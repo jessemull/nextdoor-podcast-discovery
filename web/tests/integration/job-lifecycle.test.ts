@@ -105,6 +105,7 @@ describe("Job Lifecycle Integration", () => {
           drama: 1.5,
           emotional_intensity: 1.2,
           news_value: 1.0,
+          podcast_worthy: 2.0,
           readability: 1.2,
         },
       }),

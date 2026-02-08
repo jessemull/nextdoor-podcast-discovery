@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ActiveConfigBadge } from "@/components/ActiveConfigBadge";
 import { PodcastPicks } from "@/components/PodcastPicks";
 import { PostFeed } from "@/components/PostFeed";
 import { SportsFact } from "@/components/SportsFact";
@@ -27,7 +28,10 @@ export default function Home() {
         </Suspense>
         {/* Post feed + quick filters */}
         <section aria-label="Feed">
-          <h2 className="text-xl font-semibold mb-4">Feed</h2>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Feed</h2>
+            <ActiveConfigBadge />
+          </div>
           <PostFeed />
         </section>
       </div>

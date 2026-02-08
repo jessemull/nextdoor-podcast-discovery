@@ -73,8 +73,23 @@ export function StatsPanel() {
 
   if (!stats) return null;
 
+  const embeddingBacklog = stats.embedding_backlog ?? 0;
+
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+    <div className="space-y-4">
+      {embeddingBacklog > 100 && (
+        <div
+          className="rounded-lg border border-amber-700 bg-amber-900/30 p-4"
+          role="alert"
+        >
+          <p className="text-amber-200">
+            <strong>{embeddingBacklog} posts need embeddings.</strong> Semantic
+            search may miss recent posts until the daily embed job runs. Embeddings
+            are generated after each scrape.
+          </p>
+        </div>
+      )}
+      <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
       <h3 className="text-sm font-semibold text-gray-300 mb-4">Stats</h3>
 
       {/* Counts */}
@@ -127,6 +142,7 @@ export function StatsPanel() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

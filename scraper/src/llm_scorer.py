@@ -47,6 +47,9 @@ SCORING_DIMENSIONS = {
     "news_value": (
         "Did something actually happen worth reporting? (1=nothing, 10=major incident)"
     ),
+    "podcast_worthy": (
+        "Would this work well on a comedy podcast? (1=skip, 10=perfect for the show)"
+    ),
     "readability": (
         "How easy and punchy is this to read aloud? Short, clear posts score higher; "
         "walls of text score lower. (1=rambling/long, 10=concise and punchy)"
@@ -81,8 +84,7 @@ Post to analyze:
 {post_text}
 ---
 
-Also score "podcast_worthy" (1-10): Would this work well on a comedy podcast?
-And provide "why_podcast_worthy": one short sentence explaining why (e.g. "Good for podcast because: ...").
+Also provide "why_podcast_worthy": one short sentence explaining why this is good for the podcast (e.g. "Good for podcast because: ...").
 
 Respond with ONLY valid JSON in this exact format:
 {{
@@ -113,7 +115,7 @@ Also assign 1-3 topic categories from this list to each post: {categories}
 Posts to analyze (each numbered):
 {posts_text}
 
-Also score "podcast_worthy" (1-10) per post and provide "why_podcast_worthy" (one short sentence) per post.
+Also provide "why_podcast_worthy" (one short sentence) per post explaining why it's good for the podcast.
 
 Respond with ONLY a valid JSON array. One object per post, in order. Format:
 [
@@ -612,6 +614,7 @@ class LLMScorer:
             "drama": 1.5,
             "emotional_intensity": 1.2,
             "news_value": 1.0,
+            "podcast_worthy": 2.0,
             "readability": 1.2,
         }
 

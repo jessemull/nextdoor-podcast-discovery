@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     category: searchParams.get("category") ?? undefined,
     episode_date: searchParams.get("episode_date") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
+    min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
     neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest) {
     category,
     episode_date: episodeDate,
     limit,
+    min_podcast_worthy: minPodcastWorthyParam,
     min_score: minScoreParam,
     neighborhood_id: neighborhoodId,
     offset,
@@ -64,17 +66,20 @@ export async function GET(request: NextRequest) {
   } = parsed.data;
   const minScore =
     minScoreParam != null ? String(minScoreParam) : null;
+  const minPodcastWorthy =
+    minPodcastWorthyParam != null ? minPodcastWorthyParam : null;
 
   const supabase = getSupabaseAdmin();
 
   try {
-    if (sort === "score") {
-      // For score-based sorting, query scores first then join posts
+    if (sort === "date") {
+      // For date-based sorting, query posts first then join scores
 
-      return await getPostsByScore(supabase, {
+      return await getPostsByDate(supabase, {
         category: category ?? null,
         episodeDate: episodeDate ?? null,
         limit,
+        minPodcastWorthy,
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
@@ -82,15 +87,19 @@ export async function GET(request: NextRequest) {
         unusedOnly,
       });
     } else {
-      // For date-based sorting, query posts first then join scores
+      // For score or podcast_score sorting, use get_posts_with_scores
+      const orderBy =
+        sort === "podcast_score" ? "podcast_worthy" : "score";
 
-      return await getPostsByDate(supabase, {
+      return await getPostsByScore(supabase, {
         category: category ?? null,
         episodeDate: episodeDate ?? null,
         limit,
+        minPodcastWorthy,
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
+        orderBy,
         savedOnly,
         unusedOnly,
       });
@@ -116,9 +125,11 @@ interface QueryParams {
   category: null | string;
   episodeDate: null | string;
   limit: number;
+  minPodcastWorthy: null | number;
   minScore: null | string;
   neighborhoodId: null | string;
   offset: number;
+  orderBy?: "podcast_worthy" | "score";
   savedOnly: boolean;
   unusedOnly: boolean;
 }
@@ -159,7 +170,18 @@ async function getPostsByScore(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   params: QueryParams
 ) {
-  const { category, episodeDate, limit, minScore, neighborhoodId, offset, savedOnly, unusedOnly } = params;
+  const {
+    category,
+    episodeDate,
+    limit,
+    minPodcastWorthy,
+    minScore,
+    neighborhoodId,
+    offset,
+    orderBy = "score",
+    savedOnly,
+    unusedOnly,
+  } = params;
 
   // Get active weight config ID
   const activeConfigResult = await supabase
@@ -246,9 +268,11 @@ async function getPostsByScore(
       p_category: category || null,
       p_episode_date: episodeDate || null,
       p_limit: limit,
+      p_min_podcast_worthy: minPodcastWorthy,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
+      p_order_by: orderBy,
       p_saved_only: savedOnly,
       p_unused_only: episodeDate ? false : unusedOnly,
       p_weight_config_id: activeConfigId,
@@ -276,6 +300,7 @@ async function getPostsByScore(
     {
       p_category: category || null,
       p_episode_date: episodeDate || null,
+      p_min_podcast_worthy: minPodcastWorthy,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,
@@ -369,7 +394,17 @@ async function getPostsByDate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   params: QueryParams
 ) {
-  const { category, episodeDate, limit, minScore, neighborhoodId, offset, savedOnly, unusedOnly } = params;
+  const {
+    category,
+    episodeDate,
+    limit,
+    minPodcastWorthy,
+    minScore,
+    neighborhoodId,
+    offset,
+    savedOnly,
+    unusedOnly,
+  } = params;
 
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
   const validMinScore = parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
@@ -380,6 +415,7 @@ async function getPostsByDate(
       p_category: category || null,
       p_episode_date: episodeDate || null,
       p_limit: limit,
+      p_min_podcast_worthy: minPodcastWorthy,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
@@ -407,6 +443,7 @@ async function getPostsByDate(
     {
       p_category: category || null,
       p_episode_date: episodeDate || null,
+      p_min_podcast_worthy: minPodcastWorthy,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,

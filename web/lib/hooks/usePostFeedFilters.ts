@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 
 import { useDebounce } from "@/lib/hooks";
 
-type SortOption = "date" | "score";
+type SortOption = "date" | "podcast_score" | "score";
 
 export interface PostFeedFilters {
   category: string;
   episodeDate: string;
+  minPodcastWorthy: string;
   minScore: string;
   neighborhoodId: string;
   savedOnly: boolean;
@@ -23,6 +24,7 @@ export interface Neighborhood {
 }
 
 export interface UsePostFeedFiltersResult {
+  debouncedMinPodcastWorthy: string;
   debouncedMinScore: string;
   episodeDates: string[];
   filterLoadError: null | string;
@@ -34,6 +36,7 @@ export interface UsePostFeedFiltersResult {
 const DEFAULT_FILTERS: PostFeedFilters = {
   category: "",
   episodeDate: "",
+  minPodcastWorthy: "",
   minScore: "",
   neighborhoodId: "",
   savedOnly: false,
@@ -54,6 +57,10 @@ export function usePostFeedFilters(
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
 
   const debouncedMinScore = useDebounce(filters.minScore, debounceDelayMs);
+  const debouncedMinPodcastWorthy = useDebounce(
+    filters.minPodcastWorthy,
+    debounceDelayMs
+  );
 
   useEffect(() => {
     Promise.all([
@@ -76,6 +83,7 @@ export function usePostFeedFilters(
   }, []);
 
   return {
+    debouncedMinPodcastWorthy,
     debouncedMinScore,
     episodeDates,
     filterLoadError,
