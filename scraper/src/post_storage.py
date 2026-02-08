@@ -120,9 +120,15 @@ class PostStorage:
                     if "duplicate" in error_msg or "unique" in error_msg:
                         stats["skipped"] += 1
                     else:
-                        # Other errors (network, validation, etc.) are logged as errors
+                        # Other errors (network, validation, etc.) are logged with context
+                        post_hash = (
+                            post_data.get("hash", "?")
+                            if isinstance(post_data, dict)
+                            else "?"
+                        )
                         logger.error(
-                            "Individual insert error (%s): %s",
+                            "Individual insert error (hash=%s) (%s): %s",
+                            post_hash,
                             type(inner_e).__name__,
                             error_msg,
                         )
@@ -193,8 +199,13 @@ class PostStorage:
 
         except Exception as e:
             # Might be a race condition - try to fetch again
-
-            logger.warning("Error creating neighborhood %s: %s", name, e)
+            logger.warning(
+                "Error creating neighborhood %s (slug=%s): %s (%s)",
+                name,
+                slug,
+                e,
+                type(e).__name__,
+            )
 
             result = (
                 self.supabase.table("neighborhoods")

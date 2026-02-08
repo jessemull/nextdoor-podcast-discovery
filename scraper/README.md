@@ -98,10 +98,10 @@ pytest
 
 ## Scraping policy
 
-- **Rate limiting:** The scraper uses configurable delays (scroll, typing) to avoid hammering the site. See `SCRAPER_CONFIG` in `src/config.py` (`scroll_delay_ms`, `typing_delay_ms`, `navigation_timeout_ms`).
-### Known limitation: robots.txt
+- **Rate limiting:** The scraper uses configurable delays (scroll, typing) to avoid hammering the site. See `SCRAPER_CONFIG` in `src/config.py` (`scroll_delay_ms`, `typing_delay_ms`, `navigation_timeout_ms`). The codebase defines `RateLimitError` in `src/exceptions.py` for future use: if the site returns HTTP 429 (Too Many Requests), you can catch it, raise or handle `RateLimitError`, and implement backoff/retry (e.g. with tenacity) before resuming.
+### robots.txt (optional check)
 
-We do not currently fetch or enforce Nextdoor's robots.txt. The scraper does not check for or respect `User-agent` disallow rules before making requests. If you run this against other domains, consider adding a startup check to fetch and parse robots.txt and respect disallow rules. See `LOGIN_URL`, `NEWS_FEED_URL`, and `FEED_URLS` in `src/config.py` for the URLs used.
+The scraper does **not** check robots.txt by default. You can run with `--check-robots` to fetch the site's robots.txt and exit with an error if the paths we use (`/login/`, `/news_feed/`) are disallowed. Use this when you want to respect the site's crawler policy (e.g. when running against other domains). See `src/robots.py` and `LOGIN_URL`, `FEED_URLS` in `src/config.py` for the URLs used.
 ## Project Structure
 
 ```

@@ -64,8 +64,11 @@ After running migrations, optionally run seed data:
 ## RPC Functions
 
 - `search_posts_by_embedding(query_embedding, similarity_threshold, result_limit)` — Semantic search using vector similarity
-- `get_unscored_posts(limit)` — Get posts that need LLM scoring
-- `get_posts_with_scores(weight_config_id, limit, offset, min_score, category, unused_only)` — Posts joined with scores for feed
-- `get_posts_with_scores_count(weight_config_id, min_score, category, unused_only)` — Count for pagination
-- `increment_topic_frequency(category, increment)` — Update topic frequency counts
+- `get_unscored_posts(p_limit)` — Get posts that need LLM scoring
+- `get_posts_with_scores(p_weight_config_id, p_limit, p_offset, p_min_score, p_category, p_unused_only, p_neighborhood_id, p_saved_only, p_episode_date)` — Posts joined with scores for feed (score sort); returns `why_podcast_worthy` (migration 016)
+- `get_posts_with_scores_count(p_weight_config_id, p_min_score, p_category, p_unused_only, p_neighborhood_id, p_saved_only, p_episode_date)` — Count for score-sorted feed pagination
+- `get_posts_by_date(p_limit, p_offset, p_category, p_min_score, p_neighborhood_id, p_saved_only, p_episode_date, p_unused_only)` — Posts by date with filters in DB (migration 017)
+- `get_posts_by_date_count(p_category, p_min_score, p_neighborhood_id, p_saved_only, p_episode_date, p_unused_only)` — Count for date-sorted feed pagination
+- `get_embedding_backlog_count()` — Count of posts with LLM scores but no embedding (migration 018)
+- `increment_topic_frequency(p_category, p_increment)` — Update topic frequency counts
 - `recount_topic_frequencies()` — Recalculate all topic frequencies (call daily)

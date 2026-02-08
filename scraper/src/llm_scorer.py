@@ -173,12 +173,19 @@ class LLMScorer:
 
         for i in range(0, len(posts), BATCH_SIZE):
             batch = posts[i : i + BATCH_SIZE]
+            batch_index = (i // BATCH_SIZE) + 1
+            post_ids = [p.get("id", "?") for p in batch]
             try:
                 batch_results = self._score_batch(batch)
                 results.extend(batch_results)
             except Exception as e:
                 # Intentionally broad: API/JSON/network errors; log and continue
-                logger.error("Error scoring batch: %s", e)
+                logger.error(
+                    "Error scoring batch %d (post_ids=%s): %s",
+                    batch_index,
+                    post_ids,
+                    e,
+                )
                 for post in batch:
                     results.append(
                         PostScore(
@@ -532,7 +539,11 @@ class LLMScorer:
 
             except Exception as e:
                 # Intentionally broad: RPC may not exist or DB error; fall back
-                logger.debug("RPC failed, using manual update: %s", e)
+                logger.debug(
+                    "RPC increment_topic_frequency failed (category=%s): %s",
+                    category,
+                    e,
+                )
 
                 try:
                     freq_result = (
@@ -587,7 +598,11 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning("Failed to load weights: %s", e)
+            logger.warning(
+                "Failed to load ranking_weights from settings: %s (%s)",
+                e,
+                type(e).__name__,
+            )
 
         # Default weights
 
@@ -628,7 +643,11 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning("Failed to load novelty config: %s", e)
+            logger.warning(
+                "Failed to load novelty_config from settings: %s (%s)",
+                e,
+                type(e).__name__,
+            )
 
         # Default config
 
@@ -660,7 +679,11 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning("Failed to load topic frequencies: %s", e)
+            logger.warning(
+                "Failed to load topic_frequencies table: %s (%s)",
+                e,
+                type(e).__name__,
+            )
 
         return {}
 
@@ -690,7 +713,11 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: RPC may not exist or DB error; fall back
-            logger.debug("RPC failed, using manual query: %s", e)
+            logger.debug(
+                "RPC get_unscored_posts failed (p_limit=%d), using fallback: %s",
+                limit,
+                e,
+            )
 
         # Fallback: manual query (oldest first for chronological processing)
 
@@ -724,5 +751,10 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: DB/network error; return empty to avoid crash
-            logger.error("Failed to get unscored posts: %s", e)
+            logger.error(
+                "Failed to get unscored posts (fallback query, limit=%d): %s (%s)",
+                limit,
+                e,
+                type(e).__name__,
+            )
             return []

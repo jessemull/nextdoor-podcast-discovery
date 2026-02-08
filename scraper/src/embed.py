@@ -74,7 +74,11 @@ def main(dry_run: bool = False) -> int:
                     on_conflict="key",
                 ).execute()
             except Exception as e:
-                logger.warning("Failed to update last_scrape_at: %s", e)
+                logger.warning(
+                    "Failed to update settings.last_scrape_at: %s (%s)",
+                    e,
+                    type(e).__name__,
+                )
 
         return 0
 

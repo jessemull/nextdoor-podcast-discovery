@@ -402,7 +402,12 @@ class PostExtractor:
             return None
         except Exception as e:
             # Catch any extraction error; fail gracefully for this post
-            logger.debug("Error extracting permalink for post %d: %s", post_index, e)
+            logger.debug(
+                "Error extracting permalink for post index %d: %s (%s)",
+                post_index,
+                e,
+                type(e).__name__,
+            )
             return None
 
     def _parse_post_url_from_share_link(self, href: str | None) -> str | None:

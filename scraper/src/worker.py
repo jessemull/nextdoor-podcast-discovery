@@ -467,7 +467,14 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         # Note: Supabase client doesn't export specific exception types,
         # so we catch generic Exception for database/API errors
         error_msg = f"Unexpected error: {str(e)}"
-        logger.error("Error processing job %s: %s", job_id, error_msg, exc_info=True)
+        logger.error(
+            "Error processing job %s (type=%s): %s (%s)",
+            job_id,
+            job.get("type", "?"),
+            e,
+            type(e).__name__,
+            exc_info=True,
+        )
         _handle_transient_error(supabase, job_id, error_msg)
 
 
@@ -511,7 +518,13 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
             break
         except Exception as e:
             # Catch any error to keep poll loop running; log and continue
-            logger.error("Error in worker loop: %s", e, exc_info=True)
+            logger.error(
+                "Error in worker loop (job_type=%s): %s (%s)",
+                job_type,
+                e,
+                type(e).__name__,
+                exc_info=True,
+            )
             time.sleep(poll_interval)
 
 
@@ -595,7 +608,13 @@ def main() -> int:
         return 1
     except Exception as e:
         # Other unexpected errors: fatal
-        logger.error("Fatal unexpected error: %s", e, exc_info=True)
+        logger.error(
+            "Fatal unexpected error (job_type=%s): %s (%s)",
+            args.job_type,
+            e,
+            type(e).__name__,
+            exc_info=True,
+        )
         return 1
 
 

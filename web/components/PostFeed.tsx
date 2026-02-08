@@ -3,15 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { DEBOUNCE_DELAY_MS, TOPIC_CATEGORIES } from "@/lib/constants";
+import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
+import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
 import { usePostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 
+import { BulkActionBar } from "./BulkActionBar";
+import { FeedFilters } from "./FeedFilters";
 import { PostCard } from "./PostCard";
 
 import type { PostsResponse, PostWithScores } from "@/lib/types";
-
-type SortOption = "date" | "score";
 
 /**
  * PostFeed component displays a list of Nextdoor posts with filtering and infinite scroll.
@@ -48,13 +49,19 @@ export function PostFeed() {
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
   const [episodeDateForUse, setEpisodeDateForUse] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
   const [showRefineFilters, setShowRefineFilters] = useState(true);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const postRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const {
+    focusedIndex,
+    postRefs,
+    sentinelRef,
+  } = useFeedKeyboardNav({
+    onOpenPost: (postId) => router.push(`/posts/${postId}`),
+    posts,
+  });
 
   const toggleSelect = useCallback((postId: string, selected: boolean) => {
     setSelectedIds((prev) => {
@@ -158,7 +165,7 @@ export function PostFeed() {
     return () => {
       observer.disconnect();
     };
-  }, [fetchPosts, loadingMore, initialLoading, offset, total]);
+  }, [fetchPosts, loadingMore, initialLoading, offset, sentinelRef, total]);
 
   const handleMarkSaved = async (postId: string, saved: boolean) => {
     if (markingSaved.has(postId)) return;
@@ -277,296 +284,27 @@ export function PostFeed() {
 
   const hasMore = offset + POSTS_PER_PAGE < total;
 
-  // Keyboard: J/K or ArrowDown/Up move focus, Enter opens post
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-      if (posts.length === 0) return;
-      const key = e.key.toLowerCase();
-      if (key === "j" || key === "arrowdown") {
-        e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev < posts.length - 1 ? prev + 1 : prev
-        );
-      } else if (key === "k" || key === "arrowup") {
-        e.preventDefault();
-        setFocusedIndex((prev) => (prev <= 0 ? 0 : prev - 1));
-      } else if (key === "enter" && focusedIndex >= 0 && posts[focusedIndex]) {
-        e.preventDefault();
-        router.push(`/posts/${posts[focusedIndex].id}`);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [focusedIndex, posts, router]);
-
-  // Clamp focused index when posts change
-  useEffect(() => {
-    if (posts.length === 0) setFocusedIndex(-1);
-    else if (focusedIndex >= posts.length) setFocusedIndex(posts.length - 1);
-  }, [focusedIndex, posts.length]);
-
-  // Scroll focused card into view
-  useEffect(() => {
-    if (focusedIndex >= 0 && postRefs.current[focusedIndex]) {
-      postRefs.current[focusedIndex]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
-  }, [focusedIndex]);
-
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        {filterLoadError && (
-          <p className="mb-4 text-sm text-amber-400" role="alert">
-            {filterLoadError}
-          </p>
-        )}
-        {/* Quick filter chips */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="text-xs text-gray-500 self-center">Quick:</span>
-          <button
-            className={`rounded px-3 py-1 text-sm transition-colors ${
-              filters.savedOnly
-                ? "bg-blue-600 text-white"
-                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({ ...prev, savedOnly: !prev.savedOnly }))
-            }
-          >
-            Saved
-          </button>
-          <button
-            className={`rounded px-3 py-1 text-sm transition-colors ${
-              filters.unusedOnly
-                ? "bg-amber-600 text-white"
-                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({ ...prev, unusedOnly: !prev.unusedOnly }))
-            }
-          >
-            Unused
-          </button>
-          <button
-            className={`rounded px-3 py-1 text-sm transition-colors ${
-              filters.category === "drama"
-                ? "bg-purple-600 text-white"
-                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                category: prev.category === "drama" ? "" : "drama",
-              }))
-            }
-          >
-            Drama
-          </button>
-          <button
-            className={`rounded px-3 py-1 text-sm transition-colors ${
-              filters.category === "humor"
-                ? "bg-yellow-600 text-yellow-900"
-                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                category: prev.category === "humor" ? "" : "humor",
-              }))
-            }
-          >
-            Humor
-          </button>
-        </div>
-        {/* Refine filters (collapsible) */}
-        <div>
-          <button
-            className="mb-2 text-sm text-gray-400 hover:text-white"
-            type="button"
-            onClick={() => setShowRefineFilters((prev) => !prev)}
-          >
-            {showRefineFilters ? "▼" : "▶"} Refine filters
-          </button>
-          {showRefineFilters && (
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Sort */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="sort">Sort:</label>
-            <select
-              className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600"
-              id="sort"
-              value={filters.sort}
-              onChange={(e) => setFilters({ ...filters, sort: e.target.value as SortOption })}
-            >
-              <option value="score">Highest Score</option>
-              <option value="date">Most Recent</option>
-            </select>
-          </div>
-          {/* Neighborhood */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="neighborhood">
-              Neighborhood:
-            </label>
-            <select
-              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-              id="neighborhood"
-              value={filters.neighborhoodId}
-              onChange={(e) =>
-                setFilters({ ...filters, neighborhoodId: e.target.value })
-              }
-            >
-              <option value="">All</option>
-              {neighborhoods.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Episode */}
-          {episodeDates.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400" htmlFor="episode">
-                Episode:
-              </label>
-              <select
-                className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-                id="episode"
-                value={filters.episodeDate}
-                onChange={(e) =>
-                  setFilters({ ...filters, episodeDate: e.target.value })
-                }
-              >
-                <option value="">All</option>
-                {episodeDates.map((date) => (
-                  <option key={date} value={date}>
-                    {date}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {/* Category */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="category">
-              Category:
-            </label>
-            <select
-              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-              id="category"
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            >
-              <option value="">All</option>
-              {TOPIC_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Min Score */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="minScore">Min Score:</label>
-            <input
-              className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600 w-16"
-              id="minScore"
-              min="0"
-              placeholder="0"
-              type="number"
-              value={filters.minScore}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Only allow valid numbers or empty string
-                if (value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                  setFilters({ ...filters, minScore: value });
-                }
-              }}
-            />
-          </div>
-          {/* Saved Only */}
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              checked={filters.savedOnly}
-              className="rounded border-gray-600 bg-gray-700"
-              type="checkbox"
-              onChange={(e) => setFilters({ ...filters, savedOnly: e.target.checked })}
-            />
-            <span className="text-sm text-gray-400">Saved only</span>
-          </label>
-          {/* Unused Only */}
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              checked={filters.unusedOnly}
-              className="rounded border-gray-600 bg-gray-700"
-              type="checkbox"
-              onChange={(e) => setFilters({ ...filters, unusedOnly: e.target.checked })}
-            />
-            <span className="text-sm text-gray-400">Unused only</span>
-          </label>
-        </div>
-          )}
-        </div>
-      </div>
+      <FeedFilters
+        episodeDates={episodeDates}
+        filterLoadError={filterLoadError}
+        filters={filters}
+        neighborhoods={neighborhoods}
+        setFilters={setFilters}
+        setShowRefineFilters={setShowRefineFilters}
+        showRefineFilters={showRefineFilters}
+      />
 
-      {/* Bulk actions bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-600 bg-gray-800/80 px-4 py-2">
-          <span className="text-sm text-gray-400">
-            {selectedIds.size} selected
-          </span>
-          <label className="text-sm text-gray-400" htmlFor="bulk-episode-date">
-            Episode date:
-          </label>
-          <input
-            className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-            id="bulk-episode-date"
-            type="date"
-            value={episodeDateForUse}
-            onChange={(e) => setEpisodeDateForUse(e.target.value)}
-          />
-          <button
-            className="rounded bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-            disabled={bulkActionLoading}
-            type="button"
-            onClick={handleBulkMarkUsed}
-          >
-            {bulkActionLoading ? "..." : "Mark as used"}
-          </button>
-          <button
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-            disabled={bulkActionLoading}
-            type="button"
-            onClick={handleBulkSave}
-          >
-            {bulkActionLoading ? "..." : "Save selected"}
-          </button>
-          <button
-            className="text-sm text-gray-400 transition-colors hover:text-white"
-            type="button"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Clear
-          </button>
-        </div>
-      )}
+      <BulkActionBar
+        bulkActionLoading={bulkActionLoading}
+        episodeDateForUse={episodeDateForUse}
+        selectedCount={selectedIds.size}
+        setEpisodeDateForUse={setEpisodeDateForUse}
+        onBulkMarkUsed={handleBulkMarkUsed}
+        onBulkSave={handleBulkSave}
+        onClear={() => setSelectedIds(new Set())}
+      />
 
       {/* Results count */}
       <div className="text-sm text-gray-500">

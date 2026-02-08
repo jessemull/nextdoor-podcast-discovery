@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import Client
 
-from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
+from src.config import FEED_URLS, LOGIN_URL, SCRAPER_CONFIG, validate_env
 from src.embedder import Embedder
 from src.exceptions import (
     CaptchaRequiredError,
@@ -23,6 +23,7 @@ from src.exceptions import (
 )
 from src.llm_scorer import LLMScorer
 from src.post_storage import PostStorage
+from src.robots import check_robots_allowed
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
 
@@ -72,6 +73,7 @@ def _run_scoring(supabase_client: Client) -> None:
 
 
 def main(
+    check_robots: bool = False,
     dry_run: bool = False,
     embed: bool = False,
     extract_permalinks: bool = False,
@@ -83,6 +85,7 @@ def main(
     """Run the scraper pipeline.
 
     Args:
+        check_robots: If True, fetch robots.txt and exit with 1 if our paths are disallowed.
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding generation after scrape/score (so new posts are searchable).
         extract_permalinks: If True, click Share on each post to get permalink.
@@ -94,6 +97,17 @@ def main(
     Returns:
         Exit code (0 for success, 1 for failure).
     """
+    # Optional robots.txt check before scraping
+    if check_robots:
+        base_url = LOGIN_URL.rstrip("/").rsplit("/", 1)[0] or "https://nextdoor.com"
+        paths = ["/login/", "/news_feed/"]
+        allowed, message = check_robots_allowed(base_url, paths)
+        if allowed:
+            logger.info("Robots check: %s", message)
+        else:
+            logger.error("Robots check failed: %s", message)
+            return 1
+
     # Validate feed type
 
     if feed_type not in FEED_URLS:
@@ -121,7 +135,6 @@ def main(
 
     try:
         # Validate environment variables
-
         validate_env()
 
         # Initialize session manager
@@ -231,7 +244,11 @@ def main(
                         on_conflict="key",
                     ).execute()
                 except Exception as e:
-                    logger.warning("Failed to update last_scrape_at: %s", e)
+                    logger.warning(
+                        "Failed to update settings.last_scrape_at: %s (%s)",
+                        e,
+                        type(e).__name__,
+                    )
 
         return 0
 
@@ -257,6 +274,11 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Nextdoor scraper pipeline")
+    parser.add_argument(
+        "--check-robots",
+        action="store_true",
+        help="Fetch robots.txt and exit with error if our paths are disallowed",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -298,6 +320,7 @@ if __name__ == "__main__":
 
     sys.exit(
         main(
+            check_robots=args.check_robots,
             dry_run=args.dry_run,
             embed=args.embed,
             extract_permalinks=args.extract_permalinks,

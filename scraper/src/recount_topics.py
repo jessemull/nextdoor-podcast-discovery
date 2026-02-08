@@ -40,7 +40,11 @@ def main() -> int:
         logger.info("Topic frequencies recounted successfully")
         return 0
     except Exception as e:
-        logger.exception("Failed to recount topic frequencies: %s", e)
+        logger.exception(
+            "Failed to run RPC recount_topic_frequencies: %s (%s)",
+            e,
+            type(e).__name__,
+        )
         return 1
 
 
