@@ -92,7 +92,7 @@ describe("GET /api/sports-fact", () => {
     });
   });
 
-  it("should return fallback fact when Claude API fails", async () => {
+  it("should return 500 and error when Claude API fails", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
@@ -103,9 +103,8 @@ describe("GET /api/sports-fact", () => {
     const response = await GET();
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.fact).toContain("Steelers");
-    expect(data.source).toBe("fallback");
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("Failed to generate sports fact");
   });
 
   it("should handle non-text content from Claude", async () => {

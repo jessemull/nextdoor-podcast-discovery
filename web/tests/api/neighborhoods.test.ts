@@ -10,7 +10,7 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {},
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
 const mockFrom = vi.fn() as any;
 let neighborhoodsMockResolve: { data: unknown; error: unknown } = {
   data: [],

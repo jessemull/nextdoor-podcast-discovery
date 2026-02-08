@@ -84,7 +84,8 @@ class LLMScorer:
                 batch_results = self._score_batch(batch)
                 results.extend(batch_results)
             except Exception as e:
-                # Intentionally broad: API/JSON/network errors; log and continue
+                # Batch-level failure: log and continue; tenacity on _score_batch
+                # handles per-call retries; we do not retry the whole batch here.
                 logger.error(
                     "Error scoring batch %d (post_ids=%s): %s",
                     batch_index,

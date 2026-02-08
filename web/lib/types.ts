@@ -132,7 +132,6 @@ export interface WeightConfig {
 
 export interface SportsFactResponse {
   fact: string;
-  source?: "api" | "fallback";
 }
 
 export interface PostsResponse {

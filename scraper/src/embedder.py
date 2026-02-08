@@ -175,7 +175,8 @@ class Embedder:
                 stats["errors"] += len(batch)
                 stats["processed"] += len(batch)
             except Exception as e:
-                # Supabase/DB or other unexpected errors - continue with remaining batches
+                # Intentional broad catch: Supabase/DB or other unexpected errors;
+                # log and continue with remaining batches (tenacity on API call only).
                 logger.error(
                     "Unexpected error processing batch (batch %d/%d): %s (type: %s)",
                     (i // EMBEDDING_BATCH_SIZE) + 1,

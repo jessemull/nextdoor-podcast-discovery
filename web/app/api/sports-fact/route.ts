@@ -57,11 +57,10 @@ export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResp
   } catch (error) {
     console.error("Failed to generate sports fact:", error);
 
-    // Return fallback with a flag indicating it's not from the API
-
-    return NextResponse.json({
-      fact: "The Steelers have won 6 Super Bowls, more than any other NFL team!",
-      source: "fallback",
-    } as SportsFactResponse);
+    // We do not use a fallback fact; keep behavior simple and surface the failure.
+    return NextResponse.json(
+      { error: "Failed to generate sports fact" },
+      { status: 500 }
+    );
   }
 }
