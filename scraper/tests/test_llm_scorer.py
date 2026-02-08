@@ -40,23 +40,46 @@ class TestLLMScorer:
         assert result == []
 
     def test_score_posts_scores_single_post(self, scorer: LLMScorer) -> None:
-        """Should score a single post using Claude."""
-        post = {"id": "post1", "text": "This is a test post about a lost dog"}
+        """Should score a post using Claude (batch path with 2 posts)."""
+        posts = [
+            {"id": "post1", "text": "This is a test post about a lost dog"},
+            {"id": "post2", "text": "Another test"},
+        ]
         mock_response = mock.MagicMock()
         mock_content = mock.MagicMock()
-        mock_content.text = json.dumps(
+        batch_response = [
             {
+                "categories": ["lost_pet"],
+                "post_index": 0,
                 "scores": {
                     "absurdity": 5.0,
-                    "drama": 3.0,
                     "discussion_spark": 7.0,
+                    "drama": 3.0,
                     "emotional_intensity": 4.0,
                     "news_value": 6.0,
+                    "podcast_worthy": 6.0,
+                    "readability": 8.0,
                 },
-                "categories": ["lost_pet"],
                 "summary": "A post about a lost dog",
-            }
-        )
+                "why_podcast_worthy": "Classic lost pet appeal.",
+            },
+            {
+                "categories": ["humor"],
+                "post_index": 1,
+                "scores": {
+                    "absurdity": 8.0,
+                    "discussion_spark": 5.0,
+                    "drama": 2.0,
+                    "emotional_intensity": 6.0,
+                    "news_value": 3.0,
+                    "podcast_worthy": 7.0,
+                    "readability": 9.0,
+                },
+                "summary": "Another post",
+                "why_podcast_worthy": "Funny.",
+            },
+        ]
+        mock_content.text = json.dumps(batch_response)
         mock_response.content = [mock_content]
         scorer.anthropic.messages.create.return_value = mock_response
 
@@ -70,14 +93,17 @@ class TestLLMScorer:
 
         # Mock topic frequencies
         freq_result = mock.MagicMock()
-        freq_result.data = [{"category": "lost_pet", "count_30d": 10}]
+        freq_result.data = [
+            {"category": "lost_pet", "count_30d": 10},
+            {"category": "humor", "count_30d": 20},
+        ]
         scorer.supabase.table.return_value.select.return_value.execute.return_value = (
             freq_result
         )
 
-        results = scorer.score_posts([post])
+        results = scorer.score_posts(posts)
 
-        assert len(results) == 1
+        assert len(results) == 2
         assert results[0].post_id == "post1"
         assert results[0].scores["absurdity"] == 5.0
         assert "lost_pet" in results[0].categories

@@ -3,13 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { JobsList } from "@/components/JobsList";
-import { NoveltyConfigEditor } from "@/components/NoveltyConfigEditor";
-import { NoveltyPreview } from "@/components/NoveltyPreview";
-import { PicksDefaultsEditor } from "@/components/PicksDefaultsEditor";
-import { RankingWeightsEditor } from "@/components/RankingWeightsEditor";
-import { SearchDefaultsEditor } from "@/components/SearchDefaultsEditor";
-import { WeightConfigsList } from "@/components/WeightConfigsList";
+import { SettingsAlerts } from "@/components/SettingsAlerts";
+import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
+import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 
 import type { RankingWeights } from "@/lib/types";
@@ -445,72 +441,43 @@ export default function SettingsPage() {
             Configure ranking weights and search preferences.
           </p>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 rounded-lg border border-green-800 bg-green-900/20 p-4">
-            <p className="text-green-400">{successMessage}</p>
-          </div>
-        )}
+        <SettingsAlerts error={error} successMessage={successMessage} />
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-800 bg-red-900/20 p-4">
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-
-        {/* Ranking Weights Section */}
-        <RankingWeightsEditor
+        <SettingsWeightSection
+          activeConfigId={activeConfigId}
+          cancellingJobId={cancellingJobId}
           configName={configName}
+          configs={weightConfigs}
+          deletingConfigId={deletingConfigId}
+          isActivating={isActivating}
           isJobRunning={isJobRunning}
           isRecomputing={isRecomputing}
           isSaving={isSaving}
+          jobs={jobs}
           pendingJobsCount={pendingJobs.length}
           rankingWeights={rankingWeights}
+          setActiveConfigId={setActiveConfigId}
           setConfigName={setConfigName}
           setRankingWeights={setRankingWeights}
+          onActivate={handleActivateConfig}
+          onCancelJob={handleCancelJob}
+          onDelete={handleDeleteConfig}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
         />
 
-        {/* Novelty Config Section */}
-        <NoveltyConfigEditor
+        <SettingsDefaultsSection
           isSaving={isSaving}
           noveltyConfig={noveltyConfig}
-          setNoveltyConfig={setNoveltyConfig}
-          onSave={handleSaveNoveltyConfig}
-        />
-        <NoveltyPreview noveltyConfig={noveltyConfig} />
-
-        {/* Podcast Picks Defaults Section */}
-        <PicksDefaultsEditor
-          isSaving={isSaving}
           picksDefaults={picksDefaults}
-          setPicksDefaults={setPicksDefaults}
-          onSave={handleSavePicksDefaults}
-        />
-
-        {/* Search Defaults Section */}
-        <SearchDefaultsEditor
-          isSaving={isSaving}
           searchDefaults={searchDefaults}
+          setNoveltyConfig={setNoveltyConfig}
+          setPicksDefaults={setPicksDefaults}
           setSearchDefaults={setSearchDefaults}
-          onSave={handleSaveSearchDefaults}
+          onSaveNovelty={handleSaveNoveltyConfig}
+          onSavePicks={handleSavePicksDefaults}
+          onSaveSearch={handleSaveSearchDefaults}
         />
-
-        {/* Weight Configs Section */}
-        <WeightConfigsList
-          activeConfigId={activeConfigId}
-          configs={weightConfigs}
-          deletingConfigId={deletingConfigId}
-          isActivating={isActivating}
-          jobs={jobs}
-          onActivate={handleActivateConfig}
-          onDelete={handleDeleteConfig}
-        />
-
-        {/* Background Jobs Section */}
-        <JobsList cancellingJobId={cancellingJobId} jobs={jobs} onCancel={handleCancelJob} />
         </div>
       </main>
     </ErrorBoundary>

@@ -90,6 +90,38 @@ python -m src.embed --dry-run
 - Skips posts that already have embeddings (safe to run multiple times)
 - Processes posts in batches efficiently
 
+### Local Cron + Healthchecks.io
+
+For local cron runs with monitoring, use the run scripts from the repo root:
+
+```bash
+# Scrape recent feed (scrape + score + recount topic frequencies)
+./scripts/run-scrape.sh recent
+
+# Scrape trending feed
+./scripts/run-scrape.sh trending
+
+# Generate embeddings
+./scripts/run-embeddings.sh
+```
+
+Add to `scraper/.env`:
+
+```
+HEALTHCHECK_URL=https://hc-ping.com/your-scrape-uuid
+HEALTHCHECK_EMBED_URL=https://hc-ping.com/your-embeddings-uuid
+```
+
+Create checks at [healthchecks.io](https://healthchecks.io) and set schedules to match your cron. On success the script pings the URL; on failure it pings `/fail` so you get alerts.
+
+Example crontab:
+
+```
+0 8 * * * cd /path/to/nextdoor && ./scripts/run-scrape.sh recent
+0 14 * * * cd /path/to/nextdoor && ./scripts/run-scrape.sh trending
+0 22 * * * cd /path/to/nextdoor && ./scripts/run-embeddings.sh
+```
+
 ## Testing
 
 ```bash

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -242,11 +243,13 @@ export default function PostDetailPage() {
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     alt={`Post ${index + 1}`}
                     className="max-h-48 rounded border border-gray-700 object-cover hover:border-gray-600"
+                    height={192}
+                    sizes="(max-width: 768px) 100vw, 400px"
                     src={imageUrl}
+                    width={400}
                   />
                 </a>
               ))}

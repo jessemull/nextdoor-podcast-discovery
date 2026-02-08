@@ -40,6 +40,7 @@ def main() -> int:
         logger.info("Topic frequencies recounted successfully")
         return 0
     except Exception as e:
+        # Broad catch: RPC or Supabase errors; script exits with code 1 for cron
         logger.exception(
             "Failed to run RPC recount_topic_frequencies: %s (%s)",
             e,

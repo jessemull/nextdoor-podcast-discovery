@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { memo } from "react";
 
 import { PostWithScores } from "@/lib/types";
@@ -105,11 +106,13 @@ export const PostCard = memo(function PostCard({
               rel="noopener noreferrer"
               target="_blank"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 alt={`Post ${index + 1}`}
-                className="h-24 w-24 rounded object-cover border border-gray-700 hover:border-gray-600 transition-colors"
+                className="h-24 w-24 rounded border border-gray-700 object-cover transition-colors hover:border-gray-600"
+                height={96}
+                sizes="96px"
                 src={imageUrl}
+                width={96}
               />
             </a>
           ))}

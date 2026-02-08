@@ -48,7 +48,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           cd scraper
-          python -m src.main --feed-type recent --score
+          python -m src.main --feed-type recent --score --check-robots
 
       - name: Recount topic frequencies
         env:

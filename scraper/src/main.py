@@ -244,6 +244,8 @@ def main(
                         on_conflict="key",
                     ).execute()
                 except Exception as e:
+                    # Non-fatal: Supabase doesn't export specific exception types;
+                    # continue pipeline even if timestamp update fails
                     logger.warning(
                         "Failed to update settings.last_scrape_at: %s (%s)",
                         e,

@@ -74,6 +74,8 @@ def main(dry_run: bool = False) -> int:
                     on_conflict="key",
                 ).execute()
             except Exception as e:
+                # Non-fatal: Supabase doesn't export specific exception types;
+                # continue embed pipeline even if timestamp update fails
                 logger.warning(
                     "Failed to update settings.last_scrape_at: %s (%s)",
                     e,
@@ -86,7 +88,9 @@ def main(dry_run: bool = False) -> int:
         logger.error("Configuration error: %s", e)
         return 1
     except Exception as e:
-        # Last-resort catch so embed script exits cleanly with code 1
+        # Last-resort catch so embed script exits cleanly with code 1 for cron.
+        # Known exceptions (ConfigurationError) handled above; broad catch avoids
+        # unhandled tracebacks in scheduled runs.
         logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
         return 1
 
