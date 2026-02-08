@@ -12,6 +12,7 @@ export interface DimensionScores {
   drama: number;
   emotional_intensity: number;
   news_value: number;
+  readability?: number;
 }
 
 // LLM scoring result
@@ -41,6 +42,7 @@ export interface Post {
   image_urls: string[];
   neighborhood_id: string;
   post_id_ext: string;
+  saved?: boolean;
   text: string;
   url: null | string;
   used_on_episode: boolean;
@@ -51,6 +53,11 @@ export interface Post {
 export interface PostWithScores extends Post {
   llm_scores: LLMScore | null;
   neighborhood: Neighborhood | null;
+}
+
+// Search results include similarity score from vector search
+export interface PostWithScoresAndSimilarity extends PostWithScores {
+  similarity?: number;
 }
 
 // Topic frequency for novelty tracking
@@ -66,6 +73,7 @@ export interface RankingWeights {
   drama: number;
   emotional_intensity: number;
   news_value: number;
+  readability?: number;
 }
 
 export interface Settings {

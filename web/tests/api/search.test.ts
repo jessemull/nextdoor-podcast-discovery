@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
 
-import { POST } from "@/app/api/search/route";
+import { clearEmbeddingCacheForTest, POST } from "@/app/api/search/route";
 
 // Mock next-auth
 vi.mock("next-auth", () => ({
@@ -50,9 +50,21 @@ vi.mock("@/lib/supabase.server", () => ({
 
 import { getServerSession } from "next-auth";
 
+/** Chain for supabase.from().select().in() used when enriching search results. */
+const fromSelectInChain = () => ({
+  select: vi.fn(() => ({
+    in: vi.fn(() => Promise.resolve({ data: [], error: null })),
+  })),
+});
+
 describe("POST /api/search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearEmbeddingCacheForTest();
+    mockFrom.mockImplementation(() => fromSelectInChain());
+    mockCreate.mockResolvedValue({
+      data: [{ embedding: new Array(1536).fill(0.1) }],
+    });
   });
 
   it("should return 401 when not authenticated", async () => {

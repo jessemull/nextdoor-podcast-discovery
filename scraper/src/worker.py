@@ -41,17 +41,16 @@ def calculate_final_score(
     Returns:
         Final score (0-10).
     """
-    # Calculate weighted sum
-    weighted_sum = sum(
-        scores.get(dim, 5.0) * weights.get(dim, 1.0)
-        for dim in [
-            "absurdity",
-            "drama",
-            "discussion_spark",
-            "emotional_intensity",
-            "news_value",
-        ]
-    )
+    # Calculate weighted sum (include readability if present)
+    dims = [
+        "absurdity",
+        "discussion_spark",
+        "drama",
+        "emotional_intensity",
+        "news_value",
+        "readability",
+    ]
+    weighted_sum = sum(scores.get(dim, 5.0) * weights.get(dim, 1.0) for dim in dims)
 
     # Normalize to 0-10
     max_possible = sum(10 * weights.get(dim, 1.0) for dim in weights.keys())

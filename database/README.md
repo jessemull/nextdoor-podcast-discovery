@@ -16,6 +16,12 @@ SQL migrations for the Supabase PostgreSQL database.
    - `007_has_scores_optimization.sql`
    - `008_job_cancellation.sql`
    - `009_job_retry.sql`
+   - `010_neighborhood_filter.sql`
+   - `011_reaction_count.sql`
+   - `012_saved_posts.sql`
+   - `013_rpc_saved_filter.sql`
+   - `014_episode_date_filter.sql`
+   - `015_fulltext_search.sql`
 
 **Note:** The Python worker, web app settings/weight config flows, and TESTING_GUIDE assume migrations 004–009 are applied. Run all migrations for full functionality.
 

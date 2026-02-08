@@ -101,10 +101,11 @@ describe("Job Lifecycle Integration", () => {
       body: JSON.stringify({
         ranking_weights: {
           absurdity: 2.0,
-          drama: 1.5,
           discussion_spark: 1.0,
+          drama: 1.5,
           emotional_intensity: 1.2,
           news_value: 1.0,
+          readability: 1.2,
         },
       }),
       method: "POST",

@@ -153,7 +153,7 @@ security-web:
 test: test-scraper test-web
 
 test-scraper:
-	cd scraper && pytest -v
+	cd scraper && ../.venv/bin/pytest -v
 
 test-web:
 	cd web && npm test

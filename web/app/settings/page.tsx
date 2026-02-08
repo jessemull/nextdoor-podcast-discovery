@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { JobsList } from "@/components/JobsList";
+import { NoveltyConfigEditor } from "@/components/NoveltyConfigEditor";
 import { RankingWeightsEditor } from "@/components/RankingWeightsEditor";
 import { SearchDefaultsEditor } from "@/components/SearchDefaultsEditor";
 import { WeightConfigsList } from "@/components/WeightConfigsList";
@@ -11,8 +12,16 @@ import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 
 import type { RankingWeights } from "@/lib/types";
 
+interface NoveltyConfig {
+  frequency_thresholds?: { common: number; rare: number; very_common: number };
+  max_multiplier?: number;
+  min_multiplier?: number;
+  window_days?: number;
+}
+
 interface SettingsResponse {
   data: {
+    novelty_config?: NoveltyConfig;
     ranking_weights: RankingWeights;
     search_defaults: {
       similarity_threshold: number;
@@ -58,6 +67,7 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   drama: 1.5,
   emotional_intensity: 1.2,
   news_value: 1.0,
+  readability: 1.2,
 };
 
 interface WeightConfig {
@@ -92,6 +102,12 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isRecomputing, setIsRecomputing] = useState(false);
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
+  const [noveltyConfig, setNoveltyConfig] = useState<NoveltyConfig>({
+    frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
+    max_multiplier: 1.5,
+    min_multiplier: 0.2,
+    window_days: 30,
+  });
   const [searchDefaults, setSearchDefaults] = useState({
     similarity_threshold: 0.2,
   });
@@ -122,6 +138,9 @@ export default function SettingsPage() {
 
         if (settingsResponse.ok) {
           const settingsData: SettingsResponse = await settingsResponse.json();
+          if (settingsData.data.novelty_config) {
+            setNoveltyConfig(settingsData.data.novelty_config);
+          }
           if (settingsData.data.search_defaults) {
             setSearchDefaults(settingsData.data.search_defaults);
           }
@@ -298,6 +317,32 @@ export default function SettingsPage() {
     }
   }, [setActiveConfigId, setWeightConfigs]);
 
+  const handleSaveNoveltyConfig = useCallback(async () => {
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/settings", {
+        body: JSON.stringify({ novelty_config: noveltyConfig }),
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || "Failed to save novelty config");
+      }
+
+      setSuccessMessage("Novelty configuration saved. Changes apply to future recomputes.");
+    } catch (err) {
+      console.error("Error saving novelty config:", err);
+      setError(err instanceof Error ? err.message : "Failed to save novelty config");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [noveltyConfig]);
+
   const handleSaveSearchDefaults = useCallback(async () => {
     setIsSaving(true);
     setError(null);
@@ -379,6 +424,14 @@ export default function SettingsPage() {
           setRankingWeights={setRankingWeights}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
+        />
+
+        {/* Novelty Config Section */}
+        <NoveltyConfigEditor
+          isSaving={isSaving}
+          noveltyConfig={noveltyConfig}
+          setNoveltyConfig={setNoveltyConfig}
+          onSave={handleSaveNoveltyConfig}
         />
 
         {/* Search Defaults Section */}

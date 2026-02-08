@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS, TOPIC_CATEGORIES } from "@/lib/constants";
@@ -12,9 +13,18 @@ import type { PostsResponse, PostWithScores } from "@/lib/types";
 
 type SortOption = "date" | "score";
 
+interface Neighborhood {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface Filters {
   category: string;
+  episodeDate: string;
   minScore: string;
+  neighborhoodId: string;
+  savedOnly: boolean;
   sort: SortOption;
   unusedOnly: boolean;
 }
@@ -35,23 +45,45 @@ interface Filters {
  * ```
  */
 export function PostFeed() {
+  const router = useRouter();
   const [error, setError] = useState<null | string>(null);
+  const [episodeDates, setEpisodeDates] = useState<string[]>([]);
   const [filters, setFilters] = useState<Filters>({
     category: "",
+    episodeDate: "",
     minScore: "",
+    neighborhoodId: "",
+    savedOnly: false,
     sort: "score",
     unusedOnly: false,
   });
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [posts, setPosts] = useState<PostWithScores[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
+  const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Debounce minScore to avoid excessive API calls
   const debouncedMinScore = useDebounce(filters.minScore, DEBOUNCE_DELAY_MS);
+
+  // Fetch neighborhoods and episode dates on mount
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/neighborhoods").then((res) =>
+        res.ok ? res.json() : { data: [] }
+      ),
+      fetch("/api/episodes").then((res) =>
+        res.ok ? res.json() : { data: [] }
+      ),
+    ]).then(([neighborhoodsResult, episodesResult]) => {
+      setNeighborhoods(neighborhoodsResult.data || []);
+      setEpisodeDates(episodesResult.data || []);
+    }).catch(() => {});
+  }, []);
 
   const fetchPosts = useCallback(
     async (currentOffset = 0, append = false) => {
@@ -70,6 +102,9 @@ export function PostFeed() {
         params.set("sort", filters.sort);
 
         if (filters.category) params.set("category", filters.category);
+        if (filters.episodeDate) params.set("episode_date", filters.episodeDate);
+        if (filters.neighborhoodId) params.set("neighborhood_id", filters.neighborhoodId);
+        if (filters.savedOnly) params.set("saved_only", "true");
 
         // Validate and parse minScore
         if (debouncedMinScore) {
@@ -101,7 +136,15 @@ export function PostFeed() {
         setLoadingMore(false);
       }
     },
-    [debouncedMinScore, filters.category, filters.sort, filters.unusedOnly]
+    [
+      debouncedMinScore,
+      filters.category,
+      filters.episodeDate,
+      filters.neighborhoodId,
+      filters.savedOnly,
+      filters.sort,
+      filters.unusedOnly,
+    ]
   );
 
   useEffect(() => {
@@ -136,6 +179,33 @@ export function PostFeed() {
       observer.disconnect();
     };
   }, [fetchPosts, loadingMore, initialLoading, offset, total]);
+
+  const handleMarkSaved = async (postId: string, saved: boolean) => {
+    if (markingSaved.has(postId)) return;
+    setMarkingSaved((prev) => new Set(prev).add(postId));
+    try {
+      const response = await fetch(`/api/posts/${postId}/saved`, {
+        body: JSON.stringify({ saved }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save post");
+      }
+      fetchPosts(offset);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update post";
+      setError(errorMessage);
+    } finally {
+      setMarkingSaved((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  };
 
   const handleMarkUsed = async (postId: string) => {
     if (markingUsed.has(postId)) return; // Prevent double-clicks
@@ -193,11 +263,57 @@ export function PostFeed() {
               <option value="date">Most Recent</option>
             </select>
           </div>
+          {/* Neighborhood */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-400" htmlFor="neighborhood">
+              Neighborhood:
+            </label>
+            <select
+              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+              id="neighborhood"
+              value={filters.neighborhoodId}
+              onChange={(e) =>
+                setFilters({ ...filters, neighborhoodId: e.target.value })
+              }
+            >
+              <option value="">All</option>
+              {neighborhoods.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Episode */}
+          {episodeDates.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-400" htmlFor="episode">
+                Episode:
+              </label>
+              <select
+                className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                id="episode"
+                value={filters.episodeDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, episodeDate: e.target.value })
+                }
+              >
+                <option value="">All</option>
+                {episodeDates.map((date) => (
+                  <option key={date} value={date}>
+                    {date}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {/* Category */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="category">Category:</label>
+            <label className="text-sm text-gray-400" htmlFor="category">
+              Category:
+            </label>
             <select
-              className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600"
+              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
               id="category"
               value={filters.category}
               onChange={(e) => setFilters({ ...filters, category: e.target.value })}
@@ -229,11 +345,21 @@ export function PostFeed() {
               }}
             />
           </div>
+          {/* Saved Only */}
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              checked={filters.savedOnly}
+              className="rounded border-gray-600 bg-gray-700"
+              type="checkbox"
+              onChange={(e) => setFilters({ ...filters, savedOnly: e.target.checked })}
+            />
+            <span className="text-sm text-gray-400">Saved only</span>
+          </label>
           {/* Unused Only */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               checked={filters.unusedOnly}
-              className="rounded bg-gray-700 border-gray-600"
+              className="rounded border-gray-600 bg-gray-700"
               type="checkbox"
               onChange={(e) => setFilters({ ...filters, unusedOnly: e.target.checked })}
             />
@@ -286,9 +412,12 @@ export function PostFeed() {
             {posts.map((post) => (
               <PostCard
                 key={post.id}
+                isMarkingSaved={markingSaved.has(post.id)}
                 isMarkingUsed={markingUsed.has(post.id)}
                 post={post}
+                onMarkSaved={handleMarkSaved}
                 onMarkUsed={handleMarkUsed}
+                onViewDetails={() => router.push(`/posts/${post.id}`)}
               />
             ))}
           </div>

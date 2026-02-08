@@ -6,14 +6,18 @@ import { PostWithScores } from "@/lib/types";
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
 interface PostCardProps {
+  isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
+  onMarkSaved?: (postId: string, saved: boolean) => void;
   onMarkUsed?: (postId: string) => void;
   onViewDetails?: (postId: string) => void;
-  post: PostWithScores;
+  post: { saved?: boolean; similarity?: number } & PostWithScores;
 }
 
 export const PostCard = memo(function PostCard({
+  isMarkingSaved = false,
   isMarkingUsed = false,
+  onMarkSaved,
   onMarkUsed,
   onViewDetails,
   post,
@@ -34,13 +38,28 @@ export const PostCard = memo(function PostCard({
             {formatRelativeTime(post.created_at)}
           </span>
         </div>
-        {scores && (
+        {(scores || post.similarity != null) && (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-yellow-500">
-              {scores.final_score?.toFixed(1) ?? "—"}
-            </span>
+            {scores && (
+              <span className="text-sm font-bold text-yellow-500">
+                {scores.final_score?.toFixed(1) ?? "—"}
+              </span>
+            )}
+            {post.similarity != null && (
+              <span
+                className="text-xs text-gray-400"
+                title="Semantic similarity to search query"
+              >
+                Sim: {post.similarity.toFixed(2)}
+              </span>
+            )}
+            {post.saved && (
+              <span className="rounded bg-blue-800 px-2 py-0.5 text-xs text-blue-200">
+                Saved
+              </span>
+            )}
             {post.used_on_episode && (
-              <span className="text-xs bg-green-800 text-green-200 px-2 py-0.5 rounded">
+              <span className="rounded bg-green-800 px-2 py-0.5 text-xs text-green-200">
                 Used
               </span>
             )}
@@ -87,6 +106,9 @@ export const PostCard = memo(function PostCard({
           <ScoreBadge label="Discuss" value={dimensionScores.discussion_spark} />
           <ScoreBadge label="Intense" value={dimensionScores.emotional_intensity} />
           <ScoreBadge label="News" value={dimensionScores.news_value} />
+          {dimensionScores.readability != null && (
+            <ScoreBadge label="Read" value={dimensionScores.readability} />
+          )}
         </div>
       )}
 
@@ -133,10 +155,20 @@ export const PostCard = memo(function PostCard({
             View on Nextdoor
           </a>
         )}
+        {onMarkSaved && (
+          <button
+            aria-label={post.saved ? "Remove from saved" : "Save for episode"}
+            className="text-xs text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isMarkingSaved}
+            onClick={() => onMarkSaved(post.id, !post.saved)}
+          >
+            {isMarkingSaved ? "Saving..." : post.saved ? "Unsave" : "Save"}
+          </button>
+        )}
         {!post.used_on_episode && onMarkUsed && (
           <button
             aria-label="Mark this post as used in an episode"
-            className="text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-xs text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isMarkingUsed}
             onClick={() => onMarkUsed(post.id)}
           >

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
@@ -33,10 +34,14 @@ interface SettingsResponse {
 }
 
 export default function SearchPage() {
+  const router = useRouter();
   const [error, setError] = useState<null | string>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [useKeywordSearch, setUseKeywordSearch] = useState(false);
+  const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<PostWithScores[]>([]);
+  const [minScore, setMinScore] = useState<"" | number>("");
   const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [total, setTotal] = useState(0);
   const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
@@ -85,17 +90,22 @@ export default function SearchPage() {
       setError(null);
 
       try {
-        const response = await fetch("/api/search", {
-          body: JSON.stringify({
-            limit: 20,
-            query: searchQuery.trim(),
-            similarity_threshold: similarityThreshold,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-        });
+        const response = useKeywordSearch
+          ? await fetch(
+              `/api/search?q=${encodeURIComponent(searchQuery.trim())}&limit=20`
+            )
+          : await fetch("/api/search", {
+              body: JSON.stringify({
+                limit: 20,
+                min_score: typeof minScore === "number" ? minScore : undefined,
+                query: searchQuery.trim(),
+                similarity_threshold: similarityThreshold,
+              }),
+              headers: {
+                "Content-Type": "application/json",
+              },
+              method: "POST",
+            });
 
         if (!response.ok) {
           let errorMessage = "Search failed";
@@ -120,13 +130,38 @@ export default function SearchPage() {
         setLoading(false);
       }
     },
-    [similarityThreshold]
+    [minScore, similarityThreshold, useKeywordSearch]
   );
 
   // Trigger search when debounced query changes
   useEffect(() => {
     handleSearch(debouncedQuery);
   }, [debouncedQuery, handleSearch]);
+
+  const handleMarkSaved = useCallback(async (postId: string, saved: boolean) => {
+    if (markingSaved.has(postId)) return;
+    setMarkingSaved((prev) => new Set(prev).add(postId));
+    try {
+      const response = await fetch(`/api/posts/${postId}/saved`, {
+        body: JSON.stringify({ saved }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      if (response.ok) {
+        setResults((prev) =>
+          prev.map((post) =>
+            post.id === postId ? { ...post, saved } : post
+          )
+        );
+      }
+    } finally {
+      setMarkingSaved((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  }, [markingSaved]);
 
   const handleMarkUsed = useCallback(async (postId: string) => {
     try {
@@ -182,8 +217,45 @@ export default function SearchPage() {
           )}
         </div>
 
-        {/* Similarity Threshold Control */}
+        {/* Search mode toggle */}
+        <div className="mb-4 flex items-center gap-4">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              checked={useKeywordSearch}
+              className="rounded border-gray-600 bg-gray-700"
+              type="checkbox"
+              onChange={(e) => setUseKeywordSearch(e.target.checked)}
+            />
+            <span className="text-sm text-gray-400">
+              Keyword search (exact terms, no AI)
+            </span>
+          </label>
+        </div>
+
+        {/* Min score filter */}
         {query.trim() && (
+          <div className="mb-4 flex items-center gap-2">
+            <label className="text-sm text-gray-400" htmlFor="min-score">
+              Min score:
+            </label>
+            <input
+              className="w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+              id="min-score"
+              max={10}
+              min={0}
+              placeholder="Any"
+              type="number"
+              value={minScore}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMinScore(v === "" ? "" : parseFloat(v) || 0);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Similarity Threshold Control */}
+        {query.trim() && !useKeywordSearch && (
           <div className="mb-6 bg-gray-800 rounded-lg p-4">
             <label
               className="block text-sm text-gray-400 mb-2"
@@ -258,8 +330,11 @@ export default function SearchPage() {
             {results.map((post) => (
               <PostCard
                 key={post.id}
+                isMarkingSaved={markingSaved.has(post.id)}
                 post={post}
+                onMarkSaved={handleMarkSaved}
                 onMarkUsed={handleMarkUsed}
+                onViewDetails={() => router.push(`/posts/${post.id}`)}
               />
             ))}
           </div>

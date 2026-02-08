@@ -36,8 +36,8 @@ export async function GET() {
         ? activeConfigResult.data.value
         : null;
 
-    // Fetch active weight config and search defaults in parallel
-    const [configResult, searchDefaultsResult] = await Promise.all([
+    // Fetch active weight config, search defaults, and novelty config in parallel
+    const [configResult, searchDefaultsResult, noveltyConfigResult] = await Promise.all([
       activeConfigId
         ? supabase
             .from("weight_configs")
@@ -46,6 +46,7 @@ export async function GET() {
             .single()
         : Promise.resolve({ data: null, error: null }),
       supabase.from("settings").select("value").eq("key", "search_defaults").single(),
+      supabase.from("settings").select("value").eq("key", "novelty_config").single(),
     ]);
 
     // Get ranking weights from active config, or fallback to defaults
@@ -68,8 +69,20 @@ export async function GET() {
             similarity_threshold: 0.2,
           };
 
+    const noveltyConfig =
+      noveltyConfigResult.data?.value &&
+      typeof noveltyConfigResult.data.value === "object"
+        ? (noveltyConfigResult.data.value as Record<string, unknown>)
+        : {
+            frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
+            max_multiplier: 1.5,
+            min_multiplier: 0.2,
+            window_days: 30,
+          };
+
     return NextResponse.json({
       data: {
+        novelty_config: noveltyConfig,
         ranking_weights: rankingWeights,
         search_defaults: searchDefaults,
       },
@@ -113,7 +126,7 @@ export async function PUT(request: NextRequest) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { ranking_weights, search_defaults } = parsed.data;
+    const { novelty_config, ranking_weights, search_defaults } = parsed.data;
 
     const supabase = getSupabaseAdmin();
     const updates: unknown[] = [];
@@ -123,6 +136,14 @@ export async function PUT(request: NextRequest) {
         supabase
           .from("settings")
           .upsert({ key: "ranking_weights", value: ranking_weights }, { onConflict: "key" })
+      );
+    }
+
+    if (novelty_config) {
+      updates.push(
+        supabase
+          .from("settings")
+          .upsert({ key: "novelty_config", value: novelty_config }, { onConflict: "key" })
       );
     }
 

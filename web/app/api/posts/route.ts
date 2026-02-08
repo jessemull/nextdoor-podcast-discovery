@@ -35,9 +35,12 @@ export async function GET(request: NextRequest) {
 
   const raw = {
     category: searchParams.get("category") ?? undefined,
+    episode_date: searchParams.get("episode_date") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
+    neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
+    saved_only: searchParams.get("saved_only") ?? undefined,
     sort: searchParams.get("sort") ?? undefined,
     unused_only: searchParams.get("unused_only") ?? undefined,
   };
@@ -50,9 +53,12 @@ export async function GET(request: NextRequest) {
 
   const {
     category,
+    episode_date: episodeDate,
     limit,
     min_score: minScoreParam,
+    neighborhood_id: neighborhoodId,
     offset,
+    saved_only: savedOnly,
     sort,
     unused_only: unusedOnly,
   } = parsed.data;
@@ -67,9 +73,12 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByScore(supabase, {
         category: category ?? null,
+        episodeDate: episodeDate ?? null,
         limit,
         minScore,
+        neighborhoodId: neighborhoodId ?? null,
         offset,
+        savedOnly,
         unusedOnly,
       });
     } else {
@@ -77,9 +86,12 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByDate(supabase, {
         category: category ?? null,
+        episodeDate: episodeDate ?? null,
         limit,
         minScore,
+        neighborhoodId: neighborhoodId ?? null,
         offset,
+        savedOnly,
         unusedOnly,
       });
     }
@@ -102,9 +114,12 @@ export async function GET(request: NextRequest) {
 
 interface QueryParams {
   category: null | string;
+  episodeDate: null | string;
   limit: number;
   minScore: null | string;
+  neighborhoodId: null | string;
   offset: number;
+  savedOnly: boolean;
   unusedOnly: boolean;
 }
 
@@ -143,7 +158,7 @@ async function getPostsByScore(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   params: QueryParams
 ) {
-  const { category, limit, minScore, offset, unusedOnly } = params;
+  const { category, episodeDate, limit, minScore, neighborhoodId, offset, savedOnly, unusedOnly } = params;
 
   // Get active weight config ID
   const activeConfigResult = await supabase
@@ -228,10 +243,13 @@ async function getPostsByScore(
     "get_posts_with_scores",
     {
       p_category: category || null,
+      p_episode_date: episodeDate || null,
       p_limit: limit,
       p_min_score: validMinScore,
+      p_neighborhood_id: neighborhoodId,
       p_offset: offset,
-      p_unused_only: unusedOnly,
+      p_saved_only: savedOnly,
+      p_unused_only: episodeDate ? false : unusedOnly,
       p_weight_config_id: activeConfigId,
     }
   );
@@ -256,8 +274,11 @@ async function getPostsByScore(
     "get_posts_with_scores_count",
     {
       p_category: category || null,
+      p_episode_date: episodeDate || null,
       p_min_score: validMinScore,
-      p_unused_only: unusedOnly,
+      p_neighborhood_id: neighborhoodId,
+      p_saved_only: savedOnly,
+      p_unused_only: episodeDate ? false : unusedOnly,
       p_weight_config_id: activeConfigId,
     }
   );
@@ -346,7 +367,7 @@ async function getPostsByDate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   params: QueryParams
 ) {
-  const { category, limit, minScore, offset, unusedOnly } = params;
+  const { category, episodeDate, limit, minScore, neighborhoodId, offset, savedOnly, unusedOnly } = params;
 
   // Build posts query
 
@@ -355,7 +376,17 @@ async function getPostsByDate(
     .select("*, neighborhood:neighborhoods(*)", { count: "exact" })
     .order("created_at", { ascending: false });
 
-  if (unusedOnly) {
+  if (neighborhoodId) {
+    postsQuery = postsQuery.eq("neighborhood_id", neighborhoodId);
+  }
+
+  if (savedOnly) {
+    postsQuery = postsQuery.eq("saved", true);
+  }
+
+  if (episodeDate) {
+    postsQuery = postsQuery.eq("episode_date", episodeDate).eq("used_on_episode", true);
+  } else if (unusedOnly) {
     postsQuery = postsQuery.eq("used_on_episode", false);
   }
 

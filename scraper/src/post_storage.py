@@ -4,6 +4,7 @@ __all__ = ["PostStorage"]
 
 import logging
 import re
+from typing import Any, cast
 
 from supabase import Client
 
@@ -61,6 +62,7 @@ class PostStorage:
                     "post_id_ext": self._extract_post_id(
                         post.post_url, post.content_hash
                     ),
+                    "reaction_count": post.reaction_count,
                     "text": post.content,
                     "url": post.post_url,
                     "user_id_hash": post.author_id,
@@ -75,7 +77,11 @@ class PostStorage:
         try:
             result = (
                 self.supabase.table("posts")
-                .upsert(posts_data, on_conflict="hash", ignore_duplicates=True)
+                .upsert(
+                    cast(Any, posts_data),
+                    on_conflict="hash",
+                    ignore_duplicates=True,
+                )
                 .execute()
             )
 
@@ -98,7 +104,11 @@ class PostStorage:
 
             for post_data in posts_data:
                 try:
-                    result = self.supabase.table("posts").insert(post_data).execute()
+                    result = (
+                        self.supabase.table("posts")
+                        .insert(cast(Any, post_data))
+                        .execute()
+                    )
                     if result.data:
                         stats["inserted"] += 1
                     else:

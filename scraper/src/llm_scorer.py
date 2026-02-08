@@ -33,12 +33,12 @@ SCORING_DIMENSIONS = {
         "How ridiculous, unhinged, or 'peak Nextdoor' is this post? "
         "(1=mundane, 10=absolutely unhinged)"
     ),
+    "discussion_spark": (
+        "Would listeners want to discuss this? (1=boring, 10=everyone has an opinion)"
+    ),
     "drama": (
         "Level of conflict, tension, or heated exchanges "
         "(1=peaceful, 10=full-blown neighbor war)"
-    ),
-    "discussion_spark": (
-        "Would listeners want to discuss this? (1=boring, 10=everyone has an opinion)"
     ),
     "emotional_intensity": (
         "Passion level - caps, exclamation marks, strong language "
@@ -46,6 +46,10 @@ SCORING_DIMENSIONS = {
     ),
     "news_value": (
         "Did something actually happen worth reporting? (1=nothing, 10=major incident)"
+    ),
+    "readability": (
+        "How easy and punchy is this to read aloud? Short, clear posts score higher; "
+        "walls of text score lower. (1=rambling/long, 10=concise and punchy)"
     ),
 }
 
@@ -81,14 +85,34 @@ Respond with ONLY valid JSON in this exact format:
 {{
     "scores": {{
         "absurdity": <1-10>,
-        "drama": <1-10>,
         "discussion_spark": <1-10>,
+        "drama": <1-10>,
         "emotional_intensity": <1-10>,
-        "news_value": <1-10>
+        "news_value": <1-10>,
+        "readability": <1-10>
     }},
     "categories": ["category1", "category2"],
     "summary": "<one sentence summary of the post>"
 }}"""
+
+# Batch scoring: multiple posts per API call
+BATCH_SIZE = 5
+
+BATCH_SCORING_PROMPT = """You are analyzing Nextdoor posts for a comedy podcast.
+
+Score each post on these dimensions (1-10):
+{dimension_descriptions}
+
+Also assign 1-3 topic categories from this list to each post: {categories}
+
+Posts to analyze (each numbered):
+{posts_text}
+
+Respond with ONLY a valid JSON array. One object per post, in order. Format:
+[
+  {{"post_index": 0, "scores": {{"absurdity": N, "discussion_spark": N, "drama": N, "emotional_intensity": N, "news_value": N, "readability": N}}, "categories": ["cat1"], "summary": "..."}},
+  {{"post_index": 1, ...}}
+]"""
 
 
 @dataclass
@@ -126,7 +150,7 @@ class LLMScorer:
         self._novelty_config: dict[str, Any] | None = None
 
     def score_posts(self, posts: list[dict[str, Any]]) -> list[PostScore]:
-        """Score multiple posts.
+        """Score multiple posts in batches for efficiency.
 
         Args:
             posts: List of post dicts with 'id' and 'text' keys.
@@ -134,25 +158,138 @@ class LLMScorer:
         Returns:
             List of PostScore results.
         """
-        results = []
+        results: list[PostScore] = []
 
-        for post in posts:
+        for i in range(0, len(posts), BATCH_SIZE):
+            batch = posts[i : i + BATCH_SIZE]
             try:
-                score = self._score_single_post(post)
-                results.append(score)
-
+                batch_results = self._score_batch(batch)
+                results.extend(batch_results)
             except Exception as e:
-                # Catch any error per-post so one failure doesn't stop the batch
-                logger.error("Error scoring post %s: %s", post.get("id"), e)
+                logger.error("Error scoring batch: %s", e)
+                for post in batch:
+                    results.append(
+                        PostScore(
+                            post_id=post.get("id", "unknown"),
+                            scores={},
+                            categories=[],
+                            summary="",
+                            error=str(e),
+                        )
+                    )
+
+        return results
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+    )
+    def _score_batch(self, posts: list[dict[str, Any]]) -> list[PostScore]:
+        """Score a batch of posts in one API call.
+
+        Args:
+            posts: List of post dicts with 'id' and 'text' keys.
+
+        Returns:
+            List of PostScore results.
+        """
+        if len(posts) == 1:
+            return [self._score_single_post(posts[0])]
+
+        dimension_desc = "\n".join(
+            f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
+        )
+        posts_text = "\n\n".join(
+            f"[Post {i}] (id={p.get('id')})\n{p.get('text', '')[:MAX_POST_LENGTH]}"
+            for i, p in enumerate(posts)
+        )
+        prompt = BATCH_SCORING_PROMPT.format(
+            dimension_descriptions=dimension_desc,
+            categories=", ".join(TOPIC_CATEGORIES),
+            posts_text=posts_text,
+        )
+
+        response = self.anthropic.messages.create(
+            max_tokens=500 * len(posts),
+            model=CLAUDE_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+        )
+
+        content_block = response.content[0]
+        raw_response = getattr(content_block, "text", "")
+
+        try:
+            parsed = json.loads(raw_response)
+        except json.JSONDecodeError as e:
+            logger.warning("Batch JSON parse error: %s", e)
+            return [
+                PostScore(
+                    post_id=p.get("id", "unknown"),
+                    scores={},
+                    categories=[],
+                    summary="",
+                    error=f"JSON parse error: {e}",
+                    raw_response=raw_response,
+                )
+                for p in posts
+            ]
+
+        if not isinstance(parsed, list):
+            logger.warning("Batch response not a list: %s", type(parsed))
+            return [
+                PostScore(
+                    post_id=p.get("id", "unknown"),
+                    scores={},
+                    categories=[],
+                    summary="",
+                    error="Invalid batch response format",
+                    raw_response=raw_response,
+                )
+                for p in posts
+            ]
+
+        results = []
+        parsed_by_index: dict[int, dict[str, Any]] = {
+            int(item.get("post_index", idx)): item
+            for idx, item in enumerate(parsed)
+            if isinstance(item, dict)
+        }
+
+        for i, post in enumerate(posts):
+            item = parsed_by_index.get(i)
+            if not item:
                 results.append(
                     PostScore(
                         post_id=post.get("id", "unknown"),
                         scores={},
                         categories=[],
                         summary="",
-                        error=str(e),
+                        error="Missing result in batch response",
                     )
                 )
+                continue
+
+            scores = item.get("scores", {})
+            validated_scores = {}
+            for dim in SCORING_DIMENSIONS:
+                s = scores.get(dim)
+                validated_scores[dim] = (
+                    float(s) if isinstance(s, (int, float)) and 1 <= s <= 10 else 5.0
+                )
+
+            raw_cats = item.get("categories", [])
+            categories = [c for c in raw_cats if c in TOPIC_CATEGORIES]
+            summary = (item.get("summary") or "")[:MAX_SUMMARY_LENGTH]
+
+            results.append(
+                PostScore(
+                    post_id=post.get("id", "unknown"),
+                    scores=validated_scores,
+                    categories=categories,
+                    summary=summary,
+                )
+            )
 
         return results
 
@@ -431,6 +568,7 @@ class LLMScorer:
             "drama": 1.5,
             "emotional_intensity": 1.2,
             "news_value": 1.0,
+            "readability": 1.2,
         }
 
         return self._weights

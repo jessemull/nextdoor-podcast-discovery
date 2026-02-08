@@ -46,10 +46,11 @@ describe("POST /api/admin/recompute-scores", () => {
       body: JSON.stringify({
         ranking_weights: {
           absurdity: 2.0,
-          drama: 1.5,
           discussion_spark: 1.0,
+          drama: 1.5,
           emotional_intensity: 1.2,
           news_value: 1.0,
+          readability: 1.2,
         },
       }),
     });
@@ -109,10 +110,11 @@ describe("POST /api/admin/recompute-scores", () => {
       body: JSON.stringify({
         ranking_weights: {
           absurdity: 15.0, // Out of bounds
-          drama: 1.5,
           discussion_spark: 1.0,
+          drama: 1.5,
           emotional_intensity: 1.2,
           news_value: 1.0,
+          readability: 1.2,
         },
       }),
     });
@@ -136,12 +138,13 @@ describe("POST /api/admin/recompute-scores", () => {
       method: "POST",
       body: JSON.stringify({
         ranking_weights: {
-          invalid_dimension: 2.0,
           absurdity: 2.0,
-          drama: 1.5,
           discussion_spark: 1.0,
+          drama: 1.5,
           emotional_intensity: 1.2,
+          invalid_dimension: 2.0,
           news_value: 1.0,
+          readability: 1.2,
         },
       }),
     });
@@ -246,10 +249,11 @@ describe("POST /api/admin/recompute-scores", () => {
       body: JSON.stringify({
         ranking_weights: {
           absurdity: 2.0,
-          drama: 1.5,
           discussion_spark: 1.0,
+          drama: 1.5,
           emotional_intensity: 1.2,
           news_value: 1.0,
+          readability: 1.2,
         },
       }),
     });

@@ -33,6 +33,137 @@ interface SearchResult {
  */
 const EMBEDDING_MODEL = "text-embedding-3-small";
 
+/** In-memory cache for query embeddings. TTL 5 minutes. */
+const EMBEDDING_CACHE_TTL_MS = 5 * 60 * 1000;
+const embeddingCache = new Map<
+  string,
+  { embedding: number[]; expiresAt: number }
+>();
+
+function getCachedEmbedding(
+  query: string,
+  similarityThreshold: number
+): null | number[] {
+  const key = `${query}:${similarityThreshold}`;
+  const entry = embeddingCache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) {
+    if (entry) embeddingCache.delete(key);
+    return null;
+  }
+  return entry.embedding;
+}
+
+/** Clears the embedding cache. Used by tests for isolation. */
+export function clearEmbeddingCacheForTest(): void {
+  embeddingCache.clear();
+}
+
+function setCachedEmbedding(
+  query: string,
+  similarityThreshold: number,
+  embedding: number[]
+): void {
+  const key = `${query}:${similarityThreshold}`;
+  embeddingCache.set(key, {
+    embedding,
+    expiresAt: Date.now() + EMBEDDING_CACHE_TTL_MS,
+  });
+  if (embeddingCache.size > 100) {
+    const oldest = [...embeddingCache.entries()].sort(
+      (a, b) => a[1].expiresAt - b[1].expiresAt
+    )[0];
+    if (oldest) embeddingCache.delete(oldest[0]);
+  }
+}
+
+/**
+ * GET /api/search?q=...&limit=...
+ *
+ * Keyword (full-text) search for posts. Requires authentication.
+ * Use when you know exact terms. Falls back to semantic search via POST for meaning-based queries.
+ */
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  const q = searchParams.get("q")?.trim();
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
+
+  if (!q || q.length === 0) {
+    return NextResponse.json(
+      { error: "Query parameter 'q' is required and must be non-empty" },
+      { status: 400 }
+    );
+  }
+
+  if (q.length > 1000) {
+    return NextResponse.json(
+      { error: "Query too long (max 1000 characters)" },
+      { status: 400 }
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const { data: posts, error } = await supabase
+      .from("posts")
+      .select("*, neighborhood:neighborhoods(*)")
+      .textSearch("text_search", q, {
+        config: "english",
+        type: "websearch",
+      })
+      .limit(limit);
+
+    if (error) {
+      if (error.message?.includes("column") && error.message?.includes("does not exist")) {
+        return NextResponse.json(
+          {
+            details: "Full-text search not available. Run migration 015_fulltext_search.sql",
+            error: "Keyword search not configured",
+          },
+          { status: 500 }
+        );
+      }
+      console.error("[search GET] Error:", error);
+      return NextResponse.json(
+        { details: error.message || "Search failed", error: "Database error" },
+        { status: 500 }
+      );
+    }
+
+    if (!posts || posts.length === 0) {
+      return NextResponse.json({ data: [], total: 0 });
+    }
+
+    const postIds = posts.map((p: { id: string }) => p.id);
+    const { data: scores } = await supabase.from("llm_scores").select("*").in("post_id", postIds);
+    const scoresMap = new Map((scores || []).map((s: { post_id: string }) => [s.post_id, s]));
+
+    const results = posts.map((post: Record<string, unknown>) => ({
+      ...post,
+      image_urls: post.image_urls || [],
+      llm_scores: scoresMap.get(post.id as string) || null,
+      neighborhood: post.neighborhood || null,
+      similarity: null,
+    }));
+
+    return NextResponse.json({ data: results, total: results.length });
+  } catch (error) {
+    console.error("[search GET] Unexpected error:", error);
+    return NextResponse.json(
+      {
+        details: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 /**
  * POST /api/search
  *
@@ -58,34 +189,44 @@ export async function POST(request: NextRequest) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { limit: validLimit, query: trimmedQuery, similarity_threshold: validThreshold } =
-      parsed.data;
+    const {
+      limit: validLimit,
+      min_score: minScore,
+      query: trimmedQuery,
+      similarity_threshold: validThreshold,
+    } = parsed.data;
 
-    // Generate embedding for the query
-    let openaiApiKey: string;
-    try {
-      openaiApiKey = env.OPENAI_API_KEY;
-    } catch (err) {
-      console.error("[search] Missing OPENAI_API_KEY environment variable");
-      return NextResponse.json(
-        {
-          details: "OPENAI_API_KEY environment variable is required for semantic search",
-          error: "Configuration error",
-        },
-        { status: 500 }
-      );
+    let queryEmbedding: null | number[] = getCachedEmbedding(
+      trimmedQuery,
+      validThreshold
+    );
+
+    if (!queryEmbedding) {
+      let openaiApiKey: string;
+      try {
+        openaiApiKey = env.OPENAI_API_KEY;
+      } catch (err) {
+        console.error("[search] Missing OPENAI_API_KEY environment variable");
+        return NextResponse.json(
+          {
+            details: "OPENAI_API_KEY environment variable is required for semantic search",
+            error: "Configuration error",
+          },
+          { status: 500 }
+        );
+      }
+
+      const openai = new OpenAI({ apiKey: openaiApiKey });
+      const embeddingResponse = await openai.embeddings.create({
+        input: trimmedQuery,
+        model: EMBEDDING_MODEL,
+      });
+      queryEmbedding = embeddingResponse.data[0].embedding;
+
+      if (queryEmbedding) {
+        setCachedEmbedding(trimmedQuery, validThreshold, queryEmbedding);
+      }
     }
-
-    const openai = new OpenAI({
-      apiKey: openaiApiKey,
-    });
-
-    const embeddingResponse = await openai.embeddings.create({
-      input: trimmedQuery,
-      model: EMBEDDING_MODEL,
-    });
-
-    const queryEmbedding = embeddingResponse.data[0].embedding;
 
     if (!queryEmbedding || queryEmbedding.length !== 1536) {
       return NextResponse.json(
@@ -195,8 +336,8 @@ export async function POST(request: NextRequest) {
     );
 
     // Combine results with scores and neighborhoods
+    // Include similarity score for display in UI
 
-    // RPC return shape matches PostWithScores structurally; DB types are hand-maintained
     const posts = searchResultsList.map((result: SearchResult) => ({
         created_at: result.created_at,
         episode_date: result.episode_date,
@@ -213,16 +354,25 @@ export async function POST(request: NextRequest) {
           },
         neighborhood_id: result.neighborhood_id,
         post_id_ext: result.post_id_ext,
+        similarity: result.similarity,
         text: result.text,
         url: result.url,
         used_on_episode: result.used_on_episode,
         user_id_hash: result.user_id_hash,
       })
-    ) as unknown as PostWithScores[];
+    );
+
+    const filteredPosts =
+      minScore != null && minScore > 0
+        ? posts.filter((p: { llm_scores: { final_score: number } | null }) => {
+            const score = p.llm_scores?.final_score;
+            return score != null && score >= minScore;
+          })
+        : posts;
 
     return NextResponse.json({
-      data: posts,
-      total: posts.length,
+      data: filteredPosts,
+      total: filteredPosts.length,
     });
   } catch (error) {
     console.error("[search] Unexpected error:", {

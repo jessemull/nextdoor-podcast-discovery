@@ -1,3 +1,4 @@
+import { PodcastPicks } from "@/components/PodcastPicks";
 import { PostFeed } from "@/components/PostFeed";
 import { SportsFact } from "@/components/SportsFact";
 import { StatsPanel } from "@/components/StatsPanel";
@@ -18,6 +19,8 @@ export default function Home() {
         <div className="mb-6">
           <StatsPanel />
         </div>
+        {/* Podcast Picks - top-scoring unused posts */}
+        <PodcastPicks />
         {/* Post feed */}
         <PostFeed />
       </div>

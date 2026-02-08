@@ -6,6 +6,13 @@ import { PostFeed } from "@/components/PostFeed";
 
 import type { PostWithScores } from "@/lib/types";
 
+// Mock next/navigation for useRouter
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
 // Mock PostCard to simplify tests
 vi.mock("@/components/PostCard", () => ({
   PostCard: ({ post, onMarkUsed }: { post: PostWithScores; onMarkUsed?: (id: string) => void }) => (
@@ -17,6 +24,11 @@ vi.mock("@/components/PostCard", () => ({
     </div>
   ),
 }));
+
+const mockNeighborhoods = [
+  { created_at: "2024-01-01", id: "neigh-1", name: "Test Neighborhood", slug: "test" },
+];
+const mockEpisodeDates: string[] = [];
 
 const mockPosts: PostWithScores[] = [
   {
@@ -81,16 +93,44 @@ const mockPosts: PostWithScores[] = [
   },
 ];
 
+/** Default fetch mock: neighborhoods, episodes, then posts. Override per test as needed. */
+function createFetchMock(postsResponse = { data: mockPosts, total: 2 }) {
+  return (url: string | URL) => {
+    const u = typeof url === "string" ? url : url.toString();
+    if (u.includes("/api/neighborhoods")) {
+      return Promise.resolve({
+        json: async () => ({ data: mockNeighborhoods }),
+        ok: true,
+      } as Response);
+    }
+    if (u.includes("/api/episodes")) {
+      return Promise.resolve({
+        json: async () => ({ data: mockEpisodeDates }),
+        ok: true,
+      } as Response);
+    }
+    if (u.includes("/api/posts")) {
+      return Promise.resolve({
+        json: async () => postsResponse,
+        ok: true,
+      } as Response);
+    }
+    return Promise.resolve({ json: async () => ({}), ok: true } as Response);
+  };
+}
+
 describe("PostFeed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    const mockFetch = vi.fn();
+    mockFetch.mockImplementation(createFetchMock());
+    global.fetch = mockFetch;
   });
 
   it("should display initial loading state", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
       () =>
-        new Promise(() => {
+        new Promise<Response>(() => {
           // Never resolves to keep loading
         })
     );
@@ -103,13 +143,9 @@ describe("PostFeed", () => {
   });
 
   it("should display posts after successful fetch", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({
-        data: mockPosts,
-        total: 2,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -122,10 +158,16 @@ describe("PostFeed", () => {
   });
 
   it("should display error message when fetch fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ error: "Failed to fetch" }),
-      ok: false,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url) => {
+      const u = typeof url === "string" ? url : url.toString();
+      if (u.includes("/api/posts")) {
+        return Promise.resolve({
+          json: async () => ({ error: "Failed to fetch" }),
+          ok: false,
+        } as Response);
+      }
+      return createFetchMock()(url);
+    });
 
     render(<PostFeed />);
 
@@ -138,21 +180,25 @@ describe("PostFeed", () => {
 
   it("should retry fetch when retry button is clicked", async () => {
     const user = userEvent.setup();
+    let postsCallCount = 0;
 
-    // First call fails
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        json: async () => ({ error: "Failed to fetch" }),
-        ok: false,
-      } as Response)
-      // Second call succeeds
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: mockPosts,
-          total: 2,
-        }),
-        ok: true,
-      } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url) => {
+      const u = typeof url === "string" ? url : url.toString();
+      if (u.includes("/api/posts")) {
+        postsCallCount++;
+        if (postsCallCount === 1) {
+          return Promise.resolve({
+            json: async () => ({ error: "Failed to fetch" }),
+            ok: false,
+          } as Response);
+        }
+        return Promise.resolve({
+          json: async () => ({ data: mockPosts, total: 2 }),
+          ok: true,
+        } as Response);
+      }
+      return createFetchMock()(url);
+    });
 
     render(<PostFeed />);
 
@@ -171,13 +217,9 @@ describe("PostFeed", () => {
   it("should filter by category when category is selected", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      json: async () => ({
-        data: [mockPosts[0]], // Only humor post
-        total: 1,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: [mockPosts[0]], total: 1 })
+    );
 
     render(<PostFeed />);
 
@@ -198,13 +240,9 @@ describe("PostFeed", () => {
   it("should filter by minimum score when minScore is entered", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      json: async () => ({
-        data: mockPosts,
-        total: 2,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -229,13 +267,9 @@ describe("PostFeed", () => {
   it("should toggle unused only filter", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      json: async () => ({
-        data: mockPosts,
-        total: 2,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -256,13 +290,9 @@ describe("PostFeed", () => {
   it("should change sort order when sort option is selected", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      json: async () => ({
-        data: mockPosts,
-        total: 2,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -281,13 +311,9 @@ describe("PostFeed", () => {
   });
 
   it("should display sentinel element when more posts are available", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({
-        data: mockPosts,
-        total: 50, // More than 2 posts
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 50 })
+    );
 
     render(<PostFeed />);
 
@@ -301,13 +327,9 @@ describe("PostFeed", () => {
   });
 
   it("should not display sentinel when all posts are loaded", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({
-        data: mockPosts,
-        total: 2, // Exactly 2 posts, no more
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -321,13 +343,9 @@ describe("PostFeed", () => {
   });
 
   it("should display end message when all posts are loaded", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({
-        data: mockPosts,
-        total: 2, // Exactly 2 posts, no more
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
@@ -339,13 +357,9 @@ describe("PostFeed", () => {
   });
 
   it("should display empty state when no posts are found", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({
-        data: [],
-        total: 0,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: [], total: 0 })
+    );
 
     render(<PostFeed />);
 
@@ -357,25 +371,16 @@ describe("PostFeed", () => {
   it("should mark post as used when button is clicked", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: mockPosts,
-          total: 2,
-        }),
-        ok: true,
-      } as Response)
-      .mockResolvedValueOnce({
-        json: async () => ({}),
-        ok: true,
-      } as Response)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: mockPosts,
-          total: 2,
-        }),
-        ok: true,
-      } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url, opts) => {
+      const u = typeof url === "string" ? url : url.toString();
+      if (u.includes("/used") && opts?.method === "PATCH") {
+        return Promise.resolve({
+          json: async () => ({}),
+          ok: true,
+        } as Response);
+      }
+      return createFetchMock()(url);
+    });
 
     render(<PostFeed />);
 
@@ -399,13 +404,9 @@ describe("PostFeed", () => {
   it("should validate minScore input to only allow non-negative numbers", async () => {
     const user = userEvent.setup();
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      json: async () => ({
-        data: mockPosts,
-        total: 2,
-      }),
-      ok: true,
-    } as Response);
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
 
     render(<PostFeed />);
 
