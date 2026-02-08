@@ -86,3 +86,32 @@ export const recomputeScoresBodySchema = z.object({
 });
 
 export type RecomputeScoresBody = z.infer<typeof recomputeScoresBodySchema>;
+
+/** GET /api/posts query params. Validates at API boundary for safe parsing. */
+export const postsQuerySchema = z.object({
+  category: z.string().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(20)
+    .transform((n) => Math.min(100, Math.max(1, n))),
+  min_score: z.coerce.number().min(0).optional(),
+  offset: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0),
+  sort: z
+    .enum(["date", "score"])
+    .optional()
+    .default("score"),
+  unused_only: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+});
+
+export type PostsQuery = z.infer<typeof postsQuerySchema>;

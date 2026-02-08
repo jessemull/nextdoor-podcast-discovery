@@ -5,12 +5,12 @@ from unittest import mock
 import pytest
 from supabase import Client
 
+from src.novelty import calculate_novelty
 from src.worker import (
     _load_job_dependencies,
     _process_batch,
     _update_job_progress,
     calculate_final_score,
-    calculate_novelty,
     load_novelty_config,
     load_topic_frequencies,
     load_weight_config,

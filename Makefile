@@ -1,4 +1,4 @@
-.PHONY: help db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
+.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
 
 # Default target
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "  db-migrate-prod  Show how to run migrations on Supabase"
 	@echo ""
 	@echo "Development:"
+	@echo "  build            Build Next.js for production"
 	@echo "  dev-scraper      Run scraper in dry-run mode"
 	@echo "  dev-web          Start Next.js dev server"
 	@echo ""
@@ -110,6 +111,9 @@ install-web:
 	cd web && npm install --legacy-peer-deps
 
 # Development
+build:
+	cd web && npm run build
+
 dev-scraper:
 	cd scraper && python -m src.main --dry-run
 

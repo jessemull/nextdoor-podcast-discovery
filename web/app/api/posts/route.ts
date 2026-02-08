@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+import { postsQuerySchema } from "@/lib/validators";
 
 import type { Database } from "@/lib/database.types";
 import type { PostsResponse, PostWithScores } from "@/lib/types";
@@ -30,18 +31,33 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
 
-  // Parse and validate query params
+  // Validate query params at API boundary (Zod)
 
-  const parsedLimit = parseInt(searchParams.get("limit") || "20");
-  const limit = Math.min(isNaN(parsedLimit) ? 20 : parsedLimit, 100);
+  const raw = {
+    category: searchParams.get("category") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+    min_score: searchParams.get("min_score") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    sort: searchParams.get("sort") ?? undefined,
+    unused_only: searchParams.get("unused_only") ?? undefined,
+  };
+  const parsed = postsQuerySchema.safeParse(raw);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    const message = first?.message ?? "Invalid query parameters";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
-  const parsedOffset = parseInt(searchParams.get("offset") || "0");
-  const offset = isNaN(parsedOffset) ? 0 : parsedOffset;
-
-  const category = searchParams.get("category");
-  const minScore = searchParams.get("min_score");
-  const unusedOnly = searchParams.get("unused_only") === "true";
-  const sort = searchParams.get("sort") || "score";
+  const {
+    category,
+    limit,
+    min_score: minScoreParam,
+    offset,
+    sort,
+    unused_only: unusedOnly,
+  } = parsed.data;
+  const minScore =
+    minScoreParam != null ? String(minScoreParam) : null;
 
   const supabase = getSupabaseAdmin();
 
@@ -50,7 +66,7 @@ export async function GET(request: NextRequest) {
       // For score-based sorting, query scores first then join posts
 
       return await getPostsByScore(supabase, {
-        category,
+        category: category ?? null,
         limit,
         minScore,
         offset,
@@ -60,7 +76,7 @@ export async function GET(request: NextRequest) {
       // For date-based sorting, query posts first then join scores
 
       return await getPostsByDate(supabase, {
-        category,
+        category: category ?? null,
         limit,
         minScore,
         offset,

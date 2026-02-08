@@ -219,31 +219,20 @@ describe("GET /api/posts", () => {
     expect(data.details).toContain("create a weight configuration");
   });
 
-  it("should handle invalid limit gracefully", async () => {
+  it("should return 400 for invalid query params", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
 
-    const rangeMock = vi.fn().mockResolvedValue({
-      count: 0,
-      data: [],
-      error: null,
-    });
+    const request = new NextRequest(
+      "http://localhost:3000/api/posts?limit=invalid&sort=date"
+    );
+    const response = await GET(request);
+    const data = await response.json();
 
-    mockFrom.mockImplementation(() => ({
-      select: () => ({
-        order: () => ({
-          range: rangeMock,
-        }),
-      }),
-    }));
-
-    const request = new NextRequest("http://localhost:3000/api/posts?limit=invalid&sort=date");
-    await GET(request);
-
-    // Falls back to default 20
-    expect(rangeMock).toHaveBeenCalledWith(0, 19);
+    expect(response.status).toBe(400);
+    expect(data.error).toBeDefined();
   });
 
   it("should cap limit at 100", async () => {

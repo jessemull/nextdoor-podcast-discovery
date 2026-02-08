@@ -219,7 +219,8 @@ def main(
         logger.error("Scraper error: %s", e)
         return 1
     except Exception as e:
-        # Last-resort catch so pipeline exits cleanly with code 1 for any unexpected error
+        # Last-resort catch so pipeline exits cleanly with code 1 (PR_REVIEW: intentional;
+        # known exceptions handled above; broad catch avoids unhandled tracebacks in cron)
         logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
         return 1
 

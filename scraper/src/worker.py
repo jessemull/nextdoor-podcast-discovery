@@ -17,6 +17,7 @@ from typing import Any, cast
 from supabase import Client
 
 from src.config import ConfigurationError, validate_env
+from src.novelty import calculate_novelty
 from src.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -61,61 +62,6 @@ def calculate_final_score(
 
     # Apply novelty multiplier
     return normalized * novelty
-
-
-def calculate_novelty(
-    categories: list[str],
-    frequencies: dict[str, int],
-    config: dict[str, Any],
-) -> float:
-    """Calculate novelty multiplier based on category frequency.
-
-    Why: Boost rare topics and penalize overused ones to keep the feed diverse.
-    This prevents the same topics (e.g., "lost pet") from dominating the rankings
-    when they appear frequently. The multiplier creates dynamic scoring that adapts
-    to recent post history.
-
-    Args:
-        categories: List of topic categories for this post.
-        frequencies: Dict of category -> count_30d.
-        config: Novelty configuration from settings.
-
-    Returns:
-        Novelty multiplier (0.2 to 1.5).
-    """
-    if not categories:
-        return 1.0  # Default: no adjustment
-
-    min_mult = float(config.get("min_multiplier", 0.2))
-    max_mult = float(config.get("max_multiplier", 1.5))
-    thresholds: dict[str, int] = config.get("frequency_thresholds", {})
-    rare_threshold = int(thresholds.get("rare", 5))
-    common_threshold = int(thresholds.get("common", 30))
-    very_common_threshold = int(thresholds.get("very_common", 100))
-
-    # Average frequency across categories
-    total_freq = sum(frequencies.get(cat, 0) for cat in categories)
-    avg_freq = float(total_freq) / len(categories) if categories else 0.0
-
-    # Map frequency to multiplier
-    if avg_freq <= rare_threshold:
-        return float(max_mult)  # Rare topic: boost
-    elif avg_freq <= common_threshold:
-        # Linear interpolation between max and 1.0
-        divisor = common_threshold - rare_threshold
-        if divisor <= 0:
-            return 1.0
-        ratio = (avg_freq - rare_threshold) / divisor
-        return float(max_mult - (ratio * (max_mult - 1.0)))
-    elif avg_freq <= very_common_threshold:
-        # Linear interpolation between 1.0 and min
-        divisor = very_common_threshold - common_threshold
-        if divisor <= 0:
-            return float(min_mult)
-        ratio = (avg_freq - common_threshold) / divisor
-        return float(1.0 - (ratio * (1.0 - min_mult)))
-    else:
-        return float(min_mult)  # Very common: penalize
 
 
 def load_weight_config(supabase: Client, weight_config_id: str) -> dict[str, float]:

@@ -8,6 +8,7 @@ from anthropic import Anthropic
 from supabase import Client
 
 from src.llm_scorer import SCORING_DIMENSIONS, LLMScorer, PostScore
+from src.novelty import calculate_novelty
 
 
 class TestLLMScorer:
@@ -156,16 +157,26 @@ class TestLLMScorer:
     def test_calculate_novelty_boosts_rare_topics(self, scorer: LLMScorer) -> None:
         """Should boost score for rare topics."""
         frequencies = {"rare_topic": 2}  # Below rare threshold
+        config = {
+            "frequency_thresholds": {"common": 30, "rare": 5, "very_common": 100},
+            "max_multiplier": 1.5,
+            "min_multiplier": 0.2,
+        }
 
-        novelty = scorer._calculate_novelty(["rare_topic"], frequencies)
+        novelty = calculate_novelty(["rare_topic"], frequencies, config)
 
         assert novelty == 1.5  # max_multiplier
 
     def test_calculate_novelty_penalizes_common_topics(self, scorer: LLMScorer) -> None:
         """Should penalize score for very common topics."""
         frequencies = {"common_topic": 150}  # Above very_common threshold
+        config = {
+            "frequency_thresholds": {"common": 30, "rare": 5, "very_common": 100},
+            "max_multiplier": 1.5,
+            "min_multiplier": 0.2,
+        }
 
-        novelty = scorer._calculate_novelty(["common_topic"], frequencies)
+        novelty = calculate_novelty(["common_topic"], frequencies, config)
 
         assert novelty == 0.2  # min_multiplier
 

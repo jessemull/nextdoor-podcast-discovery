@@ -57,7 +57,7 @@ make db-up
 # Create environment variable files
 touch scraper/.env
 touch web/.env.local
-# Edit both files with your API keys
+# Edit both files with your API keys (see Environment variables below)
 
 # Load scraper env vars into your shell (zsh/bash)
 set -a
@@ -70,6 +70,15 @@ make dev-scraper
 # Start the web app
 make dev-web
 ```
+
+## Environment variables
+
+Required environment variables are defined in each app’s example file:
+
+- **Scraper:** [scraper/.env.example](./scraper/.env.example) — Nextdoor credentials, Supabase, session encryption, Anthropic, OpenAI.
+- **Web:** [web/.env.example](./web/.env.example) — Supabase, NextAuth, Google OAuth, allowed emails.
+
+Copy to `.env` (scraper) or `.env.local` (web) and fill in your values.
 
 ## Project Structure
 
@@ -84,6 +93,7 @@ nextdoor/
 │   │   ├── exceptions.py   # Custom exceptions
 │   │   ├── llm_scorer.py   # Claude scoring
 │   │   ├── main.py         # Entry point
+│   │   ├── novelty.py      # Shared novelty calculation (scorer + worker)
 │   │   ├── post_extractor.py
 │   │   ├── post_storage.py
 │   │   ├── scraper.py      # Playwright scraper
@@ -105,6 +115,10 @@ nextdoor/
 ├── Makefile
 └── PROJECT_PLAN.md         # Full architecture documentation
 ```
+
+## Scraping policy
+
+The scraper uses configurable delays and does not currently fetch or enforce Nextdoor’s **robots.txt**. If you run this against other domains, consider adding a startup check to fetch and respect robots.txt. See [scraper/README.md](./scraper/README.md) for rate limiting and policy details.
 
 ## Documentation
 
