@@ -76,6 +76,7 @@ export interface Database {
           post_id: string;
           scores: Json;
           summary?: null | string;
+          why_podcast_worthy?: null | string;
         };
         Row: {
           categories: string[];
@@ -86,6 +87,7 @@ export interface Database {
           post_id: string;
           scores: Json;
           summary: null | string;
+          why_podcast_worthy: null | string;
         };
         Update: {
           categories?: string[];
@@ -93,6 +95,7 @@ export interface Database {
           model_version?: string;
           scores?: Json;
           summary?: null | string;
+          why_podcast_worthy?: null | string;
         };
       };
       neighborhoods: {
@@ -122,6 +125,7 @@ export interface Database {
           image_urls?: Json;
           neighborhood_id: string;
           post_id_ext: string;
+          reaction_count?: number;
           text: string;
           url?: null | string;
           used_on_episode?: boolean;
@@ -135,6 +139,7 @@ export interface Database {
           image_urls: Json;
           neighborhood_id: string;
           post_id_ext: string;
+          reaction_count: number;
           text: string;
           url: null | string;
           used_on_episode: boolean;
@@ -146,6 +151,7 @@ export interface Database {
           image_urls?: Json;
           neighborhood_id?: string;
           post_id_ext?: string;
+          reaction_count?: number;
           text?: string;
           url?: null | string;
           used_on_episode?: boolean;

@@ -10,8 +10,11 @@ interface PostCardProps {
   isMarkingUsed?: boolean;
   onMarkSaved?: (postId: string, saved: boolean) => void;
   onMarkUsed?: (postId: string) => void;
+  onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
   post: { saved?: boolean; similarity?: number } & PostWithScores;
+  selected?: boolean;
+  showCheckbox?: boolean;
 }
 
 export const PostCard = memo(function PostCard({
@@ -19,8 +22,11 @@ export const PostCard = memo(function PostCard({
   isMarkingUsed = false,
   onMarkSaved,
   onMarkUsed,
+  onSelect,
   onViewDetails,
   post,
+  selected = false,
+  showCheckbox = false,
 }: PostCardProps) {
   const scores = post.llm_scores;
   const dimensionScores = scores?.scores;
@@ -29,7 +35,17 @@ export const PostCard = memo(function PostCard({
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
-        <div>
+        <div className="flex items-center gap-2">
+          {showCheckbox && onSelect && (
+            <input
+              aria-label={`Select post from ${post.neighborhood?.name || "unknown"}`}
+              checked={selected}
+              className="rounded border-gray-600 bg-gray-700"
+              type="checkbox"
+              onChange={(e) => onSelect(post.id, e.target.checked)}
+            />
+          )}
+          <div>
           <span className="text-xs text-gray-500 uppercase tracking-wide">
             {post.neighborhood?.name || "Unknown"}
           </span>
@@ -37,6 +53,18 @@ export const PostCard = memo(function PostCard({
           <span className="text-xs text-gray-500">
             {formatRelativeTime(post.created_at)}
           </span>
+          {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
+            <>
+              <span className="text-xs text-gray-600 mx-2">•</span>
+              <span
+                className="text-xs text-gray-400"
+                title="Reactions on Nextdoor"
+              >
+                {post.reaction_count} reaction{post.reaction_count !== 1 ? "s" : ""}
+              </span>
+            </>
+          )}
+          </div>
         </div>
         {(scores || post.similarity != null) && (
           <div className="flex items-center gap-2">
@@ -109,6 +137,9 @@ export const PostCard = memo(function PostCard({
           {dimensionScores.readability != null && (
             <ScoreBadge label="Read" value={dimensionScores.readability} />
           )}
+          {dimensionScores.podcast_worthy != null && (
+            <ScoreBadge label="Podcast" value={dimensionScores.podcast_worthy} />
+          )}
         </div>
       )}
 
@@ -133,6 +164,13 @@ export const PostCard = memo(function PostCard({
         </p>
       )}
 
+      {/* Why podcast worthy */}
+      {scores?.why_podcast_worthy && (
+        <p className="text-sm text-amber-200/90 mb-3">
+          {scores.why_podcast_worthy}
+        </p>
+      )}
+
       {/* Actions */}
       <div className="flex gap-2">
         {onViewDetails && (
@@ -144,6 +182,14 @@ export const PostCard = memo(function PostCard({
             View Details
           </button>
         )}
+        <a
+          className="text-xs text-gray-400 hover:text-white transition-colors"
+          href={`/search?q=${encodeURIComponent(
+            (post.text || post.llm_scores?.summary || "").slice(0, 80)
+          )}`}
+        >
+          Find similar
+        </a>
         {post.url && (
           <a
             aria-label="View on Nextdoor"

@@ -6,12 +6,15 @@ import argparse
 import logging
 import os
 import sys
+from datetime import UTC, datetime
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from openai import OpenAI
 from supabase import Client
 
 from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
+from src.embedder import Embedder
 from src.exceptions import (
     CaptchaRequiredError,
     ConfigurationError,
@@ -70,6 +73,7 @@ def _run_scoring(supabase_client: Client) -> None:
 
 def main(
     dry_run: bool = False,
+    embed: bool = False,
     extract_permalinks: bool = False,
     feed_type: str = "recent",
     max_posts: int | None = None,
@@ -80,6 +84,7 @@ def main(
 
     Args:
         dry_run: If True, don't make any changes to the database.
+        embed: If True, run embedding generation after scrape/score (so new posts are searchable).
         extract_permalinks: If True, click Share on each post to get permalink.
         feed_type: Which feed to scrape ("recent" or "trending").
         max_posts: Maximum number of posts to scrape (default from config).
@@ -104,13 +109,14 @@ def main(
 
     logger.info(
         "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
-        "visible=%s, extract_permalinks=%s, score=%s)",
+        "visible=%s, extract_permalinks=%s, score=%s, embed=%s)",
         feed_type,
         max_posts,
         dry_run,
         visible,
         extract_permalinks,
         score,
+        embed,
     )
 
     try:
@@ -201,7 +207,31 @@ def main(
                 logger.info("Running LLM scoring on unscored posts")
                 _run_scoring(session_manager.supabase)
 
+            if embed and not dry_run:
+                logger.info("Running embedding generation for posts without embeddings")
+                openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                embedder = Embedder(session_manager.supabase, openai_client)
+                embed_stats = embedder.generate_and_store_embeddings(dry_run=False)
+                logger.info(
+                    "Embedding complete: %d processed, %d stored, %d errors",
+                    embed_stats["processed"],
+                    embed_stats["stored"],
+                    embed_stats["errors"],
+                )
+
             logger.info("Pipeline complete (feed=%s, posts=%d)", feed_type, len(posts))
+
+            if not dry_run:
+                try:
+                    session_manager.supabase.table("settings").upsert(
+                        {
+                            "key": "last_scrape_at",
+                            "value": datetime.now(UTC).isoformat(),
+                        },
+                        on_conflict="key",
+                    ).execute()
+                except Exception as e:
+                    logger.warning("Failed to update last_scrape_at: %s", e)
 
         return 0
 
@@ -231,6 +261,11 @@ if __name__ == "__main__":
         "--dry-run",
         action="store_true",
         help="Run without making changes to the database",
+    )
+    parser.add_argument(
+        "--embed",
+        action="store_true",
+        help="Run embedding generation after scrape/score so new posts are searchable",
     )
     parser.add_argument(
         "--extract-permalinks",
@@ -264,6 +299,7 @@ if __name__ == "__main__":
     sys.exit(
         main(
             dry_run=args.dry_run,
+            embed=args.embed,
             extract_permalinks=args.extract_permalinks,
             feed_type=args.feed_type,
             max_posts=args.max_posts,

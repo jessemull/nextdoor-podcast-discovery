@@ -46,7 +46,24 @@ export function PostFeed() {
   const [offset, setOffset] = useState(0);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [episodeDateForUse, setEpisodeDateForUse] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [showRefineFilters, setShowRefineFilters] = useState(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const postRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const toggleSelect = useCallback((postId: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(postId);
+      else next.delete(postId);
+      return next;
+    });
+  }, []);
 
   const fetchPosts = useCallback(
     async (currentOffset = 0, append = false) => {
@@ -177,7 +194,10 @@ export function PostFeed() {
 
     try {
       const response = await fetch(`/api/posts/${postId}/used`, {
-        body: JSON.stringify({ used: true }),
+        body: JSON.stringify({
+          episode_date: episodeDateForUse,
+          used: true,
+        }),
         headers: { "Content-Type": "application/json" },
         method: "PATCH",
       });
@@ -206,7 +226,103 @@ export function PostFeed() {
     fetchPosts(0, false); // Reset to first page on retry
   };
 
+  const handleBulkMarkUsed = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkActionLoading) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/posts/${id}/used`, {
+            body: JSON.stringify({
+              episode_date: episodeDateForUse,
+              used: true,
+            }),
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      fetchPosts(offset);
+    } catch (err) {
+      console.error("Bulk mark used failed:", err);
+      setError("Failed to mark some posts as used");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkActionLoading, episodeDateForUse, fetchPosts, offset, selectedIds]);
+
+  const handleBulkSave = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkActionLoading) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/posts/${id}/saved`, {
+            body: JSON.stringify({ saved: true }),
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      fetchPosts(offset);
+    } catch (err) {
+      console.error("Bulk save failed:", err);
+      setError("Failed to save some posts");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkActionLoading, fetchPosts, offset, selectedIds]);
+
   const hasMore = offset + POSTS_PER_PAGE < total;
+
+  // Keyboard: J/K or ArrowDown/Up move focus, Enter opens post
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      if (posts.length === 0) return;
+      const key = e.key.toLowerCase();
+      if (key === "j" || key === "arrowdown") {
+        e.preventDefault();
+        setFocusedIndex((prev) =>
+          prev < posts.length - 1 ? prev + 1 : prev
+        );
+      } else if (key === "k" || key === "arrowup") {
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev <= 0 ? 0 : prev - 1));
+      } else if (key === "enter" && focusedIndex >= 0 && posts[focusedIndex]) {
+        e.preventDefault();
+        router.push(`/posts/${posts[focusedIndex].id}`);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [focusedIndex, posts, router]);
+
+  // Clamp focused index when posts change
+  useEffect(() => {
+    if (posts.length === 0) setFocusedIndex(-1);
+    else if (focusedIndex >= posts.length) setFocusedIndex(posts.length - 1);
+  }, [focusedIndex, posts.length]);
+
+  // Scroll focused card into view
+  useEffect(() => {
+    if (focusedIndex >= 0 && postRefs.current[focusedIndex]) {
+      postRefs.current[focusedIndex]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [focusedIndex]);
 
   return (
     <div className="space-y-6">
@@ -217,6 +333,78 @@ export function PostFeed() {
             {filterLoadError}
           </p>
         )}
+        {/* Quick filter chips */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="text-xs text-gray-500 self-center">Quick:</span>
+          <button
+            className={`rounded px-3 py-1 text-sm transition-colors ${
+              filters.savedOnly
+                ? "bg-blue-600 text-white"
+                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+            type="button"
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, savedOnly: !prev.savedOnly }))
+            }
+          >
+            Saved
+          </button>
+          <button
+            className={`rounded px-3 py-1 text-sm transition-colors ${
+              filters.unusedOnly
+                ? "bg-amber-600 text-white"
+                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+            type="button"
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, unusedOnly: !prev.unusedOnly }))
+            }
+          >
+            Unused
+          </button>
+          <button
+            className={`rounded px-3 py-1 text-sm transition-colors ${
+              filters.category === "drama"
+                ? "bg-purple-600 text-white"
+                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+            type="button"
+            onClick={() =>
+              setFilters((prev) => ({
+                ...prev,
+                category: prev.category === "drama" ? "" : "drama",
+              }))
+            }
+          >
+            Drama
+          </button>
+          <button
+            className={`rounded px-3 py-1 text-sm transition-colors ${
+              filters.category === "humor"
+                ? "bg-yellow-600 text-yellow-900"
+                : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+            type="button"
+            onClick={() =>
+              setFilters((prev) => ({
+                ...prev,
+                category: prev.category === "humor" ? "" : "humor",
+              }))
+            }
+          >
+            Humor
+          </button>
+        </div>
+        {/* Refine filters (collapsible) */}
+        <div>
+          <button
+            className="mb-2 text-sm text-gray-400 hover:text-white"
+            type="button"
+            onClick={() => setShowRefineFilters((prev) => !prev)}
+          >
+            {showRefineFilters ? "▼" : "▶"} Refine filters
+          </button>
+          {showRefineFilters && (
         <div className="flex flex-wrap gap-4 items-center">
           {/* Sort */}
           <div className="flex items-center gap-2">
@@ -334,7 +522,51 @@ export function PostFeed() {
             <span className="text-sm text-gray-400">Unused only</span>
           </label>
         </div>
+          )}
+        </div>
       </div>
+
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-600 bg-gray-800/80 px-4 py-2">
+          <span className="text-sm text-gray-400">
+            {selectedIds.size} selected
+          </span>
+          <label className="text-sm text-gray-400" htmlFor="bulk-episode-date">
+            Episode date:
+          </label>
+          <input
+            className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+            id="bulk-episode-date"
+            type="date"
+            value={episodeDateForUse}
+            onChange={(e) => setEpisodeDateForUse(e.target.value)}
+          />
+          <button
+            className="rounded bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+            disabled={bulkActionLoading}
+            type="button"
+            onClick={handleBulkMarkUsed}
+          >
+            {bulkActionLoading ? "..." : "Mark as used"}
+          </button>
+          <button
+            className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            disabled={bulkActionLoading}
+            type="button"
+            onClick={handleBulkSave}
+          >
+            {bulkActionLoading ? "..." : "Save selected"}
+          </button>
+          <button
+            className="text-sm text-gray-400 transition-colors hover:text-white"
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Results count */}
       <div className="text-sm text-gray-500">
@@ -377,16 +609,26 @@ export function PostFeed() {
       {!initialLoading && posts.length > 0 && (
         <>
           <div className="space-y-4">
-            {posts.map((post) => (
-              <PostCard
+            {posts.map((post, index) => (
+              <div
                 key={post.id}
-                isMarkingSaved={markingSaved.has(post.id)}
-                isMarkingUsed={markingUsed.has(post.id)}
-                post={post}
-                onMarkSaved={handleMarkSaved}
-                onMarkUsed={handleMarkUsed}
-                onViewDetails={() => router.push(`/posts/${post.id}`)}
-              />
+                className={focusedIndex === index ? "ring-2 ring-yellow-500 rounded-lg" : ""}
+                ref={(el) => {
+                  postRefs.current[index] = el;
+                }}
+              >
+                <PostCard
+                  isMarkingSaved={markingSaved.has(post.id)}
+                  isMarkingUsed={markingUsed.has(post.id)}
+                  post={post}
+                  selected={selectedIds.has(post.id)}
+                  showCheckbox
+                  onMarkSaved={handleMarkSaved}
+                  onMarkUsed={handleMarkUsed}
+                  onSelect={toggleSelect}
+                  onViewDetails={() => router.push(`/posts/${post.id}`)}
+                />
+              </div>
             ))}
           </div>
 

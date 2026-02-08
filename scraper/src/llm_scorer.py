@@ -81,6 +81,9 @@ Post to analyze:
 {post_text}
 ---
 
+Also score "podcast_worthy" (1-10): Would this work well on a comedy podcast?
+And provide "why_podcast_worthy": one short sentence explaining why (e.g. "Good for podcast because: ...").
+
 Respond with ONLY valid JSON in this exact format:
 {{
     "scores": {{
@@ -89,10 +92,12 @@ Respond with ONLY valid JSON in this exact format:
         "drama": <1-10>,
         "emotional_intensity": <1-10>,
         "news_value": <1-10>,
+        "podcast_worthy": <1-10>,
         "readability": <1-10>
     }},
     "categories": ["category1", "category2"],
-    "summary": "<one sentence summary of the post>"
+    "summary": "<one sentence summary of the post>",
+    "why_podcast_worthy": "<one sentence: why this is good for the podcast>"
 }}"""
 
 # Batch scoring: multiple posts per API call
@@ -108,9 +113,11 @@ Also assign 1-3 topic categories from this list to each post: {categories}
 Posts to analyze (each numbered):
 {posts_text}
 
+Also score "podcast_worthy" (1-10) per post and provide "why_podcast_worthy" (one short sentence) per post.
+
 Respond with ONLY a valid JSON array. One object per post, in order. Format:
 [
-  {{"post_index": 0, "scores": {{"absurdity": N, "discussion_spark": N, "drama": N, "emotional_intensity": N, "news_value": N, "readability": N}}, "categories": ["cat1"], "summary": "..."}},
+  {{"post_index": 0, "scores": {{"absurdity": N, "discussion_spark": N, "drama": N, "emotional_intensity": N, "news_value": N, "podcast_worthy": N, "readability": N}}, "categories": ["cat1"], "summary": "...", "why_podcast_worthy": "..."}},
   {{"post_index": 1, ...}}
 ]"""
 
@@ -127,6 +134,10 @@ class PostScore:
     # Computed after applying weights and novelty
 
     final_score: float | None = None
+
+    # Podcast-worthiness (LLM-generated)
+
+    why_podcast_worthy: str | None = None
 
     # Metadata
 
@@ -278,10 +289,16 @@ class LLMScorer:
                 validated_scores[dim] = (
                     float(s) if isinstance(s, (int, float)) and 1 <= s <= 10 else 5.0
                 )
+            pw = scores.get("podcast_worthy")
+            if isinstance(pw, (int, float)) and 1 <= pw <= 10:
+                validated_scores["podcast_worthy"] = float(pw)
 
             raw_cats = item.get("categories", [])
             categories = [c for c in raw_cats if c in TOPIC_CATEGORIES]
             summary = (item.get("summary") or "")[:MAX_SUMMARY_LENGTH]
+            why_podcast_worthy = (item.get("why_podcast_worthy") or "")[
+                :MAX_SUMMARY_LENGTH
+            ].strip() or None
 
             results.append(
                 PostScore(
@@ -289,6 +306,7 @@ class LLMScorer:
                     scores=validated_scores,
                     categories=categories,
                     summary=summary,
+                    why_podcast_worthy=why_podcast_worthy,
                 )
             )
 
@@ -371,20 +389,30 @@ class LLMScorer:
             else:
                 validated_scores[dim] = 5.0  # Default to middle
 
+        # Optional podcast_worthy in scores
+
+        pw = scores.get("podcast_worthy")
+        if isinstance(pw, (int, float)) and 1 <= pw <= 10:
+            validated_scores["podcast_worthy"] = float(pw)
+
         # Extract categories
 
         raw_categories = data.get("categories", [])
         categories = [c for c in raw_categories if c in TOPIC_CATEGORIES]
 
-        # Extract summary
+        # Extract summary and why_podcast_worthy
 
         summary = data.get("summary", "")[:MAX_SUMMARY_LENGTH]
+        why_podcast_worthy = (data.get("why_podcast_worthy") or "")[
+            :MAX_SUMMARY_LENGTH
+        ].strip() or None
 
         return PostScore(
             post_id=post_id,
             scores=validated_scores,
             categories=categories,
             summary=summary,
+            why_podcast_worthy=why_podcast_worthy,
             raw_response=raw_response,
         )
 
@@ -446,6 +474,7 @@ class LLMScorer:
                     "post_id": result.post_id,
                     "scores": result.scores,
                     "summary": result.summary,
+                    "why_podcast_worthy": result.why_podcast_worthy,
                 }
 
                 self.supabase.table("llm_scores").upsert(

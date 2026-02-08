@@ -44,10 +44,18 @@ export function NoveltyConfigEditor({
   return (
     <div className="mb-8 rounded-lg bg-gray-800 p-6">
       <h2 className="mb-4 text-xl font-semibold">Novelty Configuration</h2>
-      <p className="mb-6 text-sm text-gray-400">
+      <p className="mb-2 text-sm text-gray-400">
         Control how topic frequency affects scores. Rare topics get a boost;
         overused topics get penalized.
       </p>
+      <p className="mb-4 text-xs text-gray-500">
+        Topics with ≤{thresholds.rare} posts in {noveltyConfig.window_days ?? 30} days get{" "}
+        {maxMult.toFixed(1)}×; those with &gt;{thresholds.very_common} get {minMult.toFixed(1)}×.
+      </p>
+      <div className="mb-6 rounded border border-amber-800/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
+        Recompute scores (via Ranking Weights &quot;Save & Recompute&quot;) for novelty
+        changes to take effect on the feed.
+      </div>
 
       <div className="mb-6 space-y-4">
         <div>

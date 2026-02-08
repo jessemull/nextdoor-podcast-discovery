@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { PodcastPicks } from "@/components/PodcastPicks";
 import { PostFeed } from "@/components/PostFeed";
 import { SportsFact } from "@/components/SportsFact";
@@ -19,10 +21,15 @@ export default function Home() {
         <div className="mb-6">
           <StatsPanel />
         </div>
-        {/* Podcast Picks - top-scoring unused posts */}
-        <PodcastPicks />
-        {/* Post feed */}
-        <PostFeed />
+        {/* Podcast Picks - top-scoring unused posts (uses useSearchParams) */}
+        <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-gray-800" />}>
+          <PodcastPicks />
+        </Suspense>
+        {/* Post feed + quick filters */}
+        <section aria-label="Feed">
+          <h2 className="text-xl font-semibold mb-4">Feed</h2>
+          <PostFeed />
+        </section>
       </div>
     </main>
   );

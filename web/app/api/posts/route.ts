@@ -136,6 +136,7 @@ interface PostScoreRow {
   post_id: string;
   scores: Record<string, number>;
   summary: null | string;
+  why_podcast_worthy: null | string;
 }
 
 /**
@@ -343,6 +344,7 @@ async function getPostsByScore(
         post_id: scoreRow.post_id,
         scores: scoreRow.scores,
         summary: scoreRow.summary,
+        why_podcast_worthy: scoreRow.why_podcast_worthy ?? null,
       };
 
       return {
@@ -361,7 +363,7 @@ async function getPostsByScore(
 
 /**
  * Get posts sorted by date (newest first).
- * Queries posts first, then fetches corresponding scores.
+ * Uses get_posts_by_date RPC so category and min_score are filtered in the DB.
  */
 async function getPostsByDate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -369,36 +371,66 @@ async function getPostsByDate(
 ) {
   const { category, episodeDate, limit, minScore, neighborhoodId, offset, savedOnly, unusedOnly } = params;
 
-  // Build posts query
+  const parsedMinScore = minScore ? parseFloat(minScore) : null;
+  const validMinScore = parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
-  let postsQuery = supabase
+  const { data: scoresData, error: scoresError } = await supabase.rpc(
+    "get_posts_by_date",
+    {
+      p_category: category || null,
+      p_episode_date: episodeDate || null,
+      p_limit: limit,
+      p_min_score: validMinScore,
+      p_neighborhood_id: neighborhoodId,
+      p_offset: offset,
+      p_saved_only: savedOnly,
+      p_unused_only: episodeDate ? false : unusedOnly,
+    }
+  );
+
+  if (scoresError) {
+    console.error("[posts] Error calling get_posts_by_date:", {
+      code: scoresError.code,
+      error: scoresError.message,
+    });
+    return NextResponse.json(
+      {
+        details: scoresError.message || "Database query failed",
+        error: "Database error",
+      },
+      { status: 500 }
+    );
+  }
+
+  const { data: countData, error: countError } = await supabase.rpc(
+    "get_posts_by_date_count",
+    {
+      p_category: category || null,
+      p_episode_date: episodeDate || null,
+      p_min_score: validMinScore,
+      p_neighborhood_id: neighborhoodId,
+      p_saved_only: savedOnly,
+      p_unused_only: episodeDate ? false : unusedOnly,
+    }
+  );
+
+  const total = countError ? 0 : (countData as number) || 0;
+
+  if (!scoresData || scoresData.length === 0) {
+    return NextResponse.json({ data: [], total });
+  }
+
+  const postIds = (scoresData as PostScoreRow[]).map((s) => s.post_id);
+
+  const { data: posts, error: postsError } = await supabase
     .from("posts")
-    .select("*, neighborhood:neighborhoods(*)", { count: "exact" })
-    .order("created_at", { ascending: false });
-
-  if (neighborhoodId) {
-    postsQuery = postsQuery.eq("neighborhood_id", neighborhoodId);
-  }
-
-  if (savedOnly) {
-    postsQuery = postsQuery.eq("saved", true);
-  }
-
-  if (episodeDate) {
-    postsQuery = postsQuery.eq("episode_date", episodeDate).eq("used_on_episode", true);
-  } else if (unusedOnly) {
-    postsQuery = postsQuery.eq("used_on_episode", false);
-  }
-
-  const { count, data: posts, error: postsError } = await postsQuery
-    .range(offset, offset + limit - 1);
+    .select("*, neighborhood:neighborhoods(*)")
+    .in("id", postIds);
 
   if (postsError) {
-    console.error("[posts] Error fetching posts:", {
+    console.error("[posts] Error fetching posts for date sort:", {
       code: postsError.code,
       error: postsError.message,
-      limit,
-      offset,
     });
     return NextResponse.json(
       {
@@ -409,66 +441,39 @@ async function getPostsByDate(
     );
   }
 
-  if (!posts || posts.length === 0) {
-    return NextResponse.json({ data: [], total: 0 });
-  }
-
-  // Fetch scores for these posts
   type PostRow = {
     neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
   } & Database["public"]["Tables"]["posts"]["Row"];
 
-  const postIds = (posts as PostRow[]).map((p) => p.id);
-
-  const { data: scores, error: scoresError } = await supabase
-    .from("llm_scores")
-    .select("*")
-    .in("post_id", postIds);
-
-  if (scoresError) {
-    console.error("[posts] Error fetching scores:", {
-      code: scoresError.code,
-      error: scoresError.message,
-      postCount: postIds.length,
-    });
-    // Continue without scores rather than failing entirely
-  }
-
-  // Create scores lookup map
-  type LLMScoreRow = Database["public"]["Tables"]["llm_scores"]["Row"];
-
-  const scoresMap = new Map<string, LLMScoreRow>(
-    (scores || []).map((s) => [(s as LLMScoreRow).post_id, s as LLMScoreRow])
+  const postsMap = new Map<string, PostRow>(
+    (posts || []).map((p) => [p.id, p as PostRow])
   );
 
-  // Merge posts with scores (cast: DB Row has scores as Json, we use DimensionScores in types)
-  let results = (posts as PostRow[]).map((post) => ({
-    ...post,
-    llm_scores: scoresMap.get(post.id) || null,
-    neighborhood: post.neighborhood || null,
-  })) as unknown as PostWithScores[]; // DB Row types; we use PostWithScores in API
+  const results = (scoresData as PostScoreRow[])
+    .map((scoreRow) => {
+      const post = postsMap.get(scoreRow.post_id);
+      if (!post) return null;
+      const llmScores = {
+        categories: scoreRow.categories,
+        created_at: scoreRow.llm_created_at || new Date().toISOString(),
+        final_score: scoreRow.final_score,
+        id: scoreRow.llm_score_id,
+        model_version: scoreRow.model_version || "claude-3-haiku-20240307",
+        post_id: scoreRow.post_id,
+        scores: scoreRow.scores,
+        summary: scoreRow.summary,
+        why_podcast_worthy: scoreRow.why_podcast_worthy ?? null,
+      };
+      return {
+        ...post,
+        llm_scores: llmScores,
+        neighborhood: post.neighborhood || null,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null) as unknown as PostWithScores[];
 
-  // Apply post-query filters
-
-  if (category) {
-    results = results.filter(
-      (p) => p.llm_scores?.categories?.includes(category)
-    );
-  }
-
-  if (minScore) {
-    const min = parseFloat(minScore);
-    if (!isNaN(min)) {
-      results = results.filter(
-        (p) => p.llm_scores?.final_score && p.llm_scores.final_score >= min
-      );
-    }
-  }
-
-  const response: PostsResponse = {
+  return NextResponse.json({
     data: results,
-    total: count || 0,
-  };
-
-  return NextResponse.json(response);
+    total,
+  });
 }

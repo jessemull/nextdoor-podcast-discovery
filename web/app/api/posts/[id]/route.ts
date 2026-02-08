@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
 import type { Database } from "@/lib/database.types";
-import type { PostWithScores } from "@/lib/types";
+import type { LLMScore, PostWithScores } from "@/lib/types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -85,16 +85,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ...postRow,
       image_urls: (postRow.image_urls as string[]) || [],
       llm_scores: llmScore
-        ? {
+        ? ({
             categories: llmScore.categories || [],
             created_at: llmScore.created_at,
             final_score: llmScore.final_score,
             id: llmScore.id,
             model_version: llmScore.model_version || "claude-3-haiku-20240307",
             post_id: llmScore.post_id,
-            scores: (llmScore.scores as Record<string, number>) || {},
+            scores: (llmScore.scores as LLMScore["scores"]) || {},
             summary: llmScore.summary,
-          }
+            why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
+          } as LLMScore)
         : null,
       neighborhood: postRow.neighborhood,
     };

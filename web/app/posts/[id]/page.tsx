@@ -103,13 +103,19 @@ export default function PostDetailPage() {
     [id, markingSaved, fetchPost]
   );
 
+  const today = new Date().toISOString().slice(0, 10);
+  const [episodeDate, setEpisodeDate] = useState(today);
+
   const handleMarkUsed = useCallback(async () => {
     if (!id || markingUsed) return;
 
     setMarkingUsed(true);
     try {
       const response = await fetch(`/api/posts/${id}/used`, {
-        body: JSON.stringify({ used: true }),
+        body: JSON.stringify({
+          episode_date: episodeDate,
+          used: true,
+        }),
         headers: { "Content-Type": "application/json" },
         method: "PATCH",
       });
@@ -125,7 +131,7 @@ export default function PostDetailPage() {
     } finally {
       setMarkingUsed(false);
     }
-  }, [id, markingUsed, fetchPost]);
+  }, [episodeDate, id, markingUsed, fetchPost]);
 
   // Keyboard shortcuts: J = previous (back), K = next (could be next in feed - for now back)
   useEffect(() => {
@@ -198,6 +204,19 @@ export default function PostDetailPage() {
               <span className="text-xs text-gray-500">
                 {formatRelativeTime(post.created_at)}
               </span>
+              {typeof post.reaction_count === "number" &&
+                post.reaction_count > 0 && (
+                  <>
+                    <span className="mx-2 text-gray-600">•</span>
+                    <span
+                      className="text-xs text-gray-400"
+                      title="Reactions on Nextdoor"
+                    >
+                      {post.reaction_count} reaction
+                      {post.reaction_count !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                )}
             </div>
             {scores && (
               <div className="flex items-center gap-2">
@@ -295,6 +314,13 @@ export default function PostDetailPage() {
             <p className="mt-4 italic text-gray-400">&ldquo;{scores.summary}&rdquo;</p>
           )}
 
+          {/* Why podcast worthy */}
+          {scores?.why_podcast_worthy && (
+            <p className="mt-3 text-amber-200/90">
+              {scores.why_podcast_worthy}
+            </p>
+          )}
+
           {/* Actions */}
           <div className="mt-6 flex gap-4">
             <button
@@ -316,14 +342,26 @@ export default function PostDetailPage() {
               </a>
             )}
             {!post.used_on_episode && (
-              <button
-                className="text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={markingUsed}
-                type="button"
-                onClick={() => void handleMarkUsed()}
-              >
-                {markingUsed ? "Marking..." : "Mark as Used"}
-              </button>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-400" htmlFor="episode-date">
+                  Episode date:
+                </label>
+                <input
+                  className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                  id="episode-date"
+                  type="date"
+                  value={episodeDate}
+                  onChange={(e) => setEpisodeDate(e.target.value)}
+                />
+                <button
+                  className="text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={markingUsed}
+                  type="button"
+                  onClick={() => void handleMarkUsed()}
+                >
+                  {markingUsed ? "Marking..." : "Mark as Used"}
+                </button>
+              </div>
             )}
           </div>
         </div>

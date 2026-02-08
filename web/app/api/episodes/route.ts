@@ -34,13 +34,13 @@ export async function GET() {
     );
   }
 
-  const dates = [
-    ...new Set(
+  const dates = Array.from(
+    new Set(
       (data || [])
         .map((row: { episode_date: string }) => row.episode_date)
         .filter(Boolean)
-    ),
-  ].sort((a, b) => b.localeCompare(a));
+    )
+  ).sort((a, b) => b.localeCompare(a));
 
   return NextResponse.json({ data: dates });
 }

@@ -22,6 +22,9 @@ SQL migrations for the Supabase PostgreSQL database.
    - `013_rpc_saved_filter.sql`
    - `014_episode_date_filter.sql`
    - `015_fulltext_search.sql`
+   - `016_why_podcast_worthy.sql`
+   - `017_posts_by_date_rpc.sql`
+   - `018_embedding_backlog_count.sql`
 
 **Note:** The Python worker, web app settings/weight config flows, and TESTING_GUIDE assume migrations 004–009 are applied. Run all migrations for full functionality.
 

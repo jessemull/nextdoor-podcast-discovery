@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import UTC, datetime
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -62,6 +63,18 @@ def main(dry_run: bool = False) -> int:
             stats["stored"],
             stats["errors"],
         )
+
+        if not dry_run:
+            try:
+                session_manager.supabase.table("settings").upsert(
+                    {
+                        "key": "last_scrape_at",
+                        "value": datetime.now(UTC).isoformat(),
+                    },
+                    on_conflict="key",
+                ).execute()
+            except Exception as e:
+                logger.warning("Failed to update last_scrape_at: %s", e)
 
         return 0
 

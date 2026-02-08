@@ -22,21 +22,41 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
 
   try {
-    // Get post counts in parallel
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [postsResult, scoresResult, usedResult, frequenciesResult] =
-      await Promise.all([
-        supabase.from("posts").select("id", { count: "exact", head: true }),
-        supabase.from("llm_scores").select("id", { count: "exact", head: true }),
-        supabase
-          .from("posts")
-          .select("id", { count: "exact", head: true })
-          .eq("used_on_episode", true),
-        supabase
-          .from("topic_frequencies")
-          .select("category, count_30d, last_updated")
-          .order("count_30d", { ascending: false }),
-      ]);
+    // Get post counts and extra stats in parallel
+    const [
+      postsResult,
+      scoresResult,
+      usedResult,
+      frequenciesResult,
+      postsLast24hResult,
+      lastScrapeResult,
+    ] = await Promise.all([
+      supabase.from("posts").select("id", { count: "exact", head: true }),
+      supabase.from("llm_scores").select("id", { count: "exact", head: true }),
+      supabase
+        .from("posts")
+        .select("id", { count: "exact", head: true })
+        .eq("used_on_episode", true),
+      supabase
+        .from("topic_frequencies")
+        .select("category, count_30d, last_updated")
+        .order("count_30d", { ascending: false }),
+      supabase
+        .from("posts")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", twentyFourHoursAgo),
+      supabase.from("settings").select("value").eq("key", "last_scrape_at").single(),
+    ]);
+
+    let embeddingBacklog = 0;
+    try {
+      const { data: backlogData } = await supabase.rpc("get_embedding_backlog_count");
+      if (typeof backlogData === "number") embeddingBacklog = backlogData;
+    } catch {
+      // RPC may not exist before migration 018
+    }
 
     // Check for errors
 
@@ -99,8 +119,16 @@ export async function GET() {
     const postsTotal = postsResult.count || 0;
     const postsScored = scoresResult.count || 0;
     const postsUsed = usedResult.count || 0;
+    const postsLast24h = postsLast24hResult.count ?? 0;
+    const lastScrapeAt =
+      lastScrapeResult.data?.value && typeof lastScrapeResult.data.value === "string"
+        ? lastScrapeResult.data.value
+        : null;
 
     const response: StatsResponse = {
+      embedding_backlog: embeddingBacklog,
+      last_scrape_at: lastScrapeAt,
+      posts_last_24h: postsLast24h,
       posts_scored: postsScored,
       posts_total: postsTotal,
       posts_unscored: postsTotal - postsScored,

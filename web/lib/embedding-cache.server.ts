@@ -36,7 +36,7 @@ export function setCachedEmbedding(
     expiresAt: Date.now() + EMBEDDING_CACHE_TTL_MS,
   });
   if (embeddingCache.size > 100) {
-    const oldest = [...embeddingCache.entries()].sort(
+    const oldest = Array.from(embeddingCache.entries()).sort(
       (a, b) => a[1].expiresAt - b[1].expiresAt
     )[0];
     if (oldest) embeddingCache.delete(oldest[0]);

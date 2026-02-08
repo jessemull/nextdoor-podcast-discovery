@@ -85,6 +85,30 @@ export function StatsPanel() {
         <StatCard color="purple" label="Used" value={stats.posts_used} />
       </div>
 
+      {/* Health */}
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+        <div className="rounded bg-gray-700/50 p-3">
+          <div className="text-gray-400">Posts (24h)</div>
+          <div className="text-lg font-semibold text-white">
+            {stats.posts_last_24h ?? 0}
+          </div>
+        </div>
+        <div className="rounded bg-gray-700/50 p-3">
+          <div className="text-gray-400">Embedding backlog</div>
+          <div className="text-lg font-semibold text-white">
+            {stats.embedding_backlog ?? 0}
+          </div>
+        </div>
+        <div className="rounded bg-gray-700/50 p-3">
+          <div className="text-gray-400">Last scrape</div>
+          <div className="text-xs font-medium text-gray-300">
+            {stats.last_scrape_at
+              ? new Date(stats.last_scrape_at).toLocaleString()
+              : "—"}
+          </div>
+        </div>
+      </div>
+
       {/* Top Categories */}
       {stats.top_categories.length > 0 && (
         <div>

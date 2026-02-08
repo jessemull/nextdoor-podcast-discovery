@@ -6,6 +6,9 @@ import { StatsPanel } from "@/components/StatsPanel";
 import type { StatsResponse } from "@/lib/types";
 
 const mockStats: StatsResponse = {
+  embedding_backlog: 0,
+  last_scrape_at: "2025-02-07T02:00:00Z",
+  posts_last_24h: 12,
   posts_scored: 100,
   posts_total: 150,
   posts_unscored: 50,
@@ -150,6 +153,9 @@ describe("StatsPanel", () => {
 
   it("should handle zero values correctly", async () => {
     const zeroStats: StatsResponse = {
+      embedding_backlog: 0,
+      last_scrape_at: null,
+      posts_last_24h: 0,
       posts_scored: 0,
       posts_total: 0,
       posts_unscored: 0,
@@ -174,8 +180,8 @@ describe("StatsPanel", () => {
     expect(screen.getByText("Unscored")).toBeInTheDocument();
     expect(screen.getByText("Used")).toBeInTheDocument();
 
-    // Verify that all values are 0 by checking the parent containers
+    // Verify stat cards (4 main + 3 health = 7)
     const statCards = document.querySelectorAll(".bg-gray-700\\/50");
-    expect(statCards.length).toBe(4);
+    expect(statCards.length).toBe(7);
   });
 });

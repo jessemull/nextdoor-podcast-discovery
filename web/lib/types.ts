@@ -12,6 +12,7 @@ export interface DimensionScores {
   drama: number;
   emotional_intensity: number;
   news_value: number;
+  podcast_worthy?: number;
   readability?: number;
 }
 
@@ -25,6 +26,7 @@ export interface LLMScore {
   post_id: string;
   scores: DimensionScores;
   summary: null | string;
+  why_podcast_worthy: null | string;
 }
 
 export interface Neighborhood {
@@ -42,6 +44,7 @@ export interface Post {
   image_urls: string[];
   neighborhood_id: string;
   post_id_ext: string;
+  reaction_count?: number;
   saved?: boolean;
   text: string;
   url: null | string;
@@ -105,6 +108,9 @@ export interface PostsResponse {
 }
 
 export interface StatsResponse {
+  embedding_backlog: number;
+  last_scrape_at: null | string;
+  posts_last_24h: number;
   posts_scored: number;
   posts_total: number;
   posts_unscored: number;

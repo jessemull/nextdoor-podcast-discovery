@@ -237,25 +237,27 @@ describe("GET /api/posts", () => {
       expires: "2099-01-01",
     });
 
-    const rangeMock = vi.fn().mockResolvedValue({
-      count: 0,
-      data: [],
-      error: null,
+    // Date sort uses get_posts_by_date RPC, not from().select().order().range()
+    mockRpc.mockImplementation((fnName: string) => {
+      if (fnName === "get_posts_by_date") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      if (fnName === "get_posts_by_date_count") {
+        return Promise.resolve({ data: 0, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
     });
-
-    mockFrom.mockImplementation(() => ({
-      select: () => ({
-        order: () => ({
-          range: rangeMock,
-        }),
-      }),
-    }));
 
     const request = new NextRequest("http://localhost:3000/api/posts?limit=500&sort=date");
     await GET(request);
 
-    // Capped at 100
-    expect(rangeMock).toHaveBeenCalledWith(0, 99);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "get_posts_by_date",
+      expect.objectContaining({
+        p_limit: 100,
+        p_offset: 0,
+      })
+    );
   });
 
   it("should return empty array when no posts found", async () => {
@@ -264,17 +266,15 @@ describe("GET /api/posts", () => {
       expires: "2099-01-01",
     });
 
-    mockFrom.mockImplementation(() => ({
-      select: () => ({
-        order: () => ({
-          range: vi.fn().mockResolvedValue({
-            count: 0,
-            data: [],
-            error: null,
-          }),
-        }),
-      }),
-    }));
+    mockRpc.mockImplementation((fnName: string) => {
+      if (fnName === "get_posts_by_date") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      if (fnName === "get_posts_by_date_count") {
+        return Promise.resolve({ data: 0, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
 
     const request = new NextRequest("http://localhost:3000/api/posts?sort=date");
     const response = await GET(request);
@@ -291,17 +291,18 @@ describe("GET /api/posts", () => {
       expires: "2099-01-01",
     });
 
-    mockFrom.mockImplementation(() => ({
-      select: () => ({
-        order: () => ({
-          range: vi.fn().mockResolvedValue({
-            count: null,
-            data: null,
-            error: { message: "Database connection failed" },
-          }),
-        }),
-      }),
-    }));
+    mockRpc.mockImplementation((fnName: string) => {
+      if (fnName === "get_posts_by_date") {
+        return Promise.resolve({
+          data: null,
+          error: { message: "Database connection failed" },
+        });
+      }
+      if (fnName === "get_posts_by_date_count") {
+        return Promise.resolve({ data: 0, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
 
     const request = new NextRequest("http://localhost:3000/api/posts?sort=date");
     const response = await GET(request);

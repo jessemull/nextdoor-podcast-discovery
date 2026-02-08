@@ -15,6 +15,7 @@ vi.mock("@/lib/auth", () => ({
 // Mock Supabase
 const mockSupabase = {
   from: vi.fn(),
+  rpc: vi.fn().mockResolvedValue({ data: 0 }),
 };
 
 vi.mock("@/lib/supabase.server", () => ({
@@ -82,10 +83,15 @@ describe("GET /api/stats", () => {
       const baseSelect = vi.fn();
 
       if (table === "posts") {
-        baseSelect.mockReturnValue({
+        const selectReturn = {
+          count: 50,
+          error: null,
           eq: vi.fn().mockResolvedValue({ count: 5, error: null }),
-        });
-        // First call is for total posts, second is for used posts
+          gte: vi.fn().mockResolvedValue({ count: 12, error: null }),
+          then: (resolve: (v: { count: number; error: null }) => void) =>
+            resolve({ count: 50, error: null }),
+        };
+        baseSelect.mockReturnValue(selectReturn);
         return { select: baseSelect };
       }
 
@@ -102,6 +108,19 @@ describe("GET /api/stats", () => {
           }),
         });
         return { select: baseSelect };
+      }
+
+      if (table === "settings") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { value: "2025-02-07T02:00:00Z" },
+                error: null,
+              }),
+            }),
+          }),
+        };
       }
 
       return { select: baseSelect };
@@ -139,10 +158,11 @@ describe("GET /api/stats", () => {
             }),
           };
         }
-        // Second posts call (used count)
+        // Second and third posts calls (used count, last24h) - need eq and gte
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockResolvedValue({ count: 0, error: null }),
+            gte: vi.fn().mockResolvedValue({ count: 0, error: null }),
           }),
         };
       }
@@ -155,6 +175,15 @@ describe("GET /api/stats", () => {
         return {
           select: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "settings") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
           }),
         };
       }
@@ -188,6 +217,7 @@ describe("GET /api/stats", () => {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockResolvedValue({ count: 5, error: null }),
+            gte: vi.fn().mockResolvedValue({ count: 5, error: null }),
           }),
         };
       }
@@ -205,6 +235,15 @@ describe("GET /api/stats", () => {
         return {
           select: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "settings") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
           }),
         };
       }
@@ -233,31 +272,46 @@ describe("GET /api/stats", () => {
       }),
     });
 
-    // Override for specific behavior
-    let callIndex = 0;
-    mockSupabase.from.mockImplementation(() => {
-      callIndex++;
-      if (callIndex === 1) {
-        // posts total
-        return { select: vi.fn().mockResolvedValue({ count: 100, error: null }) };
-      }
-      if (callIndex === 2) {
-        // llm_scores
-        return { select: vi.fn().mockResolvedValue({ count: 75, error: null }) };
-      }
-      if (callIndex === 3) {
-        // posts used
+    // Order in Promise.all: posts (total), llm_scores, posts (used), topic_frequencies, posts (last24h), settings
+    let postsCallCount = 0;
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === "posts") {
+        postsCallCount++;
+        if (postsCallCount === 1) {
+          return { select: vi.fn().mockResolvedValue({ count: 100, error: null }) };
+        }
+        if (postsCallCount === 2) {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ count: 10, error: null }),
+            }),
+          };
+        }
         return {
           select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ count: 10, error: null }),
+            gte: vi.fn().mockResolvedValue({ count: 5, error: null }),
           }),
         };
       }
-      if (callIndex === 4) {
-        // topic_frequencies
+      if (table === "llm_scores") {
+        return { select: vi.fn().mockResolvedValue({ count: 75, error: null }) };
+      }
+      if (table === "topic_frequencies") {
         return {
           select: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "settings") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { value: "2025-02-07T02:00:00Z" },
+                error: null,
+              }),
+            }),
           }),
         };
       }

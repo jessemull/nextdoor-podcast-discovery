@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
@@ -33,12 +33,19 @@ interface SettingsResponse {
   };
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<null | string>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [useKeywordSearch, setUseKeywordSearch] = useState(false);
+
+  // Pre-fill query from URL (e.g. /search?q=... from "Find similar" on feed)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (typeof q === "string" && q.trim()) setQuery(q.trim());
+  }, [searchParams]);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<PostWithScores[]>([]);
   const [minScore, setMinScore] = useState<"" | number>("");
@@ -341,5 +348,22 @@ export default function SearchPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen p-8">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold mb-4">Search Posts</h1>
+            <div className="h-96 animate-pulse rounded-lg bg-gray-800" />
+          </div>
+        </main>
+      }
+    >
+      <SearchPageContent />
+    </Suspense>
   );
 }
