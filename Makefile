@@ -120,16 +120,16 @@ dev-web:
 lint: lint-scraper lint-web
 
 lint-scraper:
-	cd scraper && ruff format --check src/
-	cd scraper && ruff check src/
-	cd scraper && mypy src/
+	cd scraper && ../.venv/bin/ruff format --check src/
+	cd scraper && ../.venv/bin/ruff check src/
+	cd scraper && ../.venv/bin/mypy src/
 
 lint-web:
 	cd web && npm run lint
 
 format:
-	cd scraper && ruff format src/
-	cd scraper && ruff check --fix src/
+	cd scraper && ../.venv/bin/ruff format src/
+	cd scraper && ../.venv/bin/ruff check --fix src/
 
 # Security
 security: security-scraper security-web

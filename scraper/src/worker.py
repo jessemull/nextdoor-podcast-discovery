@@ -382,7 +382,7 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         ValueError: If job params are invalid or weight_config_id is missing.
     """
     job_id = job["id"]
-    params = job.get("params", {})  # type: ignore[union-attr]
+    params = job.get("params", {})
 
     if not isinstance(params, dict):
         raise ValueError(f"Invalid params in job {job_id}")

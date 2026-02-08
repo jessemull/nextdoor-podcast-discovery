@@ -54,7 +54,7 @@ warn_return_any = true
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-path = "tests/*"
+module = "tests.*"
 strict = false
 disable_error_code = ["attr-defined"]
 

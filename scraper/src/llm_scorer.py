@@ -37,16 +37,14 @@ SCORING_DIMENSIONS = {
         "(1=peaceful, 10=full-blown neighbor war)"
     ),
     "discussion_spark": (
-        "Would listeners want to discuss this? "
-        "(1=boring, 10=everyone has an opinion)"
+        "Would listeners want to discuss this? (1=boring, 10=everyone has an opinion)"
     ),
     "emotional_intensity": (
         "Passion level - caps, exclamation marks, strong language "
         "(1=calm, 10=screaming)"
     ),
     "news_value": (
-        "Did something actually happen worth reporting? "
-        "(1=nothing, 10=major incident)"
+        "Did something actually happen worth reporting? (1=nothing, 10=major incident)"
     ),
 }
 
