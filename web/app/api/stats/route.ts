@@ -54,8 +54,11 @@ export async function GET() {
     try {
       const { data: backlogData } = await supabase.rpc("get_embedding_backlog_count");
       if (typeof backlogData === "number") embeddingBacklog = backlogData;
-    } catch {
-      // RPC may not exist before migration 018
+    } catch (rpcError) {
+      // RPC may not exist before migration 018; log but continue with 0
+      console.warn("[stats] get_embedding_backlog_count RPC failed:", {
+        error: rpcError instanceof Error ? rpcError.message : "Unknown error",
+      });
     }
 
     // Check for errors

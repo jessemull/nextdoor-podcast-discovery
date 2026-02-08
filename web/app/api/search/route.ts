@@ -9,7 +9,7 @@ import {
 } from "@/lib/embedding-cache.server";
 import { env } from "@/lib/env.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
-import { searchBodySchema } from "@/lib/validators";
+import { searchBodySchema, searchQuerySchema } from "@/lib/validators";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -50,22 +50,17 @@ export async function GET(request: NextRequest) {
   }
 
   const searchParams = request.nextUrl.searchParams;
-  const q = searchParams.get("q")?.trim();
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
-
-  if (!q || q.length === 0) {
-    return NextResponse.json(
-      { error: "Query parameter 'q' is required and must be non-empty" },
-      { status: 400 }
-    );
+  const raw = {
+    limit: searchParams.get("limit") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+  };
+  const parsed = searchQuerySchema.safeParse(raw);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    const message = first?.message ?? "Invalid query parameters";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  if (q.length > 1000) {
-    return NextResponse.json(
-      { error: "Query too long (max 1000 characters)" },
-      { status: 400 }
-    );
-  }
+  const { limit, q } = parsed.data;
 
   const supabase = getSupabaseAdmin();
 

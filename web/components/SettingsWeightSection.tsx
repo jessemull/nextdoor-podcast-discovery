@@ -4,37 +4,7 @@ import { JobsList } from "./JobsList";
 import { RankingWeightsEditor } from "./RankingWeightsEditor";
 import { WeightConfigsList } from "./WeightConfigsList";
 
-import type { RankingWeights } from "@/lib/types";
-
-interface Job {
-  cancelled_at: null | string;
-  cancelled_by: null | string;
-  completed_at: null | string;
-  created_at: string;
-  created_by: null | string;
-  error_message: null | string;
-  id: string;
-  last_retry_at: null | string;
-  max_retries: null | number;
-  params: null | Record<string, unknown>;
-  progress: null | number;
-  retry_count: null | number;
-  started_at: null | string;
-  status: string;
-  total: null | number;
-  type: string;
-}
-
-interface WeightConfig {
-  created_at: string;
-  created_by: null | string;
-  description: null | string;
-  has_scores: boolean;
-  id: string;
-  is_active: boolean;
-  name: null | string;
-  weights: RankingWeights;
-}
+import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
 interface SettingsWeightSectionProps {
   activeConfigId: null | string;

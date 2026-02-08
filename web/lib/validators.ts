@@ -30,6 +30,24 @@ const rankingWeightsSchema = z
 /** Max query length for search (prevents expensive embedding calls). */
 const MAX_QUERY_LENGTH = 1000;
 
+/** GET /api/search query params. Keyword (full-text) search. */
+export const searchQuerySchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(20)
+    .transform((n) => Math.min(50, Math.max(1, n))),
+  q: z
+    .string()
+    .trim()
+    .min(1, "Query parameter 'q' is required and must be non-empty")
+    .max(MAX_QUERY_LENGTH, `Query too long (max ${MAX_QUERY_LENGTH} characters)`),
+});
+
+export type SearchQuery = z.infer<typeof searchQuerySchema>;
+
 /** POST /api/search body. Limit and threshold are clamped to allowed range. */
 export const searchBodySchema = z.object({
   limit: z.coerce

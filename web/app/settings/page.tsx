@@ -8,7 +8,7 @@ import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 
-import type { RankingWeights } from "@/lib/types";
+import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
 interface NoveltyConfig {
   frequency_thresholds?: { common: number; rare: number; very_common: number };
@@ -35,25 +35,6 @@ interface JobResponse {
   };
 }
 
-interface Job {
-  cancelled_at: null | string;
-  cancelled_by: null | string;
-  completed_at: null | string;
-  created_at: string;
-  created_by: null | string;
-  error_message: null | string;
-  id: string;
-  last_retry_at: null | string;
-  max_retries: null | number;
-  params: null | Record<string, unknown>;
-  progress: null | number;
-  retry_count: null | number;
-  started_at: null | string;
-  status: string;
-  total: null | number;
-  type: string;
-}
-
 interface JobsResponse {
   data: Job[];
   total: number;
@@ -69,17 +50,6 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   podcast_worthy: 2.0,
   readability: 1.2,
 };
-
-interface WeightConfig {
-  created_at: string;
-  created_by: null | string;
-  description: null | string;
-  has_scores: boolean;
-  id: string;
-  is_active: boolean;
-  name: null | string;
-  weights: RankingWeights;
-}
 
 interface WeightConfigsResponse {
   active_config_id: null | string;

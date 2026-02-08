@@ -395,9 +395,13 @@ class PostExtractor:
 
             try:
                 self.page.keyboard.press("Escape")
-            except Exception:
+            except Exception as e:
                 # Intentionally swallow so modal close failure doesn't mask timeout
-                pass
+                logger.debug(
+                    "Could not press Escape to close modal (post %d): %s",
+                    post_index,
+                    e,
+                )
 
             return None
         except Exception as e:

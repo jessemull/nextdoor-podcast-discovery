@@ -1,20 +1,4 @@
-import type { JobParams, RankingWeights } from "@/lib/types";
-
-interface WeightConfig {
-  created_at: string;
-  created_by: null | string;
-  description: null | string;
-  has_scores: boolean;
-  id: string;
-  is_active: boolean;
-  name: null | string;
-  weights: RankingWeights;
-}
-
-interface Job {
-  params: JobParams | null;
-  status: string;
-}
+import type { Job, WeightConfig } from "@/lib/types";
 
 interface WeightConfigsListProps {
   activeConfigId: null | string;

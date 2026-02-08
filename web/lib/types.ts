@@ -96,6 +96,38 @@ export interface JobParams {
   weight_config_id?: string;
 }
 
+/** Background job from API. */
+export interface Job {
+  cancelled_at: null | string;
+  cancelled_by: null | string;
+  completed_at: null | string;
+  created_at: string;
+  created_by: null | string;
+  error_message: null | string;
+  id: string;
+  last_retry_at: null | string;
+  max_retries: null | number;
+  params: JobParams | null;
+  progress: null | number;
+  retry_count: null | number;
+  started_at: null | string;
+  status: string;
+  total: null | number;
+  type: string;
+}
+
+/** Weight configuration from API. */
+export interface WeightConfig {
+  created_at: string;
+  created_by: null | string;
+  description: null | string;
+  has_scores: boolean;
+  id: string;
+  is_active: boolean;
+  name: null | string;
+  weights: RankingWeights;
+}
+
 // API response types
 
 export interface SportsFactResponse {

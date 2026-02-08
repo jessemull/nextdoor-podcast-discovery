@@ -1,23 +1,6 @@
 import { calculateSuccessRate } from "@/lib/utils";
 
-interface Job {
-  cancelled_at: null | string;
-  cancelled_by: null | string;
-  completed_at: null | string;
-  created_at: string;
-  created_by: null | string;
-  error_message: null | string;
-  id: string;
-  last_retry_at: null | string;
-  max_retries: null | number;
-  params: null | Record<string, unknown>;
-  progress: null | number;
-  retry_count: null | number;
-  started_at: null | string;
-  status: string;
-  total: null | number;
-  type: string;
-}
+import type { Job } from "@/lib/types";
 
 interface JobStatsProps {
   jobs: Job[];
