@@ -25,7 +25,7 @@ class TestMain:
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
                     # Mock the scraper context manager
                     mock_scraper_instance = mock.MagicMock()
-                    mock_scraper_instance.extract_posts.return_value = []
+                    mock_scraper_instance.extract_post_batches.return_value = iter([])
                     mock_scraper.return_value.__enter__.return_value = (
                         mock_scraper_instance
                     )
@@ -42,7 +42,7 @@ class TestMain:
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
                     # Mock the scraper context manager
                     mock_scraper_instance = mock.MagicMock()
-                    mock_scraper_instance.extract_posts.return_value = []
+                    mock_scraper_instance.extract_post_batches.return_value = iter([])
                     mock_scraper.return_value.__enter__.return_value = (
                         mock_scraper_instance
                     )
@@ -99,3 +99,36 @@ class TestMain:
             result = main(dry_run=True)
 
         assert result == 1
+
+    def test_main_stops_when_stored_count_reaches_max_posts(
+        self, mock_env: dict[str, str]
+    ) -> None:
+        """Should stop extracting once we have stored max_posts new rows (not just extracted)."""
+        fake_batch1 = [mock.MagicMock()] * 3
+        fake_batch2 = [mock.MagicMock()] * 2
+        with mock.patch.dict(os.environ, mock_env, clear=True):
+            with mock.patch("src.main.SessionManager") as mock_session:
+                mock_session.return_value.supabase = mock.MagicMock()
+                with mock.patch("src.main.NextdoorScraper") as mock_scraper:
+                    mock_scraper_instance = mock.MagicMock()
+                    mock_scraper_instance.extract_post_batches.return_value = iter(
+                        [fake_batch1, fake_batch2]
+                    )
+                    mock_scraper.return_value.__enter__.return_value = (
+                        mock_scraper_instance
+                    )
+                    mock_scraper.return_value.__exit__.return_value = None
+                    with mock.patch("src.main.PostStorage") as mock_storage_cls:
+                        mock_storage = mock.MagicMock()
+                        mock_storage.store_posts.side_effect = [
+                            {"errors": 0, "inserted": 3, "skipped": 0},
+                            {"errors": 0, "inserted": 2, "skipped": 0},
+                        ]
+                        mock_storage_cls.return_value = mock_storage
+
+                        result = main(dry_run=False, max_posts=5)
+
+        assert result == 0
+        assert mock_storage.store_posts.call_count == 2
+        mock_storage.store_posts.assert_any_call(fake_batch1)
+        mock_storage.store_posts.assert_any_call(fake_batch2)

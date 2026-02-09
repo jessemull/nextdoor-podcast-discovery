@@ -8,16 +8,16 @@ Capture items we need before launch. Add new entries under the appropriate secti
 
 ### 1. When to stop scraping (Recent vs Trending)
 
-**Recent feed:** Order is stable and chronological. We can stop when:
+**Implemented behavior:**
 
-- We have processed a target number of items (e.g. `max_posts`), OR
-- We see posts we’ve already processed (duplicates).
+| Feed       | When we stop                                                                                                                                                                                             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Recent** | (1) We have **max_posts** new posts, OR (2) **MAX_SCROLL_ATTEMPTS** (100) scrolls, OR (3) **repeat_threshold** consecutive already-seen posts from the start of a batch (config: `repeat_threshold_recent`, default 10; CLI: `--repeat-threshold`), OR (4) **MAX_EMPTY_SCROLLS** (5) scrolls in a row with 0 new posts. |
+| **Trending** | (1) We have **max_posts** new posts, OR (2) **max_scroll_attempts_trending** (50) scrolls, OR (3) **MAX_EMPTY_SCROLLS** (5) scrolls in a row with 0 new posts. No repeat-threshold (order is not stable). |
 
-**Proposed strategy for Recent:** Add a “repeat threshold”: e.g. if the **next N posts in a row** (e.g. 10) are all ones we’ve already seen, then stop. If we keep getting new posts, keep going up to `max_posts`. So: scroll and extract; count consecutive already-seen posts; when that count reaches the threshold (e.g. 10), stop. Otherwise stop when we’ve collected `max_posts` new posts.
+**Recent:** Order is stable (newest first). Before processing each batch we count how many consecutive posts from the start are already in `seen_hashes`; if that count ≥ `repeat_threshold_recent`, we stop. Safety caps (max_posts, scroll cap, empty-scroll cap) remain so we never run forever.
 
-**Trending feed:** Order changes over time (not stable). We need a **different strategy** for when to stop on trending — e.g. time-based, or a fixed number of scrolls, or a repeat threshold with different parameters. To be defined (figure out what works without wasting scrolls or missing too much).
-
-**Tasks:** Implement repeat-threshold stop for Recent; document and implement a separate stop strategy for Trending.
+**Trending:** Order is not stable, so “N consecutive duplicates” does not mean “we’ve seen everything.” We rely only on max_posts, a lower scroll cap (50), and MAX_EMPTY_SCROLLS.
 
 ---
 
@@ -38,21 +38,14 @@ Capture items we need before launch. Add new entries under the appropriate secti
 
 ---
 
-### 3. Name weight configs and quick toggle (Settings + Search)
+### 3. Edit weight config name after creation
 
-**Goal:** When saving a new weight tuning, users need to know which config is which after a recompute (e.g. “Comedy Centric” vs “Drama Heavy”). They also want to swap configs often and validate how results look under each one without leaving the page.
+**Context:** Config names can be set when saving a new config (optional “Config name” field in the Save & Recompute form). If left blank, the backend uses `Config <ISO timestamp>` (e.g. “Config 2026-02-09T03:44:04.982Z”). Once a config is created, there is no way to change its name or description — the list only shows Activate and Delete.
 
-**Current state:** The app already has:
-- `weight_configs.name` and optional “Config name” when saving (Settings). If left blank, the list shows “Config &lt;id&gt;” which is hard to recognize.
-- Activate in Settings to switch the global active config (feed and search use that).
+**Task:** Allow editing the config name (and optionally description) after creation.
 
-**Requirements:**
-
-- **Naming when saving:** Make the config name **prominent and encouraged (or required)** when saving weights and triggering a recompute. Examples: “Comedy Centric”, “Drama Heavy”, “Balanced”. So after the job completes, the list clearly shows which config is which and users can choose the right one to activate.
-- **Quick swap:** Keep the existing “Activate” flow in Settings for changing the global default. Optionally add a clearer “active config” selector at the top of Settings so swapping is one click.
-- **Toggle on Search (and optionally Feed):** On the **search page** (and optionally the main feed), add a **dropdown or tabs** to “View results as: [Comedy Centric ▼]” that lets the user **preview** results using a different weight config **without** changing the global active config. So they can validate “how does search look under Comedy Centric vs Drama Heavy?” without going to Settings and activating each time. Implementation: posts/search API accepts an optional `weight_config_id` (or `preview_config_id`) for that request; when present, use that config’s scores for ranking for that request only; the global active config stays unchanged.
-
-**Tasks:** (1) Make config name prominent/required in the Save & Recompute form (Settings). (2) Optional: improve “active config” selector in Settings for one-click swap. (3) Add “View as” / config selector on Search page (and optionally Feed) that passes a preview config id to the API; backend supports optional override for that request.
+- **API:** Add `PATCH /api/admin/weight-configs/:id` accepting `{ name?: string, description?: string }` and updating the `weight_configs` row.
+- **UI:** In the Weight Configurations list (Settings), add a way to rename/edit (e.g. “Rename” or “Edit” that turns the name into an input, or an edit icon with inline field/modal). Wire it to the PATCH endpoint and refresh the list on success.
 
 ---
 

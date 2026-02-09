@@ -227,3 +227,85 @@ class TestPostExtractor:
         extractor._scroll_down()
 
         extractor.page.wait_for_timeout.assert_called_once()
+
+    def test_recent_stops_when_repeat_threshold_consecutive_already_seen(
+        self, mock_page: mock.MagicMock
+    ) -> None:
+        """Should stop extraction when repeat_threshold consecutive already-seen posts at start of batch (Recent only)."""
+        repeat_threshold = 10
+        extractor = PostExtractor(
+            mock_page,
+            feed_type="recent",
+            max_posts=50,
+            repeat_threshold=repeat_threshold,
+        )
+        # Pre-seed seen_hashes so the first 10 posts in the batch count as already seen
+        for i in range(repeat_threshold):
+            h = extractor._generate_hash(
+                f"author{i}",
+                f"Post {i} with enough content to pass minimum length",
+            )
+            extractor.seen_hashes.add(h)
+        batch = [
+            {
+                "authorId": f"author{i}",
+                "authorName": f"Author {i}",
+                "content": f"Post {i} with enough content to pass minimum length",
+                "imageUrls": [],
+                "neighborhood": None,
+                "reactionCount": 0,
+                "timestamp": None,
+            }
+            for i in range(15)
+        ]
+        mock_page.wait_for_selector.return_value = None
+        mock_page.evaluate.return_value = batch
+        mock_page.wait_for_load_state.return_value = None
+        mock_page.wait_for_timeout.return_value = None
+
+        result = extractor.extract_posts()
+
+        # Stopped on repeat threshold before adding any from this batch; no prior batch
+        assert result == []
+        assert mock_page.evaluate.call_count == 1
+
+    def test_trending_does_not_stop_on_consecutive_duplicates(
+        self, mock_page: mock.MagicMock
+    ) -> None:
+        """Should not stop on consecutive already-seen posts when feed_type is trending."""
+        repeat_threshold = 10
+        extractor = PostExtractor(
+            mock_page,
+            feed_type="trending",
+            max_posts=50,
+            repeat_threshold=repeat_threshold,
+        )
+        for i in range(repeat_threshold):
+            h = extractor._generate_hash(
+                f"author{i}",
+                f"Post {i} with enough content to pass minimum length",
+            )
+            extractor.seen_hashes.add(h)
+        # First 10 already seen, next 5 new
+        batch = [
+            {
+                "authorId": f"author{i}",
+                "authorName": f"Author {i}",
+                "content": f"Post {i} with enough content to pass minimum length",
+                "imageUrls": [],
+                "neighborhood": None,
+                "reactionCount": 0,
+                "timestamp": None,
+            }
+            for i in range(15)
+        ]
+        mock_page.wait_for_selector.return_value = None
+        mock_page.evaluate.return_value = batch
+        mock_page.wait_for_load_state.return_value = None
+        mock_page.wait_for_timeout.return_value = None
+
+        result = extractor.extract_posts()
+
+        # Trending does not use repeat-threshold stop; the 5 new posts are added
+        assert len(result) == 5
+        assert mock_page.evaluate.call_count >= 1

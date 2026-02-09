@@ -5,7 +5,7 @@ __all__ = ["NextdoorScraper"]
 import logging
 import os
 import random
-from typing import Any
+from typing import Any, Iterator
 
 from playwright.sync_api import (
     Browser,
@@ -287,15 +287,24 @@ class NextdoorScraper:
         except PlaywrightTimeoutError:
             logger.debug("Feed tab selector not found (mobile or different UI)")
 
-    def extract_posts(self, max_posts: int | None = None) -> list[RawPost]:
+    def extract_posts(
+        self,
+        feed_type: str = "recent",
+        max_posts: int | None = None,
+        repeat_threshold: int | None = None,
+    ) -> list[RawPost]:
         """Extract posts from the current feed page.
 
         Permalinks are always extracted (Share flow per post). Slower but
         provides direct URLs for each post.
 
         Args:
+            feed_type: Which feed is active ("recent" or "trending"); affects
+                stop logic and max scrolls.
             max_posts: Maximum number of posts to extract.
                 Defaults to SCRAPER_CONFIG["max_posts_per_run"].
+            repeat_threshold: For Recent feed only: stop when this many
+                consecutive already-seen posts. Defaults to config.
 
         Returns:
             List of extracted posts.
@@ -305,9 +314,49 @@ class NextdoorScraper:
 
         if max_posts is None:
             max_posts = SCRAPER_CONFIG["max_posts_per_run"]
+        if repeat_threshold is None:
+            repeat_threshold = SCRAPER_CONFIG["repeat_threshold_recent"]
 
-        extractor = PostExtractor(self.page, max_posts=max_posts)
+        extractor = PostExtractor(
+            self.page,
+            feed_type=feed_type,
+            max_posts=max_posts,
+            repeat_threshold=repeat_threshold,
+        )
         return extractor.extract_posts()
+
+    def extract_post_batches(
+        self,
+        feed_type: str = "recent",
+        repeat_threshold: int | None = None,
+        safety_cap: int = 500,
+    ) -> Iterator[list[RawPost]]:
+        """Yield batches of posts after each scroll for pipeline store-until-N flow.
+
+        Caller should store each batch and stop when stored count >= target.
+
+        Args:
+            feed_type: Which feed is active ("recent" or "trending").
+            repeat_threshold: For Recent feed, stop after this many consecutive
+                already-seen. Defaults to config.
+            safety_cap: Stop yielding after this many total posts (default 500).
+
+        Yields:
+            List of RawPost from the current scroll.
+        """
+        if not self.page:
+            raise RuntimeError("Browser not started. Call start() first.")
+
+        if repeat_threshold is None:
+            repeat_threshold = SCRAPER_CONFIG["repeat_threshold_recent"]
+
+        extractor = PostExtractor(
+            self.page,
+            feed_type=feed_type,
+            max_posts=safety_cap,
+            repeat_threshold=repeat_threshold,
+        )
+        yield from extractor.extract_post_batches(safety_cap=safety_cap)
 
     def _check_for_captcha(self) -> bool:
         """Check if CAPTCHA is present on page.
