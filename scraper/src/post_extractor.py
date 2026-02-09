@@ -80,9 +80,11 @@ def _get_extraction_script(min_content_length: int) -> str:
     const IMAGE_SEL = '{image_sel}';
     const REACTION_SEL = '{reaction_sel}';
 
-    document.querySelectorAll('div.post, div.js-media-post').forEach(el => {{
+    const containers = document.querySelectorAll('div.post, div.js-media-post');
+    containers.forEach((el, containerIndex) => {{
         try {{
             if (el.textContent?.includes('Sponsored')) return;
+            if (el.closest('[class*="gam-ad"], [class*="ad-placeholder"], [class*="feed-gam-ad"]')) return;
 
             const authorLink = el.querySelector(AUTHOR_SEL);
             if (!authorLink) return;
@@ -120,7 +122,8 @@ def _get_extraction_script(min_content_length: int) -> str:
             posts.push({{
                 authorId, authorName, content, imageUrls,
                 neighborhood, reactionCount, timestamp,
-                postIndex: posts.length  // Track position for Share click
+                containerIndex,
+                postIndex: posts.length
             }});
         }} catch (e) {{
             console.error('Extract error:', e);
@@ -284,12 +287,12 @@ class PostExtractor:
 
         # Always extract permalink (Share flow per post)
 
-        post_index = raw.get("postIndex", 0)
-        post_url = self.extract_permalink(post_index)
+        container_index = raw.get("containerIndex", raw.get("postIndex", 0))
+        post_url = self.extract_permalink(container_index)
 
         # Extract comments (open drawer, optionally "See previous", parse list)
 
-        comments = self._extract_comments_for_post(post_index)
+        comments = self._extract_comments_for_post(container_index)
 
         return RawPost(
             author_id=author_id,
@@ -344,34 +347,31 @@ class PostExtractor:
         delay = random.randint(min_delay, max_delay)
         self.page.wait_for_timeout(delay)
 
-    def extract_permalink(self, post_index: int) -> str | None:
+    def extract_permalink(self, container_index: int) -> str | None:
         """Extract permalink for a specific post by clicking Share.
 
-        Note: Uses DOM index which may become stale if posts shift during
-        scrolling (e.g., new posts at top, ads inserted). This is a best-effort
-        extraction - if the index is wrong, we get the wrong URL or fail gracefully.
+        Note: Uses DOM container index (among div.post, div.js-media-post) so
+        we target the same card we extracted from, avoiding ad containers.
 
         Args:
-            post_index: Index of the post in the current view (0-based).
+            container_index: Index of the container in the DOM (0-based).
 
         Returns:
             Post URL like https://nextdoor.com/p/XXX or None if failed.
         """
         try:
-            # Find all post containers and get the one at the specified index
-
             containers = self.page.locator("div.post, div.js-media-post")
-            if containers.count() <= post_index:
-                logger.warning("Post index %d out of range", post_index)
+            if containers.count() <= container_index:
+                logger.warning("Container index %d out of range", container_index)
                 return None
 
-            container = containers.nth(post_index)
+            container = containers.nth(container_index)
 
             # Find and click the Share button within this post
 
             share_btn = container.locator('[data-testid="share-button"]')
             if share_btn.count() == 0:
-                logger.debug("No share button found for post %d", post_index)
+                logger.debug("No share button found for container %d", container_index)
                 return None
 
             share_btn.click()
@@ -394,7 +394,7 @@ class PostExtractor:
             return post_url
 
         except PlaywrightTimeoutError:
-            logger.debug("Timeout extracting permalink for post %d", post_index)
+            logger.debug("Timeout extracting permalink for container %d", container_index)
 
             # Try to close any open modal
 
@@ -410,10 +410,9 @@ class PostExtractor:
 
             return None
         except Exception as e:
-            # Catch any extraction error; fail gracefully for this post
             logger.debug(
-                "Error extracting permalink for post index %d: %s (%s)",
-                post_index,
+                "Error extracting permalink for container %d: %s (%s)",
+                container_index,
                 e,
                 type(e).__name__,
             )
@@ -425,33 +424,41 @@ class PostExtractor:
     COMMENT_SEE_MORE_WAIT_MS = 600
     COMMENT_CLOSE_WAIT_MS = 200
 
-    def _extract_comments_for_post(self, post_index: int) -> list[RawComment]:
+    def _extract_comments_for_post(self, container_index: int) -> list[RawComment]:
         """Open comment drawer for a post, optionally load all, and extract comments.
 
-        Clicks the nth comment icon on the page, waits for the drawer, clicks
-        "See previous comments" if present, then parses all .js-media-comment
-        nodes and closes the drawer.
+        Clicks the comment button inside the container at container_index so we
+        target the same card we extracted from (avoiding ad containers).
 
         Args:
-            post_index: Index of the post (0-based; matches nth comment button).
+            container_index: Index of the post container in the DOM (0-based).
 
         Returns:
             List of RawComment (author_name, text, timestamp_relative).
         """
         try:
-            reply_buttons = self.page.get_by_test_id("post-reply-button")
-            if reply_buttons.count() <= post_index:
+            containers = self.page.locator("div.post, div.js-media-post")
+            if containers.count() <= container_index:
                 logger.info(
-                    "Comments post %d: only %d comment button(s) on page",
-                    post_index,
-                    reply_buttons.count(),
+                    "Comments container %d: only %d container(s) on page",
+                    container_index,
+                    containers.count(),
                 )
                 return []
 
-            btn = reply_buttons.nth(post_index)
+            container = containers.nth(container_index)
+            reply_in_container = container.get_by_test_id("post-reply-button")
+            if reply_in_container.count() == 0:
+                logger.info(
+                    "Comments container %d: no reply button in container",
+                    container_index,
+                )
+                return []
+
+            btn = reply_in_container.first
             btn.scroll_into_view_if_needed()
             self.page.wait_for_timeout(200)
-            logger.info("Comments post %d: clicking comment button", post_index)
+            logger.info("Comments container %d: clicking comment button", container_index)
             btn.click()
 
             # Give drawer time to start opening, then wait for content
@@ -466,8 +473,8 @@ class PostExtractor:
                 )
             except PlaywrightTimeoutError:
                 logger.info(
-                    "Comments post %d: comment drawer did not appear within %d ms",
-                    post_index,
+                    "Comments container %d: comment drawer did not appear within %d ms",
+                    container_index,
                     self.COMMENT_DRAWER_TIMEOUT_MS,
                 )
                 self.page.keyboard.press("Escape")
@@ -478,7 +485,10 @@ class PostExtractor:
 
             see_more = self.page.get_by_test_id("seeMoreButton")
             if see_more.is_visible():
-                logger.debug("Comments post %d: clicking See previous comments", post_index)
+                logger.debug(
+                    "Comments container %d: clicking See previous comments",
+                    container_index,
+                )
                 see_more.click()
                 self.page.wait_for_timeout(self.COMMENT_SEE_MORE_WAIT_MS)
 
@@ -519,20 +529,20 @@ class PostExtractor:
             ]
             if raw_count and not out:
                 logger.info(
-                    "Comments post %d: %d .js-media-comment node(s) found but none had text/author (selector mismatch?)",
-                    post_index,
+                    "Comments container %d: %d .js-media-comment node(s) found but none had text/author (selector mismatch?)",
+                    container_index,
                     raw_count,
                 )
             else:
                 logger.info(
-                    "Comments post %d: extracted %d comment(s)",
-                    post_index,
+                    "Comments container %d: extracted %d comment(s)",
+                    container_index,
                     len(out),
                 )
             return out
 
         except PlaywrightTimeoutError:
-            logger.debug("Comments post %d: timeout", post_index)
+            logger.debug("Comments container %d: timeout", container_index)
             try:
                 self.page.keyboard.press("Escape")
             except Exception:
@@ -540,8 +550,8 @@ class PostExtractor:
             return []
         except Exception as e:
             logger.warning(
-                "Comments post %d: %s (%s)",
-                post_index,
+                "Comments container %d: %s (%s)",
+                container_index,
                 e,
                 type(e).__name__,
             )
