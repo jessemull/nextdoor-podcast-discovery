@@ -141,9 +141,87 @@ describe("GET /api/posts", () => {
     expect(data.data).toHaveLength(2);
     expect(data.total).toBe(2);
     expect(mockRpc).toHaveBeenCalledWith("get_posts_with_scores", expect.objectContaining({
-      p_weight_config_id: "config-1",
+      p_ignored_only: false,
       p_limit: 10,
+      p_weight_config_id: "config-1",
     }));
+  });
+
+  it("should pass p_ignored_only to RPC when ignored_only=true", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+      expires: "2099-01-01",
+    });
+
+    const mockScoresData = [
+      {
+        categories: ["humor"],
+        final_score: 10,
+        llm_created_at: "2024-01-01T00:00:00Z",
+        llm_score_id: "score-1",
+        model_version: "claude-3-haiku-20240307",
+        post_id: "post-1",
+        scores: { absurdity: 5.0, drama: 3.0 },
+        summary: "Test summary",
+        why_podcast_worthy: null,
+      },
+    ];
+    const mockPosts = [
+      { id: "post-1", neighborhood: { name: "Test" }, text: "Post 1" },
+    ];
+
+    const settingsSelect = vi.fn().mockReturnThis();
+    const settingsEq = vi.fn().mockReturnThis();
+    const settingsSingle = vi.fn().mockResolvedValue({
+      data: { value: "config-1" },
+      error: null,
+    });
+    settingsSelect.mockReturnValue({ eq: settingsEq });
+    settingsEq.mockReturnValue({ single: settingsSingle });
+
+    mockRpc.mockImplementation((fnName: string) => {
+      if (fnName === "get_posts_with_scores") {
+        return Promise.resolve({ data: mockScoresData, error: null });
+      }
+      if (fnName === "get_posts_with_scores_count") {
+        return Promise.resolve({ data: 1, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    const postsSelect = vi.fn().mockReturnThis();
+    const postsIn = vi.fn().mockResolvedValue({
+      data: mockPosts,
+      error: null,
+    });
+    postsSelect.mockReturnValue({ in: postsIn });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "settings") {
+        return { select: settingsSelect };
+      }
+      if (table === "posts") {
+        return { select: postsSelect };
+      }
+      return {};
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/posts?limit=10&sort=score&ignored_only=true"
+    );
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data).toHaveLength(1);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "get_posts_with_scores",
+      expect.objectContaining({
+        p_ignored_only: true,
+        p_limit: 10,
+        p_weight_config_id: "config-1",
+      })
+    );
   });
 
   it("should return error when no active config found", async () => {

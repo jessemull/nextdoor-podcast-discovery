@@ -130,6 +130,15 @@ export const postsSavedBodySchema = z.object({
 
 export type PostsSavedBody = z.infer<typeof postsSavedBodySchema>;
 
+/** PATCH /api/posts/[id]/ignored body */
+export const postsIgnoredBodySchema = z.object({
+  ignored: z.boolean({
+    required_error: "Missing required field: ignored (boolean)",
+  }),
+});
+
+export type PostsIgnoredBody = z.infer<typeof postsIgnoredBodySchema>;
+
 /** POST /api/admin/recompute-scores body */
 export const recomputeScoresBodySchema = z.object({
   description: z.string().optional(),
@@ -139,9 +148,38 @@ export const recomputeScoresBodySchema = z.object({
 
 export type RecomputeScoresBody = z.infer<typeof recomputeScoresBodySchema>;
 
+/** PATCH /api/admin/weight-configs/:id body (name and/or description) */
+export const weightConfigPatchBodySchema = z
+  .object({
+    description: z
+      .string()
+      .max(2000, "Description too long")
+      .optional()
+      .transform((v) =>
+        v !== undefined && v.trim() === "" ? undefined : v
+      ),
+    name: z
+      .string()
+      .max(255, "Name too long")
+      .optional()
+      .transform((v) =>
+        v !== undefined && v.trim() === "" ? undefined : v
+      ),
+  })
+  .refine(
+    (data) => data.name !== undefined || data.description !== undefined,
+    "At least one of name or description is required"
+  );
+
+export type WeightConfigPatchBody = z.infer<typeof weightConfigPatchBodySchema>;
+
 /** GET /api/posts query params. Validates at API boundary for safe parsing. */
 export const postsQuerySchema = z.object({
   category: z.string().optional(),
+  ignored_only: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
   limit: z.coerce
     .number()
     .int()

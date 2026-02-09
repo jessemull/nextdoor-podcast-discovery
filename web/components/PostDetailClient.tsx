@@ -31,6 +31,7 @@ export function PostDetailClient({
 }: PostDetailClientProps) {
   const router = useRouter();
   const [error, setError] = useState<null | string>(null);
+  const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
   const [markingUsed, setMarkingUsed] = useState(false);
   const [post, setPost] = useState<null | PostWithScores>(initialPost);
@@ -126,6 +127,26 @@ export function PostDetailClient({
     }
   }, [postId, markingUsed, fetchPost]);
 
+  const handleMarkIgnored = useCallback(
+    async (ignored: boolean) => {
+      if (!postId || markingIgnored) return;
+      setMarkingIgnored(true);
+      try {
+        const response = await fetch(`/api/posts/${postId}/ignored`, {
+          body: JSON.stringify({ ignored }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
+        if (response.ok) {
+          await fetchPost();
+        }
+      } finally {
+        setMarkingIgnored(false);
+      }
+    },
+    [postId, markingIgnored, fetchPost]
+  );
+
   // Keyboard shortcuts: J = previous (back)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -202,6 +223,11 @@ export function PostDetailClient({
                 <span className="text-lg font-bold text-yellow-500">
                   {scores.final_score?.toFixed(1) ?? "—"}
                 </span>
+                {post.ignored && (
+                  <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
+                    Ignored
+                  </span>
+                )}
                 {post.used_on_episode && (
                   <span className="rounded bg-green-800 px-2 py-0.5 text-xs text-green-200">
                     Used
@@ -304,6 +330,18 @@ export function PostDetailClient({
 
           {/* Actions */}
           <div className="mt-6 flex gap-4">
+            <button
+              className="text-gray-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={markingIgnored}
+              type="button"
+              onClick={() => void handleMarkIgnored(!post.ignored)}
+            >
+              {markingIgnored
+                ? "..."
+                : post.ignored
+                  ? "Unignore"
+                  : "Ignore"}
+            </button>
             <button
               className="text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={markingSaved}

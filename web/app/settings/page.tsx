@@ -100,6 +100,7 @@ export default function SettingsPage() {
   const {
     activeConfigId,
     jobs,
+    refetchWeightConfigs,
     setActiveConfigId,
     setJobs,
     setWeightConfigs,
@@ -437,6 +438,7 @@ export default function SettingsPage() {
           onActivate={handleActivateConfig}
           onCancelJob={handleCancelJob}
           onDelete={handleDeleteConfig}
+          onRenameSuccess={refetchWeightConfigs}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
         />

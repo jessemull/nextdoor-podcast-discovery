@@ -20,6 +20,7 @@ interface SettingsWeightSectionProps {
   onActivate: (configId: string) => Promise<void>;
   onCancelJob: (jobId: string) => Promise<void>;
   onDelete: (configId: string) => Promise<void>;
+  onRenameSuccess?: () => void;
   onReset: () => void;
   onSave: () => Promise<void>;
   pendingJobsCount: number;
@@ -43,6 +44,7 @@ export function SettingsWeightSection({
   onActivate,
   onCancelJob,
   onDelete,
+  onRenameSuccess,
   onReset,
   onSave,
   pendingJobsCount,
@@ -73,6 +75,7 @@ export function SettingsWeightSection({
         jobs={jobs}
         onActivate={onActivate}
         onDelete={onDelete}
+        onRenameSuccess={onRenameSuccess}
       />
       <JobsList
         cancellingJobId={cancellingJobId}

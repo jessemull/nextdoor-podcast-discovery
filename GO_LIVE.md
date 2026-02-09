@@ -23,7 +23,7 @@ Capture items we need before launch. Add new entries under the appropriate secti
 
 ## App features
 
-### 2. “Ignore post” (soft delete / attribution)
+### 2. “Ignore post” (soft delete / attribution) — Done
 
 **Goal:** For initial go-live we need an **“Ignore post”** action in addition to (or instead of) “Mark as used.” Once Matt sees a post once, he can mark it ignored so it doesn’t keep surfacing; he can still review ignored posts and unmark if needed.
 
@@ -38,7 +38,7 @@ Capture items we need before launch. Add new entries under the appropriate secti
 
 ---
 
-### 3. Edit weight config name after creation
+### 3. Edit weight config name after creation — Done
 
 **Context:** Config names can be set when saving a new config (optional “Config name” field in the Save & Recompute form). If left blank, the backend uses `Config <ISO timestamp>` (e.g. “Config 2026-02-09T03:44:04.982Z”). Once a config is created, there is no way to change its name or description — the list only shows Activate and Delete.
 

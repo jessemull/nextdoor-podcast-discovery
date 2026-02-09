@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Job, WeightConfig } from "@/lib/types";
 
@@ -125,9 +125,24 @@ export function useSettingsPolling() {
     };
   }, []);
 
+  const refetchWeightConfigs = useCallback(async () => {
+    try {
+      const configsResponse = await fetch("/api/admin/weight-configs");
+      if (configsResponse.ok) {
+        const configsData: WeightConfigsResponse =
+          await configsResponse.json();
+        setWeightConfigs(configsData.data || []);
+        setActiveConfigId(configsData.active_config_id);
+      }
+    } catch (err) {
+      console.error("Error refetching weight configs:", err);
+    }
+  }, []);
+
   return {
     activeConfigId,
     jobs,
+    refetchWeightConfigs,
     setActiveConfigId,
     setJobs,
     setWeightConfigs,

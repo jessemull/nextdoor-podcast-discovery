@@ -121,6 +121,7 @@ export interface Database {
           created_at?: string;
           hash: string;
           id?: string;
+          ignored?: boolean;
           image_urls?: Json;
           neighborhood_id: string;
           post_id_ext: string;
@@ -134,6 +135,7 @@ export interface Database {
           created_at: string;
           hash: string;
           id: string;
+          ignored: boolean;
           image_urls: Json;
           neighborhood_id: string;
           post_id_ext: string;
@@ -145,6 +147,7 @@ export interface Database {
         };
         Update: {
           hash?: string;
+          ignored?: boolean;
           image_urls?: Json;
           neighborhood_id?: string;
           post_id_ext?: string;

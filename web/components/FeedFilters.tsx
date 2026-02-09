@@ -53,6 +53,19 @@ export function FeedFilters({
         </button>
         <button
           className={`rounded px-3 py-1 text-sm transition-colors ${
+            filters.ignoredOnly
+              ? "bg-gray-600 text-white"
+              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+          type="button"
+          onClick={() =>
+            setFilters((prev) => ({ ...prev, ignoredOnly: !prev.ignoredOnly }))
+          }
+        >
+          Ignored
+        </button>
+        <button
+          className={`rounded px-3 py-1 text-sm transition-colors ${
             filters.unusedOnly
               ? "bg-amber-600 text-white"
               : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -364,6 +377,18 @@ export function FeedFilters({
                 }
               />
               <span className="text-sm text-gray-400">Saved only</span>
+            </label>
+            {/* Ignored Only */}
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                checked={filters.ignoredOnly}
+                className="rounded border-gray-600 bg-gray-700"
+                type="checkbox"
+                onChange={(e) =>
+                  setFilters({ ...filters, ignoredOnly: e.target.checked })
+                }
+              />
+              <span className="text-sm text-gray-400">Ignored only</span>
             </label>
             {/* Unused Only */}
             <label className="flex cursor-pointer items-center gap-2">

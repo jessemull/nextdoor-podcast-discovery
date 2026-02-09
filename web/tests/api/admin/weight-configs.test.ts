@@ -2,7 +2,10 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/admin/weight-configs/route";
-import { DELETE } from "@/app/api/admin/weight-configs/[id]/route";
+import {
+  DELETE,
+  PATCH,
+} from "@/app/api/admin/weight-configs/[id]/route";
 import { PUT } from "@/app/api/admin/weight-configs/[id]/activate/route";
 
 // Mock next-auth
@@ -358,6 +361,157 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     expect(response.status).toBe(400);
     expect(data.error).toBe("Cannot delete config with active jobs");
     expect(data.details).toContain("job(s)");
+  });
+});
+
+const createPatchParams = (id: string) => ({
+  params: Promise.resolve({ id }),
+});
+
+describe("PATCH /api/admin/weight-configs/:id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should return 401 when not authenticated", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null);
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
+      {
+        body: JSON.stringify({ name: "New Name" }),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams(CONFIG_1_UUID));
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe("Unauthorized");
+  });
+
+  it("should return 400 for invalid config ID format", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+    } as never);
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/admin/weight-configs/not-a-uuid",
+      {
+        body: JSON.stringify({ name: "New Name" }),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams("not-a-uuid"));
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Invalid weight config ID format");
+  });
+
+  it("should return 400 when body has neither name nor description", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+    } as never);
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
+      {
+        body: JSON.stringify({}),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams(CONFIG_1_UUID));
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBeDefined();
+  });
+
+  it("should return 400 when at least one of name or description is required", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+    } as never);
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
+      {
+        body: JSON.stringify({ name: "", description: "" }),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams(CONFIG_1_UUID));
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBeDefined();
+  });
+
+  it("should return 404 when config not found", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+    } as never);
+
+    const updateSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "PGRST116", message: "Row not found" },
+    });
+    const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
+    const updateEq = vi.fn().mockReturnValue({ select: updateSelect });
+
+    mockFrom.mockReturnValue({
+      update: vi.fn().mockReturnValue({ eq: updateEq }),
+    });
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
+      {
+        body: JSON.stringify({ name: "New Name" }),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams(CONFIG_1_UUID));
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe("Not found");
+  });
+
+  it("should update name and return config when valid", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+    } as never);
+
+    const updatedConfig = {
+      description: null,
+      id: CONFIG_1_UUID,
+      name: "Updated Config Name",
+      weights: { absurdity: 2.0, drama: 1.5 },
+    };
+
+    const updateSingle = vi.fn().mockResolvedValue({
+      data: updatedConfig,
+      error: null,
+    });
+    const updateSelect = vi.fn().mockReturnValue({ single: updateSingle });
+    const updateEq = vi.fn().mockReturnValue({ select: updateSelect });
+
+    mockFrom.mockReturnValue({
+      update: vi.fn().mockReturnValue({ eq: updateEq }),
+    });
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
+      {
+        body: JSON.stringify({ name: "Updated Config Name" }),
+        method: "PATCH",
+      }
+    );
+    const response = await PATCH(request, createPatchParams(CONFIG_1_UUID));
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data.name).toBe("Updated Config Name");
   });
 });
 

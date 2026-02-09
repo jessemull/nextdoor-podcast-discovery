@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
   const raw = {
     category: searchParams.get("category") ?? undefined,
+    ignored_only: searchParams.get("ignored_only") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
 
   const {
     category,
+    ignored_only: ignoredOnly,
     limit,
     min_podcast_worthy: minPodcastWorthyParam,
     min_reaction_count: minReactionCountParam,
@@ -79,6 +81,7 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByDate(supabase, {
         category: category ?? null,
+        ignoredOnly,
         limit,
         minPodcastWorthy,
         minReactionCount,
@@ -95,6 +98,7 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByScore(supabase, {
         category: category ?? null,
+        ignoredOnly,
         limit,
         minPodcastWorthy,
         minReactionCount,
@@ -125,6 +129,7 @@ export async function GET(request: NextRequest) {
 
 interface QueryParams {
   category: null | string;
+  ignoredOnly: boolean;
   limit: number;
   minPodcastWorthy: null | number;
   minReactionCount: null | number;
@@ -174,6 +179,7 @@ async function getPostsByScore(
 ) {
   const {
     category,
+    ignoredOnly,
     limit,
     minPodcastWorthy,
     minReactionCount,
@@ -268,6 +274,7 @@ async function getPostsByScore(
     "get_posts_with_scores",
     {
       p_category: category || null,
+      p_ignored_only: ignoredOnly,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
@@ -301,6 +308,7 @@ async function getPostsByScore(
     "get_posts_with_scores_count",
     {
       p_category: category || null,
+      p_ignored_only: ignoredOnly,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
@@ -398,6 +406,7 @@ async function getPostsByDate(
 ) {
   const {
     category,
+    ignoredOnly,
     limit,
     minPodcastWorthy,
     minReactionCount,
@@ -415,6 +424,7 @@ async function getPostsByDate(
     "get_posts_by_date",
     {
       p_category: category || null,
+      p_ignored_only: ignoredOnly,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
@@ -444,6 +454,7 @@ async function getPostsByDate(
     "get_posts_by_date_count",
     {
       p_category: category || null,
+      p_ignored_only: ignoredOnly,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
