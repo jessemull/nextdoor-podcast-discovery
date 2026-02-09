@@ -10,7 +10,6 @@ export interface UseBulkActionsParams {
 
 export interface UseBulkActionsResult {
   bulkActionLoading: boolean;
-  episodeDateForUse: string;
   handleBulkMarkUsed: () => Promise<void>;
   handleBulkSave: () => Promise<void>;
   handleMarkSaved: (postId: string, saved: boolean) => Promise<void>;
@@ -18,7 +17,6 @@ export interface UseBulkActionsResult {
   markingSaved: Set<string>;
   markingUsed: Set<string>;
   selectedIds: Set<string>;
-  setEpisodeDateForUse: (value: string) => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   toggleSelect: (postId: string, selected: boolean) => void;
 }
@@ -29,9 +27,6 @@ export function useBulkActions({
   setError,
 }: UseBulkActionsParams): UseBulkActionsResult {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-  const [episodeDateForUse, setEpisodeDateForUse] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -81,10 +76,7 @@ export function useBulkActions({
       setMarkingUsed((prev) => new Set(prev).add(postId));
       try {
         const response = await fetch(`/api/posts/${postId}/used`, {
-          body: JSON.stringify({
-            episode_date: episodeDateForUse,
-            used: true,
-          }),
+          body: JSON.stringify({ used: true }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
@@ -106,7 +98,7 @@ export function useBulkActions({
         });
       }
     },
-    [episodeDateForUse, fetchPosts, markingUsed, offset, setError]
+    [fetchPosts, markingUsed, offset, setError]
   );
 
   const handleBulkMarkUsed = useCallback(async () => {
@@ -116,10 +108,7 @@ export function useBulkActions({
       await Promise.all(
         Array.from(selectedIds).map((id) =>
           fetch(`/api/posts/${id}/used`, {
-            body: JSON.stringify({
-              episode_date: episodeDateForUse,
-              used: true,
-            }),
+            body: JSON.stringify({ used: true }),
             headers: { "Content-Type": "application/json" },
             method: "PATCH",
           })
@@ -135,7 +124,6 @@ export function useBulkActions({
     }
   }, [
     bulkActionLoading,
-    episodeDateForUse,
     fetchPosts,
     offset,
     selectedIds,
@@ -167,7 +155,6 @@ export function useBulkActions({
 
   return {
     bulkActionLoading,
-    episodeDateForUse,
     handleBulkMarkUsed,
     handleBulkSave,
     handleMarkSaved,
@@ -175,7 +162,6 @@ export function useBulkActions({
     markingSaved,
     markingUsed,
     selectedIds,
-    setEpisodeDateForUse,
     setSelectedIds,
     toggleSelect,
   };

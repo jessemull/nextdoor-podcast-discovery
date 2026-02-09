@@ -18,7 +18,6 @@ import type { PostWithScores } from "@/lib/types";
  */
 interface SearchResult {
   created_at: string;
-  episode_date: null | string;
   hash: string;
   id: string;
   image_urls: null | string[];
@@ -296,7 +295,6 @@ export async function POST(request: NextRequest) {
 
     const posts = searchResultsList.map((result: SearchResult) => ({
         created_at: result.created_at,
-        episode_date: result.episode_date,
         hash: result.hash,
         id: result.id,
         image_urls: result.image_urls || [],

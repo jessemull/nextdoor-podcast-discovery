@@ -28,7 +28,6 @@ export function PostFeed() {
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    episodeDates,
     filterLoadError,
     filters,
     neighborhoods,
@@ -55,7 +54,6 @@ export function PostFeed() {
 
   const {
     bulkActionLoading,
-    episodeDateForUse,
     handleBulkMarkUsed,
     handleBulkSave,
     handleMarkSaved,
@@ -63,7 +61,6 @@ export function PostFeed() {
     markingSaved,
     markingUsed,
     selectedIds,
-    setEpisodeDateForUse,
     setSelectedIds,
     toggleSelect,
   } = useBulkActions({ fetchPosts, offset, setError });
@@ -102,7 +99,6 @@ export function PostFeed() {
   return (
     <div className="space-y-6">
       <FeedFilters
-        episodeDates={episodeDates}
         filterLoadError={filterLoadError}
         filters={filters}
         neighborhoods={neighborhoods}
@@ -113,9 +109,7 @@ export function PostFeed() {
 
       <BulkActionBar
         bulkActionLoading={bulkActionLoading}
-        episodeDateForUse={episodeDateForUse}
         selectedCount={selectedIds.size}
-        setEpisodeDateForUse={setEpisodeDateForUse}
         onBulkMarkUsed={handleBulkMarkUsed}
         onBulkSave={handleBulkSave}
         onClear={() => setSelectedIds(new Set())}

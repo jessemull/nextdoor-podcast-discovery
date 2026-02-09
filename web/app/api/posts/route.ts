@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
 
   const raw = {
     category: searchParams.get("category") ?? undefined,
-    episode_date: searchParams.get("episode_date") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
@@ -55,7 +54,6 @@ export async function GET(request: NextRequest) {
 
   const {
     category,
-    episode_date: episodeDate,
     limit,
     min_podcast_worthy: minPodcastWorthyParam,
     min_reaction_count: minReactionCountParam,
@@ -81,7 +79,6 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByDate(supabase, {
         category: category ?? null,
-        episodeDate: episodeDate ?? null,
         limit,
         minPodcastWorthy,
         minReactionCount,
@@ -98,7 +95,6 @@ export async function GET(request: NextRequest) {
 
       return await getPostsByScore(supabase, {
         category: category ?? null,
-        episodeDate: episodeDate ?? null,
         limit,
         minPodcastWorthy,
         minReactionCount,
@@ -129,7 +125,6 @@ export async function GET(request: NextRequest) {
 
 interface QueryParams {
   category: null | string;
-  episodeDate: null | string;
   limit: number;
   minPodcastWorthy: null | number;
   minReactionCount: null | number;
@@ -179,7 +174,6 @@ async function getPostsByScore(
 ) {
   const {
     category,
-    episodeDate,
     limit,
     minPodcastWorthy,
     minReactionCount,
@@ -274,7 +268,6 @@ async function getPostsByScore(
     "get_posts_with_scores",
     {
       p_category: category || null,
-      p_episode_date: episodeDate || null,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
@@ -283,7 +276,7 @@ async function getPostsByScore(
       p_offset: offset,
       p_order_by: orderBy,
       p_saved_only: savedOnly,
-      p_unused_only: episodeDate ? false : unusedOnly,
+      p_unused_only: unusedOnly,
       p_weight_config_id: activeConfigId,
     }
   );
@@ -308,13 +301,12 @@ async function getPostsByScore(
     "get_posts_with_scores_count",
     {
       p_category: category || null,
-      p_episode_date: episodeDate || null,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,
-      p_unused_only: episodeDate ? false : unusedOnly,
+      p_unused_only: unusedOnly,
       p_weight_config_id: activeConfigId,
     }
   );
@@ -406,7 +398,6 @@ async function getPostsByDate(
 ) {
   const {
     category,
-    episodeDate,
     limit,
     minPodcastWorthy,
     minReactionCount,
@@ -424,7 +415,6 @@ async function getPostsByDate(
     "get_posts_by_date",
     {
       p_category: category || null,
-      p_episode_date: episodeDate || null,
       p_limit: limit,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
@@ -432,7 +422,7 @@ async function getPostsByDate(
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
       p_saved_only: savedOnly,
-      p_unused_only: episodeDate ? false : unusedOnly,
+      p_unused_only: unusedOnly,
     }
   );
 
@@ -454,13 +444,12 @@ async function getPostsByDate(
     "get_posts_by_date_count",
     {
       p_category: category || null,
-      p_episode_date: episodeDate || null,
       p_min_podcast_worthy: minPodcastWorthy,
       p_min_reaction_count: minReactionCount,
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_saved_only: savedOnly,
-      p_unused_only: episodeDate ? false : unusedOnly,
+      p_unused_only: unusedOnly,
     }
   );
 

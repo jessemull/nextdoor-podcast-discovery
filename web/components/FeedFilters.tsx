@@ -8,7 +8,6 @@ import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
 type SortOption = "date" | "podcast_score" | "score";
 
 export interface FeedFiltersProps {
-  episodeDates: string[];
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
@@ -19,10 +18,9 @@ export interface FeedFiltersProps {
 
 /**
  * Filter UI for the post feed: quick chips (Saved, Unused, Drama, Humor)
- * and collapsible refine section (sort, neighborhood, episode, category, min score).
+ * and collapsible refine section (sort, neighborhood, category, min score).
  */
 export function FeedFilters({
-  episodeDates,
   filterLoadError,
   filters,
   neighborhoods,
@@ -256,29 +254,6 @@ export function FeedFilters({
                 ))}
               </select>
             </div>
-            {/* Episode */}
-            {episodeDates.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400" htmlFor="episode">
-                  Episode:
-                </label>
-                <select
-                  className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-                  id="episode"
-                  value={filters.episodeDate}
-                  onChange={(e) =>
-                    setFilters({ ...filters, episodeDate: e.target.value })
-                  }
-                >
-                  <option value="">All</option>
-                  {episodeDates.map((date) => (
-                    <option key={date} value={date}>
-                      {date}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
             {/* Category */}
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-400" htmlFor="category">

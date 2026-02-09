@@ -8,7 +8,6 @@ type SortOption = "date" | "podcast_score" | "score";
 
 export interface PostFeedFilters {
   category: string;
-  episodeDate: string;
   minPodcastWorthy: string;
   minReactionCount: string;
   minScore: string;
@@ -28,7 +27,6 @@ export interface UsePostFeedFiltersResult {
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
-  episodeDates: string[];
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
@@ -37,7 +35,6 @@ export interface UsePostFeedFiltersResult {
 
 const DEFAULT_FILTERS: PostFeedFilters = {
   category: "",
-  episodeDate: "",
   minPodcastWorthy: "",
   minReactionCount: "",
   minScore: "",
@@ -48,13 +45,12 @@ const DEFAULT_FILTERS: PostFeedFilters = {
 };
 
 /**
- * Hook for PostFeed filter state and filter options (neighborhoods, episodes).
- * Loads neighborhoods and episode dates on mount.
+ * Hook for PostFeed filter state and filter options (neighborhoods).
+ * Loads neighborhoods on mount.
  */
 export function usePostFeedFilters(
   debounceDelayMs: number
 ): UsePostFeedFiltersResult {
-  const [episodeDates, setEpisodeDates] = useState<string[]>([]);
   const [filterLoadError, setFilterLoadError] = useState<null | string>(null);
   const [filters, setFilters] = useState<PostFeedFilters>(DEFAULT_FILTERS);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
@@ -70,21 +66,14 @@ export function usePostFeedFilters(
   );
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/neighborhoods").then((res) =>
-        res.ok ? res.json() : { data: [] }
-      ),
-      fetch("/api/episodes").then((res) =>
-        res.ok ? res.json() : { data: [] }
-      ),
-    ])
-      .then(([neighborhoodsResult, episodesResult]) => {
+    fetch("/api/neighborhoods")
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((result) => {
         setFilterLoadError(null);
-        setNeighborhoods(neighborhoodsResult.data || []);
-        setEpisodeDates(episodesResult.data || []);
+        setNeighborhoods(result.data || []);
       })
       .catch((err) => {
-        console.error("Failed to load filter options (neighborhoods/episodes):", err);
+        console.error("Failed to load filter options (neighborhoods):", err);
         setFilterLoadError("Could not load filter options. Some filters may be empty.");
       });
   }, []);
@@ -93,7 +82,6 @@ export function usePostFeedFilters(
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    episodeDates,
     filterLoadError,
     filters,
     neighborhoods,

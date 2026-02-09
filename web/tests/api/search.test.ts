@@ -221,7 +221,6 @@ describe("POST /api/search", () => {
           image_urls: [],
           hash: "hash1",
           used_on_episode: false,
-          episode_date: null,
         },
       ],
       error: null,

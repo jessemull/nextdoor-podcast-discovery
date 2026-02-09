@@ -60,9 +60,6 @@ export function usePostFeedData(
         searchParams.set("sort", filters.sort);
 
         if (filters.category) searchParams.set("category", filters.category);
-        if (filters.episodeDate) {
-          searchParams.set("episode_date", filters.episodeDate);
-        }
         if (filters.neighborhoodId) {
           searchParams.set("neighborhood_id", filters.neighborhoodId);
         }

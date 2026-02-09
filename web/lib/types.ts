@@ -38,7 +38,6 @@ export interface Neighborhood {
 
 export interface Post {
   created_at: string;
-  episode_date: null | string;
   hash: string;
   id: string;
   image_urls: string[];
