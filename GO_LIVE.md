@@ -38,6 +38,24 @@ Capture items we need before launch. Add new entries under the appropriate secti
 
 ---
 
+### 3. Name weight configs and quick toggle (Settings + Search)
+
+**Goal:** When saving a new weight tuning, users need to know which config is which after a recompute (e.g. “Comedy Centric” vs “Drama Heavy”). They also want to swap configs often and validate how results look under each one without leaving the page.
+
+**Current state:** The app already has:
+- `weight_configs.name` and optional “Config name” when saving (Settings). If left blank, the list shows “Config &lt;id&gt;” which is hard to recognize.
+- Activate in Settings to switch the global active config (feed and search use that).
+
+**Requirements:**
+
+- **Naming when saving:** Make the config name **prominent and encouraged (or required)** when saving weights and triggering a recompute. Examples: “Comedy Centric”, “Drama Heavy”, “Balanced”. So after the job completes, the list clearly shows which config is which and users can choose the right one to activate.
+- **Quick swap:** Keep the existing “Activate” flow in Settings for changing the global default. Optionally add a clearer “active config” selector at the top of Settings so swapping is one click.
+- **Toggle on Search (and optionally Feed):** On the **search page** (and optionally the main feed), add a **dropdown or tabs** to “View results as: [Comedy Centric ▼]” that lets the user **preview** results using a different weight config **without** changing the global active config. So they can validate “how does search look under Comedy Centric vs Drama Heavy?” without going to Settings and activating each time. Implementation: posts/search API accepts an optional `weight_config_id` (or `preview_config_id`) for that request; when present, use that config’s scores for ranking for that request only; the global active config stays unchanged.
+
+**Tasks:** (1) Make config name prominent/required in the Save & Recompute form (Settings). (2) Optional: improve “active config” selector in Settings for one-click swap. (3) Add “View as” / config selector on Search page (and optionally Feed) that passes a preview config id to the API; backend supports optional override for that request.
+
+---
+
 ## More items (add below)
 
 *(Add new improvements, gaps, or features here. Use the same format: short title, then goal/requirements and tasks.)*
