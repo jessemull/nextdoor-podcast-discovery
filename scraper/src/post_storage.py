@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from supabase import Client
 
-from src.post_extractor import RawPost
+from src.post_extractor import RawComment, RawPost
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +101,17 @@ class PostStorage:
                 continue
 
             posted_at = parse_relative_timestamp(post.timestamp_relative)
+            comments_payload = [
+                {
+                    "author_name": c.author_name,
+                    "text": c.text,
+                    "timestamp_relative": c.timestamp_relative,
+                }
+                for c in post.comments
+            ]
             posts_data.append(
                 {
+                    "comments": comments_payload,
                     "hash": post.content_hash,
                     "image_urls": post.image_urls,
                     "neighborhood_id": neighborhood_id,
