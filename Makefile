@@ -1,4 +1,4 @@
-.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
+.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web inspect-scraper test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
 
 # Default target
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  build            Build Next.js for production"
 	@echo "  dev-scraper      Run scraper in dry-run mode"
 	@echo "  dev-web          Start Next.js dev server"
+	@echo "  inspect-scraper  Run scraper in inspect mode (browser pauses for DOM inspection)"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint             Run all linters"
@@ -116,6 +117,9 @@ build:
 
 dev-scraper:
 	cd scraper && python -m src.main --dry-run
+
+inspect-scraper:
+	cd scraper && python -m src.main --inspect
 
 dev-web:
 	cd web && npm run dev

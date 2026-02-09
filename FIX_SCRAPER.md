@@ -90,6 +90,26 @@ Current CLI flags for `python -m src.main`:
 
 ---
 
+## Filtering out ads (posts vs advertisements)
+
+**Issue:** The feed mixes real neighbor posts with ads (e.g. Google Ad Manager). Over half of extracted items were ads.
+
+**From DOM.html:**
+
+- **Ad containers** use classes: `gam-ad-*` (e.g. `gam-ad-inner-container`, `gam-ad-dropdown`), `ad-placeholder`, `feed-gam-ad-placeholder`. CSS also references `.sponsored-post-business-card-*` and `.post-placeholder-redesign.ad-placeholder`.
+- **Sponsored label:** Some ad cards contain the text "Sponsored".
+- **Real posts** have `data-testid="feed-item-card"`, `post-timestamp`, `styled-text`, etc.
+
+**Fix (in `post_extractor.py`):**
+
+1. Skip any container whose text includes "Sponsored" (already did this).
+2. Skip any container that is inside (or is) an element with a class containing `gam-ad`, `ad-placeholder`, or `feed-gam-ad` via `el.closest('[class*="gam-ad"], ...')`.
+3. Record **container index** (position among all `div.post, div.js-media-post`) when pushing to the posts array, and use that index for permalink extraction and comment extraction so we never click Share or Reply on an ad container.
+
+**Verification:** Run a scrape and confirm in Supabase that new rows look like real posts (neighbor content, not ads). If new ad variants appear with different class names, add more `[class*="..."]` selectors in the extraction script.
+
+---
+
 ## Filter by menu (MENU.html)
 
 Captured DOM for the **open** Filter by bottom sheet (see `MENU.html` in repo root). Use for feed-selection implementation.
