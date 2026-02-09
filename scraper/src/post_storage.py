@@ -136,7 +136,7 @@ class PostStorage:
                 self.supabase.table("posts")
                 .upsert(
                     cast(Any, posts_data),
-                    on_conflict="hash",
+                    on_conflict="neighborhood_id,hash",
                     ignore_duplicates=True,
                 )
                 .execute()
