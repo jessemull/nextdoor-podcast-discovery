@@ -6,7 +6,7 @@ import hashlib
 import logging
 import random
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.sync_api import Page
@@ -142,20 +142,32 @@ class PostExtractor:
 
     MAX_EMPTY_SCROLLS = 5
 
-    # Maximum scroll attempts before giving up
+    # Maximum scroll attempts before giving up (Recent feed)
 
     MAX_SCROLL_ATTEMPTS = 100
 
-    def __init__(self, page: Page, max_posts: int = 250) -> None:
+    def __init__(
+        self,
+        page: Page,
+        feed_type: str = "recent",
+        max_posts: int = 250,
+        repeat_threshold: int = 10,
+    ) -> None:
         """Initialize the extractor.
 
         Args:
             page: Playwright page object.
+            feed_type: "recent" or "trending"; affects stop logic and max scrolls.
             max_posts: Maximum number of posts to extract.
+            repeat_threshold: For Recent feed only: stop when this many consecutive
+                already-seen posts appear from the start of a batch.
         """
+        self.feed_type = feed_type
         self.max_posts = max_posts
         self.page = page
+        self.repeat_threshold = repeat_threshold
         self.seen_hashes: set[str] = set()
+        self._logged_extracting_comments = False
 
     def extract_posts(self) -> list[RawPost]:
         """Scroll through feed and extract posts.
@@ -183,7 +195,11 @@ class PostExtractor:
 
         extraction_script = _get_extraction_script(MIN_CONTENT_LENGTH)
 
-        max_scrolls = self.MAX_SCROLL_ATTEMPTS
+        max_scrolls = (
+            SCRAPER_CONFIG["max_scroll_attempts_trending"]
+            if self.feed_type == "trending"
+            else self.MAX_SCROLL_ATTEMPTS
+        )
         while len(posts) < self.max_posts and scroll_attempts < max_scrolls:
             # Extract visible posts using JavaScript
 
@@ -191,6 +207,17 @@ class PostExtractor:
 
             if scroll_attempts == 0:
                 logger.info("First scroll found %d raw posts", len(raw_posts))
+
+            # Recent feed: stop when we see repeat_threshold consecutive already-seen posts
+
+            if self.feed_type == "recent" and self.repeat_threshold > 0:
+                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
+                if consecutive_seen >= self.repeat_threshold:
+                    logger.info(
+                        "Repeat threshold reached (%d consecutive already-seen), stopping",
+                        consecutive_seen,
+                    )
+                    break
 
             # Process extracted data
 
@@ -225,22 +252,123 @@ class PostExtractor:
         logger.info("Extraction complete: %d posts", len(posts))
         return posts
 
+    def extract_post_batches(
+        self, safety_cap: int = 500
+    ) -> Iterator[list[RawPost]]:
+        """Yield batches of new posts after each scroll until caps are hit.
+
+        Use this when the pipeline wants to store after each batch and stop
+        when a target number of posts have been stored (not just extracted).
+        Stops when: scroll cap, empty scrolls, repeat threshold (recent), or
+        total posts yielded >= safety_cap.
+
+        Args:
+            safety_cap: Stop yielding after this many total posts (avoids
+                runaway if the feed keeps returning new in-run duplicates only).
+
+        Yields:
+            List of new RawPost from the current scroll (may be empty).
+        """
+        total_yielded = 0
+        scroll_attempts = 0
+        no_new_posts_count = 0
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+
+        logger.info(
+            "Starting batch extraction (safety_cap=%d, feed_type=%s)",
+            safety_cap,
+            self.feed_type,
+        )
+
+        try:
+            self.page.wait_for_selector("div.post, div.js-media-post", timeout=timeout)
+            logger.info("Feed content detected, starting extraction")
+        except PlaywrightTimeoutError:
+            logger.warning("Timeout waiting for post containers")
+            self._log_page_debug_info()
+            return
+
+        extraction_script = _get_extraction_script(MIN_CONTENT_LENGTH)
+        max_scrolls = (
+            SCRAPER_CONFIG["max_scroll_attempts_trending"]
+            if self.feed_type == "trending"
+            else self.MAX_SCROLL_ATTEMPTS
+        )
+
+        while total_yielded < safety_cap and scroll_attempts < max_scrolls:
+            raw_posts = self.page.evaluate(extraction_script)
+
+            if scroll_attempts == 0:
+                logger.info("First scroll found %d raw posts", len(raw_posts))
+
+            if self.feed_type == "recent" and self.repeat_threshold > 0:
+                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
+                if consecutive_seen >= self.repeat_threshold:
+                    logger.info(
+                        "Repeat threshold reached (%d consecutive already-seen), stopping",
+                        consecutive_seen,
+                    )
+                    return
+
+            batch: list[RawPost] = []
+            new_count = self._process_batch(
+                raw_posts, batch, cap=safety_cap
+            )
+            total_yielded += len(batch)
+
+            logger.info(
+                "Scroll %d: %d new posts (total yielded: %d)",
+                scroll_attempts + 1,
+                new_count,
+                total_yielded,
+            )
+
+            if new_count == 0:
+                no_new_posts_count += 1
+                if no_new_posts_count >= self.MAX_EMPTY_SCROLLS:
+                    logger.warning(
+                        "No new posts after %d scrolls, stopping",
+                        self.MAX_EMPTY_SCROLLS,
+                    )
+                    return
+            else:
+                no_new_posts_count = 0
+
+            if batch:
+                yield batch
+
+            if total_yielded >= safety_cap:
+                logger.info("Safety cap reached (%d posts), stopping", safety_cap)
+                return
+
+            self._scroll_down()
+            scroll_attempts += 1
+
+        logger.info("Batch extraction complete: %d posts yielded", total_yielded)
+
     def _process_batch(
-        self, raw_posts: list[dict[str, Any]], posts: list[RawPost]
+        self,
+        raw_posts: list[dict[str, Any]],
+        posts: list[RawPost],
+        cap: int | None = None,
     ) -> int:
         """Process a batch of raw posts and add to posts list.
 
         Args:
             raw_posts: List of raw post dicts from JavaScript.
             posts: Accumulator list to add processed posts to.
+            cap: Stop adding after this many new posts in this batch.
+                If None, use self.max_posts (for extract_posts). Caller can pass
+                a large value when building a single batch to yield.
 
         Returns:
             Number of new posts added.
         """
+        limit = cap if cap is not None else self.max_posts
         new_count = 0
 
         for raw in raw_posts:
-            if len(posts) >= self.max_posts:
+            if len(posts) >= limit:
                 break
 
             post = self._process_raw_post(raw)
@@ -306,6 +434,32 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
+
+    def _count_consecutive_already_seen(
+        self, raw_posts: list[dict[str, Any]]
+    ) -> int:
+        """Count how many posts from the start of the batch are already in seen_hashes.
+
+        Used for Recent feed: when this reaches repeat_threshold we stop.
+
+        Args:
+            raw_posts: List of raw post dicts (authorId, content, etc.).
+
+        Returns:
+            Number of consecutive already-seen posts from the start.
+        """
+        count = 0
+        for raw in raw_posts:
+            author_id = raw.get("authorId") or ""
+            content = (raw.get("content") or "").strip()
+            if not author_id or not content:
+                continue
+            h = self._generate_hash(author_id, content)
+            if h in self.seen_hashes:
+                count += 1
+            else:
+                break
+        return count
 
     def _generate_hash(self, author_id: str, content: str) -> str:
         """Generate SHA256 hash for deduplication.
@@ -437,28 +591,22 @@ class PostExtractor:
             List of RawComment (author_name, text, timestamp_relative).
         """
         try:
+            if not self._logged_extracting_comments:
+                logger.info("Extracting comments")
+                self._logged_extracting_comments = True
+
             containers = self.page.locator("div.post, div.js-media-post")
             if containers.count() <= container_index:
-                logger.info(
-                    "Comments container %d: only %d container(s) on page",
-                    container_index,
-                    containers.count(),
-                )
                 return []
 
             container = containers.nth(container_index)
             reply_in_container = container.get_by_test_id("post-reply-button")
             if reply_in_container.count() == 0:
-                logger.info(
-                    "Comments container %d: no reply button in container",
-                    container_index,
-                )
                 return []
 
             btn = reply_in_container.first
             btn.scroll_into_view_if_needed()
             self.page.wait_for_timeout(200)
-            logger.info("Comments container %d: clicking comment button", container_index)
             btn.click()
 
             # Give drawer time to start opening, then wait for content
@@ -472,25 +620,21 @@ class PostExtractor:
                     state="visible", timeout=self.COMMENT_DRAWER_TIMEOUT_MS
                 )
             except PlaywrightTimeoutError:
-                logger.info(
-                    "Comments container %d: comment drawer did not appear within %d ms",
-                    container_index,
-                    self.COMMENT_DRAWER_TIMEOUT_MS,
-                )
                 self.page.keyboard.press("Escape")
                 self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
                 return []
 
-            # If "See previous comments" is visible, click to load all
+            # If "See previous comments" is visible, click to load all (scope to the
+            # drawer we just opened so we match only one element)
 
-            see_more = self.page.get_by_test_id("seeMoreButton")
-            if see_more.is_visible():
-                logger.debug(
-                    "Comments container %d: clicking See previous comments",
-                    container_index,
-                )
-                see_more.click()
-                self.page.wait_for_timeout(self.COMMENT_SEE_MORE_WAIT_MS)
+            try:
+                drawer = comment_list.first
+                see_more = drawer.locator("[data-testid='seeMoreButton']").first
+                if see_more.is_visible():
+                    see_more.click()
+                    self.page.wait_for_timeout(self.COMMENT_SEE_MORE_WAIT_MS)
+            except Exception:
+                pass
 
             # Extract comment data from DOM
 
@@ -517,7 +661,6 @@ class PostExtractor:
             self.page.keyboard.press("Escape")
             self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
 
-            raw_count = len(comments_data) if comments_data else 0
             out = [
                 RawComment(
                     author_name=item["author_name"],
@@ -527,34 +670,15 @@ class PostExtractor:
                 for item in (comments_data or [])
                 if item.get("text") or item.get("author_name")
             ]
-            if raw_count and not out:
-                logger.info(
-                    "Comments container %d: %d .js-media-comment node(s) found but none had text/author (selector mismatch?)",
-                    container_index,
-                    raw_count,
-                )
-            else:
-                logger.info(
-                    "Comments container %d: extracted %d comment(s)",
-                    container_index,
-                    len(out),
-                )
             return out
 
         except PlaywrightTimeoutError:
-            logger.debug("Comments container %d: timeout", container_index)
             try:
                 self.page.keyboard.press("Escape")
             except Exception:
                 pass
             return []
-        except Exception as e:
-            logger.warning(
-                "Comments container %d: %s (%s)",
-                container_index,
-                e,
-                type(e).__name__,
-            )
+        except Exception:
             try:
                 self.page.keyboard.press("Escape")
             except Exception:

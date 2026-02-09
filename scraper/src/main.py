@@ -83,6 +83,7 @@ def main(
     feed_type: str = "recent",
     inspect: bool = False,
     max_posts: int | None = None,
+    repeat_threshold: int | None = None,
     score: bool = False,
     unscored_batch_limit: int = 50,
     visible: bool = False,
@@ -96,6 +97,7 @@ def main(
         feed_type: Which feed to scrape ("recent" or "trending").
         inspect: If True, open browser (iPhone mobile), go to feed, then pause so you can inspect DOM (e.g. Filter by menu).
         max_posts: Maximum number of posts to scrape (default from config).
+        repeat_threshold: For Recent feed, stop after this many consecutive already-seen posts (default from config).
         score: If True, run LLM scoring on unscored posts after scraping.
         unscored_batch_limit: Max unscored posts to score per run (default 50; use env UNSCORED_BATCH_LIMIT or --unscored-limit for backfills).
         visible: If True, run browser in visible mode (not headless).
@@ -195,36 +197,59 @@ def main(
                 input()
                 return 0
 
-            # Step 4: Extract posts
+            # Step 4 & 5: Extract and store until we have max_posts new rows in DB
 
-            logger.info("Extracting up to %d posts from %s feed", max_posts, feed_type)
-            posts = scraper.extract_posts(max_posts=max_posts)
-            logger.info("Extracted %d posts", len(posts))
+            safety_cap = max(250, max_posts * 10)
+            logger.info(
+                "Extracting from %s feed until %d new posts are stored (safety cap: %d)",
+                feed_type,
+                max_posts,
+                safety_cap,
+            )
+            stored = 0
+            total_extracted = 0
+            storage_stats: dict[str, int] | None = None
+            if not dry_run:
+                storage = PostStorage(session_manager.supabase)
 
-            # Step 5: Store posts in Supabase
+            for batch in scraper.extract_post_batches(
+                feed_type=feed_type,
+                repeat_threshold=repeat_threshold,
+                safety_cap=safety_cap,
+            ):
+                total_extracted += len(batch)
+                if dry_run:
+                    stored += len(batch)
+                    if total_extracted == len(batch):
+                        for i, post in enumerate(batch[:5]):
+                            logger.info(
+                                "Sample post %d: [%s] %s... (%d chars)",
+                                i + 1,
+                                post.author_name,
+                                post.content[:80],
+                                len(post.content),
+                            )
+                else:
+                    remaining = max_posts - stored
+                    to_store = batch[:remaining] if remaining < len(batch) else batch
+                    stats = storage.store_posts(to_store)
+                    stored += stats["inserted"]
+                    logger.info(
+                        "Batch: %d in batch, %d inserted, %d skipped (new posts stored: %d, target: %d)",
+                        len(batch),
+                        stats["inserted"],
+                        stats["skipped"],
+                        stored,
+                        max_posts,
+                    )
+                if stored >= max_posts:
+                    logger.info("Target reached: %d new posts stored", stored)
+                    break
 
             if dry_run:
-                logger.info("Dry run mode - skipping storage")
-
-                # Log sample of extracted posts
-
-                for i, post in enumerate(posts[:5]):
-                    logger.info(
-                        "Sample post %d: [%s] %s... (%d chars)",
-                        i + 1,
-                        post.author_name,
-                        post.content[:80],
-                        len(post.content),
-                    )
+                logger.info("Dry run: would store %d posts (extracted %d)", stored, total_extracted)
             else:
-                logger.info("Storing %d posts in Supabase", len(posts))
-                storage = PostStorage(session_manager.supabase)
-                stats = storage.store_posts(posts)
-                logger.info(
-                    "Storage complete: %d inserted, %d duplicates skipped",
-                    stats["inserted"],
-                    stats["skipped"],
-                )
+                storage_stats = {"inserted": stored, "skipped": 0, "errors": 0}
 
             # Step 6: Run LLM scoring if enabled
 
@@ -250,7 +275,19 @@ def main(
                     embed_stats["errors"],
                 )
 
-            logger.info("Pipeline complete (feed=%s, posts=%d)", feed_type, len(posts))
+            if storage_stats is not None:
+                logger.info(
+                    "Pipeline complete (feed=%s, extracted=%d, stored=%d)",
+                    feed_type,
+                    total_extracted,
+                    storage_stats["inserted"],
+                )
+            else:
+                logger.info(
+                    "Pipeline complete (feed=%s, extracted=%d, dry_run)",
+                    feed_type,
+                    total_extracted,
+                )
 
             if not dry_run:
                 try:
@@ -327,6 +364,13 @@ if __name__ == "__main__":
         help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",  # noqa: E501
     )
     parser.add_argument(
+        "--repeat-threshold",
+        dest="repeat_threshold",
+        type=int,
+        default=None,
+        help="For Recent feed: stop after this many consecutive already-seen posts (default from config)",
+    )
+    parser.add_argument(
         "--score",
         action="store_true",
         help="Run LLM scoring on unscored posts after scraping",
@@ -359,6 +403,7 @@ if __name__ == "__main__":
             feed_type=args.feed_type,
             inspect=args.inspect,
             max_posts=args.max_posts,
+            repeat_threshold=args.repeat_threshold,
             score=args.score,
             unscored_batch_limit=unscored_limit,
             visible=args.visible,
