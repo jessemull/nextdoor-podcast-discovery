@@ -7,20 +7,24 @@ import { PostWithScores } from "@/lib/types";
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
 interface PostCardProps {
+  isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
+  onMarkIgnored?: (postId: string, ignored: boolean) => void;
   onMarkSaved?: (postId: string, saved: boolean) => void;
   onMarkUsed?: (postId: string) => void;
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
-  post: { saved?: boolean; similarity?: number } & PostWithScores;
+  post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
   selected?: boolean;
   showCheckbox?: boolean;
 }
 
 export const PostCard = memo(function PostCard({
+  isMarkingIgnored = false,
   isMarkingSaved = false,
   isMarkingUsed = false,
+  onMarkIgnored,
   onMarkSaved,
   onMarkUsed,
   onSelect,
@@ -80,6 +84,11 @@ export const PostCard = memo(function PostCard({
                 title="Semantic similarity to search query"
               >
                 Sim: {post.similarity.toFixed(2)}
+              </span>
+            )}
+            {post.ignored && (
+              <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
+                Ignored
               </span>
             )}
             {post.saved && (
@@ -212,6 +221,20 @@ export const PostCard = memo(function PostCard({
             onClick={() => onMarkSaved(post.id, !post.saved)}
           >
             {isMarkingSaved ? "Saving..." : post.saved ? "Unsave" : "Save"}
+          </button>
+        )}
+        {onMarkIgnored && (
+          <button
+            aria-label={post.ignored ? "Unignore this post" : "Ignore this post"}
+            className="text-xs text-gray-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isMarkingIgnored}
+            onClick={() => onMarkIgnored(post.id, !post.ignored)}
+          >
+            {isMarkingIgnored
+              ? "..."
+              : post.ignored
+                ? "Unignore"
+                : "Ignore"}
           </button>
         )}
         {!post.used_on_episode && onMarkUsed && (

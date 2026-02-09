@@ -40,6 +40,7 @@ export interface Post {
   created_at: string;
   hash: string;
   id: string;
+  ignored?: boolean;
   image_urls: string[];
   neighborhood_id: string;
   post_id_ext: string;

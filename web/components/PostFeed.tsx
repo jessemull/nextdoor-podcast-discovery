@@ -54,10 +54,14 @@ export function PostFeed() {
 
   const {
     bulkActionLoading,
+    handleBulkIgnore,
     handleBulkMarkUsed,
     handleBulkSave,
+    handleBulkUnignore,
+    handleMarkIgnored,
     handleMarkSaved,
     handleMarkUsed,
+    markingIgnored,
     markingSaved,
     markingUsed,
     selectedIds,
@@ -109,10 +113,12 @@ export function PostFeed() {
 
       <BulkActionBar
         bulkActionLoading={bulkActionLoading}
-        selectedCount={selectedIds.size}
+        onBulkIgnore={handleBulkIgnore}
         onBulkMarkUsed={handleBulkMarkUsed}
         onBulkSave={handleBulkSave}
+        onBulkUnignore={handleBulkUnignore}
         onClear={() => setSelectedIds(new Set())}
+        selectedCount={selectedIds.size}
       />
 
       <div className="text-sm text-gray-500">
@@ -161,11 +167,13 @@ export function PostFeed() {
                 }}
               >
                 <PostCard
+                  isMarkingIgnored={markingIgnored.has(post.id)}
                   isMarkingSaved={markingSaved.has(post.id)}
                   isMarkingUsed={markingUsed.has(post.id)}
                   post={post}
                   selected={selectedIds.has(post.id)}
                   showCheckbox
+                  onMarkIgnored={handleMarkIgnored}
                   onMarkSaved={handleMarkSaved}
                   onMarkUsed={handleMarkUsed}
                   onSelect={toggleSelect}

@@ -10,10 +10,14 @@ export interface UseBulkActionsParams {
 
 export interface UseBulkActionsResult {
   bulkActionLoading: boolean;
+  handleBulkIgnore: () => Promise<void>;
   handleBulkMarkUsed: () => Promise<void>;
   handleBulkSave: () => Promise<void>;
+  handleBulkUnignore: () => Promise<void>;
+  handleMarkIgnored: (postId: string, ignored: boolean) => Promise<void>;
   handleMarkSaved: (postId: string, saved: boolean) => Promise<void>;
   handleMarkUsed: (postId: string) => Promise<void>;
+  markingIgnored: Set<string>;
   markingSaved: Set<string>;
   markingUsed: Set<string>;
   selectedIds: Set<string>;
@@ -27,6 +31,7 @@ export function useBulkActions({
   setError,
 }: UseBulkActionsParams): UseBulkActionsResult {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [markingIgnored, setMarkingIgnored] = useState<Set<string>>(new Set());
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,6 +73,36 @@ export function useBulkActions({
       }
     },
     [fetchPosts, markingSaved, offset, setError]
+  );
+
+  const handleMarkIgnored = useCallback(
+    async (postId: string, ignored: boolean) => {
+      if (markingIgnored.has(postId)) return;
+      setMarkingIgnored((prev) => new Set(prev).add(postId));
+      try {
+        const response = await fetch(`/api/posts/${postId}/ignored`, {
+          body: JSON.stringify({ ignored }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to update post");
+        }
+        await fetchPosts(offset);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        setError(errorMessage);
+      } finally {
+        setMarkingIgnored((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+      }
+    },
+    [fetchPosts, markingIgnored, offset, setError]
   );
 
   const handleMarkUsed = useCallback(
@@ -153,12 +188,62 @@ export function useBulkActions({
     }
   }, [bulkActionLoading, fetchPosts, offset, selectedIds, setError]);
 
+  const handleBulkIgnore = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkActionLoading) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/posts/${id}/ignored`, {
+            body: JSON.stringify({ ignored: true }),
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      await fetchPosts(offset);
+    } catch (err) {
+      console.error("Bulk ignore failed:", err);
+      setError("Failed to ignore some posts");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkActionLoading, fetchPosts, offset, selectedIds, setError]);
+
+  const handleBulkUnignore = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkActionLoading) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/posts/${id}/ignored`, {
+            body: JSON.stringify({ ignored: false }),
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      await fetchPosts(offset);
+    } catch (err) {
+      console.error("Bulk unignore failed:", err);
+      setError("Failed to unignore some posts");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkActionLoading, fetchPosts, offset, selectedIds, setError]);
+
   return {
     bulkActionLoading,
+    handleBulkIgnore,
     handleBulkMarkUsed,
     handleBulkSave,
+    handleBulkUnignore,
+    handleMarkIgnored,
     handleMarkSaved,
     handleMarkUsed,
+    markingIgnored,
     markingSaved,
     markingUsed,
     selectedIds,

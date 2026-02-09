@@ -63,6 +63,7 @@ export function usePostFeedData(
         if (filters.neighborhoodId) {
           searchParams.set("neighborhood_id", filters.neighborhoodId);
         }
+        if (filters.ignoredOnly) searchParams.set("ignored_only", "true");
         if (filters.savedOnly) searchParams.set("saved_only", "true");
 
         if (debouncedMinScore) {
@@ -114,7 +115,7 @@ export function usePostFeedData(
       debouncedMinReactionCount,
       debouncedMinScore,
       filters.category,
-      filters.episodeDate,
+      filters.ignoredOnly,
       filters.neighborhoodId,
       filters.savedOnly,
       filters.sort,

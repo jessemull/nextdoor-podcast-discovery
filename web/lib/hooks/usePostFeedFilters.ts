@@ -8,6 +8,7 @@ type SortOption = "date" | "podcast_score" | "score";
 
 export interface PostFeedFilters {
   category: string;
+  ignoredOnly: boolean;
   minPodcastWorthy: string;
   minReactionCount: string;
   minScore: string;
@@ -35,6 +36,7 @@ export interface UsePostFeedFiltersResult {
 
 const DEFAULT_FILTERS: PostFeedFilters = {
   category: "",
+  ignoredOnly: false,
   minPodcastWorthy: "",
   minReactionCount: "",
   minScore: "",

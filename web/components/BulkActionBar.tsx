@@ -2,20 +2,24 @@
 
 export interface BulkActionBarProps {
   bulkActionLoading: boolean;
+  onBulkIgnore: () => void;
   onBulkMarkUsed: () => void;
   onBulkSave: () => void;
+  onBulkUnignore: () => void;
   onClear: () => void;
   selectedCount: number;
 }
 
 /**
  * Bar shown when one or more posts are selected. Offers bulk mark-as-used,
- * bulk save, and clear selection.
+ * bulk save, bulk ignore/unignore, and clear selection.
  */
 export function BulkActionBar({
   bulkActionLoading,
+  onBulkIgnore,
   onBulkMarkUsed,
   onBulkSave,
+  onBulkUnignore,
   onClear,
   selectedCount,
 }: BulkActionBarProps) {
@@ -39,6 +43,22 @@ export function BulkActionBar({
         onClick={onBulkSave}
       >
         {bulkActionLoading ? "..." : "Save selected"}
+      </button>
+      <button
+        className="rounded bg-gray-600 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+        disabled={bulkActionLoading}
+        type="button"
+        onClick={onBulkIgnore}
+      >
+        {bulkActionLoading ? "..." : "Ignore selected"}
+      </button>
+      <button
+        className="rounded border border-gray-500 bg-gray-700 px-3 py-1 text-sm text-gray-200 transition-colors hover:bg-gray-600 disabled:opacity-50"
+        disabled={bulkActionLoading}
+        type="button"
+        onClick={onBulkUnignore}
+      >
+        {bulkActionLoading ? "..." : "Unignore selected"}
       </button>
       <button
         className="text-sm text-gray-400 transition-colors hover:text-white"
