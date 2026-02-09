@@ -1,6 +1,6 @@
 """Post extraction from Nextdoor feed."""
 
-__all__ = ["PostExtractor", "RawPost"]
+__all__ = ["PostExtractor", "RawComment", "RawPost"]
 
 import hashlib
 import logging
@@ -22,6 +22,15 @@ MIN_CONTENT_LENGTH = 10
 
 
 @dataclass
+class RawComment:
+    """Single comment on a post."""
+
+    author_name: str
+    text: str
+    timestamp_relative: str | None = None
+
+
+@dataclass
 class RawPost:
     """Raw post data extracted from Nextdoor feed.
 
@@ -37,6 +46,7 @@ class RawPost:
 
     # Optional fields (alphabetized)
 
+    comments: list["RawComment"] = field(default_factory=list)
     image_urls: list[str] = field(default_factory=list)
     neighborhood: str | None = None
     post_url: str | None = None
@@ -277,9 +287,14 @@ class PostExtractor:
         post_index = raw.get("postIndex", 0)
         post_url = self.extract_permalink(post_index)
 
+        # Extract comments (open drawer, optionally "See previous", parse list)
+
+        comments = self._extract_comments_for_post(post_index)
+
         return RawPost(
             author_id=author_id,
             author_name=author_name,
+            comments=comments,
             content=content,
             content_hash=content_hash,
             image_urls=raw.get("imageUrls", []),
@@ -403,6 +418,138 @@ class PostExtractor:
                 type(e).__name__,
             )
             return None
+
+    # Comment flow timeouts (drawer needs time to open after tap)
+
+    COMMENT_DRAWER_TIMEOUT_MS = 3500
+    COMMENT_SEE_MORE_WAIT_MS = 600
+    COMMENT_CLOSE_WAIT_MS = 200
+
+    def _extract_comments_for_post(self, post_index: int) -> list[RawComment]:
+        """Open comment drawer for a post, optionally load all, and extract comments.
+
+        Clicks the nth comment icon on the page, waits for the drawer, clicks
+        "See previous comments" if present, then parses all .js-media-comment
+        nodes and closes the drawer.
+
+        Args:
+            post_index: Index of the post (0-based; matches nth comment button).
+
+        Returns:
+            List of RawComment (author_name, text, timestamp_relative).
+        """
+        try:
+            reply_buttons = self.page.get_by_test_id("post-reply-button")
+            if reply_buttons.count() <= post_index:
+                logger.info(
+                    "Comments post %d: only %d comment button(s) on page",
+                    post_index,
+                    reply_buttons.count(),
+                )
+                return []
+
+            btn = reply_buttons.nth(post_index)
+            btn.scroll_into_view_if_needed()
+            self.page.wait_for_timeout(200)
+            logger.info("Comments post %d: clicking comment button", post_index)
+            btn.click()
+
+            # Give drawer time to start opening, then wait for content
+
+            self.page.wait_for_timeout(400)
+            comment_list = self.page.locator(
+                ".comment-container, .comment-list-container, .js-media-comment"
+            )
+            try:
+                comment_list.first.wait_for(
+                    state="visible", timeout=self.COMMENT_DRAWER_TIMEOUT_MS
+                )
+            except PlaywrightTimeoutError:
+                logger.info(
+                    "Comments post %d: comment drawer did not appear within %d ms",
+                    post_index,
+                    self.COMMENT_DRAWER_TIMEOUT_MS,
+                )
+                self.page.keyboard.press("Escape")
+                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+                return []
+
+            # If "See previous comments" is visible, click to load all
+
+            see_more = self.page.get_by_test_id("seeMoreButton")
+            if see_more.is_visible():
+                logger.debug("Comments post %d: clicking See previous comments", post_index)
+                see_more.click()
+                self.page.wait_for_timeout(self.COMMENT_SEE_MORE_WAIT_MS)
+
+            # Extract comment data from DOM
+
+            comments_data = self.page.evaluate(
+                """
+                () => {
+                    const nodes = document.querySelectorAll('.js-media-comment');
+                    return Array.from(nodes).map(el => {
+                        const detail = el.querySelector('[data-testid="comment-detail"]');
+                        const body = el.querySelector('[data-testid="comment-detail-body"]');
+                        const authorLink = detail?.querySelector('.comment-detail-scopeline a');
+                        const ts = el.querySelector('.comment-detail-scopeline-timestamp');
+                        const author = authorLink?.textContent?.trim() ?? '';
+                        const text = body?.innerText?.trim() ?? '';
+                        const timestamp = ts?.textContent?.trim() ?? null;
+                        return { author_name: author, text, timestamp_relative: timestamp };
+                    });
+                }
+            """
+            )
+
+            # Close the drawer
+
+            self.page.keyboard.press("Escape")
+            self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+
+            raw_count = len(comments_data) if comments_data else 0
+            out = [
+                RawComment(
+                    author_name=item["author_name"],
+                    text=item["text"],
+                    timestamp_relative=item.get("timestamp_relative"),
+                )
+                for item in (comments_data or [])
+                if item.get("text") or item.get("author_name")
+            ]
+            if raw_count and not out:
+                logger.info(
+                    "Comments post %d: %d .js-media-comment node(s) found but none had text/author (selector mismatch?)",
+                    post_index,
+                    raw_count,
+                )
+            else:
+                logger.info(
+                    "Comments post %d: extracted %d comment(s)",
+                    post_index,
+                    len(out),
+                )
+            return out
+
+        except PlaywrightTimeoutError:
+            logger.debug("Comments post %d: timeout", post_index)
+            try:
+                self.page.keyboard.press("Escape")
+            except Exception:
+                pass
+            return []
+        except Exception as e:
+            logger.warning(
+                "Comments post %d: %s (%s)",
+                post_index,
+                e,
+                type(e).__name__,
+            )
+            try:
+                self.page.keyboard.press("Escape")
+            except Exception:
+                pass
+            return []
 
     def _parse_post_url_from_share_link(self, href: str | None) -> str | None:
         """Parse the post URL from a share link href.
