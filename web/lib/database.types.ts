@@ -119,7 +119,6 @@ export interface Database {
       posts: {
         Insert: {
           created_at?: string;
-          episode_date?: null | string;
           hash: string;
           id?: string;
           image_urls?: Json;
@@ -133,7 +132,6 @@ export interface Database {
         };
         Row: {
           created_at: string;
-          episode_date: null | string;
           hash: string;
           id: string;
           image_urls: Json;
@@ -146,7 +144,6 @@ export interface Database {
           user_id_hash: null | string;
         };
         Update: {
-          episode_date?: null | string;
           hash?: string;
           image_urls?: Json;
           neighborhood_id?: string;

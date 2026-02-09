@@ -16,7 +16,6 @@ interface RouteParams {
  *
  * Body:
  * - used: boolean
- * - episode_date?: string (ISO date, e.g. "2026-02-05")
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // Require authentication
@@ -42,20 +41,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { episode_date, used } = parsed.data;
+    const { used } = parsed.data;
 
     const supabase = getSupabaseAdmin();
 
-    const updateData: Record<string, boolean | string> = {
+    const updateData: Record<string, boolean> = {
       used_on_episode: used,
     };
-
-    if (episode_date) {
-      updateData.episode_date = episode_date;
-    } else if (used) {
-      // Default to today if marking as used without a date
-      updateData.episode_date = new Date().toISOString().split("T")[0];
-    }
 
     // Cast needed because Supabase types may be out of sync with DB schema
     const { data, error } = await (supabase.from("posts") as ReturnType<

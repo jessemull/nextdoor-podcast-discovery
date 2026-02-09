@@ -33,7 +33,6 @@ const mockEpisodeDates: string[] = [];
 const mockPosts: PostWithScores[] = [
   {
     created_at: "2024-01-01T00:00:00Z",
-    episode_date: null,
     hash: "hash1",
     id: "post-1",
     image_urls: [],
@@ -63,7 +62,6 @@ const mockPosts: PostWithScores[] = [
   },
   {
     created_at: "2024-01-02T00:00:00Z",
-    episode_date: null,
     hash: "hash2",
     id: "post-2",
     image_urls: [],

@@ -11,7 +11,6 @@ vi.mock("next/navigation", () => ({
 
 const mockPost = {
   created_at: "2025-02-01T12:00:00Z",
-  episode_date: null,
   hash: "abc",
   id: "post-1",
   image_urls: [],

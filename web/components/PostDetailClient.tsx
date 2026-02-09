@@ -102,19 +102,13 @@ export function PostDetailClient({
     [postId, markingSaved, fetchPost]
   );
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [episodeDate, setEpisodeDate] = useState(today);
-
   const handleMarkUsed = useCallback(async () => {
     if (!postId || markingUsed) return;
 
     setMarkingUsed(true);
     try {
       const response = await fetch(`/api/posts/${postId}/used`, {
-        body: JSON.stringify({
-          episode_date: episodeDate,
-          used: true,
-        }),
+        body: JSON.stringify({ used: true }),
         headers: { "Content-Type": "application/json" },
         method: "PATCH",
       });
@@ -130,7 +124,7 @@ export function PostDetailClient({
     } finally {
       setMarkingUsed(false);
     }
-  }, [episodeDate, postId, markingUsed, fetchPost]);
+  }, [postId, markingUsed, fetchPost]);
 
   // Keyboard shortcuts: J = previous (back)
   useEffect(() => {
@@ -329,26 +323,14 @@ export function PostDetailClient({
               </a>
             )}
             {!post.used_on_episode && (
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400" htmlFor="episode-date">
-                  Episode date:
-                </label>
-                <input
-                  className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
-                  id="episode-date"
-                  type="date"
-                  value={episodeDate}
-                  onChange={(e) => setEpisodeDate(e.target.value)}
-                />
-                <button
-                  className="text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={markingUsed}
-                  type="button"
-                  onClick={() => void handleMarkUsed()}
-                >
-                  {markingUsed ? "Marking..." : "Mark as Used"}
-                </button>
-              </div>
+              <button
+                className="text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={markingUsed}
+                type="button"
+                onClick={() => void handleMarkUsed()}
+              >
+                {markingUsed ? "Marking..." : "Mark as Used"}
+              </button>
             )}
           </div>
         </div>
