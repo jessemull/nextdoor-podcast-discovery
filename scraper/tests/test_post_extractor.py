@@ -129,7 +129,6 @@ class TestPostExtractor:
 
     def test_extract_permalink_success(self, extractor: PostExtractor) -> None:
         """Should extract permalink by clicking Share button."""
-        extractor.extract_permalinks_flag = True
         container = mock.MagicMock()
         share_btn = mock.MagicMock()
         share_btn.count.return_value = 1

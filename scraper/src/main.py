@@ -80,8 +80,8 @@ def main(
     check_robots: bool = False,
     dry_run: bool = False,
     embed: bool = False,
-    extract_permalinks: bool = False,
     feed_type: str = "recent",
+    inspect: bool = False,
     max_posts: int | None = None,
     score: bool = False,
     unscored_batch_limit: int = 50,
@@ -93,8 +93,8 @@ def main(
         check_robots: If True, fetch robots.txt and exit with 1 if our paths are disallowed.
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding generation after scrape/score (so new posts are searchable).
-        extract_permalinks: If True, click Share on each post to get permalink.
         feed_type: Which feed to scrape ("recent" or "trending").
+        inspect: If True, open browser (iPhone mobile), go to feed, then pause so you can inspect DOM (e.g. Filter by menu).
         max_posts: Maximum number of posts to scrape (default from config).
         score: If True, run LLM scoring on unscored posts after scraping.
         unscored_batch_limit: Max unscored posts to score per run (default 50; use env UNSCORED_BATCH_LIMIT or --unscored-limit for backfills).
@@ -129,12 +129,11 @@ def main(
 
     logger.info(
         "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
-        "visible=%s, extract_permalinks=%s, score=%s, embed=%s)",
+        "visible=%s, score=%s, embed=%s)",
         feed_type,
         max_posts,
         dry_run,
         visible,
-        extract_permalinks,
         score,
         embed,
     )
@@ -151,7 +150,7 @@ def main(
 
         headless = False if visible else SCRAPER_CONFIG["headless"]
 
-        with NextdoorScraper(headless=headless) as scraper:
+        with NextdoorScraper(headless=False if inspect else headless) as scraper:
             # Step 1: Try to load existing session
 
             cookies = session_manager.get_cookies()
@@ -186,13 +185,20 @@ def main(
             logger.info("Navigating to %s feed", feed_type)
             scraper.navigate_to_feed(feed_type)
 
+            # Inspect mode: pause so user can open DevTools and inspect DOM (e.g. Filter by menu)
+
+            if inspect:
+                print()
+                print("Browser is open with iPhone mobile view on the news feed.")
+                print("Open DevTools (F12 or right-click → Inspect), click the 'Filter by' menu to open it,")
+                print("then inspect the DOM for menu selectors. Press Enter here when done to close the browser.")
+                input()
+                return 0
+
             # Step 4: Extract posts
 
             logger.info("Extracting up to %d posts from %s feed", max_posts, feed_type)
-            posts = scraper.extract_posts(
-                max_posts=max_posts,
-                extract_permalinks=extract_permalinks,
-            )
+            posts = scraper.extract_posts(max_posts=max_posts)
             logger.info("Extracted %d posts", len(posts))
 
             # Step 5: Store posts in Supabase
@@ -304,15 +310,15 @@ if __name__ == "__main__":
         help="Run embedding generation after scrape/score so new posts are searchable",
     )
     parser.add_argument(
-        "--extract-permalinks",
-        action="store_true",
-        help="Click Share on each post to extract permalink URL (slower)",
-    )
-    parser.add_argument(
         "--feed-type",
         choices=["recent", "trending"],
         default="recent",
         help="Which feed to scrape (default: recent)",
+    )
+    parser.add_argument(
+        "--inspect",
+        action="store_true",
+        help="Open browser (iPhone mobile), go to feed, then pause for DOM inspection (e.g. Filter by menu)",
     )
     parser.add_argument(
         "--max-posts",
@@ -350,8 +356,8 @@ if __name__ == "__main__":
             check_robots=args.check_robots,
             dry_run=args.dry_run,
             embed=args.embed,
-            extract_permalinks=args.extract_permalinks,
             feed_type=args.feed_type,
+            inspect=args.inspect,
             max_posts=args.max_posts,
             score=args.score,
             unscored_batch_limit=unscored_limit,

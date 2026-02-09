@@ -1,9 +1,10 @@
 """Post storage in Supabase with deduplication."""
 
-__all__ = ["PostStorage"]
+__all__ = ["PostStorage", "parse_relative_timestamp"]
 
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
 from supabase import Client
@@ -11,6 +12,51 @@ from supabase import Client
 from src.post_extractor import RawPost
 
 logger = logging.getLogger(__name__)
+
+
+def parse_relative_timestamp(relative: str | None) -> datetime | None:
+    """Parse a relative timestamp string into an absolute UTC datetime.
+
+    Handles patterns like "5m", "2h", "1d", "Yesterday", "Just now".
+    Uses current UTC time as reference; result is approximate.
+
+    Args:
+        relative: Raw string from DOM (e.g. "2h", "Yesterday").
+
+    Returns:
+        UTC datetime or None if unparseable.
+    """
+    if not relative or not relative.strip():
+        return None
+    text = relative.strip().lower()
+    if text.endswith(" ago"):
+        text = text[:-4].strip()
+    now = datetime.now(timezone.utc)
+    # Just now / Now
+    if text in ("just now", "now"):
+        return now
+    # N minutes
+    m = re.match(r"^(\d+)\s*m(?:in(?:ute)?s?)?$", text)
+    if m:
+        return now - timedelta(minutes=int(m.group(1)))
+    # N hours
+    m = re.match(r"^(\d+)\s*h(?:our)?s?$", text)
+    if m:
+        return now - timedelta(hours=int(m.group(1)))
+    # N days
+    m = re.match(r"^(\d+)\s*d(?:ay)?s?$", text)
+    if m:
+        return now - timedelta(days=int(m.group(1)))
+    # N weeks
+    m = re.match(r"^(\d+)\s*w(?:eek)?s?$", text)
+    if m:
+        return now - timedelta(weeks=int(m.group(1)))
+    # Yesterday: use previous day at noon UTC (approximate)
+    if text == "yesterday":
+        return (now - timedelta(days=1)).replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
+    return None
 
 
 class PostStorage:
@@ -54,6 +100,7 @@ class PostStorage:
                 stats["errors"] += 1
                 continue
 
+            posted_at = parse_relative_timestamp(post.timestamp_relative)
             posts_data.append(
                 {
                     "hash": post.content_hash,
@@ -62,6 +109,7 @@ class PostStorage:
                     "post_id_ext": self._extract_post_id(
                         post.post_url, post.content_hash
                     ),
+                    "posted_at": posted_at.isoformat() if posted_at else None,
                     "reaction_count": post.reaction_count,
                     "text": post.content,
                     "url": post.post_url,

@@ -133,21 +133,13 @@ class PostExtractor:
 
     MAX_SCROLL_ATTEMPTS = 100
 
-    def __init__(
-        self,
-        page: Page,
-        max_posts: int = 250,
-        extract_permalinks: bool = False,
-    ) -> None:
+    def __init__(self, page: Page, max_posts: int = 250) -> None:
         """Initialize the extractor.
 
         Args:
             page: Playwright page object.
             max_posts: Maximum number of posts to extract.
-            extract_permalinks: If True, click Share on each post to get permalink.
-                This is slower but provides direct links to posts.
         """
-        self.extract_permalinks_flag = extract_permalinks
         self.max_posts = max_posts
         self.page = page
         self.seen_hashes: set[str] = set()
@@ -280,12 +272,10 @@ class PostExtractor:
 
         content_hash = self._generate_hash(author_id, content)
 
-        # Extract permalink if flag is set
+        # Always extract permalink (Share flow per post)
 
-        post_url: str | None = None
-        if self.extract_permalinks_flag:
-            post_index = raw.get("postIndex", 0)
-            post_url = self.extract_permalink(post_index)
+        post_index = raw.get("postIndex", 0)
+        post_url = self.extract_permalink(post_index)
 
         return RawPost(
             author_id=author_id,

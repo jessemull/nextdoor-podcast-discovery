@@ -1,12 +1,47 @@
 """Tests for post_storage module."""
 
+from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
 from supabase import Client
 
 from src.post_extractor import RawPost
-from src.post_storage import PostStorage
+from src.post_storage import PostStorage, parse_relative_timestamp
+
+
+class TestParseRelativeTimestamp:
+    """Test parse_relative_timestamp helper."""
+
+    def test_returns_none_for_empty_or_none(self) -> None:
+        """Should return None for None or empty string."""
+        assert parse_relative_timestamp(None) is None
+        assert parse_relative_timestamp("") is None
+        assert parse_relative_timestamp("   ") is None
+
+    def test_parses_minutes(self) -> None:
+        """Should parse N minutes."""
+        result = parse_relative_timestamp("5m")
+        assert result is not None
+        assert (datetime.now(timezone.utc) - result).total_seconds() >= 4 * 60
+
+    def test_parses_hours(self) -> None:
+        """Should parse N hours and 'N hours ago'."""
+        result = parse_relative_timestamp("2h")
+        assert result is not None
+        result_ago = parse_relative_timestamp("2 hours ago")
+        assert result_ago is not None
+
+    def test_parses_yesterday(self) -> None:
+        """Should parse Yesterday."""
+        result = parse_relative_timestamp("Yesterday")
+        assert result is not None
+        assert result.date() != datetime.now(timezone.utc).date()
+
+    def test_returns_none_for_unknown_format(self) -> None:
+        """Should return None for unparseable strings."""
+        assert parse_relative_timestamp("Last week") is None
+        assert parse_relative_timestamp("Jan 15") is None
 
 
 class TestPostStorage:

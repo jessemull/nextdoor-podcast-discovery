@@ -226,6 +226,9 @@ class NextdoorScraper:
     def navigate_to_feed(self, feed_type: str) -> None:
         """Navigate to a specific feed tab.
 
+        On mobile, opens the Filter by bottom sheet and clicks Recent or
+        Trending. On desktop, relies on URL and tab selectors.
+
         Args:
             feed_type: Which feed to navigate to ("recent" or "trending").
 
@@ -245,37 +248,54 @@ class NextdoorScraper:
         logger.info("Navigating to %s feed: %s", feed_type, feed_url)
         self.page.goto(feed_url, timeout=timeout)
 
-        # Wait for the feed to load by checking for the tab to be selected
+        # Wait for feed, then open Filter by sheet (mobile: navbar button with aria-controls) and select feed type
 
+        try:
+            self.page.get_by_test_id("feed-container").wait_for(state="visible", timeout=timeout)
+        except PlaywrightTimeoutError:
+            pass
+        self._random_delay()
+        self.page.evaluate("window.scrollTo(0, 0)")
+        self.page.wait_for_timeout(1000)
+
+        try:
+            navbar = self.page.get_by_test_id("navbar")
+            navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
+            dialog = self.page.get_by_role("dialog", name="Filter by")
+            dialog.wait_for(state="visible", timeout=8000)
+            self.page.get_by_role("button", name=feed_type.capitalize()).click(timeout=5000)
+            logger.info("Selected %s feed from Filter by menu", feed_type)
+        except PlaywrightTimeoutError:
+            logger.warning("Filter by menu not found or failed; feed may still be default (For you)")
+        self._random_delay()
+
+        self._wait_for_feed_tab_or_continue(feed_type, timeout)
+        self._random_delay()
+
+    def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
+        """Wait for desktop feed tab if present; otherwise no-op."""
         tab_selectors = {
             "recent": SELECTORS["feed_tab_recent"],
             "trending": SELECTORS["feed_tab_trending"],
         }
         tab_selector = tab_selectors.get(feed_type)
-        if tab_selector:
-            try:
-                self.page.wait_for_selector(tab_selector, timeout=timeout)
-                logger.info("Successfully loaded %s feed", feed_type)
-            except PlaywrightTimeoutError:
-                # Tab might not be visible but page loaded - that's okay
-                logger.warning("Feed tab selector not found, but page loaded")
+        if not tab_selector:
+            return
+        try:
+            self.page.wait_for_selector(tab_selector, timeout=min(3000, timeout))
+            logger.info("Successfully loaded %s feed", feed_type)
+        except PlaywrightTimeoutError:
+            logger.debug("Feed tab selector not found (mobile or different UI)")
 
-        # Small delay to let dynamic content start loading
-
-        self._random_delay()
-
-    def extract_posts(
-        self,
-        max_posts: int | None = None,
-        extract_permalinks: bool = False,
-    ) -> list[RawPost]:
+    def extract_posts(self, max_posts: int | None = None) -> list[RawPost]:
         """Extract posts from the current feed page.
+
+        Permalinks are always extracted (Share flow per post). Slower but
+        provides direct URLs for each post.
 
         Args:
             max_posts: Maximum number of posts to extract.
                 Defaults to SCRAPER_CONFIG["max_posts_per_run"].
-            extract_permalinks: If True, click Share on each post to get
-                permalink URL. This is slower but provides direct links.
 
         Returns:
             List of extracted posts.
@@ -286,11 +306,7 @@ class NextdoorScraper:
         if max_posts is None:
             max_posts = SCRAPER_CONFIG["max_posts_per_run"]
 
-        extractor = PostExtractor(
-            self.page,
-            max_posts=max_posts,
-            extract_permalinks=extract_permalinks,
-        )
+        extractor = PostExtractor(self.page, max_posts=max_posts)
         return extractor.extract_posts()
 
     def _check_for_captcha(self) -> bool:
