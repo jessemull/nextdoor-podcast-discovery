@@ -139,12 +139,12 @@ function StatsSection({
                 />
                 <StatCell
                   icon={<Layers aria-hidden className="h-9 w-9" strokeWidth={1.5} />}
-                  label="Embedding backlog"
+                  label="Embedding Backlog"
                   value={String(stats.embedding_backlog ?? 0)}
                 />
                 <StatCell
                   icon={<RefreshCw aria-hidden className="h-9 w-9" strokeWidth={1.5} />}
-                  label="Last scrape"
+                  label="Last Scrape"
                   title={
                     stats.last_scrape_at
                       ? new Date(stats.last_scrape_at).toLocaleString()
@@ -173,7 +173,7 @@ function CategoriesSection({
   return (
     <section>
       <h3 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
-        Top Categories (30 days)
+        Top Categories (30 Days)
       </h3>
       <div className={STATS_GRID_CLASS}>
         {loading
