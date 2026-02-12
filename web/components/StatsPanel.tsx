@@ -93,7 +93,7 @@ function StatsSection({
 }) {
   return (
     <section>
-      <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-foreground">
+      <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
         Stats
       </h2>
       <div className={STATS_GRID_CLASS}>
@@ -172,7 +172,7 @@ function CategoriesSection({
 }) {
   return (
     <section>
-      <h3 className="mb-5 text-center text-2xl font-bold tracking-tight text-foreground">
+      <h3 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
         Top Categories (30 days)
       </h3>
       <div className={STATS_GRID_CLASS}>
@@ -259,8 +259,8 @@ export function StatsPanel() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div aria-hidden className={ALERT_SLOT_MIN_H} />
+      <div className="space-y-24">
+        <div aria-hidden className="h-0" />
         <StatsSection loading stats={null} />
         <CategoriesSection categories={[]} loading />
       </div>
@@ -280,7 +280,7 @@ export function StatsPanel() {
   const embeddingBacklog = stats.embedding_backlog ?? 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-24">
       {embeddingBacklog > 100 ? (
         <Card className="border-border-focus" role="alert">
           <p className="text-muted text-sm">
@@ -292,7 +292,7 @@ export function StatsPanel() {
           </p>
         </Card>
       ) : (
-        <div aria-hidden className={ALERT_SLOT_MIN_H} />
+        <div aria-hidden className="h-0" />
       )}
       <StatsSection loading={false} stats={stats} />
       <CategoriesSection
