@@ -35,9 +35,12 @@ export function SportsFact() {
     return null;
   }
 
+  const wrapperClass =
+    "border-pittsburgh-gold-muted mb-8 w-fit mx-auto rounded-lg border p-5 text-center";
+
   if (showSkeleton) {
     return (
-      <div className="mb-8 text-center">
+      <div className={wrapperClass}>
         <div className="mb-5 h-7 w-48 animate-pulse rounded bg-surface-hover mx-auto" />
         <div className={SPORTS_FACT_BODY_MIN_H + " space-y-2"}>
           <div className="mx-auto h-4 max-w-md rounded bg-surface-hover animate-pulse" />
@@ -50,8 +53,8 @@ export function SportsFact() {
 
   if (isError && error) {
     return (
-      <div className="mb-8 text-center">
-        <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold">
+      <div className={wrapperClass}>
+        <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold-muted">
           Pittsburgh Sports Fact
         </h2>
         <p className="text-muted mx-auto max-w-xl text-base">{error.message}</p>
@@ -64,8 +67,8 @@ export function SportsFact() {
   }
 
   return (
-    <div className="mb-8 text-center">
-      <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold">
+    <div className={wrapperClass}>
+      <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold-muted">
         Pittsburgh Sports Fact
       </h2>
       <p
