@@ -1,5 +1,9 @@
 "use client";
 
+import { Bookmark, Check, Eye, EyeOff, X } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
+
 export interface BulkActionBarProps {
   bulkActionLoading: boolean;
   onBulkIgnore: () => void;
@@ -26,47 +30,46 @@ export function BulkActionBar({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-600 bg-gray-800/80 px-4 py-2">
-      <span className="text-sm text-gray-400">{selectedCount} selected</span>
-      <button
-        className="rounded bg-green-600 px-3 py-1 text-sm text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+    <div className="flex flex-wrap items-center gap-3 rounded-card border border-border bg-surface px-4 py-2">
+      <span className="text-muted-foreground text-sm">
+        {selectedCount} selected
+      </span>
+      <Button
         disabled={bulkActionLoading}
-        type="button"
+        variant="primary"
         onClick={onBulkMarkUsed}
       >
+        <Check aria-hidden className="h-4 w-4" />
         {bulkActionLoading ? "..." : "Mark as used"}
-      </button>
-      <button
-        className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+      </Button>
+      <Button
         disabled={bulkActionLoading}
-        type="button"
+        variant="primary"
         onClick={onBulkSave}
       >
+        <Bookmark aria-hidden className="h-4 w-4" />
         {bulkActionLoading ? "..." : "Save selected"}
-      </button>
-      <button
-        className="rounded bg-gray-600 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+      </Button>
+      <Button
         disabled={bulkActionLoading}
-        type="button"
+        variant="secondary"
         onClick={onBulkIgnore}
       >
+        <EyeOff aria-hidden className="h-4 w-4" />
         {bulkActionLoading ? "..." : "Ignore selected"}
-      </button>
-      <button
-        className="rounded border border-gray-500 bg-gray-700 px-3 py-1 text-sm text-gray-200 transition-colors hover:bg-gray-600 disabled:opacity-50"
+      </Button>
+      <Button
         disabled={bulkActionLoading}
-        type="button"
+        variant="secondary"
         onClick={onBulkUnignore}
       >
+        <Eye aria-hidden className="h-4 w-4" />
         {bulkActionLoading ? "..." : "Unignore selected"}
-      </button>
-      <button
-        className="text-sm text-gray-400 transition-colors hover:text-white"
-        type="button"
-        onClick={onClear}
-      >
+      </Button>
+      <Button variant="ghost" onClick={onClear}>
+        <X aria-hidden className="h-4 w-4" />
         Clear
-      </button>
+      </Button>
     </div>
   );
 }

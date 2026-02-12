@@ -1,5 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
+
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
+
 import type { RankingWeights } from "@/lib/types";
 
 interface RankingWeightsEditorProps {
@@ -73,6 +79,11 @@ const PRESETS: Record<string, RankingWeights> = {
   },
 };
 
+function weightsEqual(a: RankingWeights, b: RankingWeights): boolean {
+  const keys = Object.keys(a) as (keyof RankingWeights)[];
+  return keys.every((k) => a[k] === b[k]);
+}
+
 /**
  * RankingWeightsEditor Component
  *
@@ -90,22 +101,32 @@ export function RankingWeightsEditor({
   setConfigName,
   setRankingWeights,
 }: RankingWeightsEditorProps) {
+  const activePresetName = useMemo(() => {
+    const entry = Object.entries(PRESETS).find(([, w]) =>
+      weightsEqual(w, rankingWeights)
+    );
+    return entry ? entry[0] : null;
+  }, [rankingWeights]);
+
   return (
-    <div className="mb-8 rounded-lg bg-gray-800 p-6">
-      <h2 className="mb-4 text-xl font-semibold">Ranking Weights</h2>
-      <p className="mb-4 text-sm text-gray-400">
-        Adjust how important each scoring dimension is when calculating the final score.
+    <Card className="mb-8 p-6">
+      <h2 className="mb-4 text-foreground text-lg font-semibold">
+        Ranking Weights
+      </h2>
+      <p className="text-muted mb-4 text-sm">
+        Adjust how important each scoring dimension is when calculating the
+        final score.
       </p>
 
       <div className="mb-4">
         <label
-          className="mb-1 block text-sm font-medium text-gray-300"
+          className="text-muted-foreground mb-1 block text-sm font-medium"
           htmlFor="config-name"
         >
           Config name (optional)
         </label>
         <input
-          className="w-full max-w-md rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
+          className="w-full max-w-md rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-border-focus focus:outline-none focus:ring-1"
           id="config-name"
           placeholder="e.g. Episode 5 Prep, Comedy Focus"
           type="text"
@@ -115,29 +136,39 @@ export function RankingWeightsEditor({
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        <span className="text-xs text-gray-500">Presets:</span>
-        {Object.entries(PRESETS).map(([name, weights]) => (
-          <button
-            key={name}
-            className="rounded border border-gray-600 bg-gray-700 px-3 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
-            type="button"
-            onClick={() => setRankingWeights(weights)}
-          >
-            {name}
-          </button>
-        ))}
+        <span className="text-muted-foreground self-center text-xs">
+          Presets:
+        </span>
+        {Object.entries(PRESETS).map(([name, weights]) => {
+          const isActive = activePresetName === name;
+          return (
+            <button
+              key={name}
+              className={cn(
+                "rounded border px-3 py-1 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus",
+                isActive
+                  ? "border-border bg-surface-hover text-foreground"
+                  : "border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+              )}
+              type="button"
+              onClick={() => setRankingWeights(weights)}
+            >
+              {name}
+            </button>
+          );
+        })}
       </div>
 
       {Object.entries(rankingWeights).map(([dimension, value]) => (
         <div key={dimension} className="mb-4">
           <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium capitalize text-gray-300">
+            <label className="text-muted-foreground text-sm font-medium capitalize">
               {dimension.replace(/_/g, " ")}
             </label>
-            <span className="text-sm text-gray-400">{value.toFixed(1)}</span>
+            <span className="text-muted text-sm">{value.toFixed(1)}</span>
           </div>
           <input
-            className="w-full"
+            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-muted"
             max={5}
             min={0}
             step={0.1}
@@ -155,16 +186,12 @@ export function RankingWeightsEditor({
 
       <div className="mt-6">
         <div className="flex gap-4">
-          <button
-            className="rounded bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
-            type="button"
-            onClick={onReset}
-          >
+          <Button variant="ghost" onClick={onReset}>
             Reset to Defaults
-          </button>
-          <button
-            className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          </Button>
+          <Button
             disabled={isSaving || isRecomputing || isJobRunning}
+            variant="primary"
             onClick={onSave}
           >
             {isRecomputing
@@ -172,18 +199,19 @@ export function RankingWeightsEditor({
               : isJobRunning
                 ? "Job Running..."
                 : "Save & Recompute Scores"}
-          </button>
+          </Button>
         </div>
-        <p className="mt-2 text-xs text-gray-500">
-          This will update the weights and recalculate final scores for all posts.
-          The dashboard will reflect the new rankings once the job completes.
+        <p className="text-muted-foreground mt-2 text-xs">
+          This will update the weights and recalculate final scores for all
+          posts. The dashboard will reflect the new rankings once the job
+          completes.
           {pendingJobsCount > 0 && (
-            <span className="block mt-1">
+            <span className="mt-1 block">
               {pendingJobsCount} job{pendingJobsCount > 1 ? "s" : ""} queued
             </span>
           )}
         </p>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -394,8 +394,10 @@ export default function SettingsPage() {
     return (
       <main className="min-h-screen p-8">
         <div className="mx-auto max-w-4xl">
-          <h1 className="mb-4 text-3xl font-bold">Settings</h1>
-          <p className="text-gray-400">Loading...</p>
+          <h1 className="mb-4 text-2xl font-semibold text-foreground">
+            Settings
+          </h1>
+          <p className="text-muted">Loading...</p>
         </div>
       </main>
     );
@@ -412,8 +414,10 @@ export default function SettingsPage() {
     <ErrorBoundary>
       <main className="min-h-screen p-8">
         <div className="mx-auto max-w-4xl">
-          <h1 className="mb-4 text-3xl font-bold">Settings</h1>
-          <p className="mb-8 text-gray-400">
+          <h1 className="mb-4 text-2xl font-semibold text-foreground">
+            Settings
+          </h1>
+          <p className="text-muted mb-8 text-sm">
             Configure ranking weights and search preferences.
           </p>
 

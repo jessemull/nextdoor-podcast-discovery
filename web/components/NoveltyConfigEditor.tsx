@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
 interface NoveltyConfig {
   frequency_thresholds?: {
     common: number;
@@ -42,31 +45,37 @@ export function NoveltyConfigEditor({
   const maxMult = noveltyConfig.max_multiplier ?? DEFAULT_NOVELTY.max_multiplier!;
 
   return (
-    <div className="mb-8 rounded-lg bg-gray-800 p-6">
-      <h2 className="mb-4 text-xl font-semibold">Novelty Configuration</h2>
-      <p className="mb-2 text-sm text-gray-400">
+    <Card className="mb-8 p-6">
+      <h2 className="mb-4 text-foreground text-lg font-semibold">
+        Novelty Configuration
+      </h2>
+      <p className="text-muted mb-2 text-sm">
         Control how topic frequency affects scores. Rare topics get a boost;
         overused topics get penalized.
       </p>
-      <p className="mb-4 text-xs text-gray-500">
-        Topics with ≤{thresholds.rare} posts in {noveltyConfig.window_days ?? 30} days get{" "}
-        {maxMult.toFixed(1)}×; those with &gt;{thresholds.very_common} get {minMult.toFixed(1)}×.
+      <p className="text-muted-foreground mb-4 text-xs">
+        Topics with ≤{thresholds.rare} posts in {noveltyConfig.window_days ?? 30}{" "}
+        days get {maxMult.toFixed(1)}×; those with &gt;{thresholds.very_common}{" "}
+        get {minMult.toFixed(1)}×.
       </p>
-      <div className="mb-6 rounded border border-amber-800/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
-        Recompute scores (via Ranking Weights &quot;Save & Recompute&quot;) for novelty
-        changes to take effect on the feed.
+      <div className="border-border bg-surface-hover mb-6 rounded border px-3 py-2 text-muted text-sm">
+        Recompute scores (via Ranking Weights &quot;Save & Recompute&quot;)
+        for novelty changes to take effect on the feed.
       </div>
 
       <div className="mb-6 space-y-4">
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-300" htmlFor="min-multiplier">
+            <label
+              className="text-muted-foreground text-sm font-medium"
+              htmlFor="min-multiplier"
+            >
               Min Multiplier (very common topics)
             </label>
-            <span className="text-sm text-gray-400">{minMult.toFixed(2)}</span>
+            <span className="text-muted text-sm">{minMult.toFixed(2)}</span>
           </div>
           <input
-            className="w-full"
+            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
             id="min-multiplier"
             max={1}
             min={0.1}
@@ -84,13 +93,16 @@ export function NoveltyConfigEditor({
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-300" htmlFor="max-multiplier">
+            <label
+              className="text-muted-foreground text-sm font-medium"
+              htmlFor="max-multiplier"
+            >
               Max Multiplier (rare topics)
             </label>
-            <span className="text-sm text-gray-400">{maxMult.toFixed(2)}</span>
+            <span className="text-muted text-sm">{maxMult.toFixed(2)}</span>
           </div>
           <input
-            className="w-full"
+            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
             id="max-multiplier"
             max={2}
             min={1}
@@ -106,17 +118,20 @@ export function NoveltyConfigEditor({
           />
         </div>
 
-        <div className="border-t border-gray-700 pt-4">
-          <h3 className="mb-3 text-sm font-medium text-gray-300">
+        <div className="border-border border-t pt-4">
+          <h3 className="text-muted-foreground mb-3 text-sm font-medium">
             Frequency Thresholds (30-day window)
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs text-gray-400" htmlFor="rare-threshold">
+              <label
+                className="text-muted-foreground mb-1 block text-xs"
+                htmlFor="rare-threshold"
+              >
                 Rare (≤)
               </label>
               <input
-                className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="rare-threshold"
                 max={100}
                 min={0}
@@ -134,11 +149,14 @@ export function NoveltyConfigEditor({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-gray-400" htmlFor="common-threshold">
+              <label
+                className="text-muted-foreground mb-1 block text-xs"
+                htmlFor="common-threshold"
+              >
                 Common (≤)
               </label>
               <input
-                className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="common-threshold"
                 max={500}
                 min={1}
@@ -156,11 +174,14 @@ export function NoveltyConfigEditor({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-gray-400" htmlFor="very-common-threshold">
+              <label
+                className="text-muted-foreground mb-1 block text-xs"
+                htmlFor="very-common-threshold"
+              >
                 Very Common (≤)
               </label>
               <input
-                className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="very-common-threshold"
                 max={1000}
                 min={10}
@@ -181,13 +202,13 @@ export function NoveltyConfigEditor({
         </div>
       </div>
 
-      <button
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
         disabled={isSaving}
+        variant="primary"
         onClick={onSave}
       >
         {isSaving ? "Saving..." : "Save Novelty Config"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }

@@ -9,13 +9,13 @@ export function SettingsAlerts({ error, successMessage }: SettingsAlertsProps) {
   return (
     <>
       {successMessage && (
-        <div className="mb-6 rounded-lg border border-green-800 bg-green-900/20 p-4">
-          <p className="text-green-400">{successMessage}</p>
+        <div className="border-border bg-surface-hover mb-6 rounded-card border p-4">
+          <p className="text-foreground text-sm">{successMessage}</p>
         </div>
       )}
       {error && (
-        <div className="mb-6 rounded-lg border border-red-800 bg-red-900/20 p-4">
-          <p className="text-red-400">{error}</p>
+        <div className="border-destructive bg-destructive/10 mb-6 rounded-card border p-4">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
     </>

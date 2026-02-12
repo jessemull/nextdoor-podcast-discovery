@@ -5,6 +5,14 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --surface: #171717;
+  --surface-hover: #262626;
+  --border: #262626;
+  --border-focus: #404040;
+  --muted: #a3a3a3;
+  --muted-foreground: #737373;
+  --primary: #e5e5e5;
+  --destructive: #dc2626;
 }
 
 body {
