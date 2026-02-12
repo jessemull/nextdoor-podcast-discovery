@@ -31,6 +31,7 @@ const config: Config = {
         muted: "var(--muted)",
         "muted-foreground": "var(--muted-foreground)",
         "pittsburgh-gold": "var(--pittsburgh-gold)",
+        "pittsburgh-gold-muted": "var(--pittsburgh-gold-muted)",
         primary: "var(--primary)",
         surface: "var(--surface)",
         "surface-hover": "var(--surface-hover)",
