@@ -66,7 +66,15 @@ export function Navbar() {
           </Link>
 
           {status === "loading" ? (
-            <span className="text-muted-foreground text-sm">Loading...</span>
+            <span
+              aria-label="Loading user"
+              className={cn(
+                "flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium opacity-60",
+                "pointer-events-none"
+              )}
+            >
+              ?
+            </span>
           ) : session ? (
             <div className="relative" ref={userMenuRef}>
               <button
