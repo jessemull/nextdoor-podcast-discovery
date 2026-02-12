@@ -10,7 +10,7 @@ const config: Config = {
       animation: {
         "fade-in-up": "fade-in-up 0.5s ease-out forwards",
         "fade-in-up-hero": "fade-in-up 1.5s ease-out forwards",
-        "fade-in-up-slow": "fade-in-up 1.2s ease-out forwards",
+        "fade-in-up-slow": "fade-in-up 1s ease-out forwards",
         "fade-in-up-sub": "fade-in-up 1.8s ease-out forwards",
       },
       animationDelay: {
