@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
-  Mic,
-  Search,
-  Settings,
-  User,
-} from "lucide-react";
+import { LogOut, Mic } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -61,20 +53,16 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           <Link className={navLinkClass} href="/feed">
-            <LayoutDashboard aria-hidden className="h-5 w-5" />
-            <span className="hidden sm:inline">Feed</span>
+            Feed
           </Link>
           <Link className={navLinkClass} href="/search">
-            <Search aria-hidden className="h-5 w-5" />
-            <span className="hidden sm:inline">Search</span>
+            Search
           </Link>
           <Link className={navLinkClass} href="/jobs">
-            <ListTodo aria-hidden className="h-5 w-5" />
-            <span className="hidden sm:inline">Jobs</span>
+            Jobs
           </Link>
           <Link className={navLinkClass} href="/settings">
-            <Settings aria-hidden className="h-5 w-5" />
-            <span className="hidden sm:inline">Settings</span>
+            Settings
           </Link>
 
           {status === "loading" ? (
@@ -86,19 +74,13 @@ export function Navbar() {
                 aria-haspopup="menu"
                 aria-label="Open user menu"
                 className={cn(
-                  "flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 transition-colors",
-                  "hover:bg-surface-hover focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  "flex h-8 w-8 items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium transition-colors",
+                  "hover:bg-surface-hover/80 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
                 )}
                 type="button"
                 onClick={() => setUserMenuOpen((o) => !o)}
               >
-                <span
-                  aria-hidden
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface-hover text-muted text-sm font-medium"
-                >
-                  {initial}
-                </span>
-                <User aria-hidden className="h-4 w-4 text-muted sm:hidden" />
+                <span aria-hidden>{initial}</span>
               </button>
 
               {userMenuOpen && (
@@ -106,15 +88,6 @@ export function Navbar() {
                   className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
                   role="menu"
                 >
-                  <Link
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                    href="/settings"
-                    role="menuitem"
-                    onClick={closeUserMenu}
-                  >
-                    <Settings aria-hidden className="h-4 w-4" />
-                    Settings
-                  </Link>
                   <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                     role="menuitem"
