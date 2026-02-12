@@ -1,15 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
-
-import { Card } from "@/components/ui/Card";
 
 import type { SportsFactResponse } from "@/lib/types";
 
+const SPORTS_FACT_BODY_MIN_H = "min-h-[4.5rem]";
+
 export function SportsFact() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const isLoggedIn = !!session?.user;
 
   const { data, error, isError, isLoading } = useQuery<SportsFactResponse>({
@@ -28,18 +27,35 @@ export function SportsFact() {
     staleTime: Infinity,
   });
 
-  if (!isLoggedIn || isLoading) {
+  const showSkeleton =
+    sessionStatus === "loading" ||
+    (isLoggedIn && (isLoading || (!data?.fact && !error)));
+
+  if (sessionStatus === "unauthenticated") {
     return null;
+  }
+
+  if (showSkeleton) {
+    return (
+      <div className="mb-8 text-center">
+        <div className="mb-5 h-7 w-48 animate-pulse rounded bg-surface-hover mx-auto" />
+        <div className={SPORTS_FACT_BODY_MIN_H + " space-y-2"}>
+          <div className="mx-auto h-4 max-w-md rounded bg-surface-hover animate-pulse" />
+          <div className="mx-auto h-4 max-w-sm rounded bg-surface-hover animate-pulse" />
+          <div className="mx-auto h-4 max-w-xs rounded bg-surface-hover animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   if (isError && error) {
     return (
-      <Card className="mb-6 border-border-focus">
-        <p className="font-semibold text-foreground">
+      <div className="mb-8 text-center">
+        <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold">
           Pittsburgh Sports Fact
-        </p>
-        <p className="text-muted text-sm">{error.message}</p>
-      </Card>
+        </h2>
+        <p className="text-muted mx-auto max-w-xl text-base">{error.message}</p>
+      </div>
     );
   }
 
@@ -48,19 +64,17 @@ export function SportsFact() {
   }
 
   return (
-    <Card className="mb-6">
-      <div className="flex items-center gap-3">
-        <Info
-          aria-hidden
-          className="h-5 w-5 shrink-0 text-muted"
-        />
-        <div>
-          <p className="font-semibold text-foreground">
-            Pittsburgh Sports Fact
-          </p>
-          <p className="text-muted text-sm">{data.fact}</p>
-        </div>
-      </div>
-    </Card>
+    <div className="mb-8 text-center">
+      <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold">
+        Pittsburgh Sports Fact
+      </h2>
+      <p
+        className={
+          SPORTS_FACT_BODY_MIN_H + " text-muted mx-auto max-w-xl text-base"
+        }
+      >
+        {data.fact}
+      </p>
+    </div>
   );
 }

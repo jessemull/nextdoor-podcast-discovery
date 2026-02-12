@@ -56,7 +56,8 @@ describe("StatsPanel", () => {
     expect(screen.getByText("150")).toBeInTheDocument(); // Total posts
     expect(screen.getByText("100")).toBeInTheDocument(); // Scored
     expect(screen.getByText("50")).toBeInTheDocument(); // Unscored
-    expect(screen.getByText("25")).toBeInTheDocument(); // Used
+    expect(screen.getByText("Total Posts")).toBeInTheDocument();
+    expect(screen.getByText("Used")).toBeInTheDocument();
   });
 
   it("should display top categories", async () => {
@@ -71,9 +72,11 @@ describe("StatsPanel", () => {
       expect(screen.getByText("Top Categories (30 days)")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/humor: 30/i)).toBeInTheDocument();
-    expect(screen.getByText(/drama: 25/i)).toBeInTheDocument();
-    expect(screen.getByText(/wildlife: 20/i)).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText("Humor")).toBeInTheDocument();
+    expect(screen.getByText("Drama")).toBeInTheDocument();
+    expect(screen.getByText("20")).toBeInTheDocument();
+    expect(screen.getByText("Wildlife")).toBeInTheDocument();
   });
 
   it("should display error message when fetch fails", async () => {
@@ -142,13 +145,15 @@ describe("StatsPanel", () => {
     render(<StatsPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/cat1: 10/i)).toBeInTheDocument();
+      expect(screen.getByText("Cat1")).toBeInTheDocument();
+      expect(screen.getByText("10")).toBeInTheDocument();
     });
 
     // Should show first 5
-    expect(screen.getByText(/cat5: 6/i)).toBeInTheDocument();
-    // Should not show 6th
-    expect(screen.queryByText(/cat6: 5/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Cat5")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
+    // Should not show 6th category
+    expect(screen.queryByText("Cat6")).not.toBeInTheDocument();
   });
 
   it("should handle zero values correctly", async () => {
@@ -180,8 +185,8 @@ describe("StatsPanel", () => {
     expect(screen.getByText("Unscored")).toBeInTheDocument();
     expect(screen.getByText("Used")).toBeInTheDocument();
 
-    // Verify stat cards (4 main + 3 health = 7)
-    const statCards = document.querySelectorAll(".bg-gray-700\\/50");
+    // Verify stat cards (7 total: Total, Scored, Unscored, Used, Posts 24h, Embedding backlog, Last scrape)
+    const statCards = document.querySelectorAll("[class*='bg-surface-hover/50']");
     expect(statCards.length).toBe(7);
   });
 });

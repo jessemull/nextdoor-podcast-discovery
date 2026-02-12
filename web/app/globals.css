@@ -13,6 +13,8 @@
   --muted-foreground: #737373;
   --primary: #e5e5e5;
   --destructive: #dc2626;
+  /* Pittsburgh Pirates official gold (Pantone PMS 123 C) */
+  --pittsburgh-gold: #fdb827;
 }
 
 body {

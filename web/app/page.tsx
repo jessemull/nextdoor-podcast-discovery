@@ -1,39 +1,41 @@
-import { Suspense } from "react";
-
-import { ActiveConfigBadge } from "@/components/ActiveConfigBadge";
-import { PodcastPicks } from "@/components/PodcastPicks";
-import { PostFeed } from "@/components/PostFeed";
 import { SportsFact } from "@/components/SportsFact";
 import { StatsPanel } from "@/components/StatsPanel";
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="mb-2 text-2xl font-semibold text-foreground">
+    <main className="min-h-screen">
+      {/* Hero: centered title + sub-header */}
+      <section
+        aria-label="Welcome"
+        className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-16 text-center"
+      >
+        <h1
+          className="text-foreground mb-3 max-w-2xl text-4xl font-bold tracking-tight animate-fade-in-up-hero opacity-0 sm:text-5xl"
+        >
           Nextdoor Podcast Discovery
         </h1>
-        <p className="mb-8 text-muted text-sm">
+        <p
+          className="text-muted max-w-lg text-lg animate-fade-in-up-sub opacity-0 sm:text-xl"
+          style={{ animationDelay: "2.5s" } as React.CSSProperties}
+        >
           Discover and curate interesting Nextdoor posts for your podcast.
         </p>
-        {/* Sports fact banner for Matt */}
-        <SportsFact />
-        {/* Stats panel */}
-        <div className="mb-6">
+      </section>
+
+      {/* Content: sports fact then stats, fading in sequence after sub-header */}
+      <div className="mx-auto max-w-5xl px-6 pb-16">
+        <div
+          className="animate-fade-in-up-slow opacity-0"
+          style={{ animationDelay: "5.5s" } as React.CSSProperties}
+        >
+          <SportsFact />
+        </div>
+        <div
+          className="animate-fade-in-up-slow opacity-0"
+          style={{ animationDelay: "6.7s" } as React.CSSProperties}
+        >
           <StatsPanel />
         </div>
-        {/* Podcast Picks - top-scoring unused posts (uses useSearchParams) */}
-        <Suspense fallback={<div className="h-32 animate-pulse rounded-card bg-surface" />}>
-          <PodcastPicks />
-        </Suspense>
-        {/* Post feed + quick filters */}
-        <section aria-label="Feed">
-          <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-foreground text-lg font-semibold">Feed</h2>
-            <ActiveConfigBadge />
-          </div>
-          <PostFeed />
-        </section>
       </div>
     </main>
   );
