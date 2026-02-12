@@ -1,5 +1,6 @@
 """Configuration constants for the scraper."""
 
+import logging
 import os
 from typing import TypedDict
 
@@ -15,6 +16,7 @@ __all__ = [
     "EMBEDDING_MODEL",
     "FEED_URLS",
     "LOGIN_URL",
+    "log_supabase_error",
     "NEWS_FEED_URL",
     "REQUIRED_ENV_VARS",
     "SCRAPER_CONFIG",
@@ -141,6 +143,16 @@ SELECTORS: Selectors = {
     "login_button": 'role=button[name="Log in"]',
     "password_input": 'role=textbox[name="Password"]',
 }
+
+
+def log_supabase_error(context: str, e: Exception) -> None:
+    """Log a Supabase/DB error with context.
+
+    Use in broad except blocks where Supabase does not export specific
+    exception types, so logging is consistent and actionable.
+    """
+    _logger = logging.getLogger(__name__)
+    _logger.error("%s: %s (%s)", context, e, type(e).__name__)
 
 
 def validate_env() -> None:

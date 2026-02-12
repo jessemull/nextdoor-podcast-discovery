@@ -125,7 +125,7 @@ nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
 ├── .github/workflows/     # deploy.yml, scrape.yml, scrape-trending.yml
 ├── database/
-│   ├── migrations/        # 001–020 SQL (run in order in Supabase)
+│   ├── migrations/        # 001–024 SQL (run in numeric order in Supabase)
 │   └── seeds/             # seed_neighborhoods.sql
 ├── scraper/               # Python scraper + workers
 │   ├── src/
@@ -149,7 +149,6 @@ nextdoor/
 ├── docker-compose.yml     # Local Postgres + pgvector (dev only)
 ├── Makefile
 ├── DOM.html               # Optional: mobile DOM snapshot for scraper debugging
-├── FIX_SCRAPER.md         # Known gaps (URL, posted_at, feed selection, comments)
 └── README.md
 ```
 
@@ -255,7 +254,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 2. **Env files** — Create `scraper/.env` and `web/.env.local` from the example files; fill in all required variables.
 
 3. **Database**
-   - **Production:** Create a Supabase project and run migrations 001–020 in the SQL Editor (see [Database](#database)).
+   - **Production:** Create a Supabase project and run all migrations 001–024 in numeric order in the SQL Editor (see [Database](#database)).
    - **Local:** `make db-up` then `make db-migrate-local`.
 
 4. **Scraper (one-off)**
@@ -270,7 +269,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 ## Database
 
-**Production:** Supabase. Run `database/migrations/001_initial_schema.sql` through `020_*.sql` in numeric order in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`.
+**Production:** Supabase. Run all files in `database/migrations/` in numeric order (001_initial_schema.sql through 026_function_search_path.sql) in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`.
 
 **Local dev:** `docker-compose up -d db` (pgvector/pg16), then `make db-migrate-local` to pipe migrations and seeds into the container.
 
@@ -282,7 +281,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 **Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--score`, `--embed`, `--dry-run`, `--check-robots`, `--extract-permalinks`, `--visible`, `--inspect`.
 
-**Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection: see FIX_SCRAPER.md) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
+**Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
 
 **Scoring:** `LLMScorer` fetches unscored posts, batches them, calls Claude Haiku, computes final score (weights + novelty), and upserts `llm_scores` and topic frequencies.
 
@@ -312,7 +311,7 @@ Processes `recompute_final_scores` jobs created when a user clicks “Save & Rec
 
 - **Lint** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats scraper code.
 - **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase and NextAuth.
-- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. See `FIX_SCRAPER.md` for current data gaps.
+- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search.
 
 ## Security
 
@@ -356,7 +355,7 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **Materialized final scores + background jobs** | On-request computation doesn’t scale; precomputed `post_scores` + job keeps reads fast and allows atomic config switch |
 | **Weight config versioning** | Multiple configs; one “active”; recompute fills one config; activation switches feed without recomputing |
 | **Session cookies in Supabase** | Reuse login across runs → fewer CAPTCHAs; Fernet encryption at rest |
-| **Mobile viewport for scraper** | Nextdoor mobile UI; feed selection and selectors differ from desktop (see FIX_SCRAPER.md) |
+| **Mobile viewport for scraper** | Nextdoor mobile UI; feed selection and selectors differ from desktop |
 
 ## Scraping policy
 
@@ -368,7 +367,6 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 
 | Doc | Purpose |
 | :-- | :------ |
-| **FIX_SCRAPER.md** | Known issues: `posts.url` / `posted_at` / `episode_date` often NULL, mobile feed selection (Filter by → Recent/Trending), comment scraping. Verify fixes in Supabase. |
 | **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |
 | **.cursorrules** | Project conventions: alphabetization, comments, Python/TypeScript style, testing philosophy. |
 | **database/migrations/** | Source of truth for schema and RPCs; run in order in Supabase. |

@@ -18,6 +18,7 @@ import type { Database } from "./database.types";
 
 // Use 'any' for the client so incomplete Database types don't produce 'never'
 // for tables/RPCs. The DB schema is correct at runtime; types are hand-maintained.
+// Types can be tightened over time as database.types.ts is updated or generated.
 let _supabaseAdmin: null | SupabaseClient<any> = null;
 
 /**

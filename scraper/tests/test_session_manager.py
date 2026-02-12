@@ -43,15 +43,20 @@ class TestSessionManager:
             ):
                 return SessionManager()
 
+    def _chain_for_get_cookies(self, session_manager: SessionManager) -> mock.MagicMock:
+        """Build mock chain: table().select().eq().order().limit().execute()."""
+        chain = (
+            session_manager.supabase.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value
+        )
+        return chain
+
     def test_get_cookies_returns_none_when_no_session(
         self, session_manager: SessionManager
     ) -> None:
         """Should return None when no session exists."""
         result_mock = mock.MagicMock()
         result_mock.data = []
-        session_manager.supabase.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = (
-            result_mock
-        )
+        self._chain_for_get_cookies(session_manager).execute.return_value = result_mock
 
         result = session_manager.get_cookies()
 
@@ -72,9 +77,7 @@ class TestSessionManager:
                 "expires_at": expires_at,
             }
         ]
-        session_manager.supabase.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = (
-            result_mock
-        )
+        self._chain_for_get_cookies(session_manager).execute.return_value = result_mock
 
         result = session_manager.get_cookies()
 
@@ -95,9 +98,7 @@ class TestSessionManager:
                 "expires_at": expires_at,
             }
         ]
-        session_manager.supabase.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = (
-            result_mock
-        )
+        self._chain_for_get_cookies(session_manager).execute.return_value = result_mock
 
         result = session_manager.get_cookies()
 
@@ -121,9 +122,7 @@ class TestSessionManager:
                 "expires_at": expires_at,
             }
         ]
-        session_manager.supabase.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = (
-            result_mock
-        )
+        self._chain_for_get_cookies(session_manager).execute.return_value = result_mock
 
         result = session_manager.get_cookies()
 
