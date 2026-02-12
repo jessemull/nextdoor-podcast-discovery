@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
 interface SearchDefaults {
   similarity_threshold: number;
 }
@@ -23,23 +26,28 @@ export function SearchDefaultsEditor({
   setSearchDefaults,
 }: SearchDefaultsEditorProps) {
   return (
-    <div className="mb-8 rounded-lg bg-gray-800 p-6">
-      <h2 className="mb-4 text-xl font-semibold">Search Defaults</h2>
-      <p className="mb-6 text-sm text-gray-400">
+    <Card className="mb-8 p-6">
+      <h2 className="mb-4 text-foreground text-lg font-semibold">
+        Search Defaults
+      </h2>
+      <p className="text-muted mb-6 text-sm">
         Configure default settings for semantic search.
       </p>
 
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-300" htmlFor="similarity-threshold">
+          <label
+            className="text-muted-foreground text-sm font-medium"
+            htmlFor="similarity-threshold"
+          >
             Similarity Threshold
           </label>
-          <span className="text-sm text-gray-400">
+          <span className="text-muted text-sm">
             {searchDefaults.similarity_threshold.toFixed(2)}
           </span>
         </div>
         <input
-          className="w-full"
+          className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
           id="similarity-threshold"
           max={1}
           min={0}
@@ -53,22 +61,18 @@ export function SearchDefaultsEditor({
             })
           }
         />
-        <div className="mt-1 flex justify-between text-xs text-gray-500">
+        <div className="text-muted-foreground mt-1 flex justify-between text-xs">
           <span>Broader (0.0)</span>
           <span>Precise (1.0)</span>
         </div>
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="text-muted-foreground mt-2 text-xs">
           Lower values return more results, higher values are more precise.
         </p>
       </div>
 
-      <button
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={isSaving}
-        onClick={onSave}
-      >
+      <Button disabled={isSaving} variant="primary" onClick={onSave}>
         {isSaving ? "Saving..." : "Save Search Defaults"}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }

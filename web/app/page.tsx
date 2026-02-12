@@ -9,11 +9,11 @@ import { StatsPanel } from "@/components/StatsPanel";
 export default function Home() {
   return (
     <main className="min-h-screen p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">
           Nextdoor Podcast Discovery
         </h1>
-        <p className="text-lg text-gray-400 mb-8">
+        <p className="mb-8 text-muted text-sm">
           Discover and curate interesting Nextdoor posts for your podcast.
         </p>
         {/* Sports fact banner for Matt */}
@@ -23,13 +23,13 @@ export default function Home() {
           <StatsPanel />
         </div>
         {/* Podcast Picks - top-scoring unused posts (uses useSearchParams) */}
-        <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-gray-800" />}>
+        <Suspense fallback={<div className="h-32 animate-pulse rounded-card bg-surface" />}>
           <PodcastPicks />
         </Suspense>
         {/* Post feed + quick filters */}
         <section aria-label="Feed">
           <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-xl font-semibold">Feed</h2>
+            <h2 className="text-foreground text-lg font-semibold">Feed</h2>
             <ActiveConfigBadge />
           </div>
           <PostFeed />

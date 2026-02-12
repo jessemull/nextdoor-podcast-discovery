@@ -1,7 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
+
+import { Card } from "@/components/ui/Card";
 
 import type { SportsFactResponse } from "@/lib/types";
 
@@ -31,10 +34,12 @@ export function SportsFact() {
 
   if (isError && error) {
     return (
-      <div className="mb-6 rounded-lg border border-amber-700 bg-amber-900/30 px-4 py-3 text-amber-200">
-        <p className="font-bold">Pittsburgh Sports Fact</p>
-        <p className="text-sm">{error.message}</p>
-      </div>
+      <Card className="mb-6 border-border-focus">
+        <p className="font-semibold text-foreground">
+          Pittsburgh Sports Fact
+        </p>
+        <p className="text-muted text-sm">{error.message}</p>
+      </Card>
     );
   }
 
@@ -43,14 +48,19 @@ export function SportsFact() {
   }
 
   return (
-    <div className="mb-6 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 px-4 py-3 text-black shadow-md">
+    <Card className="mb-6">
       <div className="flex items-center gap-3">
-        <span aria-label="Football" className="text-2xl" role="img">🏈</span>
+        <Info
+          aria-hidden
+          className="h-5 w-5 shrink-0 text-muted"
+        />
         <div>
-          <p className="font-bold">Pittsburgh Sports Fact!</p>
-          <p className="text-sm">{data.fact}</p>
+          <p className="font-semibold text-foreground">
+            Pittsburgh Sports Fact
+          </p>
+          <p className="text-muted text-sm">{data.fact}</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

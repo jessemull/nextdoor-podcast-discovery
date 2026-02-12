@@ -1,6 +1,7 @@
 "use client";
 
 import { TOPIC_CATEGORIES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
@@ -28,22 +29,30 @@ export function FeedFilters({
   setShowRefineFilters,
   showRefineFilters,
 }: FeedFiltersProps) {
+  const chipBase =
+    "rounded border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus";
+  const chipInactive =
+    "border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground";
+  const chipActive =
+    "border-border bg-surface-hover text-foreground";
+
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+    <div className="rounded-card border border-border bg-surface p-4">
       {filterLoadError && (
-        <p className="mb-4 text-sm text-amber-400" role="alert">
+        <p className="mb-4 text-destructive text-sm" role="alert">
           {filterLoadError}
         </p>
       )}
       {/* Quick filter chips */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <span className="self-center text-xs text-gray-500">Quick:</span>
+        <span className="text-muted-foreground self-center text-xs">
+          Quick:
+        </span>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.savedOnly
-              ? "bg-blue-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.savedOnly ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({ ...prev, savedOnly: !prev.savedOnly }))
@@ -52,11 +61,10 @@ export function FeedFilters({
           Saved
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.ignoredOnly
-              ? "bg-gray-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.ignoredOnly ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({ ...prev, ignoredOnly: !prev.ignoredOnly }))
@@ -65,11 +73,10 @@ export function FeedFilters({
           Ignored
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.unusedOnly
-              ? "bg-amber-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.unusedOnly ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({ ...prev, unusedOnly: !prev.unusedOnly }))
@@ -78,11 +85,12 @@ export function FeedFilters({
           Unused
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
+          className={cn(
+            chipBase,
             filters.minPodcastWorthy === "7" && filters.sort === "podcast_score"
-              ? "bg-yellow-600 text-yellow-900"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+              ? chipActive
+              : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => {
@@ -99,11 +107,10 @@ export function FeedFilters({
           Podcast ≥7
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.minReactionCount !== ""
-              ? "bg-emerald-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.minReactionCount !== "" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -115,11 +122,10 @@ export function FeedFilters({
           High engagement
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "drama"
-              ? "bg-purple-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "drama" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -131,11 +137,10 @@ export function FeedFilters({
           Drama
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "humor"
-              ? "bg-yellow-600 text-yellow-900"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "humor" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -147,11 +152,10 @@ export function FeedFilters({
           Humor
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "wildlife"
-              ? "bg-green-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "wildlife" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -163,11 +167,10 @@ export function FeedFilters({
           Wildlife
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "crime"
-              ? "bg-red-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "crime" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -179,11 +182,10 @@ export function FeedFilters({
           Crime
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "lost_pet"
-              ? "bg-orange-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "lost_pet" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -195,11 +197,10 @@ export function FeedFilters({
           Lost Pet
         </button>
         <button
-          className={`rounded px-3 py-1 text-sm transition-colors ${
-            filters.category === "local_news"
-              ? "bg-cyan-600 text-white"
-              : "border border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
-          }`}
+          className={cn(
+            chipBase,
+            filters.category === "local_news" ? chipActive : chipInactive
+          )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
@@ -214,7 +215,7 @@ export function FeedFilters({
       {/* Refine filters (collapsible) */}
       <div>
         <button
-          className="mb-2 text-sm text-gray-400 hover:text-white"
+          className="text-muted mb-2 text-sm hover:text-foreground"
           type="button"
           onClick={() => setShowRefineFilters((prev) => !prev)}
         >
@@ -224,11 +225,14 @@ export function FeedFilters({
           <div className="flex flex-wrap items-center gap-4">
             {/* Sort */}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400" htmlFor="sort">
+              <label
+                className="text-muted-foreground text-sm"
+                htmlFor="sort"
+              >
                 Sort:
               </label>
               <select
-                className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="sort"
                 value={filters.sort}
                 onChange={(e) =>
@@ -246,13 +250,13 @@ export function FeedFilters({
             {/* Neighborhood */}
             <div className="flex items-center gap-2">
               <label
-                className="text-sm text-gray-400"
+                className="text-muted-foreground text-sm"
                 htmlFor="neighborhood"
               >
                 Neighborhood:
               </label>
               <select
-                className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="neighborhood"
                 value={filters.neighborhoodId}
                 onChange={(e) =>
@@ -269,11 +273,14 @@ export function FeedFilters({
             </div>
             {/* Category */}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400" htmlFor="category">
+              <label
+                className="text-muted-foreground text-sm"
+                htmlFor="category"
+              >
                 Category:
               </label>
               <select
-                className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="category"
                 value={filters.category}
                 onChange={(e) =>
@@ -290,11 +297,14 @@ export function FeedFilters({
             </div>
             {/* Min Score */}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400" htmlFor="minScore">
+              <label
+                className="text-muted-foreground text-sm"
+                htmlFor="minScore"
+              >
                 Min Score:
               </label>
               <input
-                className="w-16 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="w-16 rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="minScore"
                 min="0"
                 placeholder="0"
@@ -314,13 +324,13 @@ export function FeedFilters({
             {/* Min Podcast Worthy */}
             <div className="flex items-center gap-2">
               <label
-                className="text-sm text-gray-400"
+                className="text-muted-foreground text-sm"
                 htmlFor="minPodcastWorthy"
               >
                 Min Podcast:
               </label>
               <input
-                className="w-16 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="w-16 rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="minPodcastWorthy"
                 max="10"
                 min="0"
@@ -343,13 +353,13 @@ export function FeedFilters({
             {/* Min Reactions */}
             <div className="flex items-center gap-2">
               <label
-                className="text-sm text-gray-400"
+                className="text-muted-foreground text-sm"
                 htmlFor="minReactionCount"
               >
                 Min reactions:
               </label>
               <input
-                className="w-16 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+                className="w-16 rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
                 id="minReactionCount"
                 min="0"
                 placeholder="0"
@@ -370,37 +380,43 @@ export function FeedFilters({
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 checked={filters.savedOnly}
-                className="rounded border-gray-600 bg-gray-700"
+                className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters({ ...filters, savedOnly: e.target.checked })
                 }
               />
-              <span className="text-sm text-gray-400">Saved only</span>
+              <span className="text-muted-foreground text-sm">
+                Saved only
+              </span>
             </label>
             {/* Ignored Only */}
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 checked={filters.ignoredOnly}
-                className="rounded border-gray-600 bg-gray-700"
+                className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters({ ...filters, ignoredOnly: e.target.checked })
                 }
               />
-              <span className="text-sm text-gray-400">Ignored only</span>
+              <span className="text-muted-foreground text-sm">
+                Ignored only
+              </span>
             </label>
             {/* Unused Only */}
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 checked={filters.unusedOnly}
-                className="rounded border-gray-600 bg-gray-700"
+                className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters({ ...filters, unusedOnly: e.target.checked })
                 }
               />
-              <span className="text-sm text-gray-400">Unused only</span>
+              <span className="text-muted-foreground text-sm">
+                Unused only
+              </span>
             </label>
           </div>
         )}

@@ -62,27 +62,21 @@ export function NoveltyPreview({ noveltyConfig }: NoveltyPreviewProps) {
   if (topCategories.length === 0) return null;
 
   return (
-    <div className="mt-4 rounded border border-gray-700 bg-gray-700/30 p-4">
-      <h4 className="mb-2 text-xs font-semibold text-gray-400">
+    <div className="border-border bg-surface-hover/30 mt-4 rounded border p-4">
+      <h4 className="text-muted-foreground mb-2 text-xs font-semibold">
         Novelty preview (30-day window)
       </h4>
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="text-muted-foreground mb-3 text-xs">
         Topics with low frequency get a score boost; overused topics get
         penalized.
       </p>
       <div className="flex flex-wrap gap-2">
         {topCategories.map((cat) => {
-          const { mult, status } = getMultiplier(cat.count_30d, noveltyConfig);
-          const statusClass =
-            status === "boosted"
-              ? "bg-green-900/50 text-green-300 border-green-700"
-              : status === "penalized"
-                ? "bg-red-900/30 text-red-300 border-red-700"
-                : "bg-gray-700/50 text-gray-400 border-gray-600";
+          const { mult } = getMultiplier(cat.count_30d, noveltyConfig);
           return (
             <span
               key={cat.category}
-              className={`rounded border px-2 py-1 text-xs ${statusClass}`}
+              className="rounded border border-border bg-surface-hover px-2 py-1 text-muted text-xs"
               title={`${cat.category}: ${cat.count_30d} posts → ${mult.toFixed(2)}×`}
             >
               {cat.category}: {cat.count_30d} ({mult.toFixed(2)}×)

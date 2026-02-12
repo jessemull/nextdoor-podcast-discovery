@@ -113,24 +113,24 @@ export function PostFeed() {
 
       <BulkActionBar
         bulkActionLoading={bulkActionLoading}
+        selectedCount={selectedIds.size}
         onBulkIgnore={handleBulkIgnore}
         onBulkMarkUsed={handleBulkMarkUsed}
         onBulkSave={handleBulkSave}
         onBulkUnignore={handleBulkUnignore}
         onClear={() => setSelectedIds(new Set())}
-        selectedCount={selectedIds.size}
       />
 
-      <div className="text-sm text-gray-500">
+      <div className="text-muted-foreground text-sm">
         Showing {posts.length} of {total} posts
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-700 bg-red-900/50 p-4 text-red-200">
+        <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
           <div className="flex items-center justify-between">
             <span>{error}</span>
             <button
-              className="ml-4 rounded bg-red-800 px-3 py-1 text-sm transition-colors hover:bg-red-700"
+              className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
               type="button"
               onClick={handleRetry}
             >
@@ -142,14 +142,17 @@ export function PostFeed() {
 
       {initialLoading && (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-yellow-500" />
+          <div
+            aria-hidden
+            className="border-border-focus h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+          />
         </div>
       )}
 
       {!initialLoading && posts.length === 0 && (
-        <div className="rounded-lg bg-gray-800 p-8 text-center">
-          <p className="text-gray-400">No posts found</p>
-          <p className="mt-2 text-sm text-gray-500">
+        <div className="rounded-card border border-border bg-surface p-8 text-center">
+          <p className="text-muted">No posts found</p>
+          <p className="text-muted-foreground mt-2 text-sm">
             Try adjusting your filters or run the scraper to collect posts.
           </p>
         </div>
@@ -161,7 +164,11 @@ export function PostFeed() {
             {posts.map((post, index) => (
               <div
                 key={post.id}
-                className={focusedIndex === index ? "rounded-lg ring-2 ring-yellow-500" : ""}
+                className={
+                  focusedIndex === index
+                    ? "rounded-card ring-2 ring-border-focus"
+                    : ""
+                }
                 ref={(el) => {
                   postRefs.current[index] = el;
                 }}
@@ -190,13 +197,16 @@ export function PostFeed() {
               ref={sentinelRef}
             >
               {loadingMore && (
-                <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-yellow-500" />
+                <div
+                  aria-hidden
+                  className="border-border-focus h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+                />
               )}
             </div>
           )}
 
           {!hasMore && posts.length > 0 && (
-            <div className="py-4 text-center text-sm text-gray-500">
+            <div className="text-muted-foreground py-4 text-center text-sm">
               No more posts to load
             </div>
           )}

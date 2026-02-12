@@ -37,25 +37,27 @@ export function JobStats({ jobs }: JobStatsProps) {
 
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <div className="rounded bg-gray-900 p-4">
-        <p className="text-xs text-gray-400">Total Jobs</p>
-        <p className="text-2xl font-bold text-white">{totalJobs}</p>
+      <div className="rounded bg-surface-hover/50 p-4">
+        <p className="text-muted-foreground text-xs">Total Jobs</p>
+        <p className="text-2xl font-bold text-foreground">{totalJobs}</p>
       </div>
-      <div className="rounded bg-gray-900 p-4">
-        <p className="text-xs text-gray-400">Success Rate</p>
-        <p className="text-2xl font-bold text-white">{successRate}%</p>
+      <div className="rounded bg-surface-hover/50 p-4">
+        <p className="text-muted-foreground text-xs">Success Rate</p>
+        <p className="text-2xl font-bold text-foreground">{successRate}%</p>
       </div>
-      <div className="rounded bg-gray-900 p-4">
-        <p className="text-xs text-gray-400">Avg Duration</p>
-        <p className="text-2xl font-bold text-white">
+      <div className="rounded bg-surface-hover/50 p-4">
+        <p className="text-muted-foreground text-xs">Avg Duration</p>
+        <p className="text-2xl font-bold text-foreground">
           {avgDurationSeconds > 60
             ? `${Math.round(avgDurationSeconds / 60)}m`
             : `${avgDurationSeconds}s`}
         </p>
       </div>
-      <div className="rounded bg-gray-900 p-4">
-        <p className="text-xs text-gray-400">Completed</p>
-        <p className="text-2xl font-bold text-green-400">{completedJobs.length}</p>
+      <div className="rounded bg-surface-hover/50 p-4">
+        <p className="text-muted-foreground text-xs">Completed</p>
+        <p className="text-2xl font-bold text-foreground">
+          {completedJobs.length}
+        </p>
       </div>
     </div>
   );

@@ -1,8 +1,19 @@
 "use client";
 
+import {
+  Bookmark,
+  Check,
+  ExternalLink,
+  EyeOff,
+  List,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 import Image from "next/image";
-import { memo } from "react";
+import Link from "next/link";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
+import { Card } from "@/components/ui/Card";
 import { PostWithScores } from "@/lib/types";
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
@@ -34,75 +45,209 @@ export const PostCard = memo(function PostCard({
   showCheckbox = false,
 }: PostCardProps) {
   const scores = post.llm_scores;
-  const dimensionScores = scores?.scores;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu();
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [menuOpen, closeMenu]);
+
+  const neighborhoodName = post.neighborhood?.name ?? "Unknown";
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
+    <Card className="transition-colors hover:border-border-focus">
       {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {showCheckbox && onSelect && (
             <input
-              aria-label={`Select post from ${post.neighborhood?.name || "unknown"}`}
+              aria-label={`Select post from ${neighborhoodName}`}
               checked={selected}
-              className="rounded border-gray-600 bg-gray-700"
+              className="rounded border-border bg-surface-hover"
               type="checkbox"
               onChange={(e) => onSelect(post.id, e.target.checked)}
             />
           )}
-          <div>
-          <span className="text-xs text-gray-500 uppercase tracking-wide">
-            {post.neighborhood?.name || "Unknown"}
-          </span>
-          <span className="text-xs text-gray-600 mx-2">•</span>
-          <span className="text-xs text-gray-500">
-            {formatRelativeTime(post.created_at)}
-          </span>
-          {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
-            <>
-              <span className="text-xs text-gray-600 mx-2">•</span>
-              <span
-                className="text-xs text-gray-400"
-                title="Reactions on Nextdoor"
-              >
-                {post.reaction_count} reaction{post.reaction_count !== 1 ? "s" : ""}
-              </span>
-            </>
-          )}
+          <div className="min-w-0 truncate">
+            <span className="text-muted-foreground text-xs uppercase tracking-wide">
+              {neighborhoodName}
+            </span>
+            <span className="text-muted-foreground mx-2 text-xs">•</span>
+            <span className="text-muted-foreground text-xs">
+              {formatRelativeTime(post.created_at)}
+            </span>
+            {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
+              <>
+                <span className="text-muted-foreground mx-2 text-xs">•</span>
+                <span
+                  className="text-muted text-xs"
+                  title="Reactions on Nextdoor"
+                >
+                  {post.reaction_count} reaction
+                  {post.reaction_count !== 1 ? "s" : ""}
+                </span>
+              </>
+            )}
           </div>
         </div>
-        {(scores || post.similarity != null) && (
-          <div className="flex items-center gap-2">
-            {scores && (
-              <span className="text-sm font-bold text-yellow-500">
-                {scores.final_score?.toFixed(1) ?? "—"}
-              </span>
-            )}
-            {post.similarity != null && (
-              <span
-                className="text-xs text-gray-400"
-                title="Semantic similarity to search query"
+        <div className="flex shrink-0 items-center gap-2">
+          {scores?.final_score != null && (
+            <span className="text-foreground text-sm font-semibold">
+              {scores.final_score.toFixed(1)}
+            </span>
+          )}
+          {post.similarity != null && (
+            <span
+              className="text-muted text-xs"
+              title="Semantic similarity to search query"
+            >
+              Sim: {post.similarity.toFixed(2)}
+            </span>
+          )}
+          {(post.ignored || post.saved || post.used_on_episode) && (
+            <div className="flex flex-wrap justify-end gap-1">
+              {post.ignored && (
+                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                  Ignored
+                </span>
+              )}
+              {post.saved && (
+                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                  Saved
+                </span>
+              )}
+              {post.used_on_episode && (
+                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                  Used
+                </span>
+              )}
+            </div>
+          )}
+          {/* Actions dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="Post actions"
+              className={cn(
+                "rounded p-1 transition-colors",
+                "hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+              )}
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <MoreHorizontal aria-hidden className="h-5 w-5 text-muted" />
+            </button>
+            {menuOpen && (
+              <div
+                className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                role="menu"
               >
-                Sim: {post.similarity.toFixed(2)}
-              </span>
-            )}
-            {post.ignored && (
-              <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
-                Ignored
-              </span>
-            )}
-            {post.saved && (
-              <span className="rounded bg-blue-800 px-2 py-0.5 text-xs text-blue-200">
-                Saved
-              </span>
-            )}
-            {post.used_on_episode && (
-              <span className="rounded bg-green-800 px-2 py-0.5 text-xs text-green-200">
-                Used
-              </span>
+                {onViewDetails && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onViewDetails(post.id);
+                    }}
+                  >
+                    <List aria-hidden className="h-4 w-4" />
+                    View details
+                  </button>
+                )}
+                <Link
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                  href={`/search?q=${encodeURIComponent(
+                    (post.text || scores?.summary || "").slice(0, 80)
+                  )}`}
+                  role="menuitem"
+                  onClick={closeMenu}
+                >
+                  <Search aria-hidden className="h-4 w-4" />
+                  Find similar
+                </Link>
+                {post.url && (
+                  <a
+                    aria-label="View on Nextdoor"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                    href={post.url}
+                    rel="noopener noreferrer"
+                    role="menuitem"
+                    target="_blank"
+                    onClick={closeMenu}
+                  >
+                    <ExternalLink aria-hidden className="h-4 w-4" />
+                    View on Nextdoor
+                  </a>
+                )}
+                {onMarkSaved && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isMarkingSaved}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onMarkSaved(post.id, !post.saved);
+                    }}
+                  >
+                    <Bookmark aria-hidden className="h-4 w-4" />
+                    {isMarkingSaved
+                      ? "Saving..."
+                      : post.saved
+                        ? "Unsave"
+                        : "Save"}
+                  </button>
+                )}
+                {onMarkIgnored && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isMarkingIgnored}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onMarkIgnored(post.id, !post.ignored);
+                    }}
+                  >
+                    <EyeOff aria-hidden className="h-4 w-4" />
+                    {isMarkingIgnored
+                      ? "..."
+                      : post.ignored
+                        ? "Unignore"
+                        : "Ignore"}
+                  </button>
+                )}
+                {!post.used_on_episode && onMarkUsed && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isMarkingUsed}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onMarkUsed(post.id);
+                    }}
+                  >
+                    <Check aria-hidden className="h-4 w-4" />
+                    {isMarkingUsed ? "Marking..." : "Mark as used"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Images */}
@@ -117,7 +262,7 @@ export const PostCard = memo(function PostCard({
             >
               <Image
                 alt={`Post ${index + 1}`}
-                className="h-24 w-24 rounded border border-gray-700 object-cover transition-colors hover:border-gray-600"
+                className="h-24 w-24 rounded border border-border object-cover transition-colors hover:border-border-focus"
                 height={96}
                 sizes="96px"
                 src={imageUrl}
@@ -126,7 +271,7 @@ export const PostCard = memo(function PostCard({
             </a>
           ))}
           {post.image_urls.length > 4 && (
-            <div className="flex h-24 w-24 items-center justify-center rounded border border-gray-700 bg-gray-700 text-xs text-gray-400">
+            <div className="flex h-24 w-24 items-center justify-center rounded border border-border bg-surface-hover text-muted text-xs">
               +{post.image_urls.length - 4}
             </div>
           )}
@@ -134,148 +279,23 @@ export const PostCard = memo(function PostCard({
       )}
 
       {/* Content */}
-      <p className="text-gray-200 mb-3">
+      <p className="text-foreground mb-3 text-sm">
         {truncate(post.text, POST_PREVIEW_LENGTH)}
       </p>
 
-      {/* Scores */}
-      {dimensionScores && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          <ScoreBadge label="Absurd" value={dimensionScores.absurdity} />
-          <ScoreBadge label="Drama" value={dimensionScores.drama} />
-          <ScoreBadge label="Discuss" value={dimensionScores.discussion_spark} />
-          <ScoreBadge label="Intense" value={dimensionScores.emotional_intensity} />
-          <ScoreBadge label="News" value={dimensionScores.news_value} />
-          {dimensionScores.readability != null && (
-            <ScoreBadge label="Read" value={dimensionScores.readability} />
-          )}
-          {dimensionScores.podcast_worthy != null && (
-            <ScoreBadge label="Podcast" value={dimensionScores.podcast_worthy} />
-          )}
-        </div>
-      )}
-
-      {/* Categories */}
+      {/* Categories (one line) */}
       {scores?.categories && scores.categories.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {scores.categories.map((category: string, index: number) => (
+        <div className="flex flex-wrap gap-1">
+          {scores.categories.slice(0, 5).map((category: string, index: number) => (
             <span
               key={`${category}-${index}`}
-              className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded"
+              className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs"
             >
               {category}
             </span>
           ))}
         </div>
       )}
-
-      {/* Summary */}
-      {scores?.summary && (
-        <p className="text-sm text-gray-400 italic mb-3">
-          &ldquo;{scores.summary}&rdquo;
-        </p>
-      )}
-
-      {/* Why podcast worthy */}
-      {scores?.why_podcast_worthy && (
-        <p className="text-sm text-amber-200/90 mb-3">
-          {scores.why_podcast_worthy}
-        </p>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        {onViewDetails && (
-          <button
-            aria-label={`View details for post from ${post.neighborhood?.name || "unknown neighborhood"}`}
-            className="text-xs text-gray-400 hover:text-white transition-colors"
-            onClick={() => onViewDetails(post.id)}
-          >
-            View Details
-          </button>
-        )}
-        <a
-          className="text-xs text-gray-400 hover:text-white transition-colors"
-          href={`/search?q=${encodeURIComponent(
-            (post.text || post.llm_scores?.summary || "").slice(0, 80)
-          )}`}
-        >
-          Find similar
-        </a>
-        {post.url && (
-          <a
-            aria-label="View on Nextdoor"
-            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-            href={post.url}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View on Nextdoor
-          </a>
-        )}
-        {onMarkSaved && (
-          <button
-            aria-label={post.saved ? "Remove from saved" : "Save for episode"}
-            className="text-xs text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isMarkingSaved}
-            onClick={() => onMarkSaved(post.id, !post.saved)}
-          >
-            {isMarkingSaved ? "Saving..." : post.saved ? "Unsave" : "Save"}
-          </button>
-        )}
-        {onMarkIgnored && (
-          <button
-            aria-label={post.ignored ? "Unignore this post" : "Ignore this post"}
-            className="text-xs text-gray-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isMarkingIgnored}
-            onClick={() => onMarkIgnored(post.id, !post.ignored)}
-          >
-            {isMarkingIgnored
-              ? "..."
-              : post.ignored
-                ? "Unignore"
-                : "Ignore"}
-          </button>
-        )}
-        {!post.used_on_episode && onMarkUsed && (
-          <button
-            aria-label="Mark this post as used in an episode"
-            className="text-xs text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isMarkingUsed}
-            onClick={() => onMarkUsed(post.id)}
-          >
-            {isMarkingUsed ? "Marking..." : "Mark as Used"}
-          </button>
-        )}
-      </div>
-    </div>
+    </Card>
   );
 });
-
-/**
- * Internal component for displaying individual score metrics.
- * Color-coded based on score value (green=high, red=low).
- * Handles null/undefined values gracefully.
- */
-function ScoreBadge({ label, value }: { label: string; value: null | number | undefined }) {
-  if (value === null || value === undefined) {
-    return (
-      <span className="text-xs text-gray-400">
-        {label}: <span className="text-gray-500">—</span>
-      </span>
-    );
-  }
-
-  const colorClass = cn(
-    value >= 8 && "text-green-400",
-    value >= 6 && value < 8 && "text-yellow-400",
-    value >= 4 && value < 6 && "text-orange-400",
-    value < 4 && "text-red-400"
-  );
-
-  return (
-    <span className="text-xs text-gray-400">
-      {label}: <span className={colorClass}>{value.toFixed(1)}</span>
-    </span>
-  );
-}

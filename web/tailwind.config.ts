@@ -9,7 +9,18 @@ const config: Config = {
     extend: {
       colors: {
         background: "var(--background)",
+        border: "var(--border)",
+        "border-focus": "var(--border-focus)",
+        destructive: "var(--destructive)",
         foreground: "var(--foreground)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        primary: "var(--primary)",
+        surface: "var(--surface)",
+        "surface-hover": "var(--surface-hover)",
+      },
+      borderRadius: {
+        card: "0.5rem",
       },
     },
   },

@@ -1,11 +1,25 @@
 "use client";
 
+import {
+  ArrowLeft,
+  Bookmark,
+  Check,
+  ExternalLink,
+  EyeOff,
+  MoreHorizontal,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { PostCard } from "@/components/PostCard";
+import { Card } from "@/components/ui/Card";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
 import type { PostWithScores } from "@/lib/types";
@@ -34,9 +48,11 @@ export function PostDetailClient({
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
   const [markingUsed, setMarkingUsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [post, setPost] = useState<null | PostWithScores>(initialPost);
   const [relatedPosts, setRelatedPosts] = useState<PostWithScores[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchPost = useCallback(async () => {
     if (!postId) return;
@@ -57,7 +73,6 @@ export function PostDetailClient({
     }
   }, [postId]);
 
-  // Fetch related posts via semantic search (post text as query)
   useEffect(() => {
     if (!post?.text || !postId) return;
 
@@ -77,7 +92,9 @@ export function PostDetailClient({
       .then((res) => res.json())
       .then((result) => {
         const posts = result.data || [];
-        setRelatedPosts(posts.filter((p: PostWithScores) => p.id !== postId).slice(0, 5));
+        setRelatedPosts(
+          posts.filter((p: PostWithScores) => p.id !== postId).slice(0, 5)
+        );
       })
       .catch(() => setRelatedPosts([]))
       .finally(() => setRelatedLoading(false));
@@ -147,10 +164,23 @@ export function PostDetailClient({
     [postId, markingIgnored, fetchPost]
   );
 
-  // Keyboard shortcuts: J = previous (back)
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [menuOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
       if (e.key === "j" || e.key === "J") {
@@ -167,12 +197,16 @@ export function PostDetailClient({
     return (
       <main className="min-h-screen p-8">
         <div className="mx-auto max-w-3xl">
-          <div className="rounded-lg border border-red-800 bg-red-900/20 p-6">
-            <p className="text-red-400">{error || "Post not found"}</p>
-            <Link className="mt-4 inline-block text-blue-400 hover:text-blue-300" href="/">
+          <Card className="border-destructive bg-destructive/10">
+            <p className="text-destructive">{error || "Post not found"}</p>
+            <Link
+              className="mt-4 inline-flex items-center gap-2 text-muted hover:text-foreground"
+              href="/"
+            >
+              <ArrowLeft aria-hidden className="h-4 w-4" />
               Back to Feed
             </Link>
-          </div>
+          </Card>
         </div>
       </main>
     );
@@ -186,30 +220,31 @@ export function PostDetailClient({
       <div className="mx-auto max-w-3xl">
         {/* Back link */}
         <Link
-          className="mb-6 inline-block text-sm text-gray-400 hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-muted text-sm hover:text-foreground"
           href="/"
         >
-          ← Back to Feed
+          <ArrowLeft aria-hidden className="h-4 w-4" />
+          Back to Feed
         </Link>
 
         {/* Post card */}
-        <div className="mb-8 rounded-lg border border-gray-700 bg-gray-800 p-6">
+        <Card className="mb-8 p-6">
           {/* Header */}
-          <div className="mb-4 flex items-start justify-between">
+          <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <span className="text-xs uppercase tracking-wide text-gray-500">
+              <span className="text-muted-foreground text-xs uppercase tracking-wide">
                 {post.neighborhood?.name || "Unknown"}
               </span>
-              <span className="mx-2 text-gray-600">•</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground mx-2">•</span>
+              <span className="text-muted-foreground text-xs">
                 {formatRelativeTime(post.created_at)}
               </span>
               {typeof post.reaction_count === "number" &&
                 post.reaction_count > 0 && (
                   <>
-                    <span className="mx-2 text-gray-600">•</span>
+                    <span className="text-muted-foreground mx-2">•</span>
                     <span
-                      className="text-xs text-gray-400"
+                      className="text-muted text-xs"
                       title="Reactions on Nextdoor"
                     >
                       {post.reaction_count} reaction
@@ -218,23 +253,120 @@ export function PostDetailClient({
                   </>
                 )}
             </div>
-            {scores && (
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-yellow-500">
-                  {scores.final_score?.toFixed(1) ?? "—"}
+            <div className="flex shrink-0 items-center gap-2">
+              {scores?.final_score != null && (
+                <span className="text-foreground text-lg font-semibold">
+                  {scores.final_score.toFixed(1)}
                 </span>
-                {post.ignored && (
-                  <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
-                    Ignored
-                  </span>
-                )}
-                {post.used_on_episode && (
-                  <span className="rounded bg-green-800 px-2 py-0.5 text-xs text-green-200">
-                    Used
-                  </span>
+              )}
+              {(post.ignored || post.saved || post.used_on_episode) && (
+                <div className="flex gap-1">
+                  {post.ignored && (
+                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                      Ignored
+                    </span>
+                  )}
+                  {post.saved && (
+                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                      Saved
+                    </span>
+                  )}
+                  {post.used_on_episode && (
+                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                      Used
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* Actions dropdown */}
+              <div className="relative" ref={menuRef}>
+                <button
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Post actions"
+                  className={cn(
+                    "rounded p-1 transition-colors",
+                    "hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  )}
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                >
+                  <MoreHorizontal
+                    aria-hidden
+                    className="h-5 w-5 text-muted"
+                  />
+                </button>
+                {menuOpen && (
+                  <div
+                    className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                    role="menu"
+                  >
+                    {post.url && (
+                      <a
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                        href={post.url}
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        target="_blank"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <ExternalLink aria-hidden className="h-4 w-4" />
+                        View on Nextdoor
+                      </a>
+                    )}
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                      disabled={markingSaved}
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void handleMarkSaved(!post.saved);
+                      }}
+                    >
+                      <Bookmark aria-hidden className="h-4 w-4" />
+                      {markingSaved
+                        ? "Saving..."
+                        : post.saved
+                          ? "Unsave"
+                          : "Save"}
+                    </button>
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                      disabled={markingIgnored}
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void handleMarkIgnored(!post.ignored);
+                      }}
+                    >
+                      <EyeOff aria-hidden className="h-4 w-4" />
+                      {markingIgnored
+                        ? "..."
+                        : post.ignored
+                          ? "Unignore"
+                          : "Ignore"}
+                    </button>
+                    {!post.used_on_episode && (
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                        disabled={markingUsed}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          void handleMarkUsed();
+                        }}
+                      >
+                        <Check aria-hidden className="h-4 w-4" />
+                        {markingUsed ? "Marking..." : "Mark as used"}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Images */}
@@ -249,7 +381,7 @@ export function PostDetailClient({
                 >
                   <Image
                     alt={`Post ${index + 1}`}
-                    className="max-h-48 rounded border border-gray-700 object-cover hover:border-gray-600"
+                    className="max-h-48 rounded border border-border object-cover hover:border-border-focus"
                     height={192}
                     sizes="(max-width: 768px) 100vw, 400px"
                     src={imageUrl}
@@ -261,46 +393,42 @@ export function PostDetailClient({
           )}
 
           {/* Full content */}
-          <p className="whitespace-pre-wrap text-gray-200">{post.text}</p>
+          <p className="whitespace-pre-wrap text-foreground">{post.text}</p>
 
-          {/* Dimension scores with bars */}
-          {dimensionScores && Object.keys(dimensionScores).length > 0 && (
-            <div className="mt-6">
-              <h4 className="mb-3 text-sm font-semibold text-gray-400">
-                Score Breakdown
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(dimensionScores).map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="w-28 text-xs text-gray-400">
-                      {DIMENSION_LABELS[key] || key}
-                    </span>
-                    <div className="flex-1">
-                      <div className="h-2 overflow-hidden rounded-full bg-gray-700">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            (value as number) >= 8 && "bg-green-500",
-                            (value as number) >= 6 &&
-                              (value as number) < 8 &&
-                              "bg-yellow-500",
-                            (value as number) >= 4 &&
-                              (value as number) < 6 &&
-                              "bg-orange-500",
-                            (value as number) < 4 && "bg-red-500"
-                          )}
-                          style={{ width: `${((value as number) / 10) * 100}%` }}
-                        />
+          {/* Score breakdown - neutral bars */}
+          {dimensionScores &&
+            Object.keys(dimensionScores).length > 0 && (
+              <div className="mt-6">
+                <h4 className="mb-3 text-muted-foreground text-sm font-semibold">
+                  Score breakdown
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(dimensionScores).map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3"
+                    >
+                      <span className="text-muted w-28 text-xs">
+                        {DIMENSION_LABELS[key] || key}
+                      </span>
+                      <div className="flex-1">
+                        <div className="bg-surface-hover h-2 overflow-hidden rounded-full">
+                          <div
+                            className="bg-muted h-full rounded-full"
+                            style={{
+                              width: `${((value as number) / 10) * 100}%`,
+                            }}
+                          />
+                        </div>
                       </div>
+                      <span className="text-muted w-8 text-right text-xs">
+                        {(value as number).toFixed(1)}
+                      </span>
                     </div>
-                    <span className="w-8 text-right text-xs text-gray-400">
-                      {(value as number).toFixed(1)}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Categories */}
           {scores?.categories && scores.categories.length > 0 && (
@@ -308,7 +436,7 @@ export function PostDetailClient({
               {scores.categories.map((category, index) => (
                 <span
                   key={`${category}-${index}`}
-                  className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300"
+                  className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs"
                 >
                   {category}
                 </span>
@@ -318,69 +446,30 @@ export function PostDetailClient({
 
           {/* Summary */}
           {scores?.summary && (
-            <p className="mt-4 italic text-gray-400">&ldquo;{scores.summary}&rdquo;</p>
+            <p className="text-muted mt-4 italic">
+              &ldquo;{scores.summary}&rdquo;
+            </p>
           )}
 
           {/* Why podcast worthy */}
           {scores?.why_podcast_worthy && (
-            <p className="mt-3 text-amber-200/90">
+            <p className="text-muted mt-3 text-sm">
               {scores.why_podcast_worthy}
             </p>
           )}
-
-          {/* Actions */}
-          <div className="mt-6 flex gap-4">
-            <button
-              className="text-gray-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={markingIgnored}
-              type="button"
-              onClick={() => void handleMarkIgnored(!post.ignored)}
-            >
-              {markingIgnored
-                ? "..."
-                : post.ignored
-                  ? "Unignore"
-                  : "Ignore"}
-            </button>
-            <button
-              className="text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={markingSaved}
-              type="button"
-              onClick={() => void handleMarkSaved(!post.saved)}
-            >
-              {markingSaved ? "Saving..." : post.saved ? "Unsave" : "Save"}
-            </button>
-            {post.url && (
-              <a
-                className="text-blue-400 transition-colors hover:text-blue-300"
-                href={post.url}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                View on Nextdoor
-              </a>
-            )}
-            {!post.used_on_episode && (
-              <button
-                className="text-green-400 transition-colors hover:text-green-300 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={markingUsed}
-                type="button"
-                onClick={() => void handleMarkUsed()}
-              >
-                {markingUsed ? "Marking..." : "Mark as Used"}
-              </button>
-            )}
-          </div>
-        </div>
+        </Card>
 
         {/* Related posts */}
         <section>
-          <h3 className="mb-4 text-lg font-semibold text-gray-300">
-            Related Posts
+          <h3 className="mb-4 text-foreground text-lg font-semibold">
+            Related posts
           </h3>
           {relatedLoading ? (
             <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-yellow-500" />
+              <div
+                aria-hidden
+                className="border-border-focus h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+              />
             </div>
           ) : relatedPosts.length > 0 ? (
             <div className="space-y-4">
@@ -388,17 +477,23 @@ export function PostDetailClient({
                 <PostCard
                   key={relatedPost.id}
                   post={relatedPost}
-                  onViewDetails={() => router.push(`/posts/${relatedPost.id}`)}
+                  onViewDetails={() =>
+                    router.push(`/posts/${relatedPost.id}`)
+                  }
                 />
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No related posts found.</p>
+            <p className="text-muted">No related posts found.</p>
           )}
         </section>
 
-        <p className="mt-6 text-xs text-gray-500">
-          Press <kbd className="rounded bg-gray-700 px-1">J</kbd> to go back
+        <p className="text-muted-foreground mt-6 text-xs">
+          Press{" "}
+          <kbd className="rounded border border-border bg-surface-hover px-1">
+            J
+          </kbd>{" "}
+          to go back
         </p>
       </div>
     </main>

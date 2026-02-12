@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Card } from "@/components/ui/Card";
+
 import { PostCard } from "./PostCard";
 
 import type { PostWithScores } from "@/lib/types";
@@ -153,20 +155,15 @@ export function PodcastPicks() {
   if (loading) {
     return (
       <section className="mb-8">
-        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
-          <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-yellow-400">
-            Podcast Picks
-          </span>
+        <h2 className="mb-4 text-foreground text-lg font-semibold">
+          Podcast Picks
         </h2>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="animate-pulse rounded-lg border border-gray-700 bg-gray-800 p-4"
-            >
-              <div className="mb-2 h-4 w-1/3 rounded bg-gray-700" />
-              <div className="h-20 rounded bg-gray-700" />
-            </div>
+            <Card key={i} className="animate-pulse">
+              <div className="mb-2 h-4 w-1/3 rounded bg-surface-hover" />
+              <div className="h-20 rounded bg-surface-hover" />
+            </Card>
           ))}
         </div>
       </section>
@@ -175,32 +172,27 @@ export function PodcastPicks() {
 
   return (
     <section className="mb-8">
-      <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
-        <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-yellow-400">
-          Podcast Picks
-        </span>
-        <span className="text-sm font-normal text-gray-500">
-          {picksMinPodcast != null
-            ? `Top posts (podcast ≥ ${picksMinPodcast})`
-            : `Top posts (score ≥ ${picksMinScore})`}
-        </span>
+      <h2 className="mb-4 text-foreground text-lg font-semibold">
+        Podcast Picks
       </h2>
+      <p className="text-muted-foreground mb-2 text-sm">
+        {picksMinPodcast != null
+          ? `Top posts (podcast ≥ ${picksMinPodcast})`
+          : `Top posts (score ≥ ${picksMinScore})`}
+      </p>
       {picks.length === 0 ? (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/80 p-6 text-center">
-          <p className="text-gray-400">No picks in this range yet.</p>
-          <p className="mt-2 text-sm text-gray-500">
+        <Card className="py-6 text-center">
+          <p className="text-muted">No picks in this range yet.</p>
+          <p className="text-muted-foreground mt-2 text-sm">
             Try lowering the minimum score in the feed filters, or run the
             scraper to add more scored posts.
           </p>
-        </div>
+        </Card>
       ) : (
-      <div className="space-y-4">
-        {picks.map((post) => (
-          <div
-            key={post.id}
-            className="rounded-lg border-2 border-yellow-500/30 bg-gray-800/80"
-          >
+        <div className="space-y-4">
+          {picks.map((post) => (
             <PostCard
+              key={post.id}
               isMarkingSaved={markingSaved.has(post.id)}
               isMarkingUsed={markingUsed.has(post.id)}
               post={post}
@@ -208,9 +200,8 @@ export function PodcastPicks() {
               onMarkUsed={handleMarkUsed}
               onViewDetails={() => router.push(`/posts/${post.id}`)}
             />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
     </section>
   );

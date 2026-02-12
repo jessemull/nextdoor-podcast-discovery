@@ -1,11 +1,14 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
+import { Card } from "@/components/ui/Card";
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -235,46 +238,69 @@ function SearchPageContent() {
     }
   }, []);
 
+  const chipClass =
+    "rounded border border-border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground";
+
   return (
     <main className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">Search Posts</h1>
-        <p className="text-gray-400 mb-8">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-4 text-2xl font-semibold text-foreground">
+          Search Posts
+        </h1>
+        <p className="text-muted mb-8 text-sm">
           Find similar posts using semantic search. Search by meaning, not just
           keywords.
         </p>
 
         {/* Load Defaults Error */}
         {loadDefaultsError && (
-          <div className="mb-6 rounded-lg border border-yellow-800 bg-yellow-900/20 p-4">
-            <p className="text-yellow-400 text-sm">{loadDefaultsError}</p>
-          </div>
+          <Card className="border-border-focus mb-6">
+            <p className="text-muted text-sm">{loadDefaultsError}</p>
+          </Card>
         )}
 
-        {/* Search Input */}
-        <div className="mb-4">
+        {/* Search Input + Submit */}
+        <div className="mb-4 flex gap-2">
           <input
             aria-label="Search posts"
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-card border border-border bg-surface px-4 py-3 text-foreground placeholder-muted-foreground focus:border-border-focus focus:outline-none focus:ring-2"
             placeholder="e.g., noisy neighbors, lost pet, suspicious activity..."
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleSearch(query.trim());
+              }
+            }}
           />
-          {loading && (
-            <p className="mt-2 text-sm text-gray-500">Searching...</p>
-          )}
+          <button
+            aria-label="Search"
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-card border border-border bg-surface-hover px-4 py-3 text-foreground transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus disabled:opacity-50"
+            )}
+            disabled={loading}
+            type="button"
+            onClick={() => void handleSearch(query.trim())}
+          >
+            <Search aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Search</span>
+          </button>
         </div>
+        {loading && (
+          <p className="text-muted-foreground mt-2 text-sm">Searching...</p>
+        )}
 
         {/* Search suggestions */}
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="self-center text-xs text-gray-500">
+          <span className="text-muted-foreground self-center text-xs">
             Try:
           </span>
           {SEARCH_SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}
-              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+              className={chipClass}
               type="button"
               onClick={() => setQuery(suggestion)}
             >
@@ -285,10 +311,10 @@ function SearchPageContent() {
 
         {/* Embedding backlog note */}
         {embeddingBacklog > 0 && (
-          <p className="mb-4 text-xs text-amber-400">
-            {embeddingBacklog} post{embeddingBacklog !== 1 ? "s" : ""} still
-            need embeddings. Semantic search may miss some recent posts until
-            the daily embed job runs.
+          <p className="text-muted mb-4 text-xs">
+            {embeddingBacklog} post{embeddingBacklog !== 1 ? "s" : ""} still need
+            embeddings. Semantic search may miss some recent posts until the
+            daily embed job runs.
           </p>
         )}
 
@@ -297,11 +323,11 @@ function SearchPageContent() {
           <label className="flex cursor-pointer items-center gap-2">
             <input
               checked={useKeywordSearch}
-              className="rounded border-gray-600 bg-gray-700"
+              className="rounded border-border bg-surface-hover focus:ring-border-focus"
               type="checkbox"
               onChange={(e) => setUseKeywordSearch(e.target.checked)}
             />
-            <span className="text-sm text-gray-400">
+            <span className="text-muted-foreground text-sm">
               Keyword search (exact terms, no AI)
             </span>
           </label>
@@ -310,11 +336,14 @@ function SearchPageContent() {
         {/* Min score filter */}
         {query.trim() && (
           <div className="mb-4 flex items-center gap-2">
-            <label className="text-sm text-gray-400" htmlFor="min-score">
+            <label
+              className="text-muted-foreground text-sm"
+              htmlFor="min-score"
+            >
               Min score:
             </label>
             <input
-              className="w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white"
+              className="w-20 rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
               id="min-score"
               max={10}
               min={0}
@@ -331,16 +360,16 @@ function SearchPageContent() {
 
         {/* Similarity Threshold Control */}
         {query.trim() && !useKeywordSearch && (
-          <div className="mb-6 bg-gray-800 rounded-lg p-4">
+          <Card className="mb-6 p-4">
             <label
-              className="block text-sm text-gray-400 mb-2"
+              className="text-muted-foreground mb-2 block text-sm"
               htmlFor="similarity-threshold"
             >
-              Similarity Threshold: {similarityThreshold.toFixed(1)} (lower =
+              Similarity threshold: {similarityThreshold.toFixed(1)} (lower =
               more results, higher = more precise)
             </label>
             <input
-              className="w-full"
+              className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
               id="similarity-threshold"
               max={1}
               min={0}
@@ -353,24 +382,24 @@ function SearchPageContent() {
                 updateUrlThreshold(v);
               }}
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="text-muted-foreground mt-1 flex justify-between text-xs">
               <span>0.0 (loose)</span>
               <span>0.5 (balanced)</span>
               <span>1.0 (strict)</span>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-400">{error}</p>
-          </div>
+          <Card className="border-destructive bg-destructive/10 mb-6 text-destructive text-sm">
+            {error}
+          </Card>
         )}
 
         {/* Results Count */}
         {!loading && query.trim() && total > 0 && (
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-muted-foreground mb-4 text-sm">
             Found {total} {total === 1 ? "post" : "posts"}
           </p>
         )}
@@ -381,24 +410,32 @@ function SearchPageContent() {
           debouncedQuery === query &&
           total === 0 &&
           !error && (
-            <div className="bg-gray-800 rounded-lg p-8 text-center">
-              <p className="text-gray-400 mb-2">No posts found</p>
-              <p className="text-sm text-gray-500">
+            <Card className="py-8 text-center">
+              <Search
+                aria-hidden
+                className="text-muted mx-auto mb-2 h-10 w-10"
+              />
+              <p className="text-foreground mb-1 font-medium">No posts found</p>
+              <p className="text-muted-foreground text-sm">
                 Try different search terms or lower the similarity threshold.
               </p>
-            </div>
+            </Card>
           )}
 
         {/* Initial State */}
         {!query.trim() && (
-          <div className="bg-gray-800 rounded-lg p-8 text-center">
-            <p className="text-gray-400 mb-2">
+          <Card className="py-8 text-center">
+            <Search
+              aria-hidden
+              className="text-muted mx-auto mb-2 h-10 w-10"
+            />
+            <p className="text-foreground mb-1 font-medium">
               Enter a search query to find similar posts
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground text-sm">
               Semantic search finds posts by meaning, not just exact words.
             </p>
-          </div>
+          </Card>
         )}
 
         {/* Results */}
@@ -426,9 +463,11 @@ export default function SearchPage() {
     <Suspense
       fallback={
         <main className="min-h-screen p-8">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-4">Search Posts</h1>
-            <div className="h-96 animate-pulse rounded-lg bg-gray-800" />
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-4 text-2xl font-semibold text-foreground">
+              Search Posts
+            </h1>
+            <div className="h-96 animate-pulse rounded-card bg-surface" />
           </div>
         </main>
       }

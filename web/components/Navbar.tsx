@@ -1,47 +1,129 @@
 "use client";
 
+import {
+  ListTodo,
+  LogOut,
+  Mic,
+  Search,
+  Settings,
+  User,
+} from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
 const navLinkClass = cn(
-  "text-gray-400 hover:text-white transition-colors"
+  "flex items-center gap-2 text-muted hover:text-foreground transition-colors"
 );
 
 export function Navbar() {
   const { data: session, status } = useSession();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        closeUserMenu();
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [userMenuOpen, closeUserMenu]);
+
+  const initial = session?.user?.email?.slice(0, 1).toUpperCase() ?? "?";
 
   return (
-    <nav className="bg-gray-900 border-b border-gray-800">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link aria-label="Go to home page" className="text-xl font-bold" href="/">
-          🎙️ Podcast Discovery
+    <nav className="border-border bg-surface border-b">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <Link
+          aria-label="Go to home page"
+          className="flex items-center gap-2 text-lg font-semibold text-foreground"
+          href="/"
+        >
+          <Mic aria-hidden className="h-5 w-5" />
+          Podcast Discovery
         </Link>
 
         <div className="flex items-center gap-4">
           <Link className={navLinkClass} href="/search">
-            Search
+            <Search aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Search</span>
+          </Link>
+          <Link className={navLinkClass} href="/jobs">
+            <ListTodo aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Jobs</span>
           </Link>
           <Link className={navLinkClass} href="/settings">
-            Settings
+            <Settings aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Settings</span>
           </Link>
 
           {status === "loading" ? (
-            <span className="text-gray-500">Loading...</span>
+            <span className="text-muted-foreground text-sm">Loading...</span>
           ) : session ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-400">{session.user?.email}</span>
+            <div className="relative" ref={userMenuRef}>
               <button
-                aria-label="Sign out of your account"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Open user menu"
                 className={cn(
-                  "px-3 py-1 text-sm rounded-md transition-colors",
-                  "bg-gray-800 hover:bg-gray-700"
+                  "flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 transition-colors",
+                  "hover:bg-surface-hover focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
                 )}
-                onClick={() => signOut()}
+                type="button"
+                onClick={() => setUserMenuOpen((o) => !o)}
               >
-                Sign Out
+                <span
+                  aria-hidden
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface-hover text-muted text-sm font-medium"
+                >
+                  {initial}
+                </span>
+                <User aria-hidden className="h-4 w-4 text-muted sm:hidden" />
               </button>
+
+              {userMenuOpen && (
+                <div
+                  className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
+                  role="menu"
+                >
+                  <Link
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                    href="/settings"
+                    role="menuitem"
+                    onClick={closeUserMenu}
+                  >
+                    <Settings aria-hidden className="h-4 w-4" />
+                    Settings
+                  </Link>
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeUserMenu();
+                      signOut();
+                    }}
+                  >
+                    <LogOut aria-hidden className="h-4 w-4" />
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
         </div>

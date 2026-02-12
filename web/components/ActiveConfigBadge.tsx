@@ -24,7 +24,7 @@ export function ActiveConfigBadge() {
   if (!activeName) return null;
 
   return (
-    <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-400">
+    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
       Ranked by: {activeName}
     </span>
   );
