@@ -15,6 +15,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from src.config import CLAUDE_MODEL, log_supabase_error
 from src.llm_prompts import (
     BATCH_SCORING_PROMPT,
+    BATCH_SCORING_RETRY_PROMPT,
     BATCH_SIZE,
     MAX_POST_LENGTH,
     MAX_SUMMARY_LENGTH,
@@ -25,6 +26,20 @@ from src.llm_prompts import (
 from src.novelty import calculate_novelty
 
 logger = logging.getLogger(__name__)
+
+
+def _strip_json_from_markdown(text: str) -> str:
+    """Try to extract JSON from markdown code blocks (e.g. ```json ... ```)."""
+    if not text:
+        return ""
+    text = text.strip()
+    for start in ("```json", "```"):
+        if text.startswith(start):
+            text = text[len(start) :].strip()
+            if text.endswith("```"):
+                text = text[:-3].strip()
+            return text
+    return text
 
 
 @dataclass
@@ -134,31 +149,63 @@ class LLMScorer:
             posts_text=posts_text,
         )
 
-        response = self.anthropic.messages.create(
-            max_tokens=500 * len(posts),
-            model=CLAUDE_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-        )
+        max_attempts = 3
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        parsed: Any = None
+        raw_response = ""
 
-        content_block = response.content[0]
-        raw_response = getattr(content_block, "text", "")
+        for attempt in range(max_attempts):
+            response = self.anthropic.messages.create(
+                max_tokens=500 * len(posts),
+                model=CLAUDE_MODEL,
+                messages=messages,
+                temperature=0.3,
+            )
 
-        try:
-            parsed = json.loads(raw_response)
-        except json.JSONDecodeError as e:
-            logger.warning("Batch JSON parse error: %s", e)
-            return [
-                PostScore(
-                    post_id=p.get("id", "unknown"),
-                    scores={},
-                    categories=[],
-                    summary="",
-                    error=f"JSON parse error: {e}",
-                    raw_response=raw_response,
-                )
-                for p in posts
-            ]
+            content_block = response.content[0]
+            raw_response = getattr(content_block, "text", "")
+
+            parse_error: json.JSONDecodeError | None = None
+            for text_to_parse in (raw_response, _strip_json_from_markdown(raw_response)):
+                if not text_to_parse:
+                    continue
+                try:
+                    parsed = json.loads(text_to_parse)
+                    parse_error = None
+                    break
+                except json.JSONDecodeError as e:
+                    parse_error = e
+                    continue
+            else:
+                e = parse_error or json.JSONDecodeError("Invalid JSON", raw_response, 0)
+                if attempt < max_attempts - 1:
+                    logger.warning(
+                        "Batch JSON parse error (attempt %d/%d, retrying with feedback): %s",
+                        attempt + 1,
+                        max_attempts,
+                        e,
+                    )
+                    messages.append({"role": "assistant", "content": raw_response})
+                    messages.append({
+                        "role": "user",
+                        "content": BATCH_SCORING_RETRY_PROMPT.format(error=str(e)),
+                    })
+                else:
+                    logger.warning("Batch JSON parse error after %d attempts: %s", max_attempts, e)
+                    return [
+                        PostScore(
+                            post_id=p.get("id", "unknown"),
+                            scores={},
+                            categories=[],
+                            summary="",
+                            error=f"JSON parse error: {e}",
+                            raw_response=raw_response,
+                        )
+                        for p in posts
+                    ]
+                continue
+
+            break
 
         if not isinstance(parsed, list):
             logger.warning("Batch response not a list: %s", type(parsed))
@@ -364,7 +411,7 @@ class LLMScorer:
         return results
 
     def save_scores(self, results: list[PostScore]) -> dict[str, int]:
-        """Save scores to Supabase.
+        """Save scores to Supabase (llm_scores and post_scores for active config).
 
         Args:
             results: List of PostScore objects to save.
@@ -373,6 +420,7 @@ class LLMScorer:
             Dict with counts: {"saved": N, "skipped": N, "errors": N}
         """
         stats = {"errors": 0, "saved": 0, "skipped": 0}
+        saved_results: list[PostScore] = []
 
         for result in results:
             if result.error:
@@ -396,11 +444,31 @@ class LLMScorer:
                 ).execute()
 
                 stats["saved"] += 1
+                saved_results.append(result)
 
             except Exception as e:
                 # Intentionally broad: Supabase doesn't export specific exception types
                 log_supabase_error(f"Error saving score for post {result.post_id}", e)
                 stats["errors"] += 1
+
+        # Write post_scores for active weight config so the feed shows posts
+        active_config_id = self._get_active_weight_config_id()
+        if active_config_id and saved_results:
+            try:
+                post_scores_data = [
+                    {
+                        "final_score": r.final_score,
+                        "post_id": r.post_id,
+                        "weight_config_id": active_config_id,
+                    }
+                    for r in saved_results
+                ]
+                self.supabase.table("post_scores").upsert(
+                    post_scores_data,
+                    on_conflict="post_id,weight_config_id",
+                ).execute()
+            except Exception as e:
+                log_supabase_error("Failed to write post_scores (feed may be empty)", e)
 
         # Update topic frequencies
 
@@ -492,18 +560,17 @@ class LLMScorer:
                 self.supabase.table("settings")
                 .select("value")
                 .eq("key", "ranking_weights")
-                .single()
+                .limit(1)
                 .execute()
             )
-
-            if result.data:
-                value = result.data.get("value", {})  # type: ignore[union-attr]
+            rows = result.data if isinstance(result.data, list) else []
+            if rows:
+                value = rows[0].get("value", {})
                 if isinstance(value, dict):
                     self._weights = value
                     return self._weights
 
         except Exception as e:
-            # Intentionally broad: Supabase doesn't export specific exception types
             log_supabase_error("Failed to load ranking_weights from settings", e)
 
         # Default weights
@@ -520,6 +587,36 @@ class LLMScorer:
 
         return self._weights
 
+    def _get_active_weight_config_id(self) -> str | None:
+        """Load active weight config id from settings (so post_scores feed the UI)."""
+        try:
+            result = (
+                self.supabase.table("settings")
+                .select("value")
+                .eq("key", "active_weight_config_id")
+                .limit(1)
+                .execute()
+            )
+            rows = result.data if isinstance(result.data, list) else []
+            if rows:
+                value = rows[0].get("value")
+                if isinstance(value, str) and value:
+                    return value
+            # Fallback: first active config
+            config_result = (
+                self.supabase.table("weight_configs")
+                .select("id")
+                .eq("is_active", True)
+                .limit(1)
+                .execute()
+            )
+            config_rows = config_result.data if isinstance(config_result.data, list) else []
+            if config_rows:
+                return config_rows[0].get("id")
+        except Exception as e:
+            log_supabase_error("Failed to load active_weight_config_id", e)
+        return None
+
     def _get_novelty_config(self) -> dict[str, Any]:
         """Load novelty configuration from settings.
 
@@ -534,18 +631,17 @@ class LLMScorer:
                 self.supabase.table("settings")
                 .select("value")
                 .eq("key", "novelty_config")
-                .single()
+                .limit(1)
                 .execute()
             )
-
-            if result.data:
-                value = result.data.get("value", {})  # type: ignore[union-attr]
+            rows = result.data if isinstance(result.data, list) else []
+            if rows:
+                value = rows[0].get("value", {})
                 if isinstance(value, dict):
                     self._novelty_config = value
                     return self._novelty_config
 
         except Exception as e:
-            # Intentionally broad: Supabase doesn't export specific exception types
             log_supabase_error("Failed to load novelty_config from settings", e)
 
         # Default config

@@ -104,13 +104,14 @@ def load_novelty_config(supabase: Client) -> dict[str, Any]:
         supabase.table("settings")
         .select("value")
         .eq("key", "novelty_config")
-        .single()
+        .limit(1)
         .execute()
     )
 
     novelty_config: dict[str, Any] = {}
-    if result.data:
-        value = result.data.get("value", {})  # type: ignore[union-attr]
+    rows = result.data if isinstance(result.data, list) else []
+    if rows:
+        value = rows[0].get("value", {})
         if isinstance(value, dict):
             novelty_config = value
 
