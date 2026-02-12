@@ -486,14 +486,12 @@ class PostExtractor:
 
             self.page.evaluate("window.scrollBy(0, window.innerHeight)")
 
-            # Wait for network to settle
-
-            self.page.wait_for_load_state("networkidle", timeout=5000)
+            # Brief wait for new content; avoid long hang on infinite-scroll feeds
+            self.page.wait_for_load_state("networkidle", timeout=3000)
 
         except PlaywrightTimeoutError:
             # Network didn't settle, that's okay - continue anyway
             # This is expected when page has continuous loading (infinite scroll)
-
             logger.debug("Network didn't settle after scroll, continuing anyway")
 
         # Random delay to seem human

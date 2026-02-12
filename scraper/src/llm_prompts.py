@@ -5,6 +5,7 @@ Extracted from llm_scorer for easier inspection and updates.
 
 __all__ = [
     "BATCH_SCORING_PROMPT",
+    "BATCH_SCORING_RETRY_PROMPT",
     "BATCH_SIZE",
     "MAX_POST_LENGTH",
     "MAX_SUMMARY_LENGTH",
@@ -108,8 +109,15 @@ Posts to analyze (each numbered):
 
 Also provide "why_podcast_worthy" (one short sentence) per post explaining why it's good for the podcast.
 
-Respond with ONLY a valid JSON array. One object per post, in order. Format:
+Respond with ONLY a valid JSON array—no markdown, no code fences, no trailing commas.
+Escape any double quotes inside strings (e.g. use \\" for a quote in summary or why_podcast_worthy).
+One object per post, in order. Format:
 [
   {{"post_index": 0, "scores": {{"absurdity": N, "discussion_spark": N, "drama": N, "emotional_intensity": N, "news_value": N, "podcast_worthy": N, "readability": N}}, "categories": ["cat1"], "summary": "...", "why_podcast_worthy": "..."}},
   {{"post_index": 1, ...}}
 ]"""
+
+# Message to send on retry when the model's JSON was invalid
+BATCH_SCORING_RETRY_PROMPT = """Your previous response had invalid JSON: {error}
+
+Please respond again with ONLY a valid JSON array. No markdown, no code blocks, no trailing commas. Escape double quotes inside strings with \\"."""
