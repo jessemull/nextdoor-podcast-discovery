@@ -69,7 +69,7 @@ describe("StatsPanel", () => {
     render(<StatsPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText("Top Categories (30 days)")).toBeInTheDocument();
+      expect(screen.getByText("Top Categories (30 Days)")).toBeInTheDocument();
     });
 
     expect(screen.getByText("30")).toBeInTheDocument();
@@ -185,7 +185,7 @@ describe("StatsPanel", () => {
     expect(screen.getByText("Unscored")).toBeInTheDocument();
     expect(screen.getByText("Used")).toBeInTheDocument();
 
-    // Verify stat cards (7 total: Total, Scored, Unscored, Used, Posts 24h, Embedding backlog, Last scrape)
+    // Verify stat cards (7 total: Total, Scored, Unscored, Used, Posts 24h, Embedding Backlog, Last Scrape)
     const statCards = document.querySelectorAll("[class*='bg-surface-hover/50']");
     expect(statCards.length).toBe(7);
   });
