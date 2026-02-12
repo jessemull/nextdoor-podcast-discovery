@@ -36,7 +36,7 @@ export function SportsFact() {
   }
 
   const wrapperClass =
-    "border-pittsburgh-gold-muted mb-8 w-fit mx-auto rounded-lg border p-5 text-center";
+    "border-pittsburgh-gold-muted mb-0 w-fit mx-auto rounded-lg border p-5 text-center";
 
   if (showSkeleton) {
     return (
