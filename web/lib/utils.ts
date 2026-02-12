@@ -69,6 +69,17 @@ export function calculateSuccessRate(completed: number, errors: number): number 
   return Number(successRatePercent.toFixed(2));
 }
 
+/**
+ * Format a category key (snake_case) for display (e.g. "Local News").
+ */
+export function formatCategoryLabel(categoryKey: string): string {
+  if (!categoryKey) return categoryKey;
+  return categoryKey
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // UI Constants
 
 export const POST_PREVIEW_LENGTH = 300;

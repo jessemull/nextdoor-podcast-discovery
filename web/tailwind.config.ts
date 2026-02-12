@@ -7,6 +7,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      animation: {
+        "fade-in-up": "fade-in-up 0.5s ease-out forwards",
+        "fade-in-up-hero": "fade-in-up 2.5s ease-out forwards",
+        "fade-in-up-slow": "fade-in-up 1.2s ease-out forwards",
+        "fade-in-up-sub": "fade-in-up 3s ease-out forwards",
+      },
+      animationDelay: {
+        "200": "200ms",
+        "2500": "2500ms",
+        "400": "400ms",
+        "600": "600ms",
+      },
+      borderRadius: {
+        card: "0.5rem",
+      },
       colors: {
         background: "var(--background)",
         border: "var(--border)",
@@ -15,12 +30,16 @@ const config: Config = {
         foreground: "var(--foreground)",
         muted: "var(--muted)",
         "muted-foreground": "var(--muted-foreground)",
+        "pittsburgh-gold": "var(--pittsburgh-gold)",
         primary: "var(--primary)",
         surface: "var(--surface)",
         "surface-hover": "var(--surface-hover)",
       },
-      borderRadius: {
-        card: "0.5rem",
+      keyframes: {
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
     },
   },

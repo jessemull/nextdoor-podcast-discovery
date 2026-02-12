@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  LayoutDashboard,
   ListTodo,
   LogOut,
   Mic,
@@ -59,6 +60,10 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
+          <Link className={navLinkClass} href="/feed">
+            <LayoutDashboard aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Feed</span>
+          </Link>
           <Link className={navLinkClass} href="/search">
             <Search aria-hidden className="h-5 w-5" />
             <span className="hidden sm:inline">Search</span>
