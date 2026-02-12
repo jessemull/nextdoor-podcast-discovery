@@ -12,7 +12,7 @@ from anthropic import Anthropic
 from supabase import Client
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import CLAUDE_MODEL
+from src.config import CLAUDE_MODEL, log_supabase_error
 from src.llm_prompts import (
     BATCH_SCORING_PROMPT,
     BATCH_SIZE,
@@ -399,7 +399,7 @@ class LLMScorer:
 
             except Exception as e:
                 # Intentionally broad: Supabase doesn't export specific exception types
-                logger.error("Error saving score for post %s: %s", result.post_id, e)
+                log_supabase_error(f"Error saving score for post {result.post_id}", e)
                 stats["errors"] += 1
 
         # Update topic frequencies
@@ -504,11 +504,7 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning(
-                "Failed to load ranking_weights from settings: %s (%s)",
-                e,
-                type(e).__name__,
-            )
+            log_supabase_error("Failed to load ranking_weights from settings", e)
 
         # Default weights
 
@@ -550,11 +546,7 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning(
-                "Failed to load novelty_config from settings: %s (%s)",
-                e,
-                type(e).__name__,
-            )
+            log_supabase_error("Failed to load novelty_config from settings", e)
 
         # Default config
 
@@ -586,11 +578,7 @@ class LLMScorer:
 
         except Exception as e:
             # Intentionally broad: Supabase doesn't export specific exception types
-            logger.warning(
-                "Failed to load topic_frequencies table: %s (%s)",
-                e,
-                type(e).__name__,
-            )
+            log_supabase_error("Failed to load topic_frequencies table", e)
 
         return {}
 

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { postsQuerySchema } from "@/lib/validators";
 
@@ -111,12 +112,9 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
+    logError("[posts]", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
-    console.error("[posts] Unexpected error:", {
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
     return NextResponse.json(
       {
         details: errorDetails,
@@ -191,29 +189,12 @@ async function getPostsByScore(
     unusedOnly,
   } = params;
 
-  // Get active weight config ID
   const activeConfigResult = await supabase
     .from("settings")
     .select("value")
     .eq("key", "active_weight_config_id")
     .single();
 
-  /**
-   * Get active weight config ID with fallback strategy.
-   *
-   * Fallback logic:
-   * 1. First, try to get active_weight_config_id from settings table
-   * 2. If not found, query weight_configs for any config with is_active=true
-   *    - If found, use it and update settings to maintain consistency
-   * 3. If no active config exists, check if any configs exist at all
-   *    - If configs exist but none are active: return 503 (user must activate one)
-   *    - If no configs exist: return 503 (user must create one)
-   *
-   * This fallback handles edge cases where:
-   * - Settings table is out of sync with weight_configs.is_active
-   * - Migration created configs but didn't set active_weight_config_id
-   * - User deleted the active config without setting a new one
-   */
   let activeConfigId: null | string =
     activeConfigResult.data?.value &&
     typeof activeConfigResult.data.value === "string"
@@ -289,11 +270,7 @@ async function getPostsByScore(
   );
 
   if (scoresError) {
-    console.error("[posts] Error calling get_posts_with_scores:", {
-      code: scoresError.code,
-      error: scoresError.message,
-      hint: scoresError.hint,
-    });
+    logError("[posts] get_posts_with_scores", scoresError);
     return NextResponse.json(
       {
         details: scoresError.message || "Database query failed",
@@ -337,11 +314,7 @@ async function getPostsByScore(
   const { data: posts, error: postsError } = await postsQuery;
 
   if (postsError) {
-    console.error("[posts] Error fetching posts:", {
-      code: postsError.code,
-      error: postsError.message,
-      postCount: postIds.length,
-    });
+    logError("[posts] fetch posts", postsError);
     return NextResponse.json(
       {
         details: postsError.message || "Failed to fetch posts",
@@ -437,10 +410,7 @@ async function getPostsByDate(
   );
 
   if (scoresError) {
-    console.error("[posts] Error calling get_posts_by_date:", {
-      code: scoresError.code,
-      error: scoresError.message,
-    });
+    logError("[posts] get_posts_by_date", scoresError);
     return NextResponse.json(
       {
         details: scoresError.message || "Database query failed",
@@ -478,10 +448,7 @@ async function getPostsByDate(
     .in("id", postIds);
 
   if (postsError) {
-    console.error("[posts] Error fetching posts for date sort:", {
-      code: postsError.code,
-      error: postsError.message,
-    });
+    logError("[posts] fetch posts for date sort", postsError);
     return NextResponse.json(
       {
         details: postsError.message || "Failed to fetch posts",

@@ -557,8 +557,8 @@ class PostExtractor:
             except Exception as e:
                 # Intentionally swallow so modal close failure doesn't mask timeout
                 logger.debug(
-                    "Could not press Escape to close modal (post %d): %s",
-                    post_index,
+                    "Could not press Escape to close modal (container %d): %s",
+                    container_index,
                     e,
                 )
 

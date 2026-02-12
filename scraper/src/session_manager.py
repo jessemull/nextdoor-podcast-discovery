@@ -13,8 +13,10 @@ from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
 
-# Default identifier for sessions without a specific neighborhood
-DEFAULT_SESSION_ID = "default"
+# UUID of the reserved "Default" neighborhood used for session storage when
+# no specific neighborhood is selected. Must match the row inserted in
+# database/migrations/024_default_session_neighborhood.sql.
+DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000001"
 
 
 class SessionManager:
@@ -41,8 +43,9 @@ class SessionManager:
         """
         query = self.supabase.table("sessions").select("cookies_encrypted, expires_at")
 
-        if neighborhood_id:
-            query = query.eq("neighborhood_id", neighborhood_id)
+        # When no neighborhood specified, load the default session (reserved UUID)
+        session_key = neighborhood_id if neighborhood_id is not None else DEFAULT_SESSION_ID
+        query = query.eq("neighborhood_id", session_key)
 
         result = query.order("updated_at", desc=True).limit(1).execute()
 

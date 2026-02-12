@@ -8,6 +8,7 @@ import {
   setCachedEmbedding,
 } from "@/lib/embedding-cache.server";
 import { env } from "@/lib/env.server";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { searchBodySchema, searchQuerySchema } from "@/lib/validators";
 
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
           { status: 500 }
         );
       }
-      console.error("[search GET] Error:", error);
+      logError("[search GET]", error);
       return NextResponse.json(
         { details: error.message || "Search failed", error: "Database error" },
         { status: 500 }
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: results, total: results.length });
   } catch (error) {
-    console.error("[search GET] Unexpected error:", error);
+    logError("[search GET]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Internal server error",
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       try {
         openaiApiKey = env.OPENAI_API_KEY;
       } catch (err) {
-        console.error("[search] Missing OPENAI_API_KEY environment variable");
+        logError("[search] config", err);
         return NextResponse.json(
           {
             details: "OPENAI_API_KEY environment variable is required for semantic search",
@@ -203,12 +204,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (searchError) {
-      console.error("[search] Database search failed:", {
-        code: searchError.code,
-        error: searchError.message,
-        hint: searchError.hint,
-        query: trimmedQuery.substring(0, 50),
-      });
+      logError("[search] database", searchError);
 
       // Provide helpful error message if function doesn't exist
       if (
@@ -252,11 +248,7 @@ export async function POST(request: NextRequest) {
       .in("post_id", postIds);
 
     if (scoresError) {
-      console.error("[search] Failed to fetch LLM scores:", {
-        code: scoresError.code,
-        error: scoresError.message,
-        postCount: postIds.length,
-      });
+      logError("[search] LLM scores", scoresError);
       // Continue without scores - posts will have null llm_scores
     }
 
@@ -270,11 +262,7 @@ export async function POST(request: NextRequest) {
       .in("id", neighborhoodIds);
 
     if (neighborhoodsError) {
-      console.error("[search] Failed to fetch neighborhoods:", {
-        code: neighborhoodsError.code,
-        error: neighborhoodsError.message,
-        neighborhoodCount: neighborhoodIds.length,
-      });
+      logError("[search] neighborhoods", neighborhoodsError);
       // Continue without neighborhoods - posts will have "Unknown" neighborhood
     }
 
@@ -329,11 +317,7 @@ export async function POST(request: NextRequest) {
       total: filteredPosts.length,
     });
   } catch (error) {
-    console.error("[search] Unexpected error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      type: error instanceof Error ? error.constructor.name : typeof error,
-    });
+    logError("[search]", error);
 
     // Check if it's a missing environment variable error
     const errorMessage =

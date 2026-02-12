@@ -183,6 +183,30 @@ class TestPostExtractor:
 
         assert result is None
 
+    def test_extract_permalink_handles_timeout_then_escape_failure(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return None when modal timeout occurs and closing modal raises.
+
+        Regression test: the inner except must use container_index (not post_index)
+        so that no NameError is raised when Escape fails.
+        """
+        container = mock.MagicMock()
+        share_btn = mock.MagicMock()
+        share_btn.count.return_value = 1
+        container.locator.return_value = share_btn
+
+        locator_mock = mock.MagicMock()
+        locator_mock.count.return_value = 5
+        locator_mock.nth.return_value = container
+        locator_mock.wait_for.side_effect = PlaywrightTimeoutError("Timeout")
+        extractor.page.locator.return_value = locator_mock
+        extractor.page.keyboard.press.side_effect = RuntimeError("Escape failed")
+
+        result = extractor.extract_permalink(0)
+
+        assert result is None
+
     def test_generate_hash_creates_consistent_hash(
         self, extractor: PostExtractor
     ) -> None:

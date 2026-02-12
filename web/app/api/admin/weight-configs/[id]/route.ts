@@ -73,8 +73,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
       }
       console.error("[admin/weight-configs/patch] Error updating config:", {
-        error: error.message,
         configId,
+        error: error.message,
       });
       return NextResponse.json(
         {
@@ -90,8 +90,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error";
     console.error("[admin/weight-configs/patch] Unexpected error:", {
-      error: errorMessage,
       configId,
+      error: errorMessage,
     });
     return NextResponse.json(
       { details: errorMessage, error: "Internal server error" },
