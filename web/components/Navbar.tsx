@@ -41,7 +41,7 @@ export function Navbar() {
 
   return (
     <nav className="border-border bg-surface border-b">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+      <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6">
         <Link
           aria-label="Go to home page"
           className="flex items-center gap-2 text-lg font-semibold text-foreground"
