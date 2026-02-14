@@ -176,10 +176,10 @@ export const PostCard = memo(function PostCard({
       {/* Header: score column (when present) | metadata + tags | actions */}
       <div className="mb-6 flex items-start justify-between gap-3">
         {scores?.final_score != null && (
-          <div className="flex w-14 shrink-0 items-center justify-center">
+          <div className="flex w-16 shrink-0 items-center justify-center self-stretch">
             <span
               className={cn(
-                "inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold",
+                "inline-flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold",
                 scoreColorClass || "text-foreground",
                 scoreCircleBorderClass || "border-border"
               )}
