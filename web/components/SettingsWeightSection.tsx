@@ -9,7 +9,6 @@ import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 interface SettingsWeightSectionProps {
   activeConfigId: null | string;
   cancellingJobId: null | string;
-  configName: string;
   configs: WeightConfig[];
   deletingConfigId: null | string;
   isActivating: boolean;
@@ -22,18 +21,16 @@ interface SettingsWeightSectionProps {
   onDelete: (configId: string) => Promise<void>;
   onRenameSuccess?: () => void;
   onReset: () => void;
-  onSave: () => Promise<void>;
+  onSave: (name: string) => Promise<void>;
   pendingJobsCount: number;
   rankingWeights: RankingWeights;
   setActiveConfigId: (id: null | string) => void;
-  setConfigName: (name: string) => void;
   setRankingWeights: (weights: RankingWeights) => void;
 }
 
 export function SettingsWeightSection({
   activeConfigId,
   cancellingJobId,
-  configName,
   configs,
   deletingConfigId,
   isActivating,
@@ -50,19 +47,16 @@ export function SettingsWeightSection({
   pendingJobsCount,
   rankingWeights,
   setActiveConfigId,
-  setConfigName,
   setRankingWeights,
 }: SettingsWeightSectionProps) {
   return (
     <>
       <RankingWeightsEditor
-        configName={configName}
         isJobRunning={isJobRunning}
         isRecomputing={isRecomputing}
         isSaving={isSaving}
         pendingJobsCount={pendingJobsCount}
         rankingWeights={rankingWeights}
-        setConfigName={setConfigName}
         setRankingWeights={setRankingWeights}
         onReset={onReset}
         onSave={onSave}

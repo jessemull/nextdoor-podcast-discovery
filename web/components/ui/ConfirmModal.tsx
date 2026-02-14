@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 export interface ConfirmModalProps {
   cancelLabel: string;
+  confirmDisabled?: boolean;
   confirmLabel: string;
   confirmLoading?: boolean;
   counting?: boolean;
@@ -23,6 +24,7 @@ export interface ConfirmModalProps {
 export function ConfirmModal({
   cancelLabel,
   children,
+  confirmDisabled = false,
   confirmLabel,
   confirmLoading = false,
   counting = false,
@@ -82,7 +84,7 @@ export function ConfirmModal({
                 {cancelLabel}
               </Button>
               <Button
-                disabled={confirmLoading}
+                disabled={confirmDisabled || confirmLoading}
                 onClick={onConfirm}
                 variant="primary"
               >

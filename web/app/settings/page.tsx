@@ -75,7 +75,6 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRecomputing, setIsRecomputing] = useState(false);
-  const [configName, setConfigName] = useState("");
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
   const [noveltyConfig, setNoveltyConfig] = useState<NoveltyConfig>({
     frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
@@ -158,7 +157,7 @@ export default function SettingsPage() {
   }, [setActiveConfigId, setWeightConfigs]);
 
 
-  const handleSaveWeights = useCallback(async () => {
+  const handleSaveWeights = useCallback(async (name: string) => {
     setIsSaving(true);
     setIsRecomputing(true);
     setError(null);
@@ -168,7 +167,7 @@ export default function SettingsPage() {
       // Save weights and trigger recompute
       const response = await fetch("/api/admin/recompute-scores", {
         body: JSON.stringify({
-          name: configName.trim() || undefined,
+          name: name.trim() || undefined,
           ranking_weights: rankingWeights,
         }),
         headers: {
@@ -199,7 +198,7 @@ export default function SettingsPage() {
       setIsSaving(false);
       setIsRecomputing(false);
     }
-  }, [configName, rankingWeights, setWeightConfigs]);
+  }, [rankingWeights, setWeightConfigs]);
 
   const handleActivateConfig = useCallback(async (configId: string) => {
     setIsActivating(true);
@@ -426,7 +425,6 @@ export default function SettingsPage() {
         <SettingsWeightSection
           activeConfigId={activeConfigId}
           cancellingJobId={cancellingJobId}
-          configName={configName}
           configs={weightConfigs}
           deletingConfigId={deletingConfigId}
           isActivating={isActivating}
@@ -437,7 +435,6 @@ export default function SettingsPage() {
           pendingJobsCount={pendingJobs.length}
           rankingWeights={rankingWeights}
           setActiveConfigId={setActiveConfigId}
-          setConfigName={setConfigName}
           setRankingWeights={setRankingWeights}
           onActivate={handleActivateConfig}
           onCancelJob={handleCancelJob}
