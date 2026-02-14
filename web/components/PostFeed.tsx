@@ -220,8 +220,8 @@ export function PostFeed({
       {/* Main content */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
         {searchSlot && (
-          <div className="flex w-full items-stretch gap-2">
-            <div className="flex h-10 min-w-0 max-w-full flex-1">
+          <div className="flex w-full items-stretch">
+            <div className="mr-3 flex h-10 min-w-0 max-w-full flex-1">
               <FeedSearchBar
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
@@ -233,7 +233,7 @@ export function PostFeed({
                 useKeywordSearch={searchSlot.useKeywordSearch}
               />
             </div>
-            <div className="flex h-10 shrink-0 items-center gap-2">
+            <div className="flex h-10 shrink-0 items-center">
               <button
                 className="border-border bg-surface hover:bg-surface-hover flex h-10 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
                 type="button"
