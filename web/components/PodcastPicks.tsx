@@ -152,18 +152,6 @@ export function PodcastPicks() {
     [fetchPicks, markingUsed]
   );
 
-  // Demo: repeat first image 10× for the first pick that has an image (so carousel is visible)
-  const picksWithCarouselDemo = useMemo(() => {
-    const idx = picks.findIndex((p) => (p.image_urls?.length ?? 0) > 0);
-    if (idx === -1) return picks;
-    return picks.map((post, i) => {
-      if (i !== idx) return post;
-      const urls = post.image_urls ?? [];
-      const repeated = Array.from({ length: 20 }, () => urls[0]);
-      return { ...post, image_urls: repeated };
-    });
-  }, [picks]);
-
   if (loading) {
     return (
       <section className="mb-8">
@@ -202,7 +190,7 @@ export function PodcastPicks() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {picksWithCarouselDemo.map((post) => (
+          {picks.map((post) => (
             <PostCard
               key={post.id}
               isMarkingSaved={markingSaved.has(post.id)}
