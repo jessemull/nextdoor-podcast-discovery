@@ -221,7 +221,7 @@ export function PostFeed({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
         {searchSlot && (
           <div className="flex w-full items-stretch gap-2">
-            <div className="flex h-9 min-w-0 max-w-full flex-1">
+            <div className="flex h-10 min-w-0 max-w-full flex-1">
               <FeedSearchBar
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
@@ -233,9 +233,9 @@ export function PostFeed({
                 useKeywordSearch={searchSlot.useKeywordSearch}
               />
             </div>
-            <div className="flex h-9 shrink-0 items-center gap-2">
+            <div className="flex h-10 shrink-0 items-center gap-2">
               <button
-                className="border-border bg-surface hover:bg-surface-hover flex h-9 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                className="border-border bg-surface hover:bg-surface-hover flex h-10 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
                 type="button"
                 onClick={() => setOpenFilterDrawer(true)}
               >
@@ -249,7 +249,7 @@ export function PostFeed({
               </button>
               <CustomSelect
                 ariaLabel="Sort Posts"
-                className="h-9 min-w-[11rem] shrink-0"
+                className="h-10 min-w-[11rem] shrink-0"
                 onChange={(val) => {
                   const opt = SORT_OPTIONS[Number(val)];
                   if (opt) {
@@ -269,7 +269,7 @@ export function PostFeed({
               {(searchSlot.query.trim() || activeFilterCount > 0) && (
                 <button
                   aria-label="Reset filters"
-                  className="text-foreground hover:opacity-80 flex h-9 min-w-9 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="text-foreground hover:opacity-80 flex h-10 min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
                     handleResetFilters();
@@ -349,7 +349,7 @@ export function PostFeed({
                   </button>
                   <CustomSelect
                     ariaLabel="Sort Posts"
-                    className="h-9 min-w-[11rem]"
+                    className="h-10 min-w-[11rem]"
                     onChange={(val) => {
                       const opt = SORT_OPTIONS[Number(val)];
                       if (opt) {
@@ -368,7 +368,7 @@ export function PostFeed({
                   />
                   <button
                     aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-9 min-w-9 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    className="text-foreground hover:opacity-80 flex h-10 min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                     type="button"
                     onClick={handleResetFilters}
                   >

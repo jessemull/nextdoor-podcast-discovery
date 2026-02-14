@@ -136,7 +136,7 @@ export function FeedSearchBar({
         </Card>
       )}
 
-      <div className="relative flex h-full min-h-9 w-full min-w-0 rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
+      <div className="relative flex h-full min-h-10 w-full min-w-0 rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
         <input
           aria-activedescendant={
             showDropdown && highlightedIndex >= 0
@@ -146,7 +146,7 @@ export function FeedSearchBar({
           aria-autocomplete="list"
           aria-expanded={showDropdown}
           aria-label="Search for posts"
-          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-9 text-foreground placeholder-muted-foreground focus:outline-none"
+          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none"
           placeholder="Search for posts..."
           type="text"
           value={query}
