@@ -107,7 +107,7 @@ export const PostCard = memo(function PostCard({
   return (
     <Card className="transition-colors hover:border-border-focus">
       {/* Header */}
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-6 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {showCheckbox && onSelect && (
             <input
@@ -357,7 +357,7 @@ export const PostCard = memo(function PostCard({
 
       {/* Images: main full-width, carousel below with arrows */}
       {imageUrls.length > 0 && (
-        <div className="border-border mb-3 rounded-lg border">
+        <div className="border-border mb-6 rounded-lg border">
           <div
             className={cn(
               "relative aspect-[21/10] w-full overflow-hidden border-b border-border bg-surface-hover",
@@ -427,14 +427,14 @@ export const PostCard = memo(function PostCard({
 
       {/* Content */}
       {scores?.summary && (
-        <div className="mb-3">
+        <div className="mb-6">
           <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
             AI Summary
           </h3>
           <p className="text-foreground text-sm">{scores.summary}</p>
         </div>
       )}
-      <div className="mb-3">
+      <div className="mb-6">
         <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
           Original post
         </h3>
