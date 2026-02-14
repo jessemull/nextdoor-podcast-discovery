@@ -218,6 +218,40 @@ export const postsQuerySchema = z.object({
 
 export type PostsQuery = z.infer<typeof postsQuerySchema>;
 
+/** POST /api/posts/bulk body: query object (for apply_to_query). Same filters as GET /api/posts. */
+const postsBulkQuerySchema = z.object({
+  category: z.string().optional(),
+  ignored_only: z.boolean().optional(),
+  min_podcast_worthy: z.number().min(0).max(10).optional(),
+  min_reaction_count: z.number().int().min(0).optional(),
+  min_score: z.number().min(0).optional(),
+  neighborhood_id: z
+    .string()
+    .optional()
+    .refine((v) => !v || v.trim() === "" || UUID_REGEX.test(v), "Invalid neighborhood ID"),
+  order: z.enum(["asc", "desc"]).optional(),
+  saved_only: z.boolean().optional(),
+  sort: z.enum(["date", "podcast_score", "score"]).optional(),
+  unused_only: z.boolean().optional(),
+});
+
+/** POST /api/posts/bulk body. Either post_ids or (apply_to_query and query). */
+export const postsBulkBodySchema = z
+  .object({
+    action: z.enum(["ignore", "mark_used", "save", "unignore"]),
+    apply_to_query: z.boolean().optional(),
+    post_ids: z.array(z.string().regex(UUID_REGEX)).optional(),
+    query: postsBulkQuerySchema.optional(),
+  })
+  .refine(
+    (data) =>
+      (data.post_ids != null && data.post_ids.length > 0) ||
+      (data.apply_to_query === true && data.query != null),
+    "Provide either non-empty post_ids or apply_to_query true with query"
+  );
+
+export type PostsBulkBody = z.infer<typeof postsBulkBodySchema>;
+
 /** GET /api/admin/jobs query params. */
 export const adminJobsQuerySchema = z.object({
   id: z

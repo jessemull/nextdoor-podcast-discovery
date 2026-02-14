@@ -2,14 +2,34 @@
 
 import { useCallback, useState } from "react";
 
+export type BulkActionType = "ignore" | "mark_used" | "save" | "unignore";
+
+export interface BulkQuery {
+  category?: string;
+  ignored_only?: boolean;
+  min_podcast_worthy?: number;
+  min_reaction_count?: number;
+  min_score?: number;
+  neighborhood_id?: string;
+  order?: "asc" | "desc";
+  saved_only?: boolean;
+  sort?: "date" | "podcast_score" | "score";
+  unused_only?: boolean;
+}
+
 export interface UseBulkActionsParams {
   fetchPosts: (currentOffset?: number, append?: boolean) => Promise<void>;
+  getCurrentQuery: () => BulkQuery;
   offset: number;
   setError: (value: null | string) => void;
 }
 
 export interface UseBulkActionsResult {
   bulkActionLoading: boolean;
+  handleBulkAction: (
+    action: BulkActionType,
+    options: { applyToQuery: boolean }
+  ) => Promise<void>;
   handleBulkIgnore: () => Promise<void>;
   handleBulkMarkUsed: () => Promise<void>;
   handleBulkSave: () => Promise<void>;
@@ -27,6 +47,7 @@ export interface UseBulkActionsResult {
 
 export function useBulkActions({
   fetchPosts,
+  getCurrentQuery,
   offset,
   setError,
 }: UseBulkActionsParams): UseBulkActionsResult {
@@ -35,6 +56,56 @@ export function useBulkActions({
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const handleBulkAction = useCallback(
+    async (
+      action: BulkActionType,
+      options: { applyToQuery: boolean }
+    ): Promise<void> => {
+      const { applyToQuery } = options;
+      if (!applyToQuery && selectedIds.size === 0) return;
+      if (bulkActionLoading) return;
+
+      setBulkActionLoading(true);
+      try {
+        const body = applyToQuery
+          ? {
+              action,
+              apply_to_query: true,
+              query: getCurrentQuery(),
+            }
+          : { action, post_ids: Array.from(selectedIds) };
+
+        const response = await fetch("/api/posts/bulk", {
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error ?? "Bulk action failed");
+        }
+
+        setSelectedIds(new Set());
+        await fetchPosts(offset);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Bulk action failed";
+        setError(errorMessage);
+      } finally {
+        setBulkActionLoading(false);
+      }
+    },
+    [
+      bulkActionLoading,
+      fetchPosts,
+      getCurrentQuery,
+      offset,
+      selectedIds,
+      setError,
+    ]
+  );
 
   const toggleSelect = useCallback((postId: string, selected: boolean) => {
     setSelectedIds((prev) => {
@@ -236,6 +307,7 @@ export function useBulkActions({
 
   return {
     bulkActionLoading,
+    handleBulkAction,
     handleBulkIgnore,
     handleBulkMarkUsed,
     handleBulkSave,

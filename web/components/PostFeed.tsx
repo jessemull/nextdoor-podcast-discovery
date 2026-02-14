@@ -2,25 +2,24 @@
 
 import { Filter, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
+import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
+import { useBulkActions } from "@/lib/hooks/useBulkActions";
 import {
   DEFAULT_FILTERS,
   usePostFeedFilters,
 } from "@/lib/hooks/usePostFeedFilters";
-import { useBulkActions } from "@/lib/hooks/useBulkActions";
-import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
 import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
+import type { BulkQuery } from "@/lib/hooks/useBulkActions";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-import { BulkActionBar } from "./BulkActionBar";
+import { Card } from "./ui/Card";
 import { CustomSelect } from "./ui/CustomSelect";
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
 import { PostCard } from "./PostCard";
-import { Card } from "./ui/Card";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -66,7 +65,10 @@ export function PostFeed({
   searchSlot?: null | PostFeedSearchSlotProps;
 } = {}) {
   const router = useRouter();
+  const [bulkMode, setBulkMode] = useState(false);
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+  const [selectAllChecked, setSelectAllChecked] = useState(false);
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
   const {
     debouncedMinPodcastWorthy,
@@ -96,12 +98,45 @@ export function PostFeed({
     filters,
   });
 
+  const getCurrentQuery = useCallback((): BulkQuery => {
+    const minScoreNum = parseFloat(debouncedMinScore);
+    const minPodcastWorthy = parseFloat(debouncedMinPodcastWorthy);
+    const minReactionCount = parseInt(debouncedMinReactionCount, 10);
+    return {
+      category: filters.category || undefined,
+      ignored_only: filters.ignoredOnly,
+      min_podcast_worthy:
+        !isNaN(minPodcastWorthy) && minPodcastWorthy >= 0 && minPodcastWorthy <= 10
+          ? minPodcastWorthy
+          : undefined,
+      min_reaction_count:
+        !isNaN(minReactionCount) && minReactionCount >= 0
+          ? minReactionCount
+          : undefined,
+      min_score:
+        !isNaN(minScoreNum) && minScoreNum >= 0 ? minScoreNum : undefined,
+      neighborhood_id: filters.neighborhoodId || undefined,
+      order: filters.sortOrder,
+      saved_only: filters.savedOnly,
+      sort: filters.sort,
+      unused_only: filters.unusedOnly,
+    };
+  }, [
+    debouncedMinPodcastWorthy,
+    debouncedMinReactionCount,
+    debouncedMinScore,
+    filters.category,
+    filters.ignoredOnly,
+    filters.neighborhoodId,
+    filters.savedOnly,
+    filters.sort,
+    filters.sortOrder,
+    filters.unusedOnly,
+  ]);
+
   const {
     bulkActionLoading,
-    handleBulkIgnore,
-    handleBulkMarkUsed,
-    handleBulkSave,
-    handleBulkUnignore,
+    handleBulkAction,
     handleMarkIgnored,
     handleMarkSaved,
     handleMarkUsed,
@@ -111,7 +146,12 @@ export function PostFeed({
     selectedIds,
     setSelectedIds,
     toggleSelect,
-  } = useBulkActions({ fetchPosts, offset, setError });
+  } = useBulkActions({
+    fetchPosts,
+    getCurrentQuery,
+    offset,
+    setError,
+  });
 
   const {
     focusedIndex,
@@ -125,6 +165,17 @@ export function PostFeed({
   const handleResetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
   }, [setFilters]);
+
+  useEffect(() => {
+    const el = selectAllCheckboxRef.current;
+    if (el)
+      el.indeterminate =
+        selectedIds.size > 0 && selectedIds.size < posts.length;
+  }, [selectedIds.size, posts.length]);
+
+  useEffect(() => {
+    if (selectedIds.size < posts.length) setSelectAllChecked(false);
+  }, [selectedIds.size, posts.length]);
 
   const activeFilterCount = [
     filters.category,
@@ -233,7 +284,7 @@ export function PostFeed({
                 useKeywordSearch={searchSlot.useKeywordSearch}
               />
             </div>
-            <div className="flex h-10 shrink-0 items-center">
+            <div className="flex h-10 min-w-0 shrink-0 items-center">
               <button
                 className="border-border bg-surface hover:bg-surface-hover flex h-10 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
                 type="button"
@@ -266,6 +317,50 @@ export function PostFeed({
                 }))}
                 value={String(SORT_OPTIONS.indexOf(currentSortOption))}
               />
+              {bulkMode ? (
+                <div className="ml-3 flex items-center gap-3">
+                  <CustomSelect
+                    ariaLabel="Bulk action"
+                    className="h-10 min-w-[11rem] shrink-0"
+                    onChange={async (val) => {
+                      if (!val) return;
+                      const action = val as "ignore" | "mark_used" | "save" | "unignore";
+                      await handleBulkAction(action, {
+                        applyToQuery: selectAllChecked,
+                      });
+                      setBulkMode(false);
+                      setSelectAllChecked(false);
+                    }}
+                    options={[
+                      { label: "Ignore", value: "ignore" },
+                      { label: "Mark as used", value: "mark_used" },
+                      { label: "Save", value: "save" },
+                      { label: "Unignore", value: "unignore" },
+                    ]}
+                    placeholder="Actions"
+                    value=""
+                  />
+                  <button
+                    className="text-foreground hover:opacity-80 flex h-10 w-28 shrink-0 items-center justify-center rounded-card border border-border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => {
+                      setBulkMode(false);
+                      setSelectAllChecked(false);
+                      setSelectedIds(new Set());
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="text-foreground hover:opacity-80 ml-3 flex h-10 w-28 shrink-0 items-center justify-center rounded-card border border-border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => setBulkMode(true)}
+                >
+                  Bulk Actions
+                </button>
+              )}
               {(searchSlot.query.trim() || activeFilterCount > 0) && (
                 <button
                   aria-label="Reset filters"
@@ -378,19 +473,34 @@ export function PostFeed({
               </div>
             )}
 
-        <div className="text-muted-foreground text-sm">
-          Showing {posts.length} of {total} Posts
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-sm">
+            Showing {posts.length} of {total} Posts
+          </span>
+          {bulkMode && (
+            <label className="flex cursor-pointer items-center gap-2 pr-4">
+              <span className="text-muted-foreground text-sm">
+                Select All
+              </span>
+              <input
+                aria-label="Select All"
+                checked={selectedIds.size === posts.length && posts.length > 0}
+                className="rounded border-border bg-surface-hover"
+                ref={selectAllCheckboxRef}
+                type="checkbox"
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedIds(new Set(posts.map((p) => p.id)));
+                    setSelectAllChecked(true);
+                  } else {
+                    setSelectedIds(new Set());
+                    setSelectAllChecked(false);
+                  }
+                }}
+              />
+            </label>
+          )}
         </div>
-
-        <BulkActionBar
-          bulkActionLoading={bulkActionLoading}
-          selectedCount={selectedIds.size}
-          onBulkIgnore={handleBulkIgnore}
-          onBulkMarkUsed={handleBulkMarkUsed}
-          onBulkSave={handleBulkSave}
-          onBulkUnignore={handleBulkUnignore}
-          onClear={() => setSelectedIds(new Set())}
-        />
 
         {error && (
           <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
@@ -446,7 +556,7 @@ export function PostFeed({
                     isMarkingUsed={markingUsed.has(post.id)}
                     post={post}
                     selected={selectedIds.has(post.id)}
-                    showCheckbox
+                    showCheckbox={bulkMode}
                     onMarkIgnored={handleMarkIgnored}
                     onMarkSaved={handleMarkSaved}
                     onMarkUsed={handleMarkUsed}

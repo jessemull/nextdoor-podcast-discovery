@@ -190,15 +190,6 @@ export const PostCard = memo(function PostCard({
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-            {showCheckbox && onSelect && (
-              <input
-                aria-label={`Select post from ${neighborhoodName}`}
-                checked={selected}
-                className="hidden rounded border-border bg-surface-hover"
-                type="checkbox"
-                onChange={(e) => onSelect(post.id, e.target.checked)}
-              />
-            )}
             {post.author_name && (
               <>
                 <span className="text-foreground text-sm">{post.author_name}</span>
@@ -239,30 +230,39 @@ export const PostCard = memo(function PostCard({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {post.similarity != null && (
-            <span
-              className="text-muted text-xs"
-              title="Semantic Similarity To Search Query"
-            >
-              Sim: {post.similarity.toFixed(2)}
-            </span>
-          )}
-          {(post.ignored || post.used_on_episode) && (
-            <div className="flex flex-wrap justify-end gap-1">
-              {post.ignored && (
-                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                  Ignored
+          {showCheckbox && onSelect ? (
+            <input
+              aria-label={`Select post from ${neighborhoodName}`}
+              checked={selected}
+              className="rounded border-border bg-surface-hover"
+              type="checkbox"
+              onChange={(e) => onSelect(post.id, e.target.checked)}
+            />
+          ) : (
+            <>
+              {post.similarity != null && (
+                <span
+                  className="text-muted text-xs"
+                  title="Semantic Similarity To Search Query"
+                >
+                  Sim: {post.similarity.toFixed(2)}
                 </span>
               )}
-              {post.used_on_episode && (
-                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                  Used
-                </span>
+              {(post.ignored || post.used_on_episode) && (
+                <div className="flex flex-wrap justify-end gap-1">
+                  {post.ignored && (
+                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                      Ignored
+                    </span>
+                  )}
+                  {post.used_on_episode && (
+                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                      Used
+                    </span>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-          {/* Quick actions (icon-only, white; saved = filled bookmark only) */}
-          {onViewDetails && (
+              {onViewDetails && (
             <button
               aria-label="View Details"
               className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -415,8 +415,10 @@ export const PostCard = memo(function PostCard({
               </div>
             )}
           </div>
+            </>
+          )}
+          </div>
         </div>
-      </div>
 
       {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
       {imageUrls.length > 0 && (
