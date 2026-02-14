@@ -17,6 +17,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
 import { PostWithScores } from "@/lib/types";
+import type { DimensionScores } from "@/lib/types";
 import {
   cn,
   formatCategoryLabel,
@@ -25,7 +26,18 @@ import {
   POST_PREVIEW_LENGTH,
 } from "@/lib/utils";
 
+const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
+  absurdity: "Absurdity",
+  discussion_spark: "Discussion",
+  drama: "Drama",
+  emotional_intensity: "Intensity",
+  news_value: "News",
+  podcast_worthy: "Podcast",
+  readability: "Readability",
+};
+
 interface PostCardProps {
+  defaultExpanded?: boolean;
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
@@ -37,9 +49,11 @@ interface PostCardProps {
   post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
   selected?: boolean;
   showCheckbox?: boolean;
+  showScoreBreakdown?: boolean;
 }
 
 export const PostCard = memo(function PostCard({
+  defaultExpanded = false,
   isMarkingIgnored = false,
   isMarkingSaved = false,
   isMarkingUsed = false,
@@ -51,11 +65,12 @@ export const PostCard = memo(function PostCard({
   post,
   selected = false,
   showCheckbox = false,
+  showScoreBreakdown = false,
 }: PostCardProps) {
   const scores = post.llm_scores;
   const [carouselOverflows, setCarouselOverflows] = useState(false);
   const [carouselDragging, setCarouselDragging] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!defaultExpanded);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -506,6 +521,50 @@ export const PostCard = memo(function PostCard({
           )}
         </>
       )}
+
+      {/* Score breakdown (detail page only) */}
+      {showScoreBreakdown &&
+        scores?.scores &&
+        Object.keys(scores.scores).length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
+              Score breakdown
+            </h3>
+            <div className="space-y-2">
+              {(Object.entries(scores.scores) as [keyof DimensionScores, number][]).map(
+                ([key, value]) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-3"
+                  >
+                    <span
+                      className="text-foreground w-28 text-sm"
+                      style={{ opacity: 0.85 }}
+                    >
+                      {DIMENSION_LABELS[key] ?? key}
+                    </span>
+                    <div className="flex-1">
+                      <div className="bg-surface-hover h-2 overflow-hidden rounded-full">
+                        <div
+                          className="bg-foreground/85 h-full rounded-full"
+                          style={{
+                            width: `${((value as number) / 10) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <span
+                      className="text-foreground w-8 text-right text-sm"
+                      style={{ opacity: 0.85 }}
+                    >
+                      {(value as number).toFixed(1)}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Content */}
       {scores?.summary && (
