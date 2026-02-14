@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { PodcastPicks } from "@/components/PodcastPicks";
 import { PostFeed } from "@/components/PostFeed";
+import { cn } from "@/lib/utils";
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
 import { useSearchResults } from "@/lib/hooks/useSearchResults";
@@ -31,6 +32,16 @@ export function FeedPageContent() {
   const [embeddingBacklog, setEmbeddingBacklog] = useState(0);
   const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
   const [useKeywordSearch, setUseKeywordSearch] = useState(false);
+
+  useEffect(() => {
+    if (view === "feed") {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [view]);
 
   useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
@@ -160,9 +171,15 @@ export function FeedPageContent() {
   }, [updateUrl]);
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6">
-      <div className="w-full">
-        {view === "picks" && (
+    <main
+      className={cn(
+        view === "feed"
+          ? "flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden pt-0"
+          : "min-h-screen px-4 py-8 sm:px-6"
+      )}
+    >
+      {view === "picks" && (
+        <div className="w-full">
           <Suspense
             fallback={
               <div className="h-32 animate-pulse rounded-card bg-surface" />
@@ -170,11 +187,15 @@ export function FeedPageContent() {
           >
             <PodcastPicks />
           </Suspense>
-        )}
+        </div>
+      )}
 
-        {view === "feed" && (
-          <section aria-label="Feed">
-            <PostFeed
+      {view === "feed" && (
+        <section
+          aria-label="Feed"
+          className="flex min-h-0 flex-1 flex-col min-w-0"
+        >
+          <PostFeed
               searchSlot={{
                 debouncedQuery,
                 embeddingBacklog,
@@ -197,9 +218,8 @@ export function FeedPageContent() {
                 useKeywordSearch,
               }}
             />
-          </section>
-        )}
-      </div>
+        </section>
+      )}
     </main>
   );
 }
