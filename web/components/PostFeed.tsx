@@ -16,6 +16,7 @@ import {
   usePostFeedFilters,
 } from "@/lib/hooks/usePostFeedFilters";
 import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
+import { useToast } from "@/lib/ToastContext";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/Card";
@@ -54,6 +55,13 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   mark_used: "Mark As Used",
   save: "Save",
   unignore: "Unignore",
+};
+
+const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
+  ignore: "Ignored",
+  mark_used: "Marked as used",
+  save: "Saved",
+  unignore: "Unignored",
 };
 
 const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
@@ -175,6 +183,7 @@ export function PostFeed({
     offset,
     setError,
   });
+  const { toast } = useToast();
 
   const {
     focusedIndex,
@@ -663,25 +672,29 @@ export function PostFeed({
       <ConfirmModal
         cancelLabel="Cancel"
         confirmLabel="Confirm"
-        confirmLoading={bulkActionLoading}
         counting={countLoading && confirmModal?.count === undefined}
         message={
           confirmModal?.count != null
-            ? `Are you sure you want to ${BULK_ACTION_LABELS[confirmModal.action]} ${confirmModal.count} post(s)?`
+            ? `Are you sure you want to ${BULK_ACTION_LABELS[confirmModal.action].toLowerCase()} ${confirmModal.count} post(s)?`
             : undefined
         }
         onCancel={() => {
           setConfirmModal(null);
           if (countLoading) setCountLoading(false);
         }}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (confirmModal?.count == null) return;
-          await handleBulkAction(confirmModal.action, {
-            applyToQuery: selectAllChecked,
-          });
+          const { action, count } = confirmModal;
+          const successMessage = `${BULK_ACTION_SUCCESS[action]} ${count} post(s).`;
+          const applyToQuery = selectAllChecked;
           setConfirmModal(null);
           setBulkMode(false);
           setSelectAllChecked(false);
+          handleBulkAction(action, {
+            applyToQuery,
+            onError: (message) => toast.error(message),
+            onSuccess: () => toast.success(successMessage),
+          });
         }}
         open={confirmModal != null}
         title={confirmModal ? BULK_ACTION_TITLES[confirmModal.action] : ""}
