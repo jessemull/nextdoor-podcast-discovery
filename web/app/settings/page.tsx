@@ -94,8 +94,6 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
   const [deletingConfigId, setDeletingConfigId] = useState<null | string>(null);
-  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
-
   // Use polling hook for jobs and weight configs
   const {
     activeConfigId,
@@ -228,41 +226,6 @@ export default function SettingsPage() {
       setIsActivating(false);
     }
   }, [setActiveConfigId, setWeightConfigs]);
-
-  const handleCancelJob = useCallback(async (jobId: string) => {
-    if (!confirm("Are you sure you want to cancel this job? The worker will stop processing it.")) {
-      return;
-    }
-
-    setCancellingJobId(jobId);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}/cancel`, {
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.details || "Failed to cancel job");
-      }
-
-      setSuccessMessage("Job cancelled successfully.");
-      
-      // Refresh jobs
-      const jobsResponse = await fetch("/api/admin/jobs?type=recompute_final_scores&limit=20");
-      if (jobsResponse.ok) {
-        const jobsData: JobsResponse = await jobsResponse.json();
-        setJobs(jobsData.data || []);
-      }
-    } catch (err) {
-      console.error("Error cancelling job:", err);
-      setError(err instanceof Error ? err.message : "Failed to cancel job");
-    } finally {
-      setCancellingJobId(null);
-    }
-  }, [setJobs]);
 
   const handleDeleteConfig = useCallback(async (configId: string) => {
     if (!confirm("Are you sure you want to delete this weight configuration? This will also delete all associated scores and cannot be undone.")) {
@@ -421,7 +384,6 @@ export default function SettingsPage() {
 
         <SettingsWeightSection
           activeConfigId={activeConfigId}
-          cancellingJobId={cancellingJobId}
           configs={weightConfigs}
           deletingConfigId={deletingConfigId}
           isActivating={isActivating}
@@ -430,7 +392,6 @@ export default function SettingsPage() {
           setActiveConfigId={setActiveConfigId}
           setRankingWeights={setRankingWeights}
           onActivate={handleActivateConfig}
-          onCancelJob={handleCancelJob}
           onDelete={handleDeleteConfig}
           onRenameSuccess={refetchWeightConfigs}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
