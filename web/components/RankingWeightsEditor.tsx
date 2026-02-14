@@ -12,12 +12,8 @@ import type { RankingWeights } from "@/lib/types";
 const MIN_CONFIG_NAME_LENGTH = 3;
 
 interface RankingWeightsEditorProps {
-  isJobRunning: boolean;
-  isRecomputing: boolean;
-  isSaving: boolean;
   onReset: () => void;
   onSave: (name: string) => void;
-  pendingJobsCount: number;
   rankingWeights: RankingWeights;
   setRankingWeights: (weights: RankingWeights) => void;
 }
@@ -91,12 +87,8 @@ function weightsEqual(a: RankingWeights, b: RankingWeights): boolean {
  * Allows users to adjust ranking weights using sliders and save/recompute scores.
  */
 export function RankingWeightsEditor({
-  isJobRunning,
-  isRecomputing,
-  isSaving,
   onReset,
   onSave,
-  pendingJobsCount,
   rankingWeights,
   setRankingWeights,
 }: RankingWeightsEditorProps) {
@@ -117,23 +109,20 @@ export function RankingWeightsEditor({
 
   const handleConfirmSave = () => {
     if (saveModalName.trim().length < MIN_CONFIG_NAME_LENGTH) return;
-    onSave(saveModalName.trim());
     setSaveModalOpen(false);
+    onSave(saveModalName.trim());
   };
 
   const description =
-    "Adjust how important each scoring dimension is when calculating the final score. Saving will update the weights and recalculate final scores for all posts; the dashboard will reflect the new rankings once the job completes." +
-    (pendingJobsCount > 0
-      ? ` ${pendingJobsCount} job${pendingJobsCount > 1 ? "s" : ""} queued.`
-      : "");
+    "Adjust the weight of each scoring dimension when calculating the final score. Saving will queue a job to update the weights and recalculate the final scores for all posts.";
 
   return (
     <Card className="mb-8 p-6">
-      <h2 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
+      <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
         Add Weight Configuration
       </h2>
       <p
-        className="text-foreground mb-4 text-sm"
+        className="text-foreground mb-6 text-sm"
         style={{ opacity: 0.85 }}
       >
         {description}
@@ -202,16 +191,8 @@ export function RankingWeightsEditor({
         >
           Defaults
         </Button>
-        <Button
-          disabled={isSaving || isRecomputing || isJobRunning}
-          variant="primary"
-          onClick={handleOpenSaveModal}
-        >
-          {isRecomputing
-            ? "Starting..."
-            : isJobRunning
-              ? "Job Running..."
-              : "Save"}
+        <Button variant="primary" onClick={handleOpenSaveModal}>
+          Save
         </Button>
       </div>
 
@@ -219,7 +200,6 @@ export function RankingWeightsEditor({
         cancelLabel="Cancel"
         confirmDisabled={saveModalName.trim().length < MIN_CONFIG_NAME_LENGTH}
         confirmLabel="Submit"
-        confirmLoading={isSaving}
         onCancel={() => setSaveModalOpen(false)}
         onConfirm={handleConfirmSave}
         open={saveModalOpen}

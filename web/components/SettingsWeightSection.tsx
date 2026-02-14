@@ -12,9 +12,6 @@ interface SettingsWeightSectionProps {
   configs: WeightConfig[];
   deletingConfigId: null | string;
   isActivating: boolean;
-  isJobRunning: boolean;
-  isRecomputing: boolean;
-  isSaving: boolean;
   jobs: Job[];
   onActivate: (configId: string) => Promise<void>;
   onCancelJob: (jobId: string) => Promise<void>;
@@ -22,7 +19,6 @@ interface SettingsWeightSectionProps {
   onRenameSuccess?: () => void;
   onReset: () => void;
   onSave: (name: string) => Promise<void>;
-  pendingJobsCount: number;
   rankingWeights: RankingWeights;
   setActiveConfigId: (id: null | string) => void;
   setRankingWeights: (weights: RankingWeights) => void;
@@ -34,9 +30,6 @@ export function SettingsWeightSection({
   configs,
   deletingConfigId,
   isActivating,
-  isJobRunning,
-  isRecomputing,
-  isSaving,
   jobs,
   onActivate,
   onCancelJob,
@@ -44,7 +37,6 @@ export function SettingsWeightSection({
   onRenameSuccess,
   onReset,
   onSave,
-  pendingJobsCount,
   rankingWeights,
   setActiveConfigId,
   setRankingWeights,
@@ -52,10 +44,6 @@ export function SettingsWeightSection({
   return (
     <>
       <RankingWeightsEditor
-        isJobRunning={isJobRunning}
-        isRecomputing={isRecomputing}
-        isSaving={isSaving}
-        pendingJobsCount={pendingJobsCount}
         rankingWeights={rankingWeights}
         setRankingWeights={setRankingWeights}
         onReset={onReset}

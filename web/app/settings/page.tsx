@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useToast } from "@/lib/ToastContext";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
@@ -71,10 +72,10 @@ interface WeightConfigsResponse {
  * - Display background job status and history
  */
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [error, setError] = useState<null | string>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRecomputing, setIsRecomputing] = useState(false);
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
   const [noveltyConfig, setNoveltyConfig] = useState<NoveltyConfig>({
     frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
@@ -157,48 +158,44 @@ export default function SettingsPage() {
   }, [setActiveConfigId, setWeightConfigs]);
 
 
-  const handleSaveWeights = useCallback(async (name: string) => {
-    setIsSaving(true);
-    setIsRecomputing(true);
-    setError(null);
-    setSuccessMessage(null);
+  const handleSaveWeights = useCallback(
+    async (name: string) => {
+      setError(null);
+      setSuccessMessage(null);
 
-    try {
-      // Save weights and trigger recompute
-      const response = await fetch("/api/admin/recompute-scores", {
-        body: JSON.stringify({
-          name: name.trim() || undefined,
-          ranking_weights: rankingWeights,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
+      try {
+        const response = await fetch("/api/admin/recompute-scores", {
+          body: JSON.stringify({
+            name: name.trim() || undefined,
+            ranking_weights: rankingWeights,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.details || "Failed to trigger recompute");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || errorData.details || "Failed to trigger recompute"
+          );
+        }
+
+        await response.json();
+        // Refetch configs so the new config appears in the list below
+        const configsResponse = await fetch("/api/admin/weight-configs");
+        if (configsResponse.ok) {
+          const configsData: WeightConfigsResponse = await configsResponse.json();
+          setWeightConfigs(configsData.data || []);
+        }
+      } catch (err) {
+        console.error("Error saving weights:", err);
+        toast.error(err instanceof Error ? err.message : "Failed to save weights");
       }
-
-      const data: JobResponse = await response.json();
-      setSuccessMessage(
-        `Weights saved and recompute job started (Job #${data.data.job_id.substring(0, 8)}). This may take a few minutes. Once complete, you can activate this config.`
-      );
-      // Refresh configs to show the new one
-      const configsResponse = await fetch("/api/admin/weight-configs");
-      if (configsResponse.ok) {
-        const configsData: WeightConfigsResponse = await configsResponse.json();
-        setWeightConfigs(configsData.data || []);
-      }
-    } catch (err) {
-      console.error("Error saving weights:", err);
-      setError(err instanceof Error ? err.message : "Failed to save weights");
-    } finally {
-      setIsSaving(false);
-      setIsRecomputing(false);
-    }
-  }, [rankingWeights, setWeightConfigs]);
+    },
+    [rankingWeights, setWeightConfigs, toast]
+  );
 
   const handleActivateConfig = useCallback(async (configId: string) => {
     setIsActivating(true);
@@ -393,7 +390,7 @@ export default function SettingsPage() {
     return (
       <main className="min-h-screen p-8">
         <div className="mx-auto max-w-4xl">
-          <h1 className="mb-4 text-2xl font-semibold text-foreground">
+          <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings
           </h1>
           <p className="text-muted">Loading...</p>
@@ -401,9 +398,6 @@ export default function SettingsPage() {
       </main>
     );
   }
-
-  // Check if any job is currently running (only disable button when running, not when queued)
-  const isJobRunning = jobs.some((job) => job.status === "running");
 
   // Count pending jobs for queue position display
   const pendingJobs = jobs.filter((job) => job.status === "pending");
@@ -413,10 +407,13 @@ export default function SettingsPage() {
     <ErrorBoundary>
       <main className="min-h-screen p-8">
         <div className="mx-auto max-w-4xl">
-          <h1 className="mb-4 text-2xl font-semibold text-foreground">
+          <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings
           </h1>
-          <p className="text-muted mb-8 text-sm">
+          <p
+            className="text-foreground mb-8 text-sm"
+            style={{ opacity: 0.85 }}
+          >
             Configure ranking weights and search preferences.
           </p>
 
@@ -428,11 +425,7 @@ export default function SettingsPage() {
           configs={weightConfigs}
           deletingConfigId={deletingConfigId}
           isActivating={isActivating}
-          isJobRunning={isJobRunning}
-          isRecomputing={isRecomputing}
-          isSaving={isSaving}
           jobs={jobs}
-          pendingJobsCount={pendingJobs.length}
           rankingWeights={rankingWeights}
           setActiveConfigId={setActiveConfigId}
           setRankingWeights={setRankingWeights}
