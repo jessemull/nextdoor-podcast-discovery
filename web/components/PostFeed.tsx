@@ -166,9 +166,9 @@ export function PostFeed({
     ) ?? SORT_OPTIONS[0];
 
   return (
-    <div className="flex gap-6">
+    <div className="flex min-h-0 flex-1 gap-6">
       {/* Desktop sidebar */}
-      <div className="hidden w-64 shrink-0 md:block">
+      <div className="hidden h-full w-64 shrink-0 md:block">
         <FilterSidebar
           filterLoadError={filterLoadError}
           filters={filters}
@@ -213,7 +213,7 @@ export function PostFeed({
       )}
 
       {/* Main content */}
-      <div className="min-w-0 flex-1 space-y-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 sm:p-6">
         {searchSlot && (
           <div className="flex w-full items-stretch gap-2">
             <div className="flex h-9 min-w-0 max-w-full flex-1 overflow-hidden">
