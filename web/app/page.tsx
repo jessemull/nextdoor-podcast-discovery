@@ -13,7 +13,7 @@ export default function Home() {
           className="text-foreground mb-3 max-w-2xl text-4xl font-bold tracking-tight animate-fade-in-up-slow opacity-0 sm:text-5xl"
           style={{ animationDelay: "0s" } as React.CSSProperties}
         >
-          Nextdoor Podcast Discovery
+          Nextdoor Discovery
         </h1>
         <p
           className="text-muted max-w-lg text-lg animate-fade-in-up-slow opacity-0 sm:text-xl"
