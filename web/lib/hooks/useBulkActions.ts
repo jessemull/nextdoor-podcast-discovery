@@ -24,11 +24,17 @@ export interface UseBulkActionsParams {
   setError: (value: null | string) => void;
 }
 
+export interface BulkActionOptions {
+  applyToQuery: boolean;
+  onError?: (message: string) => void;
+  onSuccess?: () => void;
+}
+
 export interface UseBulkActionsResult {
   bulkActionLoading: boolean;
   handleBulkAction: (
     action: BulkActionType,
-    options: { applyToQuery: boolean }
+    options: BulkActionOptions
   ) => Promise<void>;
   handleBulkIgnore: () => Promise<void>;
   handleBulkMarkUsed: () => Promise<void>;
@@ -60,9 +66,9 @@ export function useBulkActions({
   const handleBulkAction = useCallback(
     async (
       action: BulkActionType,
-      options: { applyToQuery: boolean }
+      options: BulkActionOptions
     ): Promise<void> => {
-      const { applyToQuery } = options;
+      const { applyToQuery, onError, onSuccess } = options;
       if (!applyToQuery && selectedIds.size === 0) return;
       if (bulkActionLoading) return;
 
@@ -89,10 +95,15 @@ export function useBulkActions({
 
         setSelectedIds(new Set());
         await fetchPosts(offset);
+        onSuccess?.();
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Bulk action failed";
-        setError(errorMessage);
+        if (onError != null) {
+          onError(errorMessage);
+        } else {
+          setError(errorMessage);
+        }
       } finally {
         setBulkActionLoading(false);
       }
