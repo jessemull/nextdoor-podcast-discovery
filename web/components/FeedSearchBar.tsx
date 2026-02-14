@@ -157,7 +157,7 @@ export function FeedSearchBar({
         <div className="border-border border-l bg-surface-hover shrink-0" aria-hidden />
         <select
           aria-label="Search type"
-          className="border-border bg-surface-hover text-foreground h-full min-h-0 shrink-0 cursor-pointer border-0 border-l py-0 pl-3 pr-8 text-sm leading-9 focus:outline-none focus:ring-0"
+          className="select-caret border-border bg-surface-hover text-foreground h-full min-h-0 min-w-[7rem] shrink-0 cursor-pointer rounded-r-card border-0 border-l py-0 pl-3 pr-10 text-sm leading-9 focus:outline-none focus:ring-0"
           value={useKeywordSearch ? "keyword" : "ai"}
           onChange={(e) =>
             onUseKeywordSearchChange(e.target.value === "keyword")
