@@ -37,6 +37,7 @@ export interface Neighborhood {
 }
 
 export interface Post {
+  author_name?: null | string;
   created_at: string;
   hash: string;
   id: string;

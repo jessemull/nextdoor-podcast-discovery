@@ -111,6 +111,7 @@ class PostStorage:
             ]
             posts_data.append(
                 {
+                    "author_name": post.author_name or None,
                     "comments": comments_payload,
                     "hash": post.content_hash,
                     "image_urls": post.image_urls,
