@@ -21,6 +21,7 @@ import {
   cn,
   formatCategoryLabel,
   formatRelativeTime,
+  formatTitleCase,
   POST_PREVIEW_LENGTH,
 } from "@/lib/utils";
 
@@ -76,7 +77,9 @@ export const PostCard = memo(function PostCard({
     return () => document.removeEventListener("click", handleClickOutside);
   }, [menuOpen, closeMenu]);
 
-  const neighborhoodName = post.neighborhood?.name ?? "Unknown";
+  const neighborhoodName = formatTitleCase(
+    post.neighborhood?.name ?? "Unknown"
+  );
 
   /** Final score is normalized 0–10 then × novelty (≈0.2–1.5), so roughly 0–15. Color by 0–10 bands. */
   const scoreColorClass =
@@ -90,11 +93,22 @@ export const PostCard = memo(function PostCard({
             ? "text-emerald-600"
             : "text-emerald-500";
 
+  const scoreCircleBorderClass =
+    scores?.final_score == null
+      ? ""
+      : scores.final_score < 4
+        ? "border-red-400"
+        : scores.final_score < 6
+          ? "border-amber-400"
+          : scores.final_score < 8
+            ? "border-emerald-600"
+            : "border-emerald-500";
+
   return (
     <Card className="transition-colors hover:border-border-focus">
       {/* Header */}
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {showCheckbox && onSelect && (
             <input
               aria-label={`Select post from ${neighborhoodName}`}
@@ -109,8 +123,9 @@ export const PostCard = memo(function PostCard({
               <>
                 <span
                   className={cn(
-                    "text-sm font-semibold",
-                    scoreColorClass || "text-foreground"
+                    "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold",
+                    scoreColorClass || "text-foreground",
+                    scoreCircleBorderClass || "border-border"
                   )}
                 >
                   {scores.final_score.toFixed(1)}
@@ -124,7 +139,7 @@ export const PostCard = memo(function PostCard({
                 <span className="text-muted-foreground text-sm">•</span>
               </>
             )}
-            <span className="text-foreground text-sm font-medium uppercase tracking-wide">
+            <span className="text-foreground text-sm font-medium tracking-wide">
               {neighborhoodName}
             </span>
             <span className="text-muted-foreground text-sm">•</span>
@@ -145,7 +160,9 @@ export const PostCard = memo(function PostCard({
             )}
           </div>
           {scores?.categories && scores.categories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
+            <>
+              <span className="text-muted-foreground text-sm">•</span>
+              <div className="flex flex-wrap items-center gap-1.5">
               {scores.categories.slice(0, 5).map((category: string, index: number) => (
                 <span
                   key={`${category}-${index}`}
@@ -154,7 +171,8 @@ export const PostCard = memo(function PostCard({
                   {formatCategoryLabel(category)}
                 </span>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -340,7 +358,12 @@ export const PostCard = memo(function PostCard({
       {/* Images: main full-width, carousel below with arrows */}
       {imageUrls.length > 0 && (
         <div className="border-border mb-3 rounded-lg border">
-          <div className="relative aspect-[21/10] w-full overflow-hidden rounded-t-lg border-b border-border bg-surface-hover">
+          <div
+            className={cn(
+              "relative aspect-[21/10] w-full overflow-hidden border-b border-border bg-surface-hover",
+              hasMultipleImages ? "rounded-t-lg" : "rounded-b-lg rounded-t-lg"
+            )}
+          >
             <Image
               alt="Post"
               className="object-cover"

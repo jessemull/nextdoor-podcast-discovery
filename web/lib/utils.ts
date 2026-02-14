@@ -80,6 +80,19 @@ export function formatCategoryLabel(categoryKey: string): string {
     .join(" ");
 }
 
+/**
+ * Format text as title case (first letter of each word capitalized, e.g. "Rose City Park").
+ * Used for neighborhood names that may be stored in ALL CAPS.
+ */
+export function formatTitleCase(text: string): string {
+  if (!text || !text.trim()) return text;
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // UI Constants
 
 export const POST_PREVIEW_LENGTH = 300;
