@@ -246,7 +246,7 @@ export function PostFeed({
               </button>
               <select
                 aria-label="Sort Posts"
-                className="select-caret h-9 min-w-[11rem] shrink-0 rounded-card border border-border bg-surface-hover py-0 pl-3 pr-10 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                className="select-caret h-9 min-w-[11rem] shrink-0 rounded-card border border-border bg-surface-hover pl-3 pr-10 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
                 value={SORT_OPTIONS.indexOf(currentSortOption)}
                 onChange={(e) => {
                   const opt = SORT_OPTIONS[Number(e.target.value)];
@@ -348,7 +348,7 @@ export function PostFeed({
                   </button>
                   <select
                     aria-label="Sort Posts"
-                    className="select-caret h-9 min-w-[11rem] rounded-card border border-border bg-surface-hover py-0 pl-3 pr-10 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                    className="select-caret h-9 min-w-[11rem] rounded-card border border-border bg-surface-hover pl-3 pr-10 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
                     value={SORT_OPTIONS.indexOf(currentSortOption)}
                     onChange={(e) => {
                       const opt = SORT_OPTIONS[Number(e.target.value)];
