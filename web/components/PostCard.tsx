@@ -22,7 +22,6 @@ import {
   formatCategoryLabel,
   formatRelativeTime,
   POST_PREVIEW_LENGTH,
-  truncate,
 } from "@/lib/utils";
 
 interface PostCardProps {
@@ -79,6 +78,18 @@ export const PostCard = memo(function PostCard({
 
   const neighborhoodName = post.neighborhood?.name ?? "Unknown";
 
+  /** Final score is normalized 0–10 then × novelty (≈0.2–1.5), so roughly 0–15. Color by 0–10 bands. */
+  const scoreColorClass =
+    scores?.final_score == null
+      ? ""
+      : scores.final_score < 4
+        ? "text-red-400"
+        : scores.final_score < 6
+          ? "text-amber-400"
+          : scores.final_score < 8
+            ? "text-emerald-600"
+            : "text-emerald-500";
+
   return (
     <Card className="transition-colors hover:border-border-focus">
       {/* Header */}
@@ -94,6 +105,19 @@ export const PostCard = memo(function PostCard({
             />
           )}
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 truncate">
+            {scores?.final_score != null && (
+              <>
+                <span
+                  className={cn(
+                    "text-sm font-semibold",
+                    scoreColorClass || "text-foreground"
+                  )}
+                >
+                  {scores.final_score.toFixed(1)}
+                </span>
+                <span className="text-muted-foreground text-sm">•</span>
+              </>
+            )}
             <span className="text-foreground text-sm font-medium uppercase tracking-wide">
               {neighborhoodName}
             </span>
@@ -110,14 +134,6 @@ export const PostCard = memo(function PostCard({
                 >
                   {post.reaction_count} Reaction
                   {post.reaction_count !== 1 ? "s" : ""}
-                </span>
-              </>
-            )}
-            {scores?.final_score != null && (
-              <>
-                <span className="text-muted-foreground text-sm">•</span>
-                <span className="text-foreground text-sm font-semibold">
-                  {scores.final_score.toFixed(1)}
                 </span>
               </>
             )}
@@ -173,10 +189,7 @@ export const PostCard = memo(function PostCard({
           {onMarkSaved && (
             <button
               aria-label={post.saved ? "Unsave" : "Save"}
-              className={cn(
-                "cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus",
-                post.saved && "text-foreground"
-              )}
+              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
               disabled={isMarkingSaved}
               title={post.saved ? "Unsave" : "Save"}
               type="button"
@@ -184,7 +197,10 @@ export const PostCard = memo(function PostCard({
             >
               <Bookmark
                 aria-hidden
-                className={cn("h-4 w-4", post.saved ? "fill-current text-foreground" : "text-foreground")}
+                className={cn(
+                  "h-4 w-4 text-red-600",
+                  post.saved && "fill-current"
+                )}
               />
             </button>
           )}
@@ -370,22 +386,36 @@ export const PostCard = memo(function PostCard({
 
       {/* Content */}
       {scores?.summary && (
-        <h3 className="text-foreground mb-1 text-sm font-semibold">
-          {truncate(scores.summary, 80)}
-        </h3>
+        <div className="mb-3">
+          <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+            AI Summary
+          </h3>
+          <p className="text-foreground text-sm">{scores.summary}</p>
+        </div>
       )}
-      <p className="text-foreground mb-3 text-sm">
-        {expanded ? post.text : truncate(post.text, POST_PREVIEW_LENGTH)}
-        {!expanded && post.text.length > POST_PREVIEW_LENGTH && (
-          <button
-            className="text-muted-foreground hover:text-foreground ml-1 inline align-baseline text-sm underline focus:outline-none focus:ring-2 focus:ring-border-focus"
-            type="button"
-            onClick={() => setExpanded(true)}
-          >
-            ...
-          </button>
-        )}
-      </p>
+      <div className="mb-3">
+        <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+          Original post
+        </h3>
+        <p className="text-foreground text-sm">
+          {expanded
+            ? post.text
+            : post.text.length > POST_PREVIEW_LENGTH
+              ? (
+                  <>
+                    {post.text.slice(0, POST_PREVIEW_LENGTH - 3)}
+                    <button
+                      className="text-foreground hover:underline focus:outline-none focus:ring-2 focus:ring-border-focus"
+                      type="button"
+                      onClick={() => setExpanded(true)}
+                    >
+                      ...
+                    </button>
+                  </>
+                )
+              : post.text}
+        </p>
+      </div>
 
       {/* Categories (one line) */}
       {scores?.categories && scores.categories.length > 0 && (
