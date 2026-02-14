@@ -90,10 +90,13 @@ export function WeightConfigsList({
 
   return (
     <Card className="mb-8 p-6">
-      <h2 className="mb-4 text-foreground text-lg font-semibold">
+      <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
         Weight Configurations
       </h2>
-      <p className="text-muted mb-6 text-sm">
+      <p
+        className="text-foreground mb-6 text-sm"
+        style={{ opacity: 0.85 }}
+      >
         Switch between different weight configurations. Only configs with
         completed recompute jobs can be activated.
       </p>
