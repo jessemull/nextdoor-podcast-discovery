@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -19,8 +18,6 @@ export interface FeedSearchBarProps {
   embeddingBacklog: number;
   loadDefaultsError: null | string;
   loading: boolean;
-  minScore: "" | number;
-  onMinScoreChange: (value: "" | number) => void;
   onQueryChange: (value: string) => void;
   onSearch: () => void;
   onSimilarityThresholdChange: (value: number) => void;
@@ -34,8 +31,6 @@ export function FeedSearchBar({
   embeddingBacklog,
   loadDefaultsError,
   loading,
-  minScore,
-  onMinScoreChange,
   onQueryChange,
   onSearch,
   onSimilarityThresholdChange,
@@ -126,58 +121,56 @@ export function FeedSearchBar({
   const showDropdown = suggestionsOpen && suggestions.length > 0;
 
   return (
-    <div className="mb-6 space-y-4">
+    <div className="mb-6 w-full min-w-0 space-y-4">
       {loadDefaultsError && (
         <Card className="border-border-focus">
           <p className="text-muted text-sm">{loadDefaultsError}</p>
         </Card>
       )}
 
-      <div className="relative" ref={containerRef}>
-        <div className="flex gap-2">
-          <input
-            aria-activedescendant={
-              showDropdown && highlightedIndex >= 0
-                ? `search-suggestion-${highlightedIndex}`
-                : undefined
-            }
-            aria-autocomplete="list"
-            aria-expanded={showDropdown}
-            aria-label="Search posts"
-            className="flex-1 rounded-card border border-border bg-surface px-4 py-3 text-foreground placeholder-muted-foreground focus:border-border-focus focus:outline-none focus:ring-2"
-            placeholder="e.g., noisy neighbors, lost pet, suspicious activity..."
-            type="text"
-            value={query}
-            onChange={(e) => {
-              onQueryChange(e.target.value);
-              setSuggestionsOpen(true);
-              setHighlightedIndex(-1);
-            }}
-            onFocus={() => {
-              setSuggestionsOpen(true);
-              setSuggestions([...SEARCH_SUGGESTIONS]);
-              setHighlightedIndex(-1);
-            }}
-            onKeyDown={handleKeyDown}
-          />
-          <button
-            aria-label="Search"
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-card border border-border bg-surface-hover px-4 py-3 text-foreground transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus disabled:opacity-50"
-            )}
-            disabled={loading}
-            type="button"
-            onClick={() => onSearch()}
-          >
-            <Search aria-hidden className="h-5 w-5" />
-            <span className="hidden sm:inline">Search</span>
-          </button>
-        </div>
+      <div className="relative flex h-full min-h-9 w-full min-w-0 overflow-hidden rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
+        <input
+          aria-activedescendant={
+            showDropdown && highlightedIndex >= 0
+              ? `search-suggestion-${highlightedIndex}`
+              : undefined
+          }
+          aria-autocomplete="list"
+          aria-expanded={showDropdown}
+          aria-label="Search for posts"
+          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-9 text-foreground placeholder-muted-foreground focus:outline-none"
+          placeholder="Search for posts..."
+          type="text"
+          value={query}
+          onChange={(e) => {
+            onQueryChange(e.target.value);
+            setSuggestionsOpen(true);
+            setHighlightedIndex(-1);
+          }}
+          onFocus={() => {
+            setSuggestionsOpen(true);
+            setSuggestions([...SEARCH_SUGGESTIONS]);
+            setHighlightedIndex(-1);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <div className="border-border border-l bg-surface-hover shrink-0" aria-hidden />
+        <select
+          aria-label="Search type"
+          className="border-border bg-surface-hover text-foreground h-full min-h-0 shrink-0 cursor-pointer border-0 border-l py-0 pl-3 pr-8 text-sm leading-9 focus:outline-none focus:ring-0"
+          value={useKeywordSearch ? "keyword" : "ai"}
+          onChange={(e) =>
+            onUseKeywordSearchChange(e.target.value === "keyword")
+          }
+        >
+          <option value="ai">AI Powered</option>
+          <option value="keyword">Keyword</option>
+        </select>
 
         {showDropdown && (
           <ul
             ref={listRef}
-            className="border-border bg-surface absolute left-0 top-full z-10 mt-1 max-h-60 w-full overflow-auto rounded-card border py-1 shadow-lg"
+            className="border-border bg-surface absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
             role="listbox"
           >
             {suggestions.map((s, i) => (
@@ -206,53 +199,15 @@ export function FeedSearchBar({
       </div>
 
       {loading && (
-        <p className="text-muted-foreground text-sm">Searching...</p>
+        <p className="text-muted-foreground text-sm">Searching…</p>
       )}
 
       {embeddingBacklog > 0 && (
         <p className="text-muted text-xs">
           {embeddingBacklog} post{embeddingBacklog !== 1 ? "s" : ""} still need
-          embeddings. Semantic search may miss some recent posts until the daily
-          embed job runs.
+          embeddings. Semantic search may miss some recent posts until the
+          daily embed job runs.
         </p>
-      )}
-
-      <div className="flex items-center gap-4">
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            checked={useKeywordSearch}
-            className="rounded border-border bg-surface-hover focus:ring-border-focus"
-            type="checkbox"
-            onChange={(e) => onUseKeywordSearchChange(e.target.checked)}
-          />
-          <span className="text-muted-foreground text-sm">
-            Keyword search (exact terms, no AI)
-          </span>
-        </label>
-      </div>
-
-      {query.trim() && (
-        <div className="flex items-center gap-2">
-          <label
-            className="text-muted-foreground text-sm"
-            htmlFor="feed-min-score"
-          >
-            Min score:
-          </label>
-          <input
-            className="w-20 rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-            id="feed-min-score"
-            max={10}
-            min={0}
-            placeholder="Any"
-            type="number"
-            value={minScore}
-            onChange={(e) => {
-              const v = e.target.value;
-              onMinScoreChange(v === "" ? "" : parseFloat(v) || 0);
-            }}
-          />
-        </div>
       )}
 
       {query.trim() && !useKeywordSearch && (
@@ -261,8 +216,8 @@ export function FeedSearchBar({
             className="text-muted-foreground mb-2 block text-sm"
             htmlFor="feed-similarity-threshold"
           >
-            Similarity threshold: {similarityThreshold.toFixed(1)} (lower = more
-            results, higher = more precise)
+            Similarity Threshold: {similarityThreshold.toFixed(1)} (Lower = More
+            Results, Higher = More Precise)
           </label>
           <input
             className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -277,9 +232,9 @@ export function FeedSearchBar({
             }
           />
           <div className="text-muted-foreground mt-1 flex justify-between text-xs">
-            <span>0.0 (loose)</span>
-            <span>0.5 (balanced)</span>
-            <span>1.0 (strict)</span>
+            <span>0.0 (Loose)</span>
+            <span>0.5 (Balanced)</span>
+            <span>1.0 (Strict)</span>
           </div>
         </Card>
       )}
