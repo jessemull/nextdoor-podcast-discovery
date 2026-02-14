@@ -81,7 +81,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
     } & Database["public"]["Tables"]["posts"]["Row"];
 
-    const rawScores = llmScore.scores;
+    const rawScores = llmScore?.scores;
     const parsedScores =
       typeof rawScores === "string"
         ? (() => {
