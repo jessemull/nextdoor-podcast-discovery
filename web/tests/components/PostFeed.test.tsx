@@ -307,8 +307,12 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    const sortSelect = screen.getByLabelText(/sort posts/i);
-    await user.selectOptions(sortSelect, "Newest first");
+    const sortTrigger = screen.getByLabelText(/sort posts/i);
+    await user.click(sortTrigger);
+    const newestFirstOption = await screen.findByRole("option", {
+      name: "Newest First",
+    });
+    await user.click(newestFirstOption);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

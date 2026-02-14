@@ -20,6 +20,7 @@ interface CustomSelectProps {
   className?: string;
   onChange: (value: string) => void;
   options: CustomSelectOption[];
+  placeholder?: string;
   value: string;
 }
 
@@ -32,12 +33,17 @@ export function CustomSelect({
   className,
   onChange,
   options,
+  placeholder,
   value,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((o) => o.value === value) ?? options[0];
+  const selectedOption =
+    value !== ""
+      ? options.find((o) => o.value === value) ?? options[0]
+      : { label: placeholder ?? options[0]?.label ?? "", value: "" };
+  const listOptions = placeholder != null ? options.filter((o) => o.value !== "") : options;
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -76,10 +82,10 @@ export function CustomSelect({
       </button>
       {open && (
         <ul
-          className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
+          className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 min-w-full max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
           role="listbox"
         >
-          {options.map((opt) => (
+          {listOptions.map((opt) => (
             <li
               aria-selected={opt.value === value}
               className={cn(
