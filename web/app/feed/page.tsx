@@ -6,11 +6,9 @@ export default function FeedPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen p-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="mb-6 h-10 w-48 animate-pulse rounded bg-surface" />
-            <div className="h-96 animate-pulse rounded-card bg-surface" />
-          </div>
+        <main className="min-h-screen px-4 py-8 sm:px-6">
+          <div className="h-10 w-48 animate-pulse rounded bg-surface" />
+          <div className="mt-6 h-96 animate-pulse rounded-card bg-surface" />
         </main>
       }
     >

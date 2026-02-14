@@ -157,7 +157,7 @@ describe("PostFeed", () => {
       expect(screen.getByText("Second post")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Showing 2 of 2 posts")).toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 2 Posts")).toBeInTheDocument();
   });
 
   it("should display error message when fetch fails", async () => {

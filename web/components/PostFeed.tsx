@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, X } from "lucide-react";
+import { Filter, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -12,12 +12,38 @@ import {
 import { useBulkActions } from "@/lib/hooks/useBulkActions";
 import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
 import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
-import { formatCategoryLabel, POSTS_PER_PAGE } from "@/lib/utils";
+import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 import { BulkActionBar } from "./BulkActionBar";
+import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
 import { PostCard } from "./PostCard";
+import { Card } from "./ui/Card";
+
+import type { PostWithScores } from "@/lib/types";
+
+export interface PostFeedSearchSlotProps {
+  debouncedQuery: string;
+  embeddingBacklog: number;
+  loadDefaultsError: null | string;
+  loading: boolean;
+  markingSaved: Set<string>;
+  onMarkSaved: (postId: string) => void;
+  onMarkUsed: (postId: string) => void;
+  onQueryChange: (value: string) => void;
+  onResetAll?: () => void;
+  onSearch: () => void;
+  onSimilarityThresholdChange: (value: number) => void;
+  onUseKeywordSearchChange: (value: boolean) => void;
+  onViewDetails: (postId: string) => void;
+  query: string;
+  results: PostWithScores[];
+  searchError: null | string;
+  searchTotal: number;
+  similarityThreshold: number;
+  useKeywordSearch: boolean;
+}
 
 const SORT_OPTIONS = [
   { label: "Score (high to low)", sort: "score" as const, sortOrder: "desc" as const },
@@ -28,19 +54,16 @@ const SORT_OPTIONS = [
   { label: "Oldest first", sort: "date" as const, sortOrder: "asc" as const },
 ];
 
-const QUICK_CATEGORIES = [
-  "crime",
-  "drama",
-  "humor",
-  "lost_pet",
-  "wildlife",
-] as const;
-
 /**
  * PostFeed displays a list of Nextdoor posts with filtering and infinite scroll.
- * Layout: side panel (filters) + main (sort, chips, feed). Mobile: Filters drawer.
+ * Layout: side panel (filters) + main (optional search bar, then sort/chips/feed or search results).
+ * When searchSlot is provided, the search bar is the first element in the main column; search results or feed follow.
  */
-export function PostFeed() {
+export function PostFeed({
+  searchSlot = null,
+}: {
+  searchSlot?: null | PostFeedSearchSlotProps;
+} = {}) {
   const router = useRouter();
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
 
@@ -137,12 +160,6 @@ export function PostFeed() {
     return () => observer.disconnect();
   }, [fetchPosts, hasMore, initialLoading, loadingMore, offset, sentinelRef, total]);
 
-  const chipBase =
-    "rounded border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus";
-  const chipInactive =
-    "border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground";
-  const chipActive = "border-border bg-surface-hover text-foreground";
-
   const currentSortOption =
     SORT_OPTIONS.find(
       (o) => o.sort === filters.sort && o.sortOrder === filters.sortOrder
@@ -196,113 +213,174 @@ export function PostFeed() {
       )}
 
       {/* Main content */}
-      <div className="min-w-0 flex-1 space-y-6">
-        {/* Toolbar: mobile Filters button, sort, reset */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              className="border-border bg-surface hover:bg-surface-hover flex items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-              type="button"
-              onClick={() => setOpenFilterDrawer(true)}
-            >
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
-                  {activeFilterCount}
-                </span>
+      <div className="min-w-0 flex-1 space-y-3">
+        {searchSlot && (
+          <div className="flex w-full items-stretch gap-2">
+            <div className="flex h-9 min-w-0 max-w-full flex-1 overflow-hidden">
+              <FeedSearchBar
+                embeddingBacklog={searchSlot.embeddingBacklog}
+                loadDefaultsError={searchSlot.loadDefaultsError}
+                loading={searchSlot.loading}
+                onQueryChange={searchSlot.onQueryChange}
+                onSearch={searchSlot.onSearch}
+                onSimilarityThresholdChange={searchSlot.onSimilarityThresholdChange}
+                onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
+                query={searchSlot.query}
+                similarityThreshold={searchSlot.similarityThreshold}
+                useKeywordSearch={searchSlot.useKeywordSearch}
+              />
+            </div>
+            <div className="flex h-9 shrink-0 items-center gap-2">
+              <button
+                className="border-border bg-surface hover:bg-surface-hover flex h-9 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                type="button"
+                onClick={() => setOpenFilterDrawer(true)}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <select
+                aria-label="Sort Posts"
+                className="h-9 shrink-0 rounded border border-border bg-surface-hover px-3 py-0 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                value={SORT_OPTIONS.indexOf(currentSortOption)}
+                onChange={(e) => {
+                  const opt = SORT_OPTIONS[Number(e.target.value)];
+                  if (opt) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      sort: opt.sort,
+                      sortOrder: opt.sortOrder,
+                    }));
+                  }
+                }}
+              >
+                {SORT_OPTIONS.map((opt, i) => (
+                  <option key={opt.label} value={i}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                <button
+                  aria-label="Reset filters"
+                  className="text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => {
+                    handleResetFilters();
+                    searchSlot.onResetAll?.();
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
               )}
-            </button>
-            <select
-              aria-label="Sort posts"
-              className="rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
-              value={SORT_OPTIONS.indexOf(currentSortOption)}
-              onChange={(e) => {
-                const opt = SORT_OPTIONS[Number(e.target.value)];
-                if (opt) {
-                  setFilters((prev) => ({
-                    ...prev,
-                    sort: opt.sort,
-                    sortOrder: opt.sortOrder,
-                  }));
-                }
-              }}
-            >
-              {SORT_OPTIONS.map((opt, i) => (
-                <option key={opt.label} value={i}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <button
-              className="text-muted-foreground hover:text-foreground text-sm underline focus:outline-none focus:ring-2 focus:ring-border-focus"
-              type="button"
-              onClick={handleResetFilters}
-            >
-              Reset filters
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Quick filter chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground self-center text-xs">
-            Status:
-          </span>
-          <button
-            className={cn(chipBase, filters.savedOnly ? chipActive : chipInactive)}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({ ...prev, savedOnly: !prev.savedOnly }))
-            }
-          >
-            Saved
-          </button>
-          <button
-            className={cn(
-              chipBase,
-              filters.ignoredOnly ? chipActive : chipInactive
+        {searchSlot && searchSlot.query.trim() ? (
+          <div className="space-y-6">
+            {searchSlot.searchError && (
+              <Card className="border-destructive bg-destructive/10 text-destructive text-sm">
+                {searchSlot.searchError}
+              </Card>
             )}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({ ...prev, ignoredOnly: !prev.ignoredOnly }))
-            }
-          >
-            Ignored
-          </button>
-          <button
-            className={cn(
-              chipBase,
-              filters.unusedOnly ? chipActive : chipInactive
-            )}
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({ ...prev, unusedOnly: !prev.unusedOnly }))
-            }
-          >
-            Unused
-          </button>
-          <span className="text-muted-foreground ml-2 self-center text-xs">
-            Topic:
-          </span>
-          {QUICK_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              className={cn(
-                chipBase,
-                filters.category === cat ? chipActive : chipInactive
+            {!searchSlot.loading &&
+              searchSlot.debouncedQuery === searchSlot.query &&
+              searchSlot.query.trim() &&
+              searchSlot.searchTotal > 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Found {searchSlot.searchTotal}{" "}
+                  {searchSlot.searchTotal === 1 ? "Post" : "Posts"}
+                </p>
               )}
-              type="button"
-              onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  category: prev.category === cat ? "" : cat,
-                }))
-              }
-            >
-              {formatCategoryLabel(cat)}
-            </button>
-          ))}
+            {!searchSlot.loading &&
+              searchSlot.query.trim() &&
+              searchSlot.debouncedQuery === searchSlot.query &&
+              searchSlot.searchTotal === 0 &&
+              !searchSlot.searchError && (
+                <Card className="py-8 text-center">
+                  <p className="text-foreground mb-1 font-medium">
+                    No Posts Found
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Try Different Search Terms or Lower the Similarity
+                    Threshold.
+                  </p>
+                </Card>
+              )}
+            {searchSlot.results.length > 0 && (
+              <div className="space-y-4">
+                {searchSlot.results.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    isMarkingSaved={searchSlot.markingSaved.has(post.id)}
+                    post={post}
+                    onMarkSaved={() => searchSlot.onMarkSaved(post.id)}
+                    onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
+                    onViewDetails={() => searchSlot.onViewDetails(post.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {!searchSlot && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    className="border-border bg-surface hover:bg-surface-hover flex items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                    type="button"
+                    onClick={() => setOpenFilterDrawer(true)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                  <select
+                    aria-label="Sort Posts"
+                    className="h-9 rounded border border-border bg-surface-hover px-3 py-0 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                    value={SORT_OPTIONS.indexOf(currentSortOption)}
+                    onChange={(e) => {
+                      const opt = SORT_OPTIONS[Number(e.target.value)];
+                      if (opt) {
+                        setFilters((prev) => ({
+                          ...prev,
+                          sort: opt.sort,
+                          sortOrder: opt.sortOrder,
+                        }));
+                      }
+                    }}
+                  >
+                    {SORT_OPTIONS.map((opt, i) => (
+                      <option key={opt.label} value={i}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    aria-label="Reset filters"
+                    className="text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={handleResetFilters}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+        <div className="text-muted-foreground text-sm">
+          Showing {posts.length} of {total} Posts
         </div>
 
         <BulkActionBar
@@ -314,10 +392,6 @@ export function PostFeed() {
           onBulkUnignore={handleBulkUnignore}
           onClear={() => setSelectedIds(new Set())}
         />
-
-        <div className="text-muted-foreground text-sm">
-          Showing {posts.length} of {total} posts
-        </div>
 
         {error && (
           <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
@@ -345,9 +419,9 @@ export function PostFeed() {
 
         {!initialLoading && posts.length === 0 && (
           <div className="rounded-card border border-border bg-surface p-8 text-center">
-            <p className="text-muted">No posts found</p>
+            <p className="text-muted">No Posts Found</p>
             <p className="text-muted-foreground mt-2 text-sm">
-              Try adjusting your filters or run the scraper to collect posts.
+              Try Adjusting Your Filters or Run the Scraper to Collect Posts.
             </p>
           </div>
         )}
@@ -401,9 +475,11 @@ export function PostFeed() {
 
             {!hasMore && posts.length > 0 && (
               <div className="text-muted-foreground py-4 text-center text-sm">
-                No more posts to load
+                No More Posts to Load
               </div>
             )}
+          </>
+        )}
           </>
         )}
       </div>

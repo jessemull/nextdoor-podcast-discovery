@@ -80,7 +80,7 @@ export function FilterSidebar({
               setFilters((prev) => ({ ...prev, savedOnly: e.target.checked }))
             }
           />
-          Saved only
+          Saved Only
         </label>
         <label className={checkboxLabelClass}>
           <input
@@ -91,7 +91,7 @@ export function FilterSidebar({
               setFilters((prev) => ({ ...prev, ignoredOnly: e.target.checked }))
             }
           />
-          Ignored only
+          Ignored Only
         </label>
         <label className={checkboxLabelClass}>
           <input
@@ -102,7 +102,7 @@ export function FilterSidebar({
               setFilters((prev) => ({ ...prev, unusedOnly: e.target.checked }))
             }
           />
-          Unused only
+          Unused Only
         </label>
       </div>
 
@@ -126,10 +126,10 @@ export function FilterSidebar({
         ))}
       </div>
 
-      <h2 className={sectionHeadingClass}>Score range</h2>
+      <h2 className={sectionHeadingClass}>Score Range</h2>
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor="filter-min-score">
-          Min score
+          Min Score
         </label>
         <NumInput
           id="filter-min-score"
@@ -148,7 +148,7 @@ export function FilterSidebar({
         />
         <span className="text-muted-foreground text-sm">to</span>
         <label className="sr-only" htmlFor="filter-max-score">
-          Max score
+          Max Score
         </label>
         <NumInput
           id="filter-max-score"
@@ -167,7 +167,7 @@ export function FilterSidebar({
         />
       </div>
 
-      <h2 className={sectionHeadingClass}>Podcast score range</h2>
+      <h2 className={sectionHeadingClass}>Podcast Score Range</h2>
       <div className="flex flex-wrap items-center gap-2">
         <NumInput
           id="filter-min-podcast"
@@ -210,7 +210,7 @@ export function FilterSidebar({
         />
       </div>
 
-      <h2 className={sectionHeadingClass}>Reactions range</h2>
+      <h2 className={sectionHeadingClass}>Reactions Range</h2>
       <div className="flex flex-wrap items-center gap-2">
         <NumInput
           id="filter-min-reactions"
@@ -286,7 +286,7 @@ export function FilterSidebar({
         type="button"
         onClick={onReset}
       >
-        Clear all filters
+        Clear All Filters
       </button>
     </aside>
   );

@@ -1,20 +1,13 @@
 "use client";
 
-import { Search } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import { ActiveConfigBadge } from "@/components/ActiveConfigBadge";
-import { FeedSearchBar } from "@/components/FeedSearchBar";
 import { PodcastPicks } from "@/components/PodcastPicks";
-import { PostCard } from "@/components/PostCard";
 import { PostFeed } from "@/components/PostFeed";
-import { Card } from "@/components/ui/Card";
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
 import { useSearchResults } from "@/lib/hooks/useSearchResults";
-import { cn } from "@/lib/utils";
 
 interface SettingsResponse {
   data: {
@@ -37,7 +30,6 @@ export function FeedPageContent() {
   const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
   const [embeddingBacklog, setEmbeddingBacklog] = useState(0);
   const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
-  const [minScore, setMinScore] = useState<"" | number>("");
   const [useKeywordSearch, setUseKeywordSearch] = useState(false);
 
   useEffect(() => {
@@ -108,7 +100,7 @@ export function FeedPageContent() {
     runSearch,
     total: searchTotal,
   } = useSearchResults({
-    minScore,
+    minScore: "",
     query: debouncedQuery,
     similarityThreshold,
     useKeywordSearch,
@@ -162,41 +154,14 @@ export function FeedPageContent() {
     void runSearch(query.trim());
   }, [query, runSearch]);
 
-  const tabBase =
-    "border-b-2 px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus";
-  const tabInactive =
-    "border-transparent text-muted hover:border-border hover:text-foreground";
-  const tabActive = "border-border-focus text-foreground";
+  const handleResetAll = useCallback(() => {
+    setQuery("");
+    updateUrl({ q: "" });
+  }, [updateUrl]);
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center gap-4">
-          <nav aria-label="Feed view" className="flex gap-0">
-            <Link
-              aria-current={view === "feed" ? "page" : undefined}
-              className={cn(
-                tabBase,
-                view === "feed" ? tabActive : tabInactive
-              )}
-              href="/feed"
-            >
-              Feed
-            </Link>
-            <Link
-              aria-current={view === "picks" ? "page" : undefined}
-              className={cn(
-                tabBase,
-                view === "picks" ? tabActive : tabInactive
-              )}
-              href="/feed?view=picks"
-            >
-              Picks
-            </Link>
-          </nav>
-          {view === "feed" && <ActiveConfigBadge />}
-        </div>
-
+    <main className="min-h-screen px-4 py-8 sm:px-6">
+      <div className="w-full">
         {view === "picks" && (
           <Suspense
             fallback={
@@ -209,76 +174,29 @@ export function FeedPageContent() {
 
         {view === "feed" && (
           <section aria-label="Feed">
-            <FeedSearchBar
-              embeddingBacklog={embeddingBacklog}
-              loadDefaultsError={loadDefaultsError}
-              loading={searchLoading}
-              minScore={minScore}
-              onMinScoreChange={setMinScore}
-              onQueryChange={handleQueryChange}
-              onSearch={handleSearch}
-              onSimilarityThresholdChange={handleThresholdChange}
-              onUseKeywordSearchChange={setUseKeywordSearch}
-              query={query}
-              similarityThreshold={similarityThreshold}
-              useKeywordSearch={useKeywordSearch}
+            <PostFeed
+              searchSlot={{
+                debouncedQuery,
+                embeddingBacklog,
+                loadDefaultsError,
+                loading: searchLoading,
+                markingSaved,
+                onMarkSaved: handleMarkSaved,
+                onMarkUsed: handleMarkUsed,
+                onQueryChange: handleQueryChange,
+                onResetAll: handleResetAll,
+                onSearch: handleSearch,
+                onSimilarityThresholdChange: handleThresholdChange,
+                onUseKeywordSearchChange: setUseKeywordSearch,
+                onViewDetails: (postId) => router.push(`/posts/${postId}`),
+                query,
+                results,
+                searchError: searchError ?? null,
+                searchTotal,
+                similarityThreshold,
+                useKeywordSearch,
+              }}
             />
-
-            {query.trim() ? (
-              <div className="space-y-6">
-                {searchError && (
-                  <Card className="border-destructive bg-destructive/10 text-destructive text-sm">
-                    {searchError}
-                  </Card>
-                )}
-
-                {!searchLoading && debouncedQuery === query && query.trim() && searchTotal > 0 && (
-                  <p className="text-muted-foreground text-sm">
-                    Found {searchTotal}{" "}
-                    {searchTotal === 1 ? "post" : "posts"}
-                  </p>
-                )}
-
-                {!searchLoading &&
-                  query.trim() &&
-                  debouncedQuery === query &&
-                  searchTotal === 0 &&
-                  !searchError && (
-                    <Card className="py-8 text-center">
-                      <Search
-                        aria-hidden
-                        className="text-muted mx-auto mb-2 h-10 w-10"
-                      />
-                      <p className="text-foreground mb-1 font-medium">
-                        No posts found
-                      </p>
-                      <p className="text-muted-foreground text-sm">
-                        Try different search terms or lower the similarity
-                        threshold.
-                      </p>
-                    </Card>
-                  )}
-
-                {results.length > 0 && (
-                  <div className="space-y-4">
-                    {results.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        isMarkingSaved={markingSaved.has(post.id)}
-                        post={post}
-                        onMarkSaved={handleMarkSaved}
-                        onMarkUsed={handleMarkUsed}
-                        onViewDetails={() =>
-                          router.push(`/posts/${post.id}`)
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <PostFeed />
-            )}
           </section>
         )}
       </div>
