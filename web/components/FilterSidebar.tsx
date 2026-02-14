@@ -12,7 +12,9 @@ export interface FilterSidebarProps {
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
   onReset: () => void;
+  onSimilarityThresholdChange?: (value: number) => void;
   setFilters: React.Dispatch<React.SetStateAction<PostFeedFilters>>;
+  similarityThreshold?: number;
 }
 
 const inputClass =
@@ -56,7 +58,9 @@ export function FilterSidebar({
   filters,
   neighborhoods,
   onReset,
+  onSimilarityThresholdChange,
   setFilters,
+  similarityThreshold,
 }: FilterSidebarProps) {
   return (
     <aside
@@ -70,6 +74,26 @@ export function FilterSidebar({
             {filterLoadError}
           </p>
         )}
+
+        <h2 className={sectionHeadingClass}>Category</h2>
+        <div className="flex flex-col gap-2">
+          {TOPIC_CATEGORIES.map((cat) => (
+            <label key={cat} className={checkboxLabelClass}>
+              <input
+                checked={filters.category === cat}
+                className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                type="checkbox"
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    category: e.target.checked ? cat : "",
+                  }))
+                }
+              />
+              {formatCategoryLabel(cat)}
+            </label>
+          ))}
+        </div>
 
         <h2 className={sectionHeadingClass}>Status</h2>
         <div className="flex flex-col gap-2">
@@ -106,26 +130,6 @@ export function FilterSidebar({
             />
             Unused Only
           </label>
-        </div>
-
-        <h2 className={sectionHeadingClass}>Category</h2>
-        <div className="flex flex-col gap-2">
-          {TOPIC_CATEGORIES.map((cat) => (
-            <label key={cat} className={checkboxLabelClass}>
-              <input
-                checked={filters.category === cat}
-                className="rounded border-border bg-surface-hover focus:ring-border-focus"
-                type="checkbox"
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    category: e.target.checked ? cat : "",
-                  }))
-                }
-              />
-              {formatCategoryLabel(cat)}
-            </label>
-          ))}
         </div>
 
         <h2 className={sectionHeadingClass}>Score Range</h2>
@@ -248,6 +252,35 @@ export function FilterSidebar({
             }
           />
         </div>
+
+        {similarityThreshold !== undefined &&
+          onSimilarityThresholdChange && (
+            <>
+              <h2 className={sectionHeadingClass}>Search Similarity</h2>
+              <div className="space-y-1">
+                <label
+                  className="text-muted-foreground block text-xs"
+                  htmlFor="sidebar-similarity-threshold"
+                >
+                  {(similarityThreshold * 10).toFixed(1)} (Loose → Strict)
+                </label>
+                <input
+                  className="similarity-slider h-1.5 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-1 focus:ring-border-focus"
+                  id="sidebar-similarity-threshold"
+                  max={10}
+                  min={0}
+                  step={0.5}
+                  type="range"
+                  value={similarityThreshold * 10}
+                  onChange={(e) =>
+                    onSimilarityThresholdChange(
+                      parseFloat(e.target.value) / 10
+                    )
+                  }
+                />
+              </div>
+            </>
+          )}
 
         <h2 className={sectionHeadingClass}>Neighborhood</h2>
         <div className="flex flex-col gap-2">

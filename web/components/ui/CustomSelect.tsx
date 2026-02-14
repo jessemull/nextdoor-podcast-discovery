@@ -62,7 +62,7 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         className={cn(
-          "border-border bg-surface-hover text-foreground flex h-full min-h-0 w-full cursor-pointer items-center justify-between gap-2 rounded-card border pl-3 pr-3 text-sm focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus",
+          "border-border bg-surface-hover text-foreground flex h-full min-h-0 w-full cursor-pointer items-center justify-between gap-2 rounded-card border pl-3 pr-3 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus",
           className
         )}
         type="button"

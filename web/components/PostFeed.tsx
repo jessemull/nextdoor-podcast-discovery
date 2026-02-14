@@ -175,7 +175,9 @@ export function PostFeed({
           filters={filters}
           neighborhoods={neighborhoods}
           onReset={handleResetFilters}
+          onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
           setFilters={setFilters}
+          similarityThreshold={searchSlot?.similarityThreshold}
         />
       </div>
 
@@ -207,7 +209,9 @@ export function PostFeed({
                 handleResetFilters();
                 setOpenFilterDrawer(false);
               }}
+              onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
               setFilters={setFilters}
+              similarityThreshold={searchSlot?.similarityThreshold}
             />
           </div>
         </>
@@ -224,10 +228,8 @@ export function PostFeed({
                 loading={searchSlot.loading}
                 onQueryChange={searchSlot.onQueryChange}
                 onSearch={searchSlot.onSearch}
-                onSimilarityThresholdChange={searchSlot.onSimilarityThresholdChange}
                 onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
                 query={searchSlot.query}
-                similarityThreshold={searchSlot.similarityThreshold}
                 useKeywordSearch={searchSlot.useKeywordSearch}
               />
             </div>
@@ -267,14 +269,14 @@ export function PostFeed({
               {(searchSlot.query.trim() || activeFilterCount > 0) && (
                 <button
                   aria-label="Reset filters"
-                  className="text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="text-foreground hover:opacity-80 flex h-9 min-w-9 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
                     handleResetFilters();
                     searchSlot.onResetAll?.();
                   }}
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-5 w-5" />
                 </button>
               )}
             </div>
@@ -366,11 +368,11 @@ export function PostFeed({
                   />
                   <button
                     aria-label="Reset filters"
-                    className="text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    className="text-foreground hover:opacity-80 flex h-9 min-w-9 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                     type="button"
                     onClick={handleResetFilters}
                   >
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="h-5 w-5" />
                   </button>
                 </div>
               </div>
