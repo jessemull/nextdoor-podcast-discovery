@@ -53,6 +53,7 @@ export const PostCard = memo(function PostCard({
   showCheckbox = false,
 }: PostCardProps) {
   const scores = post.llm_scores;
+  const [carouselOverflows, setCarouselOverflows] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,6 +66,25 @@ export const PostCard = memo(function PostCard({
   const carouselUrls = imageUrls;
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!hasMultipleImages) return;
+    const el = carouselRef.current;
+    if (!el) return;
+
+    const checkOverflow = () => {
+      setCarouselOverflows(el.scrollWidth > el.clientWidth);
+    };
+
+    checkOverflow();
+    const raf = requestAnimationFrame(checkOverflow);
+    const ro = new ResizeObserver(checkOverflow);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [hasMultipleImages, carouselUrls.length]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -355,13 +375,13 @@ export const PostCard = memo(function PostCard({
         </div>
       </div>
 
-      {/* Images: main full-width, carousel below with arrows */}
+      {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
       {imageUrls.length > 0 && (
-        <div className="border-border mb-6 rounded-lg border">
+        <>
           <div
             className={cn(
-              "relative aspect-[21/10] w-full overflow-hidden border-b border-border bg-surface-hover",
-              hasMultipleImages ? "rounded-t-lg" : "rounded-b-lg rounded-t-lg"
+              "relative aspect-[21/10] w-full overflow-hidden rounded-lg border border-border bg-surface-hover",
+              hasMultipleImages ? "" : "mb-6"
             )}
           >
             <Image
@@ -373,19 +393,21 @@ export const PostCard = memo(function PostCard({
             />
           </div>
           {hasMultipleImages && (
-            <div className="relative flex items-center gap-1 rounded-b-lg p-2">
-              <button
-                aria-label="Previous image"
-                className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
-                type="button"
-                onClick={() => {
-                  carouselRef.current?.scrollBy({ left: -88, behavior: "smooth" });
-                }}
-              >
-                <ChevronLeft aria-hidden className="h-5 w-5 text-muted" />
-              </button>
+            <div className="relative mb-6 mt-2 flex items-center gap-1">
+              {carouselOverflows && (
+                <button
+                  aria-label="Previous image"
+                  className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  type="button"
+                  onClick={() => {
+                    carouselRef.current?.scrollBy({ left: -88, behavior: "smooth" });
+                  }}
+                >
+                  <ChevronLeft aria-hidden className="h-5 w-5 text-muted" />
+                </button>
+              )}
               <div
-                className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto py-1 scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+                className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto px-0 py-1 scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
                 ref={carouselRef}
               >
                 {carouselUrls.map((imageUrl, index) => (
@@ -410,19 +432,21 @@ export const PostCard = memo(function PostCard({
                   </button>
                 ))}
               </div>
-              <button
-                aria-label="Next image"
-                className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
-                type="button"
-                onClick={() => {
-                  carouselRef.current?.scrollBy({ left: 88, behavior: "smooth" });
-                }}
-              >
-                <ChevronRight aria-hidden className="h-5 w-5 text-muted" />
-              </button>
+              {carouselOverflows && (
+                <button
+                  aria-label="Next image"
+                  className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  type="button"
+                  onClick={() => {
+                    carouselRef.current?.scrollBy({ left: 88, behavior: "smooth" });
+                  }}
+                >
+                  <ChevronRight aria-hidden className="h-5 w-5 text-muted" />
+                </button>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Content */}
