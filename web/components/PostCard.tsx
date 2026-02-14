@@ -431,14 +431,22 @@ export const PostCard = memo(function PostCard({
           <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
             AI Summary
           </h3>
-          <p className="text-foreground text-sm">{scores.summary}</p>
+          <p
+            className="text-foreground text-sm"
+            style={{ opacity: 0.85 }}
+          >
+            {scores.summary}
+          </p>
         </div>
       )}
       <div className="mb-6">
         <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
           Original post
         </h3>
-        <p className="text-foreground text-sm">
+        <p
+          className="text-foreground text-sm"
+          style={{ opacity: 0.85 }}
+        >
           {expanded
             ? post.text
             : post.text.length > POST_PREVIEW_LENGTH
