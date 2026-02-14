@@ -7,12 +7,19 @@ import { cn } from "@/lib/utils";
 import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
 
+export interface PicksDefaultsSidebar {
+  picks_limit: number;
+  picks_min: number;
+  picks_min_podcast?: number;
+}
+
 export interface FilterSidebarProps {
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
   onReset: () => void;
   onSimilarityThresholdChange?: (value: number) => void;
+  picksDefaults: null | PicksDefaultsSidebar;
   setFilters: React.Dispatch<React.SetStateAction<PostFeedFilters>>;
   similarityThreshold?: number;
 }
@@ -59,9 +66,40 @@ export function FilterSidebar({
   neighborhoods,
   onReset,
   onSimilarityThresholdChange,
+  picksDefaults,
   setFilters,
   similarityThreshold,
 }: FilterSidebarProps) {
+  const picksOnlyChecked =
+    picksDefaults != null &&
+    filters.minScore === String(picksDefaults.picks_min) &&
+    (picksDefaults.picks_min_podcast == null
+      ? filters.minPodcastWorthy === ""
+      : filters.minPodcastWorthy === String(picksDefaults.picks_min_podcast));
+
+  const handlePicksOnlyChange = (checked: boolean) => {
+    if (checked && picksDefaults) {
+      setFilters((prev) => ({
+        ...prev,
+        minPodcastWorthy:
+          picksDefaults.picks_min_podcast != null
+            ? String(picksDefaults.picks_min_podcast)
+            : "",
+        minScore: String(picksDefaults.picks_min),
+        sort:
+          picksDefaults.picks_min_podcast != null ? "podcast_score" : "score",
+        sortOrder: "desc",
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        minPodcastWorthy: "",
+        minScore: "",
+        sort: "score",
+        sortOrder: "desc",
+      }));
+    }
+  };
   return (
     <aside
       aria-label="Filter posts"
@@ -131,6 +169,21 @@ export function FilterSidebar({
             Unused Only
           </label>
         </div>
+
+        {picksDefaults != null && (
+          <>
+            <h2 className={sectionHeadingClass}>Quick Filter</h2>
+            <label className={checkboxLabelClass}>
+              <input
+                checked={picksOnlyChecked}
+                className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                type="checkbox"
+                onChange={(e) => handlePicksOnlyChange(e.target.checked)}
+              />
+              Top Picks
+            </label>
+          </>
+        )}
 
         <h2 className={sectionHeadingClass}>Score Range</h2>
         <div className="flex flex-wrap items-center gap-2">
