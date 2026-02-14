@@ -1,30 +1,20 @@
 import { Suspense } from "react";
 
-import { ActiveConfigBadge } from "@/components/ActiveConfigBadge";
-import { PodcastPicks } from "@/components/PodcastPicks";
-import { PostFeed } from "@/components/PostFeed";
+import { FeedPageContent } from "./FeedPageContent";
 
 export default function FeedPage() {
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl">
-        {/* Podcast Picks - top-scoring unused posts (uses useSearchParams) */}
-        <Suspense
-          fallback={
-            <div className="h-32 animate-pulse rounded-card bg-surface" />
-          }
-        >
-          <PodcastPicks />
-        </Suspense>
-        {/* Post feed + quick filters */}
-        <section aria-label="Feed">
-          <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-foreground text-lg font-semibold">Feed</h2>
-            <ActiveConfigBadge />
+    <Suspense
+      fallback={
+        <main className="min-h-screen p-8">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-6 h-10 w-48 animate-pulse rounded bg-surface" />
+            <div className="h-96 animate-pulse rounded-card bg-surface" />
           </div>
-          <PostFeed />
-        </section>
-      </div>
-    </main>
+        </main>
+      }
+    >
+      <FeedPageContent />
+    </Suspense>
   );
 }
