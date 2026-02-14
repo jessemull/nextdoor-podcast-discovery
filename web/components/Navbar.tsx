@@ -55,8 +55,8 @@ export function Navbar() {
           <Link className={navLinkClass} href="/feed">
             Feed
           </Link>
-          <Link className={navLinkClass} href="/search">
-            Search
+          <Link className={navLinkClass} href="/feed?view=picks">
+            Picks
           </Link>
           <Link className={navLinkClass} href="/jobs">
             Jobs

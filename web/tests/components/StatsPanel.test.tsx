@@ -124,7 +124,7 @@ describe("StatsPanel", () => {
     expect(screen.queryByText("Top Categories")).not.toBeInTheDocument();
   });
 
-  it("should limit categories to top 5", async () => {
+  it("should display all categories", async () => {
     const statsWithManyCategories: StatsResponse = {
       ...mockStats,
       top_categories: [
@@ -149,11 +149,10 @@ describe("StatsPanel", () => {
       expect(screen.getByText("10")).toBeInTheDocument();
     });
 
-    // Should show first 5
     expect(screen.getByText("Cat5")).toBeInTheDocument();
     expect(screen.getByText("6")).toBeInTheDocument();
-    // Should not show 6th category
-    expect(screen.queryByText("Cat6")).not.toBeInTheDocument();
+    expect(screen.getByText("Cat6")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
   });
 
   it("should handle zero values correctly", async () => {

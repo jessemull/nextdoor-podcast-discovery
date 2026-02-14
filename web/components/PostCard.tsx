@@ -340,7 +340,7 @@ export const PostCard = memo(function PostCard({
                 )}
                 <Link
                   className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                  href={`/search?q=${encodeURIComponent(
+                  href={`/feed?q=${encodeURIComponent(
                     (post.text || scores?.summary || "").slice(0, 80)
                   )}`}
                   role="menuitem"
