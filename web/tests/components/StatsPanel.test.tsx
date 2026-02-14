@@ -184,9 +184,11 @@ describe("StatsPanel", () => {
     expect(screen.getByText("Scored")).toBeInTheDocument();
     expect(screen.getByText("Unscored")).toBeInTheDocument();
     expect(screen.getByText("Used")).toBeInTheDocument();
+    expect(screen.getByText("Scored %")).toBeInTheDocument();
 
-    // Verify stat cards (7 total: Total, Scored, Unscored, Used, Posts 24h, Embedding Backlog, Last Scrape)
-    const statCards = document.querySelectorAll("[class*='bg-surface-hover/50']");
-    expect(statCards.length).toBe(7);
+    // Verify stat cards (8 total: Total, Scored, Unscored, Scored %, Used, Posts 24h, Embedding Backlog, Last Scrape)
+    const statsSection = screen.getByRole("heading", { name: "Stats" }).closest("section");
+    const statCards = statsSection?.querySelectorAll("[class*='bg-surface-hover/50']") ?? [];
+    expect(statCards.length).toBe(8);
   });
 });

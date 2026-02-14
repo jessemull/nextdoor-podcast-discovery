@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   AudioLines,
   BadgeAlert,
   BadgeCheck,
@@ -10,10 +11,11 @@ import {
   Clock,
   Drama,
   Files,
-  Heart,
   Layers,
   Newspaper,
   PartyPopper,
+  PawPrint,
+  Percent,
   RefreshCw,
   Tag,
 } from "lucide-react";
@@ -25,8 +27,7 @@ import { formatCategoryLabel } from "@/lib/utils";
 import type { StatsResponse, TopicFrequency } from "@/lib/types";
 import type { ReactNode } from "react";
 
-const STATS_GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4";
+const STATS_GRID_CLASS = "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4";
 
 /** Compact datetime for "Last scrape" so it fits in the stat card. */
 function formatLastScrape(dateString: string): string {
@@ -44,8 +45,9 @@ const CATEGORY_ICONS: Record<string, ReactNode> = {
   drama: <Drama aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
   humor: <PartyPopper aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
   local_news: <Newspaper aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
-  lost_pet: <Heart aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
+  lost_pet: <PawPrint aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
   noise: <AudioLines aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
+  suspicious: <AlertTriangle aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
   wildlife: <Bird aria-hidden className="h-9 w-9" strokeWidth={1.5} />,
 };
 
@@ -98,7 +100,7 @@ function StatsSection({
       </h2>
       <div className={STATS_GRID_CLASS}>
         {loading
-          ? [...Array(7)].map((_, i) => (
+          ? [...Array(8)].map((_, i) => (
               <div
                 key={i}
                 className="flex min-h-[4.5rem] w-full min-w-0 items-center gap-3 rounded-lg border border-white/20 bg-surface-hover/50 p-3"
@@ -126,6 +128,15 @@ function StatsSection({
                   icon={<BadgeAlert aria-hidden className="h-9 w-9" strokeWidth={1.5} />}
                   label="Unscored"
                   value={String(stats.posts_unscored)}
+                />
+                <StatCell
+                  icon={<Percent aria-hidden className="h-9 w-9" strokeWidth={1.5} />}
+                  label="Scored %"
+                  value={
+                    stats.posts_total > 0
+                      ? `${Math.round((stats.posts_scored / stats.posts_total) * 100)}%`
+                      : "—"
+                  }
                 />
                 <StatCell
                   icon={<BookmarkCheck aria-hidden className="h-9 w-9" strokeWidth={1.5} />}
@@ -177,7 +188,7 @@ function CategoriesSection({
       </h3>
       <div className={STATS_GRID_CLASS}>
         {loading
-          ? [...Array(5)].map((_, i) => (
+          ? [...Array(8)].map((_, i) => (
               <div
                 key={i}
                 className="flex min-h-[4.5rem] w-full min-w-0 items-center gap-3 rounded-lg border border-white/20 bg-surface-hover/50 p-3"
@@ -189,7 +200,7 @@ function CategoriesSection({
                 </div>
               </div>
             ))
-          : categories.slice(0, 5).map((cat: TopicFrequency) => (
+          : categories.map((cat: TopicFrequency) => (
               <StatCell
                 key={cat.category}
                 icon={
