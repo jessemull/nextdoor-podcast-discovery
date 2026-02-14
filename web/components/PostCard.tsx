@@ -556,9 +556,11 @@ export const PostCard = memo(function PostCard({
                     <div className="flex-1">
                       <div className="bg-surface-hover h-2 overflow-hidden rounded-full">
                         <div
-                          className="bg-foreground/85 h-full rounded-full"
+                          className="h-full rounded-full"
                           style={{
                             width: `${(num / 10) * 100}%`,
+                            backgroundColor: "var(--foreground)",
+                            opacity: 0.85,
                           }}
                         />
                       </div>

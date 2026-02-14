@@ -47,6 +47,12 @@ export function PostDetailClient({
     }
   }, [postId]);
 
+  // Refetch from API on mount so we always have fresh data (including score breakdown)
+  useEffect(() => {
+    if (!postId) return;
+    void fetchPost();
+  }, [postId, fetchPost]);
+
   useEffect(() => {
     if (!post?.text || !postId) return;
 
