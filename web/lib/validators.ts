@@ -219,7 +219,7 @@ export const postsQuerySchema = z.object({
 export type PostsQuery = z.infer<typeof postsQuerySchema>;
 
 /** POST /api/posts/bulk body: query object (for apply_to_query). Same filters as GET /api/posts. */
-const postsBulkQuerySchema = z.object({
+export const postsBulkQuerySchema = z.object({
   category: z.string().optional(),
   ignored_only: z.boolean().optional(),
   min_podcast_worthy: z.number().min(0).max(10).optional(),
@@ -234,6 +234,13 @@ const postsBulkQuerySchema = z.object({
   sort: z.enum(["date", "podcast_score", "score"]).optional(),
   unused_only: z.boolean().optional(),
 });
+
+/** POST /api/posts/bulk/count body. */
+export const postsBulkCountBodySchema = z.object({
+  query: postsBulkQuerySchema,
+});
+
+export type PostsBulkCountBody = z.infer<typeof postsBulkCountBodySchema>;
 
 /** POST /api/posts/bulk body. Either post_ids or (apply_to_query and query). */
 export const postsBulkBodySchema = z

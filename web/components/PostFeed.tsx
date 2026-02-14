@@ -6,16 +6,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
 import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
-import { useBulkActions } from "@/lib/hooks/useBulkActions";
+import {
+  type BulkQuery,
+  type BulkActionType,
+  useBulkActions,
+} from "@/lib/hooks/useBulkActions";
 import {
   DEFAULT_FILTERS,
   usePostFeedFilters,
 } from "@/lib/hooks/usePostFeedFilters";
 import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
-import type { BulkQuery } from "@/lib/hooks/useBulkActions";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/Card";
+import { ConfirmModal } from "./ui/ConfirmModal";
 import { CustomSelect } from "./ui/CustomSelect";
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
@@ -45,6 +49,20 @@ export interface PostFeedSearchSlotProps {
   useKeywordSearch: boolean;
 }
 
+const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
+  ignore: "Ignore",
+  mark_used: "Mark As Used",
+  save: "Save",
+  unignore: "Unignore",
+};
+
+const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
+  ignore: "Ignore Posts",
+  mark_used: "Mark Posts As Used",
+  save: "Save Posts",
+  unignore: "Unignore Posts",
+};
+
 const SORT_OPTIONS = [
   { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
   { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
@@ -66,6 +84,11 @@ export function PostFeed({
 } = {}) {
   const router = useRouter();
   const [bulkMode, setBulkMode] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    action: BulkActionType;
+    count?: number;
+  } | null>(null);
+  const [countLoading, setCountLoading] = useState(false);
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
   const [selectAllChecked, setSelectAllChecked] = useState(false);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
@@ -324,16 +347,60 @@ export function PostFeed({
                     className="h-10 min-w-[11rem] shrink-0"
                     onChange={async (val) => {
                       if (!val) return;
-                      const action = val as "ignore" | "mark_used" | "save" | "unignore";
-                      await handleBulkAction(action, {
-                        applyToQuery: selectAllChecked,
-                      });
-                      setBulkMode(false);
-                      setSelectAllChecked(false);
+                      const action = val as BulkActionType;
+                      if (!selectAllChecked && selectedIds.size === 0) return;
+                      if (selectAllChecked) {
+                        setConfirmModal({ action });
+                        setCountLoading(true);
+                        try {
+                          const response = await fetch(
+                            "/api/posts/bulk/count",
+                            {
+                              body: JSON.stringify({
+                                query: getCurrentQuery(),
+                              }),
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              method: "POST",
+                            }
+                          );
+                          if (!response.ok) {
+                            const data = await response.json();
+                            setError(
+                              (data.error as string) ?? "Failed to get count"
+                            );
+                            setConfirmModal(null);
+                            return;
+                          }
+                          const {
+                            data: { count },
+                          } = await response.json();
+                          if (count === 0) {
+                            setError(
+                              "No posts match the current filters."
+                            );
+                            setConfirmModal(null);
+                            return;
+                          }
+                          setConfirmModal((prev) =>
+                            prev?.count === undefined
+                              ? { ...prev, count }
+                              : prev
+                          );
+                        } finally {
+                          setCountLoading(false);
+                        }
+                      } else {
+                        setConfirmModal({
+                          action,
+                          count: selectedIds.size,
+                        });
+                      }
                     }}
                     options={[
                       { label: "Ignore", value: "ignore" },
-                      { label: "Mark as used", value: "mark_used" },
+                      { label: "Mark As Used", value: "mark_used" },
                       { label: "Save", value: "save" },
                       { label: "Unignore", value: "unignore" },
                     ]}
@@ -592,6 +659,33 @@ export function PostFeed({
           </>
         )}
       </div>
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Confirm"
+        confirmLoading={bulkActionLoading}
+        counting={countLoading && confirmModal?.count === undefined}
+        message={
+          confirmModal?.count != null
+            ? `Are you sure you want to ${BULK_ACTION_LABELS[confirmModal.action]} ${confirmModal.count} post(s)?`
+            : undefined
+        }
+        onCancel={() => {
+          setConfirmModal(null);
+          if (countLoading) setCountLoading(false);
+        }}
+        onConfirm={async () => {
+          if (confirmModal?.count == null) return;
+          await handleBulkAction(confirmModal.action, {
+            applyToQuery: selectAllChecked,
+          });
+          setConfirmModal(null);
+          setBulkMode(false);
+          setSelectAllChecked(false);
+        }}
+        open={confirmModal != null}
+        title={confirmModal ? BULK_ACTION_TITLES[confirmModal.action] : ""}
+      />
     </div>
   );
 }
