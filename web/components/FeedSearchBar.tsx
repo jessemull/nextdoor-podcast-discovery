@@ -22,10 +22,8 @@ export interface FeedSearchBarProps {
   loading: boolean;
   onQueryChange: (value: string) => void;
   onSearch: () => void;
-  onSimilarityThresholdChange: (value: number) => void;
   onUseKeywordSearchChange: (value: boolean) => void;
   query: string;
-  similarityThreshold: number;
   useKeywordSearch: boolean;
 }
 
@@ -35,15 +33,14 @@ export function FeedSearchBar({
   loading,
   onQueryChange,
   onSearch,
-  onSimilarityThresholdChange,
   onUseKeywordSearchChange,
   query,
-  similarityThreshold,
   useKeywordSearch,
 }: FeedSearchBarProps) {
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -52,15 +49,23 @@ export function FeedSearchBar({
   useEffect(() => {
     if (!debouncedQuery.trim()) {
       setSuggestions([...SEARCH_SUGGESTIONS]);
+      setSuggestionsLoading(false);
       return;
     }
     const q = debouncedQuery.trim().toLowerCase();
+    setSuggestionsLoading(true);
     fetch(
       `/api/search/suggestions?q=${encodeURIComponent(q)}&limit=10`
     )
       .then((res) => (res.ok ? res.json() : { data: [] }))
-      .then((data) => setSuggestions(data.data ?? []))
-      .catch(() => setSuggestions([]));
+      .then((data) => {
+        setSuggestions(data.data ?? []);
+        setSuggestionsLoading(false);
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setSuggestionsLoading(false);
+      });
   }, [debouncedQuery]);
 
   const handleKeyDown = useCallback(
@@ -120,7 +125,8 @@ export function FeedSearchBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const showDropdown = suggestionsOpen && suggestions.length > 0;
+  const showDropdown =
+    suggestionsOpen && (suggestionsLoading || suggestions.length > 0);
 
   return (
     <div className="mb-6 w-full min-w-0 space-y-4">
@@ -174,7 +180,12 @@ export function FeedSearchBar({
             className="border-border bg-surface absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
             role="listbox"
           >
-            {suggestions.map((s, i) => (
+            {suggestionsLoading ? (
+              <li className="px-4 py-3 text-muted-foreground text-sm">
+                Loading suggestions…
+              </li>
+            ) : (
+              suggestions.map((s, i) => (
               <li
                 id={`search-suggestion-${i}`}
                 key={s}
@@ -194,7 +205,8 @@ export function FeedSearchBar({
               >
                 {s}
               </li>
-            ))}
+            ))
+            )}
           </ul>
         )}
       </div>
@@ -209,35 +221,6 @@ export function FeedSearchBar({
           embeddings. Semantic search may miss some recent posts until the
           daily embed job runs.
         </p>
-      )}
-
-      {query.trim() && !useKeywordSearch && (
-        <Card className="p-4">
-          <label
-            className="text-muted-foreground mb-2 block text-sm"
-            htmlFor="feed-similarity-threshold"
-          >
-            Similarity Threshold: {similarityThreshold.toFixed(1)} (Lower = More
-            Results, Higher = More Precise)
-          </label>
-          <input
-            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
-            id="feed-similarity-threshold"
-            max={1}
-            min={0}
-            step={0.1}
-            type="range"
-            value={similarityThreshold}
-            onChange={(e) =>
-              onSimilarityThresholdChange(parseFloat(e.target.value))
-            }
-          />
-          <div className="text-muted-foreground mt-1 flex justify-between text-xs">
-            <span>0.0 (Loose)</span>
-            <span>0.5 (Balanced)</span>
-            <span>1.0 (Strict)</span>
-          </div>
-        </Card>
       )}
     </div>
   );

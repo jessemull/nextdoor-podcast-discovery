@@ -6,8 +6,6 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { PodcastPicks } from "@/components/PodcastPicks";
 import { PostFeed } from "@/components/PostFeed";
 import { cn } from "@/lib/utils";
-import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
-import { useDebounce } from "@/lib/hooks";
 import { useSearchResults } from "@/lib/hooks/useSearchResults";
 
 interface SettingsResponse {
@@ -27,6 +25,7 @@ export function FeedPageContent() {
   const qFromUrl = searchParams.get("q") ?? "";
   const thresholdFromUrl = searchParams.get("threshold");
 
+  const [lastSearchedQuery, setLastSearchedQuery] = useState("");
   const [query, setQuery] = useState("");
   const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
   const [embeddingBacklog, setEmbeddingBacklog] = useState(0);
@@ -99,8 +98,6 @@ export function FeedPageContent() {
     void loadDefaults();
   }, [thresholdFromUrl]);
 
-  const debouncedQuery = useDebounce(query, DEBOUNCE_DELAY_MS);
-
   const {
     error: searchError,
     handleMarkSaved,
@@ -112,14 +109,10 @@ export function FeedPageContent() {
     total: searchTotal,
   } = useSearchResults({
     minScore: "",
-    query: debouncedQuery,
+    query,
     similarityThreshold,
     useKeywordSearch,
   });
-
-  useEffect(() => {
-    void runSearch(debouncedQuery);
-  }, [debouncedQuery, runSearch]);
 
   const updateUrl = useCallback(
     (updates: { q?: string; threshold?: number; view?: "feed" | "picks" }) => {
@@ -145,13 +138,9 @@ export function FeedPageContent() {
     [router, searchParams]
   );
 
-  const handleQueryChange = useCallback(
-    (value: string) => {
-      setQuery(value);
-      updateUrl({ q: value });
-    },
-    [updateUrl]
-  );
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+  }, []);
 
   const handleThresholdChange = useCallback(
     (value: number) => {
@@ -162,13 +151,18 @@ export function FeedPageContent() {
   );
 
   const handleSearch = useCallback(() => {
-    void runSearch(query.trim());
-  }, [query, runSearch]);
+    const q = query.trim();
+    setLastSearchedQuery(q);
+    void runSearch(q);
+    updateUrl({ q });
+  }, [query, runSearch, updateUrl]);
 
   const handleResetAll = useCallback(() => {
     setQuery("");
+    setLastSearchedQuery("");
     updateUrl({ q: "" });
-  }, [updateUrl]);
+    void runSearch("");
+  }, [runSearch, updateUrl]);
 
   return (
     <main
@@ -197,7 +191,7 @@ export function FeedPageContent() {
         >
           <PostFeed
               searchSlot={{
-                debouncedQuery,
+                debouncedQuery: lastSearchedQuery,
                 embeddingBacklog,
                 loadDefaultsError,
                 loading: searchLoading,

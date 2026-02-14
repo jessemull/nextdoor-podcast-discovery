@@ -69,3 +69,28 @@ body {
 .select-caret option {
   cursor: pointer;
 }
+
+/* Search similarity slider: visible grey thumb and fill */
+.similarity-slider {
+  accent-color: var(--muted-foreground);
+}
+.similarity-slider::-webkit-slider-thumb {
+  appearance: none;
+  background: var(--muted-foreground);
+  border-radius: 9999px;
+  cursor: pointer;
+  height: 0.75rem;
+  width: 0.75rem;
+}
+.similarity-slider::-moz-range-thumb {
+  background: var(--muted-foreground);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  height: 0.75rem;
+  width: 0.75rem;
+}
+.similarity-slider::-moz-range-progress {
+  background: var(--muted-foreground);
+  border-radius: 9999px;
+}
