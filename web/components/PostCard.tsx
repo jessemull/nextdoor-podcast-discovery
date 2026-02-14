@@ -559,8 +559,9 @@ export const PostCard = memo(function PostCard({
                           className="h-full rounded-full"
                           style={{
                             width: `${(num / 10) * 100}%`,
-                            backgroundColor: "var(--foreground)",
-                            opacity: 0.85,
+                            background:
+                              "linear-gradient(90deg, rgb(71 85 105), rgb(34 211 238))",
+                            opacity: 0.9,
                           }}
                         />
                       </div>
