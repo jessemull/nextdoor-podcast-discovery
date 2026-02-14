@@ -173,32 +173,31 @@ export const PostCard = memo(function PostCard({
 
   return (
     <Card className="px-4 py-5 transition-colors hover:border-border-focus">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          {showCheckbox && onSelect && (
-            <input
-              aria-label={`Select post from ${neighborhoodName}`}
-              checked={selected}
-              className="rounded border-border bg-surface-hover"
-              type="checkbox"
-              onChange={(e) => onSelect(post.id, e.target.checked)}
-            />
-          )}
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 truncate">
-            {scores?.final_score != null && (
-              <>
-                <span
-                  className={cn(
-                    "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold",
-                    scoreColorClass || "text-foreground",
-                    scoreCircleBorderClass || "border-border"
-                  )}
-                >
-                  {scores.final_score.toFixed(1)}
-                </span>
-                <span className="text-muted-foreground text-sm">•</span>
-              </>
+      {/* Header: score column (when present) | metadata + tags | actions */}
+      <div className="mb-6 flex items-start justify-between gap-3">
+        {scores?.final_score != null && (
+          <div className="flex w-14 shrink-0 items-center justify-center">
+            <span
+              className={cn(
+                "inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold",
+                scoreColorClass || "text-foreground",
+                scoreCircleBorderClass || "border-border"
+              )}
+            >
+              {scores.final_score.toFixed(1)}
+            </span>
+          </div>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+            {showCheckbox && onSelect && (
+              <input
+                aria-label={`Select post from ${neighborhoodName}`}
+                checked={selected}
+                className="hidden rounded border-border bg-surface-hover"
+                type="checkbox"
+                onChange={(e) => onSelect(post.id, e.target.checked)}
+              />
             )}
             {post.author_name && (
               <>
@@ -227,9 +226,7 @@ export const PostCard = memo(function PostCard({
             )}
           </div>
           {scores?.categories && scores.categories.length > 0 && (
-            <>
-              <span className="text-muted-foreground text-sm">•</span>
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {scores.categories.slice(0, 5).map((category: string, index: number) => (
                 <span
                   key={`${category}-${index}`}
@@ -238,8 +235,7 @@ export const PostCard = memo(function PostCard({
                   {formatCategoryLabel(category)}
                 </span>
               ))}
-              </div>
-            </>
+            </div>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
