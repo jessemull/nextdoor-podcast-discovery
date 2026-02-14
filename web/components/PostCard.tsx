@@ -172,7 +172,7 @@ export const PostCard = memo(function PostCard({
             : "border-emerald-500";
 
   return (
-    <Card className="transition-colors hover:border-border-focus">
+    <Card className="px-4 py-5 transition-colors hover:border-border-focus">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -523,7 +523,7 @@ export const PostCard = memo(function PostCard({
           </p>
         </div>
       )}
-      <div className="mb-6">
+      <div>
         <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
           Original post
         </h3>
