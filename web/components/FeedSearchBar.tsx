@@ -146,7 +146,7 @@ export function FeedSearchBar({
           aria-autocomplete="list"
           aria-expanded={showDropdown}
           aria-label="Search for posts"
-          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none"
+          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent mr-2 px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none"
           placeholder="Search for posts..."
           type="text"
           value={query}
