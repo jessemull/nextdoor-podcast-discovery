@@ -194,7 +194,7 @@ export function RankingWeightsEditor({
         </div>
       ))}
 
-      <div className="mt-6 flex gap-4">
+      <div className="mt-6 flex justify-end gap-4">
         <Button
           className="border border-border"
           variant="ghost"
@@ -223,21 +223,23 @@ export function RankingWeightsEditor({
         onCancel={() => setSaveModalOpen(false)}
         onConfirm={handleConfirmSave}
         open={saveModalOpen}
-        title="Name this config"
+        title="Adding Weight Configuration"
       >
-        <label className="block">
-          <span className="text-foreground mb-1 block text-sm" style={{ opacity: 0.85 }}>
-            Config name (required)
-          </span>
-          <input
-            autoFocus
-            className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-            placeholder="e.g. Episode 5 Prep, Comedy Focus"
-            type="text"
-            value={saveModalName}
-            onChange={(e) => setSaveModalName(e.target.value)}
-          />
-        </label>
+        <div className="py-1">
+          <label className="block">
+            <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
+              Weight Configuration Name
+            </span>
+            <input
+              autoFocus
+              className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              placeholder="Enter a name..."
+              type="text"
+              value={saveModalName}
+              onChange={(e) => setSaveModalName(e.target.value)}
+            />
+          </label>
+        </div>
       </ConfirmModal>
     </Card>
   );
