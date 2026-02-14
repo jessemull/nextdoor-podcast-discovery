@@ -428,14 +428,14 @@ export const PostCard = memo(function PostCard({
       {/* Content */}
       {scores?.summary && (
         <div className="mb-6">
-          <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+          <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
             AI Summary
           </h3>
           <p className="text-foreground text-sm">{scores.summary}</p>
         </div>
       )}
       <div className="mb-6">
-        <h3 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+        <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
           Original post
         </h3>
         <p className="text-foreground text-sm">
