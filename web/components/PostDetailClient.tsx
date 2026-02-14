@@ -20,7 +20,7 @@ import {
 
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, formatTitleCase } from "@/lib/utils";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -233,7 +233,7 @@ export function PostDetailClient({
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                {post.neighborhood?.name || "Unknown"}
+                {formatTitleCase(post.neighborhood?.name || "Unknown")}
               </span>
               <span className="text-muted-foreground mx-2">•</span>
               <span className="text-muted-foreground text-xs">
