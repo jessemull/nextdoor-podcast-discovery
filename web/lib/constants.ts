@@ -24,3 +24,17 @@ export type TopicCategory = (typeof TOPIC_CATEGORIES)[number];
  * Used to prevent excessive API calls while user is typing.
  */
 export const DEBOUNCE_DELAY_MS = 500;
+
+/**
+ * Default search suggestions for autocomplete (alphabetically sorted).
+ */
+export const SEARCH_SUGGESTIONS = [
+  "coyote",
+  "HOA",
+  "lost cat",
+  "lost dog",
+  "noisy neighbors",
+  "package stolen",
+  "suspicious",
+  "wildlife",
+] as const;

@@ -6,15 +6,21 @@ import { useDebounce } from "@/lib/hooks";
 
 type SortOption = "date" | "podcast_score" | "score";
 
+export type SortOrder = "asc" | "desc";
+
 export interface PostFeedFilters {
   category: string;
   ignoredOnly: boolean;
+  maxPodcastWorthy: string;
+  maxReactionCount: string;
+  maxScore: string;
   minPodcastWorthy: string;
   minReactionCount: string;
   minScore: string;
   neighborhoodId: string;
   savedOnly: boolean;
   sort: SortOption;
+  sortOrder: SortOrder;
   unusedOnly: boolean;
 }
 
@@ -25,6 +31,9 @@ export interface Neighborhood {
 }
 
 export interface UsePostFeedFiltersResult {
+  debouncedMaxPodcastWorthy: string;
+  debouncedMaxReactionCount: string;
+  debouncedMaxScore: string;
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
@@ -34,15 +43,19 @@ export interface UsePostFeedFiltersResult {
   setFilters: React.Dispatch<React.SetStateAction<PostFeedFilters>>;
 }
 
-const DEFAULT_FILTERS: PostFeedFilters = {
+export const DEFAULT_FILTERS: PostFeedFilters = {
   category: "",
   ignoredOnly: false,
+  maxPodcastWorthy: "",
+  maxReactionCount: "",
+  maxScore: "",
   minPodcastWorthy: "",
   minReactionCount: "",
   minScore: "",
   neighborhoodId: "",
   savedOnly: false,
   sort: "score",
+  sortOrder: "desc",
   unusedOnly: false,
 };
 
@@ -57,6 +70,15 @@ export function usePostFeedFilters(
   const [filters, setFilters] = useState<PostFeedFilters>(DEFAULT_FILTERS);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
 
+  const debouncedMaxPodcastWorthy = useDebounce(
+    filters.maxPodcastWorthy,
+    debounceDelayMs
+  );
+  const debouncedMaxReactionCount = useDebounce(
+    filters.maxReactionCount,
+    debounceDelayMs
+  );
+  const debouncedMaxScore = useDebounce(filters.maxScore, debounceDelayMs);
   const debouncedMinScore = useDebounce(filters.minScore, debounceDelayMs);
   const debouncedMinPodcastWorthy = useDebounce(
     filters.minPodcastWorthy,
@@ -81,6 +103,9 @@ export function usePostFeedFilters(
   }, []);
 
   return {
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,

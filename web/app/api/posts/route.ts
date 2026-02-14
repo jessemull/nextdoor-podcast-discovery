@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     min_score: searchParams.get("min_score") ?? undefined,
     neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
+    order: searchParams.get("order") ?? undefined,
     saved_only: searchParams.get("saved_only") ?? undefined,
     sort: searchParams.get("sort") ?? undefined,
     unused_only: searchParams.get("unused_only") ?? undefined,
@@ -63,10 +64,12 @@ export async function GET(request: NextRequest) {
     min_score: minScoreParam,
     neighborhood_id: neighborhoodId,
     offset,
+    order,
     saved_only: savedOnly,
     sort,
     unused_only: unusedOnly,
   } = parsed.data;
+  const orderAsc = order === "asc";
   const minScore =
     minScoreParam != null ? String(minScoreParam) : null;
   const minPodcastWorthy =
@@ -89,6 +92,7 @@ export async function GET(request: NextRequest) {
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
+        orderAsc,
         savedOnly,
         unusedOnly,
       });
@@ -106,6 +110,7 @@ export async function GET(request: NextRequest) {
         minScore,
         neighborhoodId: neighborhoodId ?? null,
         offset,
+        orderAsc,
         orderBy,
         savedOnly,
         unusedOnly,
@@ -134,6 +139,7 @@ interface QueryParams {
   minScore: null | string;
   neighborhoodId: null | string;
   offset: number;
+  orderAsc: boolean;
   orderBy?: "podcast_worthy" | "score";
   savedOnly: boolean;
   unusedOnly: boolean;
@@ -184,6 +190,7 @@ async function getPostsByScore(
     minScore,
     neighborhoodId,
     offset,
+    orderAsc,
     orderBy = "score",
     savedOnly,
     unusedOnly,
@@ -262,6 +269,7 @@ async function getPostsByScore(
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
+      p_order_asc: orderAsc,
       p_order_by: orderBy,
       p_saved_only: savedOnly,
       p_unused_only: unusedOnly,
@@ -386,6 +394,7 @@ async function getPostsByDate(
     minScore,
     neighborhoodId,
     offset,
+    orderAsc,
     savedOnly,
     unusedOnly,
   } = params;
@@ -404,6 +413,7 @@ async function getPostsByDate(
       p_min_score: validMinScore,
       p_neighborhood_id: neighborhoodId,
       p_offset: offset,
+      p_order_asc: orderAsc,
       p_saved_only: savedOnly,
       p_unused_only: unusedOnly,
     }

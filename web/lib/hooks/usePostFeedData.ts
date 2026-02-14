@@ -58,6 +58,7 @@ export function usePostFeedData(
         searchParams.set("limit", String(POSTS_PER_PAGE));
         searchParams.set("offset", String(currentOffset));
         searchParams.set("sort", filters.sort);
+        searchParams.set("order", filters.sortOrder);
 
         if (filters.category) searchParams.set("category", filters.category);
         if (filters.neighborhoodId) {
@@ -119,6 +120,7 @@ export function usePostFeedData(
       filters.neighborhoodId,
       filters.savedOnly,
       filters.sort,
+      filters.sortOrder,
       filters.unusedOnly,
     ]
   );

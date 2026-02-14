@@ -209,6 +209,7 @@ export const postsQuerySchema = z.object({
     .enum(["date", "podcast_score", "score"])
     .optional()
     .default("score"),
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
   unused_only: z
     .string()
     .optional()

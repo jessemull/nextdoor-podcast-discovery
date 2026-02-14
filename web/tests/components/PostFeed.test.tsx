@@ -1,4 +1,9 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -225,14 +230,17 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    const categorySelect = screen.getByLabelText(/category/i);
-    await user.selectOptions(categorySelect, "humor");
+    const humorCheckbox = screen.getByRole("checkbox", { name: /humor/i });
+    await user.click(humorCheckbox);
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("category=humor")
-      );
-    });
+    await waitFor(
+      () => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining("category=humor")
+        );
+      },
+      { timeout: 1000 }
+    );
   });
 
   it("should filter by minimum score when minScore is entered", async () => {
@@ -248,7 +256,8 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    const minScoreInput = screen.getByLabelText(/min score/i);
+    const sidebar = screen.getByRole("complementary", { name: /filter posts/i });
+    const minScoreInput = within(sidebar).getByLabelText(/min score/i);
     await user.type(minScoreInput, "8");
 
     // Wait for debounce delay (500ms) plus a small buffer
@@ -298,8 +307,8 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    const sortSelect = screen.getByLabelText(/sort/i);
-    await user.selectOptions(sortSelect, "date");
+    const sortSelect = screen.getByLabelText(/sort posts/i);
+    await user.selectOptions(sortSelect, "Newest first");
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -399,6 +408,41 @@ describe("PostFeed", () => {
     });
   });
 
+  it("should reset filters when Reset filters button is clicked", async () => {
+    const user = userEvent.setup();
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      createFetchMock({ data: mockPosts, total: 2 })
+    );
+
+    render(<PostFeed />);
+
+    await waitFor(() => {
+      expect(screen.getByText("First post")).toBeInTheDocument();
+    });
+
+    const humorCheckbox = screen.getByRole("checkbox", { name: /humor/i });
+    await user.click(humorCheckbox);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("category=humor")
+      );
+    });
+
+    const resetButton = screen.getByRole("button", {
+      name: /reset filters/i,
+    });
+    await user.click(resetButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.not.stringContaining("category=humor")
+      );
+    });
+    expect(humorCheckbox).not.toBeChecked();
+  });
+
   it("should validate minScore input to only allow non-negative numbers", async () => {
     const user = userEvent.setup();
 
@@ -412,7 +456,10 @@ describe("PostFeed", () => {
       expect(screen.getByText("First post")).toBeInTheDocument();
     });
 
-    const minScoreInput = screen.getByLabelText(/min score/i) as HTMLInputElement;
+    const sidebar = screen.getByRole("complementary", { name: /filter posts/i });
+    const minScoreInput = within(sidebar).getByLabelText(
+      /min score/i
+    ) as HTMLInputElement;
 
     // Try to enter negative number
     await user.clear(minScoreInput);
