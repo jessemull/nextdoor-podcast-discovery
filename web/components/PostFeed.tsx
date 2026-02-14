@@ -16,6 +16,7 @@ import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 import { BulkActionBar } from "./BulkActionBar";
+import { CustomSelect } from "./ui/CustomSelect";
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
 import { PostCard } from "./PostCard";
@@ -216,7 +217,7 @@ export function PostFeed({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
         {searchSlot && (
           <div className="flex w-full items-stretch gap-2">
-            <div className="flex h-9 min-w-0 max-w-full flex-1 overflow-hidden">
+            <div className="flex h-9 min-w-0 max-w-full flex-1">
               <FeedSearchBar
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
@@ -244,12 +245,11 @@ export function PostFeed({
                   </span>
                 )}
               </button>
-              <select
-                aria-label="Sort Posts"
-                className="select-caret h-9 min-w-[11rem] shrink-0 rounded-card border border-border bg-surface-hover pl-3 pr-10 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
-                value={SORT_OPTIONS.indexOf(currentSortOption)}
-                onChange={(e) => {
-                  const opt = SORT_OPTIONS[Number(e.target.value)];
+              <CustomSelect
+                ariaLabel="Sort Posts"
+                className="h-9 min-w-[11rem] shrink-0"
+                onChange={(val) => {
+                  const opt = SORT_OPTIONS[Number(val)];
                   if (opt) {
                     setFilters((prev) => ({
                       ...prev,
@@ -258,13 +258,12 @@ export function PostFeed({
                     }));
                   }
                 }}
-              >
-                {SORT_OPTIONS.map((opt, i) => (
-                  <option key={opt.label} value={i}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                options={SORT_OPTIONS.map((o, i) => ({
+                  label: o.label,
+                  value: String(i),
+                }))}
+                value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+              />
               {(searchSlot.query.trim() || activeFilterCount > 0) && (
                 <button
                   aria-label="Reset filters"
@@ -346,12 +345,11 @@ export function PostFeed({
                       </span>
                     )}
                   </button>
-                  <select
-                    aria-label="Sort Posts"
-                    className="select-caret h-9 min-w-[11rem] rounded-card border border-border bg-surface-hover pl-3 pr-10 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
-                    value={SORT_OPTIONS.indexOf(currentSortOption)}
-                    onChange={(e) => {
-                      const opt = SORT_OPTIONS[Number(e.target.value)];
+                  <CustomSelect
+                    ariaLabel="Sort Posts"
+                    className="h-9 min-w-[11rem]"
+                    onChange={(val) => {
+                      const opt = SORT_OPTIONS[Number(val)];
                       if (opt) {
                         setFilters((prev) => ({
                           ...prev,
@@ -360,13 +358,12 @@ export function PostFeed({
                         }));
                       }
                     }}
-                  >
-                    {SORT_OPTIONS.map((opt, i) => (
-                      <option key={opt.label} value={i}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={SORT_OPTIONS.map((o, i) => ({
+                      label: o.label,
+                      value: String(i),
+                    }))}
+                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+                  />
                   <button
                     aria-label="Reset filters"
                     className="text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
