@@ -54,10 +54,15 @@ export const PostCard = memo(function PostCard({
 }: PostCardProps) {
   const scores = post.llm_scores;
   const [carouselOverflows, setCarouselOverflows] = useState(false);
+  const [carouselDragging, setCarouselDragging] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const carouselDragStart = useRef<{ scrollLeft: number; x: number } | null>(null);
+  const carouselDidDrag = useRef(false);
+  const carouselIgnoreNextClick = useRef(false);
+  const carouselPendingIndex = useRef<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const imageUrls = post.image_urls ?? [];
@@ -66,6 +71,48 @@ export const PostCard = memo(function PostCard({
   const carouselUrls = imageUrls;
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  const handleCarouselPointerDown = useCallback((e: React.PointerEvent) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const thumb = (e.target as HTMLElement).closest("[data-thumb-index]");
+    carouselPendingIndex.current =
+      thumb != null ? Number((thumb as HTMLElement).dataset.thumbIndex) : null;
+    carouselDragStart.current = { scrollLeft: el.scrollLeft, x: e.clientX };
+    carouselDidDrag.current = false;
+    setCarouselDragging(false);
+    el.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleCarouselPointerMove = useCallback((e: React.PointerEvent) => {
+    const el = carouselRef.current;
+    const start = carouselDragStart.current;
+    if (!el || !start) return;
+    e.preventDefault();
+    const dx = start.x - e.clientX;
+    if (Math.abs(dx) > 5) {
+      carouselDidDrag.current = true;
+      setCarouselDragging(true);
+    }
+    el.scrollLeft = start.scrollLeft + dx;
+  }, []);
+
+  const handleCarouselPointerUp = useCallback(() => {
+    if (carouselDidDrag.current) {
+      carouselIgnoreNextClick.current = true;
+      setTimeout(() => {
+        carouselIgnoreNextClick.current = false;
+      }, 0);
+    } else if (carouselPendingIndex.current != null) {
+      setMainImageIndex(carouselPendingIndex.current);
+    }
+    carouselDragStart.current = null;
+    carouselPendingIndex.current = null;
+    carouselDidDrag.current = false;
+    setCarouselDragging(false);
+  }, []);
 
   useEffect(() => {
     if (!hasMultipleImages) return;
@@ -397,30 +444,43 @@ export const PostCard = memo(function PostCard({
               {carouselOverflows && (
                 <button
                   aria-label="Previous image"
-                  className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="cursor-pointer flex shrink-0 rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
                     carouselRef.current?.scrollBy({ left: -88, behavior: "smooth" });
                   }}
                 >
-                  <ChevronLeft aria-hidden className="h-5 w-5 text-muted" />
+                  <ChevronLeft aria-hidden className="h-5 w-5 text-foreground" />
                 </button>
               )}
               <div
-                className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto px-0 py-1 scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+                className={cn(
+                  "flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto px-0 py-1 scroll-smooth [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden",
+                  carouselOverflows && (carouselDragging ? "cursor-grabbing" : "cursor-grab")
+                )}
                 ref={carouselRef}
+                onPointerDownCapture={handleCarouselPointerDown}
+                onPointerMove={handleCarouselPointerMove}
+                onPointerUp={handleCarouselPointerUp}
+                onPointerLeave={handleCarouselPointerUp}
+                onPointerCancel={handleCarouselPointerUp}
               >
                 {carouselUrls.map((imageUrl, index) => (
                   <button
                     key={`${post.id}-thumb-${index}`}
+                    aria-pressed={index === mainImageIndex}
                     className={cn(
-                      "relative h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors",
+                      "relative h-16 w-16 shrink-0 cursor-inherit overflow-hidden rounded border-2 transition-colors",
                       index === mainImageIndex
                         ? "border-foreground"
                         : "border-border hover:border-border-focus"
                     )}
+                    data-thumb-index={index}
                     type="button"
-                    onClick={() => setMainImageIndex(index)}
+                    onClick={() => {
+                      if (carouselIgnoreNextClick.current) return;
+                      setMainImageIndex(index);
+                    }}
                   >
                     <Image
                       alt={`Image ${index + 1}`}
@@ -435,13 +495,13 @@ export const PostCard = memo(function PostCard({
               {carouselOverflows && (
                 <button
                   aria-label="Next image"
-                  className="flex shrink-0 rounded p-1 transition-colors hover:bg-surface-hover disabled:opacity-40"
+                  className="cursor-pointer flex shrink-0 rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
                     carouselRef.current?.scrollBy({ left: 88, behavior: "smooth" });
                   }}
                 >
-                  <ChevronRight aria-hidden className="h-5 w-5 text-muted" />
+                  <ChevronRight aria-hidden className="h-5 w-5 text-foreground" />
                 </button>
               )}
             </div>

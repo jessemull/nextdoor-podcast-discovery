@@ -159,7 +159,7 @@ export function PodcastPicks() {
     return picks.map((post, i) => {
       if (i !== idx) return post;
       const urls = post.image_urls ?? [];
-      const repeated = Array.from({ length: 10 }, () => urls[0]);
+      const repeated = Array.from({ length: 20 }, () => urls[0]);
       return { ...post, image_urls: repeated };
     });
   }, [picks]);
