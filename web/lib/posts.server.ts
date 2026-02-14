@@ -37,6 +37,18 @@ export async function getPostById(id: string): Promise<null | PostWithScores> {
     neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
   } & Database["public"]["Tables"]["posts"]["Row"];
 
+  const rawScores = llmScore?.scores;
+  const parsedScores =
+    typeof rawScores === "string"
+      ? (() => {
+          try {
+            return (JSON.parse(rawScores) as LLMScore["scores"]) || {};
+          } catch {
+            return {};
+          }
+        })()
+      : (rawScores as LLMScore["scores"]) || {};
+
   const result: PostWithScores = {
     ...postRow,
     image_urls: (postRow.image_urls as string[]) || [],
@@ -48,7 +60,7 @@ export async function getPostById(id: string): Promise<null | PostWithScores> {
           id: llmScore.id,
           model_version: llmScore.model_version || "claude-3-haiku-20240307",
           post_id: llmScore.post_id,
-          scores: (llmScore.scores as LLMScore["scores"]) || {},
+          scores: parsedScores,
           summary: llmScore.summary,
           why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
         } as LLMScore)

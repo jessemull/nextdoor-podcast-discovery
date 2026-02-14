@@ -523,16 +523,26 @@ export const PostCard = memo(function PostCard({
       )}
 
       {/* Score breakdown (detail page only) */}
-      {showScoreBreakdown &&
-        scores?.scores &&
-        Object.keys(scores.scores).length > 0 && (
+      {showScoreBreakdown && (() => {
+        const raw = scores?.scores;
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+        const entries = Object.entries(raw).filter(
+          (entry): entry is [string, number] => {
+            const v = entry[1];
+            const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+            return Number.isFinite(n) && n >= 0 && n <= 10;
+          }
+        );
+        if (entries.length === 0) return null;
+        return (
           <div className="mb-6">
             <h3 className="text-foreground mb-2 text-base font-semibold uppercase tracking-wide">
               Score breakdown
             </h3>
             <div className="space-y-2">
-              {(Object.entries(scores.scores) as [keyof DimensionScores, number][]).map(
-                ([key, value]) => (
+              {entries.map(([key, value]) => {
+                const num = typeof value === "number" ? value : Number(value);
+                return (
                   <div
                     key={key}
                     className="flex items-center gap-3"
@@ -541,14 +551,14 @@ export const PostCard = memo(function PostCard({
                       className="text-foreground w-28 text-sm"
                       style={{ opacity: 0.85 }}
                     >
-                      {DIMENSION_LABELS[key] ?? key}
+                      {DIMENSION_LABELS[key as keyof DimensionScores] ?? key}
                     </span>
                     <div className="flex-1">
                       <div className="bg-surface-hover h-2 overflow-hidden rounded-full">
                         <div
                           className="bg-foreground/85 h-full rounded-full"
                           style={{
-                            width: `${((value as number) / 10) * 100}%`,
+                            width: `${(num / 10) * 100}%`,
                           }}
                         />
                       </div>
@@ -557,14 +567,15 @@ export const PostCard = memo(function PostCard({
                       className="text-foreground w-8 text-right text-sm"
                       style={{ opacity: 0.85 }}
                     >
-                      {(value as number).toFixed(1)}
+                      {num.toFixed(1)}
                     </span>
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           </div>
-        )}
+        );
+      })()}
 
       {/* Content */}
       {scores?.summary && (
