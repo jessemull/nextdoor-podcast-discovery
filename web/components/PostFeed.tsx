@@ -46,12 +46,12 @@ export interface PostFeedSearchSlotProps {
 }
 
 const SORT_OPTIONS = [
-  { label: "Score (high to low)", sort: "score" as const, sortOrder: "desc" as const },
-  { label: "Score (low to high)", sort: "score" as const, sortOrder: "asc" as const },
-  { label: "Podcast score (high to low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
-  { label: "Podcast score (low to high)", sort: "podcast_score" as const, sortOrder: "asc" as const },
-  { label: "Newest first", sort: "date" as const, sortOrder: "desc" as const },
-  { label: "Oldest first", sort: "date" as const, sortOrder: "asc" as const },
+  { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
+  { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
+  { label: "Podcast Score (High to Low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
+  { label: "Podcast Score (Low to High)", sort: "podcast_score" as const, sortOrder: "asc" as const },
+  { label: "Newest First", sort: "date" as const, sortOrder: "desc" as const },
+  { label: "Oldest First", sort: "date" as const, sortOrder: "asc" as const },
 ];
 
 /**
@@ -166,7 +166,7 @@ export function PostFeed({
     ) ?? SORT_OPTIONS[0];
 
   return (
-    <div className="flex min-h-0 flex-1 gap-6">
+    <div className="flex min-h-0 flex-1 gap-4 sm:gap-6">
       {/* Desktop sidebar */}
       <div className="hidden h-full w-64 shrink-0 md:block">
         <FilterSidebar
@@ -213,7 +213,7 @@ export function PostFeed({
       )}
 
       {/* Main content */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 sm:p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
         {searchSlot && (
           <div className="flex w-full items-stretch gap-2">
             <div className="flex h-9 min-w-0 max-w-full flex-1 overflow-hidden">
@@ -246,7 +246,7 @@ export function PostFeed({
               </button>
               <select
                 aria-label="Sort Posts"
-                className="h-9 shrink-0 rounded border border-border bg-surface-hover px-3 py-0 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                className="select-caret h-9 min-w-[11rem] shrink-0 rounded-card border border-border bg-surface-hover py-0 pl-3 pr-10 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
                 value={SORT_OPTIONS.indexOf(currentSortOption)}
                 onChange={(e) => {
                   const opt = SORT_OPTIONS[Number(e.target.value)];
@@ -348,7 +348,7 @@ export function PostFeed({
                   </button>
                   <select
                     aria-label="Sort Posts"
-                    className="h-9 rounded border border-border bg-surface-hover px-3 py-0 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+                    className="select-caret h-9 min-w-[11rem] rounded-card border border-border bg-surface-hover py-0 pl-3 pr-10 text-sm leading-9 text-foreground focus:border-border-focus focus:outline-none focus:ring-2"
                     value={SORT_OPTIONS.indexOf(currentSortOption)}
                     onChange={(e) => {
                       const opt = SORT_OPTIONS[Number(e.target.value)];

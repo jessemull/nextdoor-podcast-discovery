@@ -49,3 +49,15 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--border-focus);
 }
+
+/* Native select: remove default arrow so padding and border-radius apply */
+.select-caret {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+}
+.select-caret::-ms-expand {
+  display: none;
+}
