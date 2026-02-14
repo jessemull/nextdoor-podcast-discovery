@@ -146,9 +146,9 @@ describe("PostFeed", () => {
 
     renderWithToast(<PostFeed />);
 
-    // Check for initial loading spinner (animate-spin class)
-    const loadingSpinner = document.querySelector(".animate-spin");
-    expect(loadingSpinner).toBeInTheDocument();
+    // Check for initial loading skeletons (animate-pulse class)
+    const loadingSkeleton = document.querySelector(".animate-pulse");
+    expect(loadingSkeleton).toBeInTheDocument();
   });
 
   it("should display posts after successful fetch", async () => {

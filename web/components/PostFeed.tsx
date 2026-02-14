@@ -88,9 +88,17 @@ const SORT_OPTIONS = [
  * Layout: side panel (filters) + main (optional search bar, then sort/chips/feed or search results).
  * When searchSlot is provided, the search bar is the first element in the main column; search results or feed follow.
  */
+export interface PicksDefaultsForFeed {
+  picks_limit: number;
+  picks_min: number;
+  picks_min_podcast?: number;
+}
+
 export function PostFeed({
+  picksDefaults = null,
   searchSlot = null,
 }: {
+  picksDefaults?: null | PicksDefaultsForFeed;
   searchSlot?: null | PostFeedSearchSlotProps;
 } = {}) {
   const router = useRouter();
@@ -261,6 +269,7 @@ export function PostFeed({
           filters={filters}
           neighborhoods={neighborhoods}
           onReset={handleResetFilters}
+          picksDefaults={picksDefaults}
           onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
           setFilters={setFilters}
           similarityThreshold={searchSlot?.similarityThreshold}
@@ -295,6 +304,7 @@ export function PostFeed({
                 handleResetFilters();
                 setOpenFilterDrawer(false);
               }}
+              picksDefaults={picksDefaults}
               onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
               setFilters={setFilters}
               similarityThreshold={searchSlot?.similarityThreshold}
