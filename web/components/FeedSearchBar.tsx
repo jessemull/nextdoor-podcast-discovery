@@ -1,21 +1,19 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useCallback } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { Card } from "@/components/ui/Card";
+import { SEARCH_SUGGESTIONS } from "@/lib/constants";
+import { useDebounce } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
-const SEARCH_SUGGESTIONS = [
-  "coyote",
-  "lost dog",
-  "lost cat",
-  "HOA",
-  "noisy neighbors",
-  "suspicious",
-  "package stolen",
-  "wildlife",
-];
+const SUGGESTIONS_DEBOUNCE_MS = 250;
 
 export interface FeedSearchBarProps {
   embeddingBacklog: number;
@@ -46,18 +44,86 @@ export function FeedSearchBar({
   similarityThreshold,
   useKeywordSearch,
 }: FeedSearchBarProps) {
-  const chipClass =
-    "rounded border border-border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground";
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const debouncedQuery = useDebounce(query, SUGGESTIONS_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
+      setSuggestions([...SEARCH_SUGGESTIONS]);
+      return;
+    }
+    const q = debouncedQuery.trim().toLowerCase();
+    fetch(
+      `/api/search/suggestions?q=${encodeURIComponent(q)}&limit=10`
+    )
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((data) => setSuggestions(data.data ?? []))
+      .catch(() => setSuggestions([]));
+  }, [debouncedQuery]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
+        if (suggestionsOpen && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+          e.preventDefault();
+          onQueryChange(suggestions[highlightedIndex]);
+          onSearch();
+          setSuggestionsOpen(false);
+          setHighlightedIndex(-1);
+        } else {
+          e.preventDefault();
+          onSearch();
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setSuggestionsOpen(false);
+        setHighlightedIndex(-1);
+        return;
+      }
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        onSearch();
+        setHighlightedIndex((i) =>
+          i < suggestions.length - 1 ? i + 1 : 0
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((i) =>
+          i > 0 ? i - 1 : suggestions.length - 1
+        );
       }
     },
-    [onSearch]
+    [highlightedIndex, onQueryChange, onSearch, suggestions, suggestionsOpen]
   );
+
+  useEffect(() => {
+    if (listRef.current && highlightedIndex >= 0) {
+      const el = listRef.current.children[highlightedIndex] as HTMLElement;
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const showDropdown = suggestionsOpen && suggestions.length > 0;
 
   return (
     <div className="mb-6 space-y-4">
@@ -67,49 +133,81 @@ export function FeedSearchBar({
         </Card>
       )}
 
-      <div className="flex gap-2">
-        <input
-          aria-label="Search posts"
-          className="flex-1 rounded-card border border-border bg-surface px-4 py-3 text-foreground placeholder-muted-foreground focus:border-border-focus focus:outline-none focus:ring-2"
-          placeholder="e.g., noisy neighbors, lost pet, suspicious activity..."
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <button
-          aria-label="Search"
-          className={cn(
-            "flex items-center justify-center gap-2 rounded-card border border-border bg-surface-hover px-4 py-3 text-foreground transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus disabled:opacity-50"
-          )}
-          disabled={loading}
-          type="button"
-          onClick={() => onSearch()}
-        >
-          <Search aria-hidden className="h-5 w-5" />
-          <span className="hidden sm:inline">Search</span>
-        </button>
+      <div className="relative" ref={containerRef}>
+        <div className="flex gap-2">
+          <input
+            aria-activedescendant={
+              showDropdown && highlightedIndex >= 0
+                ? `search-suggestion-${highlightedIndex}`
+                : undefined
+            }
+            aria-autocomplete="list"
+            aria-expanded={showDropdown}
+            aria-label="Search posts"
+            className="flex-1 rounded-card border border-border bg-surface px-4 py-3 text-foreground placeholder-muted-foreground focus:border-border-focus focus:outline-none focus:ring-2"
+            placeholder="e.g., noisy neighbors, lost pet, suspicious activity..."
+            type="text"
+            value={query}
+            onChange={(e) => {
+              onQueryChange(e.target.value);
+              setSuggestionsOpen(true);
+              setHighlightedIndex(-1);
+            }}
+            onFocus={() => {
+              setSuggestionsOpen(true);
+              setSuggestions([...SEARCH_SUGGESTIONS]);
+              setHighlightedIndex(-1);
+            }}
+            onKeyDown={handleKeyDown}
+          />
+          <button
+            aria-label="Search"
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-card border border-border bg-surface-hover px-4 py-3 text-foreground transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus disabled:opacity-50"
+            )}
+            disabled={loading}
+            type="button"
+            onClick={() => onSearch()}
+          >
+            <Search aria-hidden className="h-5 w-5" />
+            <span className="hidden sm:inline">Search</span>
+          </button>
+        </div>
+
+        {showDropdown && (
+          <ul
+            ref={listRef}
+            className="border-border bg-surface absolute left-0 top-full z-10 mt-1 max-h-60 w-full overflow-auto rounded-card border py-1 shadow-lg"
+            role="listbox"
+          >
+            {suggestions.map((s, i) => (
+              <li
+                id={`search-suggestion-${i}`}
+                key={s}
+                aria-selected={i === highlightedIndex}
+                className={cn(
+                  "cursor-pointer px-4 py-2 text-sm text-foreground",
+                  i === highlightedIndex && "bg-surface-hover"
+                )}
+                role="option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onQueryChange(s);
+                  onSearch();
+                  setSuggestionsOpen(false);
+                }}
+                onMouseEnter={() => setHighlightedIndex(i)}
+              >
+                {s}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {loading && (
         <p className="text-muted-foreground text-sm">Searching...</p>
       )}
-
-      <div className="flex flex-wrap gap-2">
-        <span className="text-muted-foreground self-center text-xs">
-          Try:
-        </span>
-        {SEARCH_SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion}
-            className={chipClass}
-            type="button"
-            onClick={() => onQueryChange(suggestion)}
-          >
-            {suggestion}
-          </button>
-        ))}
-      </div>
 
       {embeddingBacklog > 0 && (
         <p className="text-muted text-xs">
