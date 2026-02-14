@@ -52,6 +52,9 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
+          <Link className={navLinkClass} href="/">
+            Home
+          </Link>
           <Link className={navLinkClass} href="/feed">
             Feed
           </Link>
