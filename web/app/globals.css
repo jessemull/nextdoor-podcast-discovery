@@ -64,3 +64,8 @@ body {
 .select-caret::-ms-expand {
   display: none;
 }
+
+.select-caret,
+.select-caret option {
+  cursor: pointer;
+}

@@ -12,6 +12,8 @@ import { SEARCH_SUGGESTIONS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
+import { CustomSelect } from "./ui/CustomSelect";
+
 const SUGGESTIONS_DEBOUNCE_MS = 250;
 
 export interface FeedSearchBarProps {
@@ -128,7 +130,7 @@ export function FeedSearchBar({
         </Card>
       )}
 
-      <div className="relative flex h-full min-h-9 w-full min-w-0 overflow-hidden rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
+      <div className="relative flex h-full min-h-9 w-full min-w-0 rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
         <input
           aria-activedescendant={
             showDropdown && highlightedIndex >= 0
@@ -155,17 +157,16 @@ export function FeedSearchBar({
           onKeyDown={handleKeyDown}
         />
         <div className="border-border border-l bg-surface-hover shrink-0" aria-hidden />
-        <select
-          aria-label="Search type"
-          className="select-caret border-border bg-surface-hover text-foreground h-full min-h-0 min-w-[7rem] shrink-0 cursor-pointer rounded-r-card border-0 border-l pl-3 pr-10 text-sm focus:outline-none focus:ring-0"
+        <CustomSelect
+          ariaLabel="Search type"
+          className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
+          onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
+          options={[
+            { label: "AI Powered", value: "ai" },
+            { label: "Keyword", value: "keyword" },
+          ]}
           value={useKeywordSearch ? "keyword" : "ai"}
-          onChange={(e) =>
-            onUseKeywordSearchChange(e.target.value === "keyword")
-          }
-        >
-          <option value="ai">AI Powered</option>
-          <option value="keyword">Keyword</option>
-        </select>
+        />
 
         {showDropdown && (
           <ul
