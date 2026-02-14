@@ -48,7 +48,7 @@ export function Navbar() {
           href="/"
         >
           <Mic aria-hidden className="h-5 w-5" />
-          Podcast Discovery
+          Nextdoor Discovery
         </Link>
 
         <div className="flex items-center gap-4">

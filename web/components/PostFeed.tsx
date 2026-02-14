@@ -25,6 +25,7 @@ import { CustomSelect } from "./ui/CustomSelect";
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
 import { PostCard } from "./PostCard";
+import { PostCardSkeleton } from "./PostCardSkeleton";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -70,6 +71,8 @@ const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   save: "Save Posts",
   unignore: "Unignore Posts",
 };
+
+const SKELETON_CARD_COUNT = 8;
 
 const SORT_OPTIONS = [
   { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
@@ -302,6 +305,9 @@ export function PostFeed({
 
       {/* Main content */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
+        <h1 className="text-foreground mb-2 text-left text-4xl font-bold tracking-tight sm:text-5xl">
+          Nextdoor Discovery
+        </h1>
         {searchSlot && (
           <div className="mb-2 flex w-full items-stretch">
             <div className="mr-3 flex h-10 min-w-0 max-w-full flex-1">
@@ -594,11 +600,10 @@ export function PostFeed({
         )}
 
         {initialLoading && (
-          <div className="flex justify-center py-12">
-            <div
-              aria-hidden
-              className="border-border-focus h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-            />
+          <div className="space-y-4" aria-busy="true" aria-label="Loading feed">
+            {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
+              <PostCardSkeleton key={i} />
+            ))}
           </div>
         )}
 
