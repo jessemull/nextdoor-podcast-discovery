@@ -118,6 +118,12 @@ export const PostCard = memo(function PostCard({
                 <span className="text-muted-foreground text-sm">•</span>
               </>
             )}
+            {post.author_name && (
+              <>
+                <span className="text-foreground text-sm">{post.author_name}</span>
+                <span className="text-muted-foreground text-sm">•</span>
+              </>
+            )}
             <span className="text-foreground text-sm font-medium uppercase tracking-wide">
               {neighborhoodName}
             </span>
@@ -138,6 +144,18 @@ export const PostCard = memo(function PostCard({
               </>
             )}
           </div>
+          {scores?.categories && scores.categories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {scores.categories.slice(0, 5).map((category: string, index: number) => (
+                <span
+                  key={`${category}-${index}`}
+                  className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
+                >
+                  {formatCategoryLabel(category)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {post.similarity != null && (
@@ -198,8 +216,8 @@ export const PostCard = memo(function PostCard({
               <Bookmark
                 aria-hidden
                 className={cn(
-                  "h-4 w-4 text-red-600",
-                  post.saved && "fill-current"
+                  "h-4 w-4",
+                  post.saved ? "fill-current text-red-600" : "text-foreground"
                 )}
               />
             </button>
@@ -416,20 +434,6 @@ export const PostCard = memo(function PostCard({
               : post.text}
         </p>
       </div>
-
-      {/* Categories (one line) */}
-      {scores?.categories && scores.categories.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {scores.categories.slice(0, 5).map((category: string, index: number) => (
-            <span
-              key={`${category}-${index}`}
-              className="rounded border border-white bg-surface-hover px-2 py-0.5 text-muted text-xs"
-            >
-              {formatCategoryLabel(category)}
-            </span>
-          ))}
-        </div>
-      )}
     </Card>
   );
 });

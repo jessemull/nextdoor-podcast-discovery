@@ -118,6 +118,7 @@ export interface Database {
       };
       posts: {
         Insert: {
+          author_name?: null | string;
           created_at?: string;
           hash: string;
           id?: string;
@@ -132,6 +133,7 @@ export interface Database {
           user_id_hash?: null | string;
         };
         Row: {
+          author_name: null | string;
           created_at: string;
           hash: string;
           id: string;
@@ -146,6 +148,7 @@ export interface Database {
           user_id_hash: null | string;
         };
         Update: {
+          author_name?: null | string;
           hash?: string;
           ignored?: boolean;
           image_urls?: Json;
