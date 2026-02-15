@@ -59,7 +59,7 @@ export function NoveltyConfigEditor({
         Novelty Configuration
       </h2>
       <p
-        className="text-foreground mb-2 text-sm"
+        className="text-foreground mb-3 text-sm"
         style={{ opacity: 0.85 }}
       >
         Post scores are adjusted by a novelty multiplier that boosts rare topics
@@ -68,7 +68,7 @@ export function NoveltyConfigEditor({
         rare, common, and very common.
       </p>
       <ul
-        className="text-foreground mb-6 list-disc pl-5 text-sm"
+        className="text-foreground mb-3 mt-3 list-disc pl-5 text-sm"
         style={{ opacity: 0.85 }}
       >
         <li className="mb-1">
