@@ -1,7 +1,6 @@
 "use client";
 
 import { NoveltyConfigEditor } from "./NoveltyConfigEditor";
-import { NoveltyPreview } from "./NoveltyPreview";
 import { PicksDefaultsEditor } from "./PicksDefaultsEditor";
 import { SearchDefaultsEditor } from "./SearchDefaultsEditor";
 
@@ -49,7 +48,6 @@ export function SettingsDefaultsSection({
         setNoveltyConfig={setNoveltyConfig}
         onSave={onSaveNovelty}
       />
-      <NoveltyPreview noveltyConfig={noveltyConfig} />
       <PicksDefaultsEditor
         isSaving={isSaving}
         picksDefaults={picksDefaults}

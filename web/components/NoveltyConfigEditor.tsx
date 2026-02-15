@@ -46,17 +46,45 @@ export function NoveltyConfigEditor({
 
   return (
     <Card className="mb-8 p-6">
-      <h2 className="mb-4 text-foreground text-lg font-semibold">
+      <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
         Novelty Configuration
       </h2>
-      <p className="text-muted mb-2 text-sm">
-        Control how topic frequency affects scores. Rare topics get a boost;
-        overused topics get penalized.
+      <p
+        className="text-foreground mb-2 text-sm"
+        style={{ opacity: 0.85 }}
+      >
+        Post scores are adjusted by a novelty multiplier that boosts rare topics
+        and buries overused ones. We track how often each topic appears in the
+        past 30 days and apply multipliers based on three frequency thresholds:
+        rare, common, and very common.
       </p>
-      <p className="text-muted-foreground mb-4 text-xs">
-        Topics with ≤{thresholds.rare} posts in {noveltyConfig.window_days ?? 30}{" "}
-        days get {maxMult.toFixed(1)}×; those with &gt;{thresholds.very_common}{" "}
-        get {minMult.toFixed(1)}×.
+      <ul
+        className="text-foreground mb-6 list-disc pl-5 text-sm"
+        style={{ opacity: 0.85 }}
+      >
+        <li className="mb-1">
+          If a topic’s count is at or below the rare threshold, it receives the
+          maximum multiplier.
+        </li>
+        <li className="mb-1">
+          If a topic’s count is above the very common threshold, it receives the
+          minimum multiplier.
+        </li>
+        <li className="mb-1">
+          Between the rare and common thresholds, the multiplier decreases
+          linearly from the maximum value down to 1.0.
+        </li>
+        <li className="mb-1">
+          Between the common and very common thresholds, the multiplier decreases
+          linearly from 1.0 down to the minimum value.
+        </li>
+      </ul>
+      <p
+        className="text-foreground mb-6 text-sm"
+        style={{ opacity: 0.85 }}
+      >
+        The three thresholds define the frequency boundaries within the 30-day
+        window.
       </p>
       <div className="border-border bg-surface-hover mb-6 rounded border px-3 py-2 text-muted text-sm">
         Recompute scores (via Ranking Weights &quot;Save & Recompute&quot;)
