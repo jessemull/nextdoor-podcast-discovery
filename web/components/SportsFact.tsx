@@ -1,15 +1,15 @@
 "use client";
 
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 
 import type { SportsFactResponse } from "@/lib/types";
 
 const SPORTS_FACT_BODY_MIN_H = "min-h-[4.5rem]";
 
 export function SportsFact() {
-  const { data: session, status: sessionStatus } = useSession();
-  const isLoggedIn = !!session?.user;
+  const { isLoading: userLoading, user } = useUser();
+  const isLoggedIn = !!user;
 
   const { data, error, isError, isLoading } = useQuery<SportsFactResponse>({
     enabled: isLoggedIn,
@@ -28,10 +28,10 @@ export function SportsFact() {
   });
 
   const showSkeleton =
-    sessionStatus === "loading" ||
+    userLoading ||
     (isLoggedIn && (isLoading || (!data?.fact && !error)));
 
-  if (sessionStatus === "unauthenticated") {
+  if (!user) {
     return null;
   }
 

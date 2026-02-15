@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { calculateSuccessRate } from "@/lib/utils";
 
@@ -18,8 +17,8 @@ import { calculateSuccessRate } from "@/lib/utils";
  * - Jobs by type
  */
 export async function GET(_request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const session = await auth0.getSession();
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

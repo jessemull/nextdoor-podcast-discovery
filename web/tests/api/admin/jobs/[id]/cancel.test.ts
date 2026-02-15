@@ -4,13 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PUT } from "@/app/api/admin/jobs/[id]/cancel/route";
 
 // Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -33,7 +29,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("PUT /api/admin/jobs/:id/cancel", () => {
   beforeEach(() => {
@@ -41,7 +37,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/jobs/job-1/cancel", {
       method: "PUT",
@@ -54,7 +50,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should return 400 when job ID is missing", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -69,7 +65,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should return 400 when job ID is not a valid UUID", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -84,7 +80,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should return 404 when job not found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -121,7 +117,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should return 400 when trying to cancel a completed job", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -162,7 +158,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should cancel a pending job successfully", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -216,7 +212,7 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
   });
 
   it("should cancel a running job successfully", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 

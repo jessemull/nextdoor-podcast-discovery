@@ -4,14 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/admin/jobs/stats/route";
 import type { MockSupabaseClient, MockSupabaseQueryBuilder } from "@/tests/mocks/types";
 
-// Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock Supabase
@@ -24,7 +19,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/admin/jobs/stats", () => {
   beforeEach(() => {
@@ -32,7 +27,7 @@ describe("GET /api/admin/jobs/stats", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/jobs/stats");
     const response = await GET(request);
@@ -43,7 +38,7 @@ describe("GET /api/admin/jobs/stats", () => {
   });
 
   it("should return empty stats when no jobs exist", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -70,7 +65,7 @@ describe("GET /api/admin/jobs/stats", () => {
   });
 
   it("should calculate statistics correctly", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -132,7 +127,7 @@ describe("GET /api/admin/jobs/stats", () => {
   });
 
   it("should handle jobs with missing timestamps", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 

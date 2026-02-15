@@ -2,19 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/episodes/route";
 
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
-}));
-
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/episodes", () => {
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const response = await GET();
     const data = await response.json();
@@ -24,7 +21,7 @@ describe("GET /api/episodes", () => {
   });
 
   it("should return empty data when authenticated (episode_date removed)", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 

@@ -17,13 +17,9 @@ import { PUT } from "@/app/api/admin/jobs/[id]/cancel/route";
 import { GET } from "@/app/api/admin/jobs/route";
 
 // Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -52,7 +48,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("Job Lifecycle Integration", () => {
   beforeEach(() => {
@@ -60,7 +56,7 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should create job and return job ID", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -121,7 +117,7 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should cancel a running job", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
@@ -171,7 +167,7 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should show job status updates", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
 
