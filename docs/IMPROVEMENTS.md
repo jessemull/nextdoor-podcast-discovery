@@ -39,11 +39,14 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 5. Comments in the UI
+## 5. Comments in the UI and scoring
 
 - [ ] **Show comments in the UI**
   - Surface comment count and/or comment content where it makes sense (e.g. post card, post detail).
   - Clarify data source (stored at scrape time vs live) and any limits.
+- [ ] **Explore incorporating comments into scoring**
+  - Comments are scraped and stored in `posts.comments` but not passed to the LLM scorer. Comments can be funny, add context, or boost podcast-worthiness.
+  - Tradeoff: more tokens per post (higher API cost) vs potentially more accurate scoring. Options to explore: include top N comments (truncated), summarize comments, or make it configurable. Document findings and recommend approach.
 
 ---
 
@@ -217,6 +220,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 **Larger or product-dependent**
 
 - [ ] **§5 — Comments in the UI:** Surface comment count and/or content (post card/detail); clarify data source (scrape time vs live) and limits.
+- [ ] **§5 — Explore incorporating comments into scoring:** Comments are scraped but not used for scoring. Explore options (include top N, truncate, summarize); document tradeoffs (tokens vs accuracy).
 - [ ] **§4 — Stale post data:** Identify fields that can change after scrape (e.g. comments, reactions); decide strategy (ignore, refresh, or "may have changed" in UI).
 - [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
 - [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
