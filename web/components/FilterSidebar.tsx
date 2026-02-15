@@ -107,6 +107,9 @@ export function FilterSidebar({
     >
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="pr-4 pt-4">
+          <h2 className="text-foreground mb-4 text-xl font-semibold">
+            Filters
+          </h2>
         {filterLoadError && (
           <p className="mb-4 text-destructive text-sm" role="alert">
             {filterLoadError}
