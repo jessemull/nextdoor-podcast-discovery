@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
+type MenuRef = React.RefObject<HTMLDivElement | null>;
+
 /** Fixed order for weight dimensions (matches RankingWeightsEditor). */
 const WEIGHT_KEYS: (keyof RankingWeights)[] = [
   "absurdity",
@@ -168,7 +170,7 @@ interface ConfigCardProps {
   deletingConfigId: null | string;
   isActivating: boolean;
   menuOpen: boolean;
-  menuRef: React.RefObject<HTMLDivElement | null>;
+  menuRef: MenuRef;
   onActivate: (configId: string) => void;
   onDelete: (configId: string) => void;
   onMenuToggle: (configId: string) => void;
@@ -196,9 +198,31 @@ function ConfigCard({
       className="rounded border border-border bg-surface-hover/50 p-4"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-foreground min-w-0 truncate text-sm font-semibold">
-          {config.name?.trim() || `Config ${config.id.slice(0, 8)}`}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="text-foreground min-w-0 truncate text-sm font-semibold">
+            {config.name?.trim() || `Config ${config.id.slice(0, 8)}`}
+          </span>
+          {status === "active" && (
+            <span className="shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600">
+              Active
+            </span>
+          )}
+          {status === "computing" && (
+            <span className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+              Computing…
+            </span>
+          )}
+          {status === "ready" && (
+            <span className="shrink-0 rounded border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+              Ready
+            </span>
+          )}
+          {status === "no_scores" && (
+            <span className="border-border bg-surface-hover text-muted shrink-0 rounded border px-2 py-0.5 text-xs font-medium">
+              No scores
+            </span>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
             aria-label="Edit name"
@@ -288,29 +312,6 @@ function ConfigCard({
             )}
           </div>
         </div>
-      </div>
-
-      <div className="mb-2">
-        {status === "active" && (
-          <span className="bg-primary/15 text-primary rounded px-2 py-0.5 text-xs font-medium">
-            Active
-          </span>
-        )}
-        {status === "computing" && (
-          <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-            Computing…
-          </span>
-        )}
-        {status === "ready" && (
-          <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-            Ready
-          </span>
-        )}
-        {status === "no_scores" && (
-          <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-            No scores
-          </span>
-        )}
       </div>
 
       <div className="mb-3">
