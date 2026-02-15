@@ -20,6 +20,11 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
+vi.mock("@/lib/active-config-cache.server", () => ({
+  getActiveWeightConfigId: vi.fn(),
+}));
+
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/settings", () => {
@@ -38,6 +43,7 @@ describe("GET /api/settings", () => {
   });
 
   it("should return settings with active weight config", async () => {
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue("config-1");
     vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
@@ -111,30 +117,22 @@ describe("GET /api/settings", () => {
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(null);
 
-    // Mock settings query - no active config
-    const mockSettingsSelect = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      }),
+    // Mock settings table: .select("value").eq("key", X).single()
+    const mockSettingsEq = vi.fn().mockImplementation((_key: string, keyVal: string) => {
+      const single = vi.fn().mockResolvedValue(
+        keyVal === "search_defaults"
+          ? { data: { value: { similarity_threshold: 0.2 } }, error: null }
+          : { data: null, error: null }
+      );
+      return { single };
     });
-
-    // Mock search_defaults query
-    const mockSearchDefaultsSelect = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: { value: { similarity_threshold: 0.2 } },
-          error: null,
-        }),
-      }),
-    });
-
     mockFrom.mockImplementation((table: string) => {
       if (table === "settings") {
-        return { select: mockSettingsSelect };
+        return {
+          select: () => ({ eq: mockSettingsEq }),
+        };
       }
       return { select: vi.fn() };
     });

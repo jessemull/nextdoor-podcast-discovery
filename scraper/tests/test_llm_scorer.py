@@ -258,6 +258,10 @@ class TestLLMScorer:
         assert stats["saved"] == 1
         assert stats["skipped"] == 0
         scorer.supabase.table.return_value.upsert.assert_called_once()
+        rows = scorer.supabase.table.return_value.upsert.call_args[0][0]
+        assert len(rows) == 1
+        assert "prompt_version" in rows[0]
+        assert rows[0]["prompt_version"] == "v1"
 
     def test_save_scores_skips_posts_with_errors(self, scorer: LLMScorer) -> None:
         """Should skip posts with errors."""

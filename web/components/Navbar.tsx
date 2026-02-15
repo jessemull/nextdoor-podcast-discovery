@@ -99,8 +99,8 @@ export function Navbar() {
                   <Link
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                     href="/auth/logout"
-                    onClick={closeUserMenu}
                     role="menuitem"
+                    onClick={closeUserMenu}
                   >
                     <LogOut aria-hidden className="h-4 w-4" />
                     Sign out

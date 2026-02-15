@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -195,61 +196,33 @@ async function getPostsByScore(
     unusedOnly,
   } = params;
 
-  const activeConfigResult = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "active_weight_config_id")
-    .single();
-
-  let activeConfigId: null | string =
-    activeConfigResult.data?.value &&
-    typeof activeConfigResult.data.value === "string"
-      ? activeConfigResult.data.value
-      : null;
+  const activeConfigId = await getActiveWeightConfigId(supabase);
 
   if (!activeConfigId) {
-    // Fallback: try to get the first active config
-    const configResult = await supabase
+    const allConfigsResult = await supabase
       .from("weight_configs")
-      .select("id")
-      .eq("is_active", true)
-      .limit(1)
-      .single();
+      .select("id, name")
+      .limit(1);
 
-    if (configResult.data) {
-      // Use this config and update settings
-      activeConfigId = configResult.data.id as string;
-      await supabase
-        .from("settings")
-        .upsert(
-          { key: "active_weight_config_id", value: activeConfigId },
-          { onConflict: "key" }
-        );
-    } else {
-      // Check if any configs exist at all
-      const allConfigsResult = await supabase
-        .from("weight_configs")
-        .select("id, name")
-        .limit(1);
-
-      if (allConfigsResult.data && allConfigsResult.data.length > 0) {
-        return NextResponse.json(
-          {
-            details: "No active weight configuration found. Please activate a weight configuration in the settings page.",
-            error: "No active weight config",
-          },
-          { status: 503 }
-        );
-      } else {
-        return NextResponse.json(
-          {
-            details: "No weight configurations found. Please create a weight configuration in the settings page.",
-            error: "No weight configs found",
-          },
-          { status: 503 }
-        );
-      }
+    if (allConfigsResult.data && allConfigsResult.data.length > 0) {
+      return NextResponse.json(
+        {
+          details:
+            "No active weight configuration found. Please activate a weight configuration in the settings page.",
+          error: "No active weight config",
+        },
+        { status: 503 }
+      );
     }
+
+    return NextResponse.json(
+      {
+        details:
+          "No weight configurations found. Please create a weight configuration in the settings page.",
+        error: "No weight configs found",
+      },
+      { status: 503 }
+    );
   }
 
   // Parse minScore

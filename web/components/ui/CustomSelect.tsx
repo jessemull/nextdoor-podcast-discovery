@@ -87,12 +87,12 @@ export function CustomSelect({
         >
           {listOptions.map((opt) => (
             <li
+              key={opt.value}
               aria-selected={opt.value === value}
               className={cn(
                 "cursor-pointer px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
                 opt.value === value && "bg-surface-hover"
               )}
-              key={opt.value}
               role="option"
               onMouseDown={(e) => {
                 e.preventDefault();

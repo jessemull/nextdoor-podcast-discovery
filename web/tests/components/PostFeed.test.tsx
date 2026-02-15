@@ -5,7 +5,9 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PostFeed } from "@/components/PostFeed";
@@ -13,8 +15,23 @@ import { ToastProvider } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
 
-function renderWithToast(ui: ReactElement) {
-  return render(<ToastProvider>{ui}</ToastProvider>);
+function renderWithProviders(ui: ReactElement) {
+  const Wrapper = ({ children }: { children: React.ReactNode }) => {
+    const [queryClient] = useState(
+      () =>
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+          },
+        })
+    );
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    );
+  };
+  return render(<Wrapper>{ui}</Wrapper>);
 }
 
 // Mock next/navigation for useRouter
@@ -144,7 +161,7 @@ describe("PostFeed", () => {
         })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     // Check for initial loading skeletons (animate-pulse class)
     const loadingSkeleton = document.querySelector(".animate-pulse");
@@ -156,7 +173,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -178,7 +195,7 @@ describe("PostFeed", () => {
       return createFetchMock()(url);
     });
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to fetch/i)).toBeInTheDocument();
@@ -209,7 +226,7 @@ describe("PostFeed", () => {
       return createFetchMock()(url);
     });
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to fetch/i)).toBeInTheDocument();
@@ -230,7 +247,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: [mockPosts[0]], total: 1 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -256,7 +273,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -284,7 +301,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -307,7 +324,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -332,7 +349,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 50 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -348,7 +365,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -364,7 +381,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -378,7 +395,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: [], total: 0 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText(/no posts found/i)).toBeInTheDocument();
@@ -399,7 +416,7 @@ describe("PostFeed", () => {
       return createFetchMock()(url);
     });
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -425,7 +442,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();
@@ -460,7 +477,7 @@ describe("PostFeed", () => {
       createFetchMock({ data: mockPosts, total: 2 })
     );
 
-    renderWithToast(<PostFeed />);
+    renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
       expect(screen.getByText("First post")).toBeInTheDocument();

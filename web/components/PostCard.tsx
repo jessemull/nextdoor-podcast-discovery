@@ -17,7 +17,6 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
 import { PostWithScores } from "@/lib/types";
-import type { DimensionScores } from "@/lib/types";
 import {
   cn,
   formatCategoryLabel,
@@ -25,6 +24,8 @@ import {
   formatTitleCase,
   POST_PREVIEW_LENGTH,
 } from "@/lib/utils";
+
+import type { DimensionScores } from "@/lib/types";
 
 const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
   absurdity: "Absurdity",
@@ -77,7 +78,7 @@ export const PostCard = memo(function PostCard({
   const carouselDragStart = useRef<{ scrollLeft: number; x: number } | null>(null);
   const carouselDidDrag = useRef(false);
   const carouselIgnoreNextClick = useRef(false);
-  const carouselPendingIndex = useRef<number | null>(null);
+  const carouselPendingIndex = useRef<null | number>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const imageUrls = post.image_urls ?? [];
@@ -460,7 +461,7 @@ export const PostCard = memo(function PostCard({
                   className="cursor-pointer flex shrink-0 rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
-                    carouselRef.current?.scrollBy({ left: -88, behavior: "smooth" });
+                    carouselRef.current?.scrollBy({ behavior: "smooth", left: -88 });
                   }}
                 >
                   <ChevronLeft aria-hidden className="h-5 w-5 text-foreground" />
@@ -472,11 +473,11 @@ export const PostCard = memo(function PostCard({
                   carouselOverflows && (carouselDragging ? "cursor-grabbing" : "cursor-grab")
                 )}
                 ref={carouselRef}
+                onPointerCancel={handleCarouselPointerUp}
                 onPointerDownCapture={handleCarouselPointerDown}
+                onPointerLeave={handleCarouselPointerUp}
                 onPointerMove={handleCarouselPointerMove}
                 onPointerUp={handleCarouselPointerUp}
-                onPointerLeave={handleCarouselPointerUp}
-                onPointerCancel={handleCarouselPointerUp}
               >
                 {carouselUrls.map((imageUrl, index) => (
                   <button
@@ -511,7 +512,7 @@ export const PostCard = memo(function PostCard({
                   className="cursor-pointer flex shrink-0 rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
-                    carouselRef.current?.scrollBy({ left: 88, behavior: "smooth" });
+                    carouselRef.current?.scrollBy({ behavior: "smooth", left: 88 });
                   }}
                 >
                   <ChevronRight aria-hidden className="h-5 w-5 text-foreground" />
@@ -558,10 +559,10 @@ export const PostCard = memo(function PostCard({
                         <div
                           className="h-full rounded-full"
                           style={{
-                            width: `${(num / 10) * 100}%`,
                             background:
                               "linear-gradient(90deg, rgb(71 85 105), rgb(34 211 238))",
                             opacity: 0.9,
+                            width: `${(num / 10) * 100}%`,
                           }}
                         />
                       </div>

@@ -286,7 +286,7 @@ class NextdoorScraper:
             "trending": SELECTORS["feed_tab_trending"],
         }
         tab_selector = tab_selectors.get(feed_type)
-        if not tab_selector:
+        if not tab_selector or not self.page:
             return
         try:
             self.page.wait_for_selector(tab_selector, timeout=min(3000, timeout))

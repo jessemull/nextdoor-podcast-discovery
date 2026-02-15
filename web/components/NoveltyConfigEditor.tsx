@@ -273,10 +273,10 @@ export function NoveltyConfigEditor({
       <ConfirmModal
         cancelLabel="Cancel"
         confirmLabel="Submit"
-        onCancel={() => setSaveConfirmOpen(false)}
-        onConfirm={handleConfirmSave}
         open={saveConfirmOpen}
         title="Update Novelty Configuration"
+        onCancel={() => setSaveConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
       >
         <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
           Updating the novelty configuration will kick off a compute job to

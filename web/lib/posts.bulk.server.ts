@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
@@ -59,7 +60,7 @@ export async function getPostIdsByQuery(
       logError("[posts/bulk] get_posts_by_date", scoresError);
       return {
         error: NextResponse.json(
-          { error: "Database error", details: scoresError.message },
+          { details: scoresError.message, error: "Database error" },
           { status: 500 }
         ),
       };
@@ -68,39 +69,19 @@ export async function getPostIdsByQuery(
     return { postIds };
   }
 
-  const activeConfigResult = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "active_weight_config_id")
-    .single();
-
-  let activeConfigId: null | string =
-    activeConfigResult.data?.value &&
-    typeof activeConfigResult.data.value === "string"
-      ? activeConfigResult.data.value
-      : null;
+  const activeConfigId = await getActiveWeightConfigId(supabase);
 
   if (!activeConfigId) {
-    const configResult = await supabase
-      .from("weight_configs")
-      .select("id")
-      .eq("is_active", true)
-      .limit(1)
-      .single();
-    if (configResult.data) {
-      activeConfigId = configResult.data.id as string;
-    } else {
-      return {
-        error: NextResponse.json(
-          {
-            error: "No active weight config",
-            details:
-              "Please activate a weight configuration in the settings page.",
-          },
-          { status: 503 }
-        ),
-      };
-    }
+    return {
+      error: NextResponse.json(
+        {
+          details:
+            "Please activate a weight configuration in the settings page.",
+          error: "No active weight config",
+        },
+        { status: 503 }
+      ),
+    };
   }
 
   const orderBy = sort === "podcast_score" ? "podcast_worthy" : "score";
@@ -127,7 +108,7 @@ export async function getPostIdsByQuery(
     logError("[posts/bulk] get_posts_with_scores", scoresError);
     return {
       error: NextResponse.json(
-        { error: "Database error", details: scoresError.message },
+        { details: scoresError.message, error: "Database error" },
         { status: 500 }
       ),
     };

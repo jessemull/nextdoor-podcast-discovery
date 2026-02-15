@@ -5,27 +5,28 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
-import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
 import {
-  type BulkQuery,
   type BulkActionType,
+  type BulkQuery,
   useBulkActions,
 } from "@/lib/hooks/useBulkActions";
+import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
+import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
 import {
   DEFAULT_FILTERS,
   usePostFeedFilters,
 } from "@/lib/hooks/usePostFeedFilters";
-import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
 import { useToast } from "@/lib/ToastContext";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { Card } from "./ui/Card";
-import { ConfirmModal } from "./ui/ConfirmModal";
-import { CustomSelect } from "./ui/CustomSelect";
+
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
 import { PostCard } from "./PostCard";
 import { PostCardSkeleton } from "./PostCardSkeleton";
+import { Card } from "./ui/Card";
+import { ConfirmModal } from "./ui/ConfirmModal";
+import { CustomSelect } from "./ui/CustomSelect";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export interface PostFeedSearchSlotProps {
   loadDefaultsError: null | string;
   loading: boolean;
   markingSaved: Set<string>;
-  onMarkSaved: (postId: string) => void;
+  onMarkSaved: (postId: string, saved: boolean) => void;
   onMarkUsed: (postId: string) => void;
   onQueryChange: (value: string) => void;
   onResetAll?: () => void;
@@ -268,11 +269,11 @@ export function PostFeed({
           filterLoadError={filterLoadError}
           filters={filters}
           neighborhoods={neighborhoods}
-          onReset={handleResetFilters}
           picksDefaults={picksDefaults}
-          onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
           setFilters={setFilters}
           similarityThreshold={searchSlot?.similarityThreshold}
+          onReset={handleResetFilters}
+          onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
         />
       </div>
 
@@ -300,14 +301,14 @@ export function PostFeed({
               filterLoadError={filterLoadError}
               filters={filters}
               neighborhoods={neighborhoods}
+              picksDefaults={picksDefaults}
+              setFilters={setFilters}
+              similarityThreshold={searchSlot?.similarityThreshold}
               onReset={() => {
                 handleResetFilters();
                 setOpenFilterDrawer(false);
               }}
-              picksDefaults={picksDefaults}
               onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
-              setFilters={setFilters}
-              similarityThreshold={searchSlot?.similarityThreshold}
             />
           </div>
         </>
@@ -325,11 +326,11 @@ export function PostFeed({
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
                 loading={searchSlot.loading}
+                query={searchSlot.query}
+                useKeywordSearch={searchSlot.useKeywordSearch}
                 onQueryChange={searchSlot.onQueryChange}
                 onSearch={searchSlot.onSearch}
                 onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
-                query={searchSlot.query}
-                useKeywordSearch={searchSlot.useKeywordSearch}
               />
             </div>
             <div className="flex h-10 min-w-0 shrink-0 items-center">
@@ -349,6 +350,11 @@ export function PostFeed({
               <CustomSelect
                 ariaLabel="Sort Posts"
                 className="h-10 min-w-[11rem] shrink-0"
+                options={SORT_OPTIONS.map((o, i) => ({
+                  label: o.label,
+                  value: String(i),
+                }))}
+                value={String(SORT_OPTIONS.indexOf(currentSortOption))}
                 onChange={(val) => {
                   const opt = SORT_OPTIONS[Number(val)];
                   if (opt) {
@@ -359,17 +365,20 @@ export function PostFeed({
                     }));
                   }
                 }}
-                options={SORT_OPTIONS.map((o, i) => ({
-                  label: o.label,
-                  value: String(i),
-                }))}
-                value={String(SORT_OPTIONS.indexOf(currentSortOption))}
               />
               {bulkMode ? (
                 <div className="ml-3 flex items-center gap-3">
                   <CustomSelect
                     ariaLabel="Bulk action"
                     className="h-10 min-w-[11rem] shrink-0"
+                    options={[
+                      { label: "Ignore", value: "ignore" },
+                      { label: "Mark As Used", value: "mark_used" },
+                      { label: "Save", value: "save" },
+                      { label: "Unignore", value: "unignore" },
+                    ]}
+                    placeholder="Actions"
+                    value=""
                     onChange={async (val) => {
                       if (!val) return;
                       const action = val as BulkActionType;
@@ -409,8 +418,8 @@ export function PostFeed({
                             return;
                           }
                           setConfirmModal((prev) =>
-                            prev?.count === undefined
-                              ? { ...prev, count }
+                            prev && prev.count === undefined
+                              ? { action: prev.action, count }
                               : prev
                           );
                         } finally {
@@ -423,14 +432,6 @@ export function PostFeed({
                         });
                       }
                     }}
-                    options={[
-                      { label: "Ignore", value: "ignore" },
-                      { label: "Mark As Used", value: "mark_used" },
-                      { label: "Save", value: "save" },
-                      { label: "Unignore", value: "unignore" },
-                    ]}
-                    placeholder="Actions"
-                    value=""
                   />
                   <button
                     className="text-foreground hover:opacity-80 flex h-10 w-28 shrink-0 items-center justify-center rounded-card border border-border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -472,7 +473,7 @@ export function PostFeed({
 
         {searchSlot && searchSlot.query.trim() ? (
           <div className="space-y-6">
-            {searchSlot.searchError && (
+            {searchSlot.loading && searchSlot.query.trim() ? null : searchSlot.searchError && (
               <Card className="border-destructive bg-destructive/10 text-destructive text-sm">
                 {searchSlot.searchError}
               </Card>
@@ -501,14 +502,28 @@ export function PostFeed({
                   </p>
                 </Card>
               )}
-            {searchSlot.results.length > 0 && (
+            {searchSlot.loading && searchSlot.query.trim() && (
+              <div
+                aria-busy="true"
+                aria-label="Loading search results"
+                className="space-y-4"
+              >
+                {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
+                  <PostCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
+            {!searchSlot.loading &&
+              searchSlot.results.length > 0 && (
               <div className="space-y-4">
                 {searchSlot.results.map((post) => (
                   <PostCard
                     key={post.id}
                     isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                     post={post}
-                    onMarkSaved={() => searchSlot.onMarkSaved(post.id)}
+                    onMarkSaved={(id, saved) =>
+                      searchSlot.onMarkSaved(id, saved)
+                    }
                     onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
                     onViewDetails={() => searchSlot.onViewDetails(post.id)}
                   />
@@ -537,6 +552,11 @@ export function PostFeed({
                   <CustomSelect
                     ariaLabel="Sort Posts"
                     className="h-10 min-w-[11rem]"
+                    options={SORT_OPTIONS.map((o, i) => ({
+                      label: o.label,
+                      value: String(i),
+                    }))}
+                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
                     onChange={(val) => {
                       const opt = SORT_OPTIONS[Number(val)];
                       if (opt) {
@@ -547,11 +567,6 @@ export function PostFeed({
                         }));
                       }
                     }}
-                    options={SORT_OPTIONS.map((o, i) => ({
-                      label: o.label,
-                      value: String(i),
-                    }))}
-                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
                   />
                   <button
                     aria-label="Reset filters"
@@ -610,7 +625,7 @@ export function PostFeed({
         )}
 
         {initialLoading && (
-          <div className="space-y-4" aria-busy="true" aria-label="Loading feed">
+          <div aria-busy="true" aria-label="Loading feed" className="space-y-4">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
               <PostCardSkeleton key={i} />
             ))}
@@ -693,6 +708,8 @@ export function PostFeed({
             ? `Are you sure you want to ${BULK_ACTION_LABELS[confirmModal.action].toLowerCase()} ${confirmModal.count} post(s)?`
             : undefined
         }
+        open={confirmModal != null}
+        title={confirmModal ? BULK_ACTION_TITLES[confirmModal.action] : ""}
         onCancel={() => {
           setConfirmModal(null);
           if (countLoading) setCountLoading(false);
@@ -711,8 +728,6 @@ export function PostFeed({
             onSuccess: () => toast.success(successMessage),
           });
         }}
-        open={confirmModal != null}
-        title={confirmModal ? BULK_ACTION_TITLES[confirmModal.action] : ""}
       />
     </div>
   );

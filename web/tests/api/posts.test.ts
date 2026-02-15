@@ -24,6 +24,11 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
+vi.mock("@/lib/active-config-cache.server", () => ({
+  getActiveWeightConfigId: vi.fn(),
+}));
+
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/posts", () => {
@@ -43,6 +48,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return posts when authenticated using RPC", async () => {
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue("config-1");
     vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
@@ -144,6 +150,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should pass p_ignored_only to RPC when ignored_only=true", async () => {
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue("config-1");
     vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
@@ -225,56 +232,17 @@ describe("GET /api/posts", () => {
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(null);
 
-    // Mock settings query - no active config
-    const settingsSelect = vi.fn().mockReturnThis();
-    const settingsEq = vi.fn().mockReturnThis();
-    const settingsSingle = vi.fn().mockResolvedValue({
-      data: null,
-      error: null,
-    });
-
-    settingsSelect.mockReturnValue({
-      eq: settingsEq,
-    });
-    settingsEq.mockReturnValue({
-      single: settingsSingle,
-    });
-
-    // Mock weight_configs query - no active configs
-    // Chain: .select("id").eq("is_active", true).limit(1).single()
-    const configsLimit = vi.fn().mockReturnValue({
-      single: vi.fn().mockResolvedValue({
-        data: null,
-        error: { message: "Not found" },
-      }),
-    });
-    const configsEq = vi.fn().mockReturnValue({
-      limit: configsLimit,
-    });
-
-    // Mock check for any configs: .select("id, name").limit(1)
+    // Mock weight_configs for "any configs exist" check
     const allConfigsLimit = vi.fn().mockResolvedValue({
       data: [],
       error: null,
     });
-
     mockFrom.mockImplementation((table: string) => {
-      if (table === "settings") {
-        return { select: settingsSelect };
-      }
       if (table === "weight_configs") {
         return {
-          select: (arg?: string) => {
-            if (arg === "id, name") {
-              return { limit: allConfigsLimit };
-            }
-            // .select("id").eq("is_active", true).limit(1).single()
-            if (arg === "id") {
-              return { eq: configsEq };
-            }
-            return { eq: configsEq };
-          },
+          select: () => ({ limit: allConfigsLimit }),
         };
       }
       return {};

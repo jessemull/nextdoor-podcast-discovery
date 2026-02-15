@@ -1,7 +1,7 @@
-import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { auth0 } from "@/lib/auth0";
 import {
   getCachedEmbedding,
   setCachedEmbedding,

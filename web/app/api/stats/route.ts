@@ -60,6 +60,19 @@ export async function GET() {
       });
     }
 
+    let scoreDistribution: StatsResponse["score_distribution"] = null;
+    try {
+      const { data: distData } = await supabase.rpc("get_score_distribution");
+      if (distData && typeof distData === "object" && distData !== null) {
+        scoreDistribution = distData as StatsResponse["score_distribution"];
+      }
+    } catch (rpcError) {
+      // RPC may not exist before migration 031
+      console.warn("[stats] get_score_distribution RPC failed:", {
+        error: rpcError instanceof Error ? rpcError.message : "Unknown error",
+      });
+    }
+
     // Check for errors
 
     if (postsResult.error) {
@@ -135,6 +148,7 @@ export async function GET() {
       posts_total: postsTotal,
       posts_unscored: postsTotal - postsScored,
       posts_used: postsUsed,
+      score_distribution: scoreDistribution ?? undefined,
       top_categories: frequenciesResult.data || [],
     };
 

@@ -144,7 +144,6 @@ export function FeedSearchBar({
               : undefined
           }
           aria-autocomplete="list"
-          aria-expanded={showDropdown}
           aria-label="Search for posts"
           className="min-h-0 min-w-0 flex-1 border-0 bg-transparent mr-2 px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none"
           placeholder="Search for posts..."
@@ -162,22 +161,22 @@ export function FeedSearchBar({
           }}
           onKeyDown={handleKeyDown}
         />
-        <div className="border-border border-l bg-surface-hover shrink-0" aria-hidden />
+        <div aria-hidden className="border-border border-l bg-surface-hover shrink-0" />
         <CustomSelect
           ariaLabel="Search type"
           className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
-          onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
           options={[
             { label: "AI Powered", value: "ai" },
             { label: "Keyword", value: "keyword" },
           ]}
           value={useKeywordSearch ? "keyword" : "ai"}
+          onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
         />
 
         {showDropdown && (
           <ul
-            ref={listRef}
             className="border-border bg-surface absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
+            ref={listRef}
             role="listbox"
           >
             {suggestionsLoading ? (
@@ -187,13 +186,13 @@ export function FeedSearchBar({
             ) : (
               suggestions.map((s, i) => (
               <li
-                id={`search-suggestion-${i}`}
                 key={s}
                 aria-selected={i === highlightedIndex}
                 className={cn(
                   "cursor-pointer px-4 py-2 text-sm text-foreground",
                   i === highlightedIndex && "bg-surface-hover"
                 )}
+                id={`search-suggestion-${i}`}
                 role="option"
                 onMouseDown={(e) => {
                   e.preventDefault();

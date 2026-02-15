@@ -45,10 +45,10 @@ export function SettingsWeightSection({
       jobs={jobs}
       middleSection={
         <RankingWeightsEditor
-          onReset={onReset}
-          onSave={onSave}
           rankingWeights={rankingWeights}
           setRankingWeights={setRankingWeights}
+          onReset={onReset}
+          onSave={onSave}
         />
       }
       onActivate={onActivate}

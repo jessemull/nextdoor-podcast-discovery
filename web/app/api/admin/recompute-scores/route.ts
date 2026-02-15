@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { recomputeScoresBodySchema } from "@/lib/validators";
@@ -34,19 +35,10 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     let weightConfigId: string;
-    let weightConfigName: string | null = null;
+    let weightConfigName: null | string = null;
 
     if (use_active_config === true) {
-      const { data: activeRow } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", "active_weight_config_id")
-        .single();
-
-      const activeId =
-        activeRow?.value != null && typeof activeRow.value === "string"
-          ? activeRow.value
-          : null;
+      const activeId = await getActiveWeightConfigId(supabase);
 
       if (!activeId) {
         return NextResponse.json(
