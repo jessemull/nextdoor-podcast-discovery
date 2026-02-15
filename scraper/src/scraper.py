@@ -5,7 +5,8 @@ __all__ = ["NextdoorScraper"]
 import logging
 import os
 import random
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from playwright.sync_api import (
     Browser,
@@ -251,7 +252,9 @@ class NextdoorScraper:
         # Wait for feed, then open Filter by sheet (mobile: navbar button with aria-controls) and select feed type
 
         try:
-            self.page.get_by_test_id("feed-container").wait_for(state="visible", timeout=timeout)
+            self.page.get_by_test_id("feed-container").wait_for(
+                state="visible", timeout=timeout
+            )
         except PlaywrightTimeoutError:
             pass
         self._random_delay()
@@ -263,10 +266,14 @@ class NextdoorScraper:
             navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
             dialog = self.page.get_by_role("dialog", name="Filter by")
             dialog.wait_for(state="visible", timeout=8000)
-            self.page.get_by_role("button", name=feed_type.capitalize()).click(timeout=5000)
+            self.page.get_by_role("button", name=feed_type.capitalize()).click(
+                timeout=5000
+            )
             logger.info("Selected %s feed from Filter by menu", feed_type)
         except PlaywrightTimeoutError:
-            logger.warning("Filter by menu not found or failed; feed may still be default (For you)")
+            logger.warning(
+                "Filter by menu not found or failed; feed may still be default (For you)"
+            )
         self._random_delay()
 
         self._wait_for_feed_tab_or_continue(feed_type, timeout)

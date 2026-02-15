@@ -225,8 +225,12 @@ def main(
             if inspect:
                 print()
                 print("Browser is open with iPhone mobile view on the news feed.")
-                print("Open DevTools (F12 or right-click → Inspect), click the 'Filter by' menu to open it,")
-                print("then inspect the DOM for menu selectors. Press Enter here when done to close the browser.")
+                print(
+                    "Open DevTools (F12 or right-click → Inspect), click the 'Filter by' menu to open it,"
+                )
+                print(
+                    "then inspect the DOM for menu selectors. Press Enter here when done to close the browser."
+                )
                 input()
                 return 0
 
@@ -280,7 +284,11 @@ def main(
                     break
 
             if dry_run:
-                logger.info("Dry run: would store %d posts (extracted %d)", stored, total_extracted)
+                logger.info(
+                    "Dry run: would store %d posts (extracted %d)",
+                    stored,
+                    total_extracted,
+                )
             else:
                 storage_stats = {"inserted": stored, "skipped": 0, "errors": 0}
 

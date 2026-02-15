@@ -256,25 +256,31 @@ async function getPostsByScore(
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
   const validMinScore = parsedMinScore && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
-  // Call RPC function to get posts with scores
-  const { data: scoresData, error: scoresError } = await supabase.rpc(
-    "get_posts_with_scores",
-    {
-      p_category: category || null,
-      p_ignored_only: ignoredOnly,
+  const rpcParams = {
+    p_category: category || null,
+    p_ignored_only: ignoredOnly,
+    p_min_podcast_worthy: minPodcastWorthy,
+    p_min_reaction_count: minReactionCount,
+    p_min_score: validMinScore,
+    p_neighborhood_id: neighborhoodId,
+    p_saved_only: savedOnly,
+    p_unused_only: unusedOnly,
+    p_weight_config_id: activeConfigId,
+  };
+
+  const [scoresResult, countResult] = await Promise.all([
+    supabase.rpc("get_posts_with_scores", {
+      ...rpcParams,
       p_limit: limit,
-      p_min_podcast_worthy: minPodcastWorthy,
-      p_min_reaction_count: minReactionCount,
-      p_min_score: validMinScore,
-      p_neighborhood_id: neighborhoodId,
       p_offset: offset,
       p_order_asc: orderAsc,
       p_order_by: orderBy,
-      p_saved_only: savedOnly,
-      p_unused_only: unusedOnly,
-      p_weight_config_id: activeConfigId,
-    }
-  );
+    }),
+    supabase.rpc("get_posts_with_scores_count", rpcParams),
+  ]);
+
+  const { data: scoresData, error: scoresError } = scoresResult;
+  const { data: countData, error: countError } = countResult;
 
   if (scoresError) {
     logError("[posts] get_posts_with_scores", scoresError);
@@ -286,22 +292,6 @@ async function getPostsByScore(
       { status: 500 }
     );
   }
-
-  // Get total count for pagination (call once, used for both empty and non-empty results)
-  const { data: countData, error: countError } = await supabase.rpc(
-    "get_posts_with_scores_count",
-    {
-      p_category: category || null,
-      p_ignored_only: ignoredOnly,
-      p_min_podcast_worthy: minPodcastWorthy,
-      p_min_reaction_count: minReactionCount,
-      p_min_score: validMinScore,
-      p_neighborhood_id: neighborhoodId,
-      p_saved_only: savedOnly,
-      p_unused_only: unusedOnly,
-      p_weight_config_id: activeConfigId,
-    }
-  );
 
   const total = countError ? 0 : (countData as number) || 0;
 
@@ -401,22 +391,29 @@ async function getPostsByDate(
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
   const validMinScore = parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
-  const { data: scoresData, error: scoresError } = await supabase.rpc(
-    "get_posts_by_date",
-    {
-      p_category: category || null,
-      p_ignored_only: ignoredOnly,
+  const rpcParams = {
+    p_category: category || null,
+    p_ignored_only: ignoredOnly,
+    p_min_podcast_worthy: minPodcastWorthy,
+    p_min_reaction_count: minReactionCount,
+    p_min_score: validMinScore,
+    p_neighborhood_id: neighborhoodId,
+    p_saved_only: savedOnly,
+    p_unused_only: unusedOnly,
+  };
+
+  const [scoresResult, countResult] = await Promise.all([
+    supabase.rpc("get_posts_by_date", {
+      ...rpcParams,
       p_limit: limit,
-      p_min_podcast_worthy: minPodcastWorthy,
-      p_min_reaction_count: minReactionCount,
-      p_min_score: validMinScore,
-      p_neighborhood_id: neighborhoodId,
       p_offset: offset,
       p_order_asc: orderAsc,
-      p_saved_only: savedOnly,
-      p_unused_only: unusedOnly,
-    }
-  );
+    }),
+    supabase.rpc("get_posts_by_date_count", rpcParams),
+  ]);
+
+  const { data: scoresData, error: scoresError } = scoresResult;
+  const { data: countData, error: countError } = countResult;
 
   if (scoresError) {
     logError("[posts] get_posts_by_date", scoresError);
@@ -428,20 +425,6 @@ async function getPostsByDate(
       { status: 500 }
     );
   }
-
-  const { data: countData, error: countError } = await supabase.rpc(
-    "get_posts_by_date_count",
-    {
-      p_category: category || null,
-      p_ignored_only: ignoredOnly,
-      p_min_podcast_worthy: minPodcastWorthy,
-      p_min_reaction_count: minReactionCount,
-      p_min_score: validMinScore,
-      p_neighborhood_id: neighborhoodId,
-      p_saved_only: savedOnly,
-      p_unused_only: unusedOnly,
-    }
-  );
 
   const total = countError ? 0 : (countData as number) || 0;
 

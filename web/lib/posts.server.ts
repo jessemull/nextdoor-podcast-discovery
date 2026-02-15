@@ -17,21 +17,25 @@ import type { LLMScore, PostWithScores } from "@/lib/types";
 export async function getPostById(id: string): Promise<null | PostWithScores> {
   const supabase = getSupabaseAdmin();
 
-  const { data: post, error: postError } = await supabase
-    .from("posts")
-    .select("*, neighborhood:neighborhoods(*)")
-    .eq("id", id)
-    .single();
+  const [postResult, llmScoreResult] = await Promise.all([
+    supabase
+      .from("posts")
+      .select("*, neighborhood:neighborhoods(*)")
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("llm_scores")
+      .select("*")
+      .eq("post_id", id)
+      .single(),
+  ]);
+
+  const { data: post, error: postError } = postResult;
+  const { data: llmScore } = llmScoreResult;
 
   if (postError || !post) {
     return null;
   }
-
-  const { data: llmScore } = await supabase
-    .from("llm_scores")
-    .select("*")
-    .eq("post_id", id)
-    .single();
 
   const postRow = post as {
     neighborhood: Database["public"]["Tables"]["neighborhoods"]["Row"] | null;
