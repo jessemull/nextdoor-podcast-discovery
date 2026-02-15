@@ -188,9 +188,10 @@ export default function SettingsPage() {
           const configsData: WeightConfigsResponse = await configsResponse.json();
           setWeightConfigs(configsData.data || []);
         }
+        toast.success("Recompute job started.");
       } catch (err) {
         console.error("Error saving weights:", err);
-        toast.error(err instanceof Error ? err.message : "Failed to save weights");
+        toast.error("Recompute job failed.");
       }
     },
     [rankingWeights, setWeightConfigs, toast]
@@ -292,16 +293,14 @@ export default function SettingsPage() {
         throw new Error(errorData.error || errorData.details || "Failed to start recompute");
       }
 
-      setSuccessMessage(
-        "Novelty configuration saved and recompute job started. Scores will update when the job completes."
-      );
+      toast.success("Recompute job started.");
     } catch (err) {
       console.error("Error saving novelty config:", err);
-      setError(err instanceof Error ? err.message : "Failed to save novelty config");
+      toast.error("Recompute job failed.");
     } finally {
       setIsSaving(false);
     }
-  }, [noveltyConfig]);
+  }, [noveltyConfig, toast]);
 
   const handleSavePicksDefaults = useCallback(async () => {
     setIsSaving(true);
