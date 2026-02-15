@@ -217,11 +217,6 @@ function ConfigCard({
               Ready
             </span>
           )}
-          {status === "no_scores" && (
-            <span className="border-border bg-surface-hover text-muted shrink-0 rounded border px-2 py-0.5 text-xs font-medium">
-              No scores
-            </span>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {canActivate && (
@@ -472,7 +467,7 @@ export function WeightConfigsList({
         >
           Switch between different weight configurations.
         </p>
-        <div className="max-h-96 space-y-3 overflow-y-auto">
+        <div className="max-h-[48rem] space-y-3 overflow-y-auto">
           {configs.map((config) => {
             const state = getConfigState(config, activeConfigId, jobs);
             const menuOpen = menuOpenConfigId === config.id;
