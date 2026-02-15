@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface NoveltyConfig {
   frequency_thresholds?: {
@@ -101,11 +102,12 @@ export function NoveltyConfigEditor({
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label
-              className="text-foreground text-sm font-medium"
+              className="text-foreground flex items-center gap-1.5 text-sm font-medium"
               htmlFor="min-multiplier"
               style={{ opacity: 0.85 }}
             >
               Min Multiplier (Very Common Topics)
+              <InfoTooltip description="Multiplier applied when a topic's frequency is above the very common threshold." />
             </label>
             <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
               {minMult.toFixed(2)}
@@ -131,11 +133,12 @@ export function NoveltyConfigEditor({
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label
-              className="text-foreground text-sm font-medium"
+              className="text-foreground flex items-center gap-1.5 text-sm font-medium"
               htmlFor="max-multiplier"
               style={{ opacity: 0.85 }}
             >
               Max Multiplier (Rare Topics)
+              <InfoTooltip description="Multiplier applied when a topic's frequency is at or below the rare threshold." />
             </label>
             <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
               {maxMult.toFixed(2)}
@@ -169,7 +172,10 @@ export function NoveltyConfigEditor({
                 htmlFor="rare-threshold"
                 style={{ opacity: 0.85 }}
               >
-                Rare (≤)
+                <span className="inline-flex items-center gap-1.5">
+                  Rare (≤)
+                  <InfoTooltip description="Topics with post count at or below this value in the 30-day window are treated as rare and get the maximum multiplier." />
+                </span>
               </label>
               <input
                 className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
@@ -195,7 +201,10 @@ export function NoveltyConfigEditor({
                 htmlFor="common-threshold"
                 style={{ opacity: 0.85 }}
               >
-                Common (≤)
+                <span className="inline-flex items-center gap-1.5">
+                  Common (≤)
+                  <InfoTooltip description="Upper bound for the common frequency band; between rare and common the multiplier scales from max down to 1." />
+                </span>
               </label>
               <input
                 className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
@@ -221,7 +230,10 @@ export function NoveltyConfigEditor({
                 htmlFor="very-common-threshold"
                 style={{ opacity: 0.85 }}
               >
-                Very Common (≤)
+                <span className="inline-flex items-center gap-1.5">
+                  Very Common (≤)
+                  <InfoTooltip description="Topics with post count above this value get the minimum multiplier." />
+                </span>
               </label>
               <input
                 className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"

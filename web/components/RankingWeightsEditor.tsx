@@ -5,11 +5,29 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 
 import type { RankingWeights } from "@/lib/types";
 
 const MIN_CONFIG_NAME_LENGTH = 3;
+
+const WEIGHT_TOOLTIPS: Record<keyof RankingWeights, string> = {
+  absurdity:
+    "Weight for how absurd or comedic the content is.",
+  discussion_spark:
+    "Weight for how likely the post is to spark discussion.",
+  drama:
+    "Weight for dramatic or emotionally charged content.",
+  emotional_intensity:
+    "Weight for emotional intensity of the content.",
+  news_value:
+    "Weight for newsworthy or timely content.",
+  podcast_worthy:
+    "Weight for how suitable the content is for podcast discussion.",
+  readability:
+    "Weight for clarity and readability of the content.",
+};
 
 interface RankingWeightsEditorProps {
   onReset: () => void;
@@ -164,10 +182,15 @@ export function RankingWeightsEditor({
         <div key={dimension} className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label
-              className="text-foreground text-sm font-medium capitalize"
+              className="text-foreground flex items-center gap-1.5 text-sm font-medium capitalize"
               style={{ opacity: 0.85 }}
             >
               {dimension.replace(/_/g, " ")}
+              <InfoTooltip
+                description={
+                  WEIGHT_TOOLTIPS[dimension as keyof RankingWeights] ?? ""
+                }
+              />
             </label>
             <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>{value.toFixed(1)}</span>
           </div>
@@ -212,8 +235,12 @@ export function RankingWeightsEditor({
       >
         <div className="space-y-3 py-1">
           <label className="block">
-            <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
+            <span
+              className="text-foreground mb-2 flex items-center gap-1.5 text-sm"
+              style={{ opacity: 0.85 }}
+            >
               Weight Configuration Name
+              <InfoTooltip description="Name for this weight configuration so you can identify it later." />
             </span>
             <input
               autoFocus
@@ -225,8 +252,12 @@ export function RankingWeightsEditor({
             />
           </label>
           <label className="block">
-            <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
+            <span
+              className="text-foreground mb-2 flex items-center gap-1.5 text-sm"
+              style={{ opacity: 0.85 }}
+            >
               Description (Optional)
+              <InfoTooltip description="Optional note describing when or why to use this configuration." />
             </span>
             <textarea
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"

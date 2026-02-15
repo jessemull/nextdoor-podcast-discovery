@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface SearchDefaults {
   similarity_threshold: number;
@@ -58,11 +59,12 @@ export function SearchDefaultsEditor({
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between">
           <label
-            className="text-foreground text-sm font-medium"
+            className="text-foreground flex items-center gap-1.5 text-sm font-medium"
             htmlFor="similarity-threshold"
             style={{ opacity: 0.85 }}
           >
             Similarity Threshold
+            <InfoTooltip description="Minimum semantic similarity (0–1) for a post to appear in search results; lower means more results, higher means more precise." />
           </label>
           <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
             {searchDefaults.similarity_threshold.toFixed(2)}
