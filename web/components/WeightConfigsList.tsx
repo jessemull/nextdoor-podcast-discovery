@@ -46,6 +46,7 @@ interface WeightConfigsListProps {
   deletingConfigId: null | string;
   isActivating: boolean;
   jobs: Job[];
+  middleSection?: React.ReactNode;
   onActivate: (configId: string) => void;
   onDelete: (configId: string) => void;
   onRenameSuccess?: () => void;
@@ -325,6 +326,7 @@ export function WeightConfigsList({
   deletingConfigId,
   isActivating,
   jobs,
+  middleSection,
   onActivate,
   onDelete,
   onRenameSuccess,
@@ -493,6 +495,9 @@ export function WeightConfigsList({
             );
           })}
         </div>
+      </Card>
+
+      {middleSection}
 
       {/* Rename modal */}
       <ConfirmModal
@@ -542,7 +547,6 @@ export function WeightConfigsList({
           )}
         </div>
       </ConfirmModal>
-      </Card>
     </>
   );
 }
