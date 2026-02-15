@@ -157,13 +157,14 @@ export default function SettingsPage() {
 
 
   const handleSaveWeights = useCallback(
-    async (name: string) => {
+    async (name: string, description?: string) => {
       setError(null);
       setSuccessMessage(null);
 
       try {
         const response = await fetch("/api/admin/recompute-scores", {
           body: JSON.stringify({
+            description: description?.trim() || undefined,
             name: name.trim() || undefined,
             ranking_weights: rankingWeights,
           }),

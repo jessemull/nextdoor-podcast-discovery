@@ -15,7 +15,7 @@ interface SettingsWeightSectionProps {
   onDelete: (configId: string) => Promise<void>;
   onRenameSuccess?: () => void;
   onReset: () => void;
-  onSave: (name: string) => Promise<void>;
+  onSave: (name: string, description?: string) => Promise<void>;
   rankingWeights: RankingWeights;
   setActiveConfigId: (id: null | string) => void;
   setRankingWeights: (weights: RankingWeights) => void;
