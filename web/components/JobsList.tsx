@@ -51,6 +51,7 @@ function DetailRow({
 interface JobsListProps {
   description?: string;
   emptyMessage?: string;
+  headerRightContent?: ReactNode;
   jobs: Job[];
   onCancel: (jobId: string) => void;
   showManageLink?: boolean;
@@ -82,6 +83,7 @@ function getStatusBadgeClass(status: string): string {
 export function JobsList({
   description = DEFAULT_DESCRIPTION,
   emptyMessage = "No recent jobs.",
+  headerRightContent,
   jobs,
   onCancel,
   showManageLink = true,
@@ -91,26 +93,31 @@ export function JobsList({
 }: JobsListProps) {
   return (
     <Card className="mb-8 p-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <h2 className="text-foreground min-w-0 flex-1 text-2xl font-semibold tracking-wide">
             {title}
           </h2>
+          {showManageLink && (
+            <Link
+              className="text-muted shrink-0 text-sm hover:text-foreground"
+              href="/jobs"
+            >
+              Manage jobs →
+            </Link>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-4">
           <p
-            className="text-foreground text-sm"
+            className="text-foreground min-w-0 flex-1 text-sm"
             style={{ opacity: 0.85 }}
           >
             {description}
           </p>
+          {headerRightContent != null && (
+            <div className="shrink-0">{headerRightContent}</div>
+          )}
         </div>
-        {showManageLink && (
-          <Link
-            className="text-muted shrink-0 text-sm hover:text-foreground"
-            href="/jobs"
-          >
-            Manage jobs →
-          </Link>
-        )}
       </div>
       {jobs.length > 0 && (
         <>
