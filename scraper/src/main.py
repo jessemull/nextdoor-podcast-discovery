@@ -48,7 +48,10 @@ def _run_scoring(
         supabase_client: Supabase client instance.
         unscored_batch_limit: Max number of unscored posts to fetch and score (default 50).
     """
-    anthropic = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    anthropic = Anthropic(
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+        timeout=120.0,
+    )
     scorer = LLMScorer(anthropic, supabase_client)
 
     # Get unscored posts
@@ -85,6 +88,7 @@ def main(
     max_posts: int | None = None,
     repeat_threshold: int | None = None,
     score: bool = False,
+    score_only: bool = False,
     unscored_batch_limit: int = 50,
     visible: bool = False,
 ) -> int:
@@ -99,6 +103,7 @@ def main(
         max_posts: Maximum number of posts to scrape (default from config).
         repeat_threshold: For Recent feed, stop after this many consecutive already-seen posts (default from config).
         score: If True, run LLM scoring on unscored posts after scraping.
+        score_only: If True, skip scraping and only run score/embed (use to re-run scoring without re-scraping).
         unscored_batch_limit: Max unscored posts to score per run (default 50; use env UNSCORED_BATCH_LIMIT or --unscored-limit for backfills).
         visible: If True, run browser in visible mode (not headless).
 
@@ -129,27 +134,55 @@ def main(
     if max_posts is None:
         max_posts = SCRAPER_CONFIG["max_posts_per_run"]
 
+    if score_only and not score and not embed:
+        logger.error("--score-only requires at least one of --score or --embed")
+        return 1
+
     logger.info(
         "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
-        "visible=%s, score=%s, embed=%s)",
+        "visible=%s, score=%s, embed=%s, score_only=%s)",
         feed_type,
         max_posts,
         dry_run,
         visible,
         score,
         embed,
+        score_only,
     )
 
     try:
         # Validate environment variables
         validate_env()
 
-        # Initialize session manager
-
+        # Initialize session manager (for Supabase client)
         session_manager = SessionManager()
 
-        # Start browser (visible flag overrides config)
+        if score_only:
+            # Skip scraping; run only score and/or embed
+            if score and not dry_run:
+                logger.info(
+                    "Running LLM scoring on unscored posts (limit=%d)",
+                    unscored_batch_limit,
+                )
+                _run_scoring(
+                    session_manager.supabase,
+                    unscored_batch_limit=unscored_batch_limit,
+                )
+            if embed and not dry_run:
+                logger.info("Running embedding generation for posts without embeddings")
+                openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                embedder = Embedder(session_manager.supabase, openai_client)
+                embed_stats = embedder.generate_and_store_embeddings(dry_run=False)
+                logger.info(
+                    "Embedding complete: %d processed, %d stored, %d errors",
+                    embed_stats["processed"],
+                    embed_stats["stored"],
+                    embed_stats["errors"],
+                )
+            logger.info("Score-only pipeline complete")
+            return 0
 
+        # Start browser (visible flag overrides config)
         headless = False if visible else SCRAPER_CONFIG["headless"]
 
         with NextdoorScraper(headless=False if inspect else headless) as scraper:
@@ -376,6 +409,12 @@ if __name__ == "__main__":
         help="Run LLM scoring on unscored posts after scraping",
     )
     parser.add_argument(
+        "--score-only",
+        action="store_true",
+        dest="score_only",
+        help="Skip scraping; only run score and/or embed (re-run scoring without re-scraping)",
+    )
+    parser.add_argument(
         "--unscored-limit",
         dest="unscored_batch_limit",
         type=int,
@@ -405,6 +444,7 @@ if __name__ == "__main__":
             max_posts=args.max_posts,
             repeat_threshold=args.repeat_threshold,
             score=args.score,
+            score_only=args.score_only,
             unscored_batch_limit=unscored_limit,
             visible=args.visible,
         )
