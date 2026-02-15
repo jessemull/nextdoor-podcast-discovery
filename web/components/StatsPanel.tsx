@@ -87,17 +87,21 @@ function StatCell({
 }
 
 function StatsSection({
+  hideHeading,
   loading,
   stats,
 }: {
+  hideHeading?: boolean;
   loading: boolean;
   stats: null | StatsResponse;
 }) {
   return (
     <section>
-      <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
-        Stats
-      </h2>
+      {!hideHeading && (
+        <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
+          Stats
+        </h2>
+      )}
       <div className={STATS_GRID_CLASS}>
         {loading
           ? [...Array(8)].map((_, i) => (
@@ -176,16 +180,20 @@ function StatsSection({
 
 function CategoriesSection({
   categories,
+  hideHeading,
   loading,
 }: {
   categories: TopicFrequency[];
+  hideHeading?: boolean;
   loading: boolean;
 }) {
   return (
     <section>
-      <h3 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
-        Top Categories (30 Days)
-      </h3>
+      {!hideHeading && (
+        <h3 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
+          Top Categories (30 Days)
+        </h3>
+      )}
       <div className={STATS_GRID_CLASS}>
         {loading
           ? [...Array(8)].map((_, i) => (
@@ -221,6 +229,14 @@ function CategoriesSection({
   );
 }
 
+type StatsPanelVariant = "categories-only" | "full" | "posts-only";
+
+interface StatsPanelProps {
+  hideStatsHeading?: boolean;
+  stats?: null | StatsResponse;
+  variant?: StatsPanelVariant;
+}
+
 /**
  * StatsPanel component displays dashboard statistics about posts and categories.
  *
@@ -238,14 +254,25 @@ function CategoriesSection({
  * @example
  * ```tsx
  * <StatsPanel />
+ * <StatsPanel stats={stats} hideStatsHeading />
  * ```
  */
-export function StatsPanel() {
+export function StatsPanel({
+  hideStatsHeading = false,
+  stats: statsProp,
+  variant = "full",
+}: StatsPanelProps = {}) {
   const [error, setError] = useState<null | string>(null);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<null | StatsResponse>(null);
+  const [loading, setLoading] = useState(statsProp == null);
+  const [stats, setStats] = useState<null | StatsResponse>(statsProp ?? null);
 
   useEffect(() => {
+    if (statsProp != null) {
+      setStats(statsProp);
+      setLoading(false);
+      return;
+    }
+
     async function fetchStats() {
       try {
         const response = await fetch("/api/stats");
@@ -265,15 +292,29 @@ export function StatsPanel() {
       }
     }
 
-    fetchStats();
-  }, []);
+    void fetchStats();
+  }, [statsProp]);
 
   if (loading) {
     return (
-      <div className="space-y-24">
-        <div aria-hidden className="h-0" />
-        <StatsSection loading stats={null} />
-        <CategoriesSection categories={[]} loading />
+      <div className={variant === "full" ? "space-y-24" : ""}>
+        {variant !== "categories-only" && (
+          <>
+            <div aria-hidden className="h-0" />
+            <StatsSection
+              hideHeading={hideStatsHeading}
+              loading
+              stats={null}
+            />
+          </>
+        )}
+        {variant !== "posts-only" && (
+          <CategoriesSection
+            categories={[]}
+            hideHeading={variant === "categories-only"}
+            loading
+          />
+        )}
       </div>
     );
   }
@@ -289,29 +330,40 @@ export function StatsPanel() {
   if (!stats) return null;
 
   const embeddingBacklog = stats.embedding_backlog ?? 0;
+  const showEmbeddingAlert =
+    variant !== "categories-only" && embeddingBacklog > 100;
 
   return (
-    <div className="space-y-24">
-      {embeddingBacklog > 100 ? (
+    <div className={variant === "full" ? "space-y-24" : ""}>
+      {showEmbeddingAlert ? (
         <div role="alert">
           <Card className="border-border-focus">
-          <p className="text-muted text-sm">
-            <strong className="text-foreground">
-              {embeddingBacklog} posts need embeddings.
-            </strong>{" "}
-            Semantic search may miss recent posts until the daily embed job runs.
-            Embeddings are generated after each scrape.
-          </p>
+            <p className="text-muted text-sm">
+              <strong className="text-foreground">
+                {embeddingBacklog} posts need embeddings.
+              </strong>{" "}
+              Semantic search may miss recent posts until the daily embed job
+              runs. Embeddings are generated after each scrape.
+            </p>
           </Card>
         </div>
       ) : (
         <div aria-hidden className="h-0" />
       )}
-      <StatsSection loading={false} stats={stats} />
-      <CategoriesSection
-        categories={stats.top_categories}
-        loading={false}
-      />
+      {variant !== "categories-only" && (
+        <StatsSection
+          hideHeading={hideStatsHeading}
+          loading={false}
+          stats={stats}
+        />
+      )}
+      {variant !== "posts-only" && (
+        <CategoriesSection
+          categories={stats.top_categories}
+          hideHeading={variant === "categories-only"}
+          loading={false}
+        />
+      )}
     </div>
   );
 }
