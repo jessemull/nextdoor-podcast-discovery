@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useToast } from "@/lib/ToastContext";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
+import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
+import { useToast } from "@/lib/ToastContext";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
@@ -359,7 +360,13 @@ export default function SettingsPage() {
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings
           </h1>
-          <p className="text-muted">Loading...</p>
+          <p
+            className="text-foreground mb-8 text-sm"
+            style={{ opacity: 0.85 }}
+          >
+            Configure ranking weights and search preferences.
+          </p>
+          <SettingsPageSkeleton />
         </div>
       </main>
     );
