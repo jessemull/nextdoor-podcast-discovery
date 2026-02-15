@@ -315,7 +315,7 @@ export function PostFeed({
 
       {/* Main content */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
-        <h1 className="text-foreground mb-2 text-left text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="text-foreground mb-4 text-3xl font-semibold text-left">
           Nextdoor Discovery
         </h1>
         {searchSlot && (

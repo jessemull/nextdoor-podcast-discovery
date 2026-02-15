@@ -41,11 +41,11 @@ export function SportsFact() {
   if (showSkeleton) {
     return (
       <div className={wrapperClass}>
-        <div className="mb-5 h-7 w-48 animate-pulse rounded bg-surface-hover mx-auto" />
+        <div className="bg-surface-hover mx-auto mb-5 h-7 w-[36rem] animate-pulse rounded" />
         <div className={SPORTS_FACT_BODY_MIN_H + " space-y-2"}>
-          <div className="mx-auto h-4 max-w-md rounded bg-surface-hover animate-pulse" />
-          <div className="mx-auto h-4 max-w-sm rounded bg-surface-hover animate-pulse" />
-          <div className="mx-auto h-4 max-w-xs rounded bg-surface-hover animate-pulse" />
+          <div className="mx-auto h-4 w-[36rem] rounded bg-surface-hover animate-pulse" />
+          <div className="mx-auto h-4 w-[36rem] rounded bg-surface-hover animate-pulse" />
+          <div className="mx-auto h-4 w-[36rem] max-w-full rounded bg-surface-hover animate-pulse" />
         </div>
       </div>
     );
