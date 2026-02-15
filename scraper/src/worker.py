@@ -49,8 +49,9 @@ def calculate_final_score(
 
     normalized = (weighted_sum / max_possible) * 10
 
-    # Apply novelty multiplier
-    return normalized * novelty
+    # Apply novelty multiplier and clamp to [0, 10]
+    raw_score = normalized * novelty
+    return min(10.0, max(0.0, raw_score))
 
 
 def load_weight_config(supabase: Client, weight_config_id: str) -> dict[str, float]:
@@ -394,10 +395,11 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 ).eq("id", job_id).execute()
                 return
 
-            # Fetch batch of scores
+            # Fetch batch of scores with deterministic order for pagination
             batch_result = (
                 supabase.table("llm_scores")
                 .select("id, post_id, scores, categories")
+                .order("id")
                 .range(offset, offset + BATCH_SIZE - 1)
                 .execute()
             )

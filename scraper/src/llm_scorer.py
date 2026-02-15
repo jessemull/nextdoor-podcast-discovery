@@ -413,7 +413,8 @@ class LLMScorer:
             config = self._get_novelty_config()
             novelty = calculate_novelty(result.categories, frequencies, config)
 
-            result.final_score = normalized * novelty
+            raw_score = normalized * novelty
+            result.final_score = min(10.0, max(0.0, raw_score))
 
         return results
 

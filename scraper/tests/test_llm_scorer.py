@@ -180,6 +180,33 @@ class TestLLMScorer:
         assert results[0].final_score is not None
         assert 0 <= results[0].final_score <= 10
 
+    def test_calculate_final_scores_clamps_to_10(self, scorer: LLMScorer) -> None:
+        """Should clamp final score to 10 when normalized * novelty exceeds 10."""
+        results = [
+            PostScore(
+                post_id="post1",
+                scores={dim: 10.0 for dim in SCORING_DIMENSIONS},
+                categories=["drama"],
+                summary="Test",
+            )
+        ]
+
+        scorer._weights = {dim: 1.0 for dim in SCORING_DIMENSIONS}
+        scorer._novelty_config = {
+            "min_multiplier": 0.2,
+            "max_multiplier": 1.5,
+            "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
+        }
+        freq_result = mock.MagicMock()
+        freq_result.data = [{"category": "drama", "count_30d": 10}]
+        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
+            freq_result
+        )
+
+        scorer.calculate_final_scores(results)
+
+        assert results[0].final_score == 10.0
+
     def test_calculate_novelty_boosts_rare_topics(self, scorer: LLMScorer) -> None:
         """Should boost score for rare topics."""
         frequencies = {"rare_topic": 2}  # Below rare threshold

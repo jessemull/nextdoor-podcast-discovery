@@ -66,6 +66,24 @@ class TestCalculateFinalScore:
 
         assert score_with_novelty > score_without_novelty
 
+    def test_clamps_to_10_when_novelty_exceeds(self) -> None:
+        """Should clamp final score to 10 when normalized * novelty > 10."""
+        scores = {dim: 10.0 for dim in ["absurdity", "drama", "discussion_spark", "emotional_intensity", "news_value"]}
+        weights = {dim: 1.0 for dim in scores}
+
+        result = calculate_final_score(scores, weights, 1.5)
+
+        assert result == 10.0
+
+    def test_clamps_to_0_when_negative(self) -> None:
+        """Should clamp final score to 0 when normalized * novelty < 0."""
+        scores = {dim: 0.0 for dim in ["absurdity", "drama", "discussion_spark", "emotional_intensity", "news_value"]}
+        weights = {dim: 1.0 for dim in scores}
+
+        result = calculate_final_score(scores, weights, 0.2)
+
+        assert result == 0.0
+
 
 class TestCalculateNovelty:
     """Test calculate_novelty function."""
@@ -451,7 +469,9 @@ class TestProcessRecomputeJob:
                 select_mock = mock.MagicMock()
                 select_mock.count = 2
                 select_mock.execute.return_value = count_mock
-                select_mock.range.return_value.execute.return_value = batch_mock
+                order_mock = mock.MagicMock()
+                order_mock.range.return_value.execute.return_value = batch_mock
+                select_mock.order.return_value = order_mock
                 table_mock.select.return_value = select_mock
             elif table_name == "post_scores":
                 table_mock.upsert.return_value.execute.return_value = update_mock
