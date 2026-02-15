@@ -146,8 +146,15 @@ class LLMScorer:
         dimension_desc = "\n".join(
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
         )
+
+        def _truncate_with_signal(text: str) -> str:
+            t = text[:MAX_POST_LENGTH]
+            if len(text) > MAX_POST_LENGTH:
+                t += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
+            return t
+
         posts_text = "\n\n".join(
-            f"[Post {i}] (id={p.get('id')})\n{p.get('text', '')[:MAX_POST_LENGTH]}"
+            f"[Post {i}] (id={p.get('id')})\n{_truncate_with_signal(p.get('text', ''))}"
             for i, p in enumerate(posts)
         )
         prompt = BATCH_SCORING_PROMPT.format(
@@ -166,14 +173,17 @@ class LLMScorer:
                 max_tokens=500 * len(posts),
                 model=CLAUDE_MODEL,
                 messages=messages,
-                temperature=0.3,
+                temperature=0,  # Deterministic scoring for reproducibility
             )
 
             content_block = response.content[0]
             raw_response = getattr(content_block, "text", "")
 
             parse_error: json.JSONDecodeError | None = None
-            for text_to_parse in (raw_response, _strip_json_from_markdown(raw_response)):
+            for text_to_parse in (
+                raw_response,
+                _strip_json_from_markdown(raw_response),
+            ):
                 if not text_to_parse:
                     continue
                 try:
@@ -193,12 +203,16 @@ class LLMScorer:
                         e,
                     )
                     messages.append({"role": "assistant", "content": raw_response})
-                    messages.append({
-                        "role": "user",
-                        "content": BATCH_SCORING_RETRY_PROMPT.format(error=str(e)),
-                    })
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": BATCH_SCORING_RETRY_PROMPT.format(error=str(e)),
+                        }
+                    )
                 else:
-                    logger.warning("Batch JSON parse error after %d attempts: %s", max_attempts, e)
+                    logger.warning(
+                        "Batch JSON parse error after %d attempts: %s", max_attempts, e
+                    )
                     return [
                         PostScore(
                             post_id=p.get("id", "unknown"),
@@ -304,7 +318,11 @@ class LLMScorer:
                 error="Empty post text",
             )
 
-        # Build the prompt
+        # Build the prompt with truncation signal when text is cut
+
+        sliced = post_text[:MAX_POST_LENGTH]
+        if len(post_text) > MAX_POST_LENGTH:
+            sliced += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
 
         dimension_desc = "\n".join(
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
@@ -312,7 +330,7 @@ class LLMScorer:
         prompt = SCORING_PROMPT.format(
             dimension_descriptions=dimension_desc,
             categories=", ".join(TOPIC_CATEGORIES),
-            post_text=post_text[:MAX_POST_LENGTH],
+            post_text=sliced,
         )
 
         # Call Claude
@@ -321,7 +339,7 @@ class LLMScorer:
             max_tokens=500,
             model=CLAUDE_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,  # Explicit for reproducible scoring (PR_REVIEW)
+            temperature=0,  # Deterministic scoring for reproducibility
         )
 
         # Extract text from response (first content block)
@@ -618,7 +636,9 @@ class LLMScorer:
                 .limit(1)
                 .execute()
             )
-            config_rows = config_result.data if isinstance(config_result.data, list) else []
+            config_rows = (
+                config_result.data if isinstance(config_result.data, list) else []
+            )
             if config_rows:
                 return config_rows[0].get("id")
         except Exception as e:

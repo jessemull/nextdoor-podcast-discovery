@@ -39,6 +39,9 @@ def calculate_novelty(
     if not categories:
         return 1.0  # Default: no adjustment
 
+    if not frequencies:
+        return 1.0  # Cold start: no frequency data, use neutral multiplier
+
     min_mult = float(config.get("min_multiplier", 0.2))
     max_mult = float(config.get("max_multiplier", 1.5))
     thresholds: dict[str, int] = config.get("frequency_thresholds", {})

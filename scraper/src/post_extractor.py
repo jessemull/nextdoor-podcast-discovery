@@ -5,8 +5,9 @@ __all__ = ["PostExtractor", "RawComment", "RawPost"]
 import hashlib
 import logging
 import random
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.sync_api import Page
@@ -252,9 +253,7 @@ class PostExtractor:
         logger.info("Extraction complete: %d posts", len(posts))
         return posts
 
-    def extract_post_batches(
-        self, safety_cap: int = 500
-    ) -> Iterator[list[RawPost]]:
+    def extract_post_batches(self, safety_cap: int = 500) -> Iterator[list[RawPost]]:
         """Yield batches of new posts after each scroll until caps are hit.
 
         Use this when the pipeline wants to store after each batch and stop
@@ -311,9 +310,7 @@ class PostExtractor:
                     return
 
             batch: list[RawPost] = []
-            new_count = self._process_batch(
-                raw_posts, batch, cap=safety_cap
-            )
+            new_count = self._process_batch(raw_posts, batch, cap=safety_cap)
             total_yielded += len(batch)
 
             logger.info(
@@ -435,9 +432,7 @@ class PostExtractor:
             timestamp_relative=raw.get("timestamp") or None,
         )
 
-    def _count_consecutive_already_seen(
-        self, raw_posts: list[dict[str, Any]]
-    ) -> int:
+    def _count_consecutive_already_seen(self, raw_posts: list[dict[str, Any]]) -> int:
         """Count how many posts from the start of the batch are already in seen_hashes.
 
         Used for Recent feed: when this reaches repeat_threshold we stop.
@@ -546,7 +541,9 @@ class PostExtractor:
             return post_url
 
         except PlaywrightTimeoutError:
-            logger.debug("Timeout extracting permalink for container %d", container_index)
+            logger.debug(
+                "Timeout extracting permalink for container %d", container_index
+            )
 
             # Try to close any open modal
 

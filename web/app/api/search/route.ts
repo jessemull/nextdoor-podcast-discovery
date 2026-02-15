@@ -237,28 +237,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Fetch LLM scores and neighborhoods for the found posts
+    // Fetch LLM scores and neighborhoods in parallel
 
     const postIds = searchResultsList.map((post: SearchResult) => post.id);
+    const neighborhoodIds = searchResultsList.map(
+      (post: SearchResult) => post.neighborhood_id
+    );
 
-    const { data: scores, error: scoresError } = await supabase
-      .from("llm_scores")
-      .select("*")
-      .in("post_id", postIds);
+    const [scoresResult, neighborhoodsResult] = await Promise.all([
+      supabase.from("llm_scores").select("*").in("post_id", postIds),
+      supabase.from("neighborhoods").select("*").in("id", neighborhoodIds),
+    ]);
+
+    const { data: scores, error: scoresError } = scoresResult;
+    const { data: neighborhoods, error: neighborhoodsError } = neighborhoodsResult;
 
     if (scoresError) {
       logError("[search] LLM scores", scoresError);
       // Continue without scores - posts will have null llm_scores
     }
-
-    const neighborhoodIds = searchResultsList.map(
-      (post: SearchResult) => post.neighborhood_id
-    );
-
-    const { data: neighborhoods, error: neighborhoodsError } = await supabase
-      .from("neighborhoods")
-      .select("*")
-      .in("id", neighborhoodIds);
 
     if (neighborhoodsError) {
       logError("[search] neighborhoods", neighborhoodsError);

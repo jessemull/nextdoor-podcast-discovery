@@ -4,12 +4,12 @@ __all__ = ["PostStorage", "parse_relative_timestamp"]
 
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 from supabase import Client
 
-from src.post_extractor import RawComment, RawPost
+from src.post_extractor import RawPost
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def parse_relative_timestamp(relative: str | None) -> datetime | None:
     text = relative.strip().lower()
     if text.endswith(" ago"):
         text = text[:-4].strip()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Just now / Now
     if text in ("just now", "now"):
         return now

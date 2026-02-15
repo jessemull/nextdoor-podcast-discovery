@@ -44,7 +44,9 @@ class SessionManager:
         query = self.supabase.table("sessions").select("cookies_encrypted, expires_at")
 
         # When no neighborhood specified, load the default session (reserved UUID)
-        session_key = neighborhood_id if neighborhood_id is not None else DEFAULT_SESSION_ID
+        session_key = (
+            neighborhood_id if neighborhood_id is not None else DEFAULT_SESSION_ID
+        )
         query = query.eq("neighborhood_id", session_key)
 
         result = query.order("updated_at", desc=True).limit(1).execute()

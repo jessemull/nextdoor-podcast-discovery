@@ -17,6 +17,7 @@ from typing import Any, cast
 from supabase import Client
 
 from src.config import ConfigurationError, validate_env
+from src.llm_prompts import SCORING_DIMENSIONS
 from src.novelty import calculate_novelty
 from src.session_manager import SessionManager
 
@@ -24,6 +25,10 @@ logger = logging.getLogger(__name__)
 
 # Batch size for processing posts
 BATCH_SIZE = 500
+
+# Throttle DB round-trips: check cancellation and update progress every N batches
+CANCEL_CHECK_INTERVAL = 5
+PROGRESS_UPDATE_INTERVAL = 5
 
 
 def calculate_final_score(
@@ -88,6 +93,12 @@ def load_weight_config(supabase: Client, weight_config_id: str) -> dict[str, flo
 
     if not weights:
         raise ValueError(f"No valid weights found in config {weight_config_id}")
+
+    known = {k: v for k, v in weights.items() if k in SCORING_DIMENSIONS}
+    if len(known) < len(weights):
+        dropped = set(weights) - set(SCORING_DIMENSIONS)
+        logger.warning("Dropping unknown weight dimensions: %s", dropped)
+        weights = known
 
     return weights
 
@@ -369,31 +380,33 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         # Process in batches
         offset = 0
         processed = 0
+        batch_index = 0
 
         while offset < total:
-            # Check if job was cancelled
-            job_status_result = (
-                supabase.table("background_jobs")
-                .select("status")
-                .eq("id", job_id)
-                .single()
-                .execute()
-            )
+            # Check cancellation every N batches to reduce DB round-trips
+            if batch_index % CANCEL_CHECK_INTERVAL == 0:
+                job_status_result = (
+                    supabase.table("background_jobs")
+                    .select("status")
+                    .eq("id", job_id)
+                    .single()
+                    .execute()
+                )
 
-            job_data = (
-                cast(dict[str, Any], job_status_result.data)
-                if job_status_result.data
-                else None
-            )
-            if job_data and job_data.get("status") == "cancelled":
-                logger.info("Job %s was cancelled, stopping processing", job_id)
-                supabase.table("background_jobs").update(
-                    {
-                        "completed_at": datetime.now(UTC).isoformat(),
-                        "progress": processed,
-                    }
-                ).eq("id", job_id).execute()
-                return
+                job_data = (
+                    cast(dict[str, Any], job_status_result.data)
+                    if job_status_result.data
+                    else None
+                )
+                if job_data and job_data.get("status") == "cancelled":
+                    logger.info("Job %s was cancelled, stopping processing", job_id)
+                    supabase.table("background_jobs").update(
+                        {
+                            "completed_at": datetime.now(UTC).isoformat(),
+                            "progress": processed,
+                        }
+                    ).eq("id", job_id).execute()
+                    return
 
             # Fetch batch of scores with deterministic order for pagination
             batch_result = (
@@ -425,9 +438,12 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 ).execute()
 
                 processed += len(post_scores_to_upsert)
-                _update_job_progress(supabase, job_id, processed, total)
+                is_last_batch = offset + BATCH_SIZE >= total
+                if batch_index % PROGRESS_UPDATE_INTERVAL == 0 or is_last_batch:
+                    _update_job_progress(supabase, job_id, processed, total)
 
             offset += BATCH_SIZE
+            batch_index += 1
 
         # Mark job as completed
         supabase.table("background_jobs").update(

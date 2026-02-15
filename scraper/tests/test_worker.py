@@ -130,6 +130,20 @@ class TestCalculateNovelty:
 
         assert result == 1.0
 
+    def test_cold_start_returns_1_when_frequencies_empty(self) -> None:
+        """Should return 1.0 when frequencies is empty (cold start)."""
+        categories = ["drama"]
+        frequencies: dict[str, int] = {}
+        config = {
+            "min_multiplier": 0.2,
+            "max_multiplier": 1.5,
+            "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
+        }
+
+        result = calculate_novelty(categories, frequencies, config)
+
+        assert result == 1.0
+
 
 class TestLoadWeightConfig:
     """Test load_weight_config function."""
@@ -168,6 +182,25 @@ class TestLoadWeightConfig:
 
         with pytest.raises(ValueError, match="Weight config .* not found"):
             load_weight_config(mock_supabase, config_id)
+
+    def test_filters_unknown_weight_dimensions(
+        self, mock_supabase: mock.MagicMock
+    ) -> None:
+        """Should filter out unknown dimensions and log warning."""
+        config_id = "test-config-id"
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
+            "weights": {
+                "absurdity": 2.0,
+                "drama": 1.5,
+                "unknown_dim": 1.0,
+            }
+        }
+
+        result = load_weight_config(mock_supabase, config_id)
+
+        assert "absurdity" in result
+        assert "drama" in result
+        assert "unknown_dim" not in result
 
 
 class TestLoadNoveltyConfig:
