@@ -264,7 +264,7 @@ function ConfigCard({
                   Edit
                 </button>
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={!canActivate || isActivating}
                   role="menuitem"
                   type="button"
@@ -277,7 +277,7 @@ function ConfigCard({
                   {isActivating ? "Activating…" : "Activate"}
                 </button>
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={!canDelete || deletingConfigId === config.id}
                   role="menuitem"
                   type="button"
