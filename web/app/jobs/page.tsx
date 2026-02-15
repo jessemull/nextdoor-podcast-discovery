@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { JobStats } from "@/components/JobStats";
 import { JobsList } from "@/components/JobsList";
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useToast } from "@/lib/ToastContext";
 
 import type { Job } from "@/lib/types";
 
@@ -14,8 +16,10 @@ const POLL_INTERVAL_MS = 8000;
 type StatusFilter = "" | "cancelled" | "completed" | "error" | "pending" | "running";
 
 export default function JobsPage() {
-  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
+  const { toast } = useToast();
+  const [cancelConfirmJobId, setCancelConfirmJobId] = useState<null | string>(null);
   const [error, setError] = useState<null | string>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
 
@@ -52,30 +56,33 @@ export default function JobsPage() {
     return () => clearInterval(interval);
   }, [jobs, fetchJobs]);
 
-  const handleCancel = useCallback(
-    async (jobId: string) => {
-      if (cancellingJobId) return;
-      setCancellingJobId(jobId);
-      setError(null);
-      try {
-        const res = await fetch(`/api/admin/jobs/${jobId}/cancel`, {
-          method: "PUT",
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            (data as { error?: string }).error ?? "Failed to cancel job"
-          );
-        }
-        await fetchJobs();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to cancel");
-      } finally {
-        setCancellingJobId(null);
+  const handleRequestCancel = useCallback((jobId: string) => {
+    setCancelConfirmJobId(jobId);
+  }, []);
+
+  const handleConfirmCancel = useCallback(async () => {
+    if (cancelConfirmJobId == null) return;
+    setIsCancelling(true);
+    try {
+      const res = await fetch(
+        `/api/admin/jobs/${cancelConfirmJobId}/cancel`,
+        { method: "PUT" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error ?? "Failed to cancel job"
+        );
       }
-    },
-    [cancellingJobId, fetchJobs]
-  );
+      await fetchJobs();
+      toast.success("Job cancelled.");
+    } catch {
+      toast.error("Failed to cancel job.");
+    } finally {
+      setCancelConfirmJobId(null);
+      setIsCancelling(false);
+    }
+  }, [cancelConfirmJobId, fetchJobs, toast]);
 
   const filteredJobs =
     statusFilter === ""
@@ -146,15 +153,25 @@ export default function JobsPage() {
 
         {filteredJobs.length > 0 && (
           <JobsList
-            cancellingJobId={cancellingJobId}
             description="Jobs run one at a time in queue order. Filter by status below or cancel pending and running jobs."
             jobs={filteredJobs}
             showManageLink={false}
             showStats={false}
             title="Job Queue"
-            onCancel={handleCancel}
+            onCancel={handleRequestCancel}
           />
         )}
+
+        <ConfirmModal
+          cancelLabel="Cancel"
+          confirmLabel="Submit"
+          confirmLoading={isCancelling}
+          message="Are you sure you want to cancel this job? It will not finish processing."
+          onCancel={() => setCancelConfirmJobId(null)}
+          onConfirm={handleConfirmCancel}
+          open={cancelConfirmJobId != null}
+          title="Cancel job?"
+        />
       </div>
     </main>
   );
