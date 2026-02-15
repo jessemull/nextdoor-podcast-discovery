@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { JobStats } from "@/components/JobStats";
 import { JobsList } from "@/components/JobsList";
 import { Card } from "@/components/ui/Card";
 
@@ -84,9 +85,12 @@ export default function JobsPage() {
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-2xl font-semibold text-foreground">Jobs</h1>
-        <p className="text-muted mb-8 text-sm">
-          View and manage background recompute jobs.
+        <h1 className="mb-4 text-3xl font-semibold text-foreground">Jobs</h1>
+        <p
+          className="text-foreground mb-8 text-sm"
+          style={{ opacity: 0.85 }}
+        >
+          View stats and manage jobs.
         </p>
 
         {error && (
@@ -94,6 +98,19 @@ export default function JobsPage() {
             {error}
           </Card>
         )}
+
+        <Card className="mb-8 p-6">
+          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+            Stats
+          </h2>
+          <p
+            className="text-foreground mb-6 text-sm"
+            style={{ opacity: 0.85 }}
+          >
+            Summary of all compute jobs.
+          </p>
+          <JobStats jobs={jobs} />
+        </Card>
 
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2">
@@ -130,9 +147,11 @@ export default function JobsPage() {
         {filteredJobs.length > 0 && (
           <JobsList
             cancellingJobId={cancellingJobId}
+            description="Jobs run one at a time in queue order. Filter by status below or cancel pending and running jobs."
             jobs={filteredJobs}
             showManageLink={false}
-            title="Jobs"
+            showStats={false}
+            title="Job Queue"
             onCancel={handleCancel}
           />
         )}
