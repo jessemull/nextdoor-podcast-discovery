@@ -18,7 +18,6 @@ interface NoveltyConfig {
 }
 
 interface NoveltyConfigEditorProps {
-  isSaving: boolean;
   noveltyConfig: NoveltyConfig;
   onSave: () => void;
   setNoveltyConfig: (config: NoveltyConfig) => void;
@@ -38,7 +37,6 @@ const DEFAULT_NOVELTY: NoveltyConfig = {
  * Rare topics get a boost, very common topics get penalized.
  */
 export function NoveltyConfigEditor({
-  isSaving,
   noveltyConfig,
   onSave,
   setNoveltyConfig,
@@ -255,12 +253,8 @@ export function NoveltyConfigEditor({
         >
           Defaults
         </Button>
-        <Button
-          disabled={isSaving}
-          variant="primary"
-          onClick={() => setSaveConfirmOpen(true)}
-        >
-          {isSaving ? "Saving…" : "Save"}
+        <Button variant="primary" onClick={() => setSaveConfirmOpen(true)}>
+          Save
         </Button>
       </div>
 
