@@ -37,23 +37,23 @@ export function SettingsWeightSection({
   setRankingWeights,
 }: SettingsWeightSectionProps) {
   return (
-    <>
-      <RankingWeightsEditor
-        rankingWeights={rankingWeights}
-        setRankingWeights={setRankingWeights}
-        onReset={onReset}
-        onSave={onSave}
-      />
-      <WeightConfigsList
-        activeConfigId={activeConfigId}
-        configs={configs}
-        deletingConfigId={deletingConfigId}
-        isActivating={isActivating}
-        jobs={jobs}
-        onActivate={onActivate}
-        onDelete={onDelete}
-        onRenameSuccess={onRenameSuccess}
-      />
-    </>
+    <WeightConfigsList
+      activeConfigId={activeConfigId}
+      configs={configs}
+      deletingConfigId={deletingConfigId}
+      isActivating={isActivating}
+      jobs={jobs}
+      middleSection={
+        <RankingWeightsEditor
+          onReset={onReset}
+          onSave={onSave}
+          rankingWeights={rankingWeights}
+          setRankingWeights={setRankingWeights}
+        />
+      }
+      onActivate={onActivate}
+      onDelete={onDelete}
+      onRenameSuccess={onRenameSuccess}
+    />
   );
 }
