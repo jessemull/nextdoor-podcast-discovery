@@ -8,13 +8,13 @@ import { recomputeScoresBodySchema } from "@/lib/validators";
 /**
  * POST /api/admin/recompute-scores
  *
- * Creates a weight config and background job to recompute final scores for all posts.
+ * Creates a background job to recompute final scores for all posts.
  * Requires authentication.
  *
- * Body:
- * - ranking_weights: Record<string, number> (required)
- * - name?: string (optional name for the weight config)
- * - description?: string (optional description)
+ * Body (one of):
+ * - ranking_weights: Record<string, number> — create a new weight config and job
+ * - use_active_config: true — create a job using the current active weight config
+ *   (e.g. after saving novelty config; no new config is created)
  */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -30,41 +30,90 @@ export async function POST(request: NextRequest) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { description, name, ranking_weights } = parsed.data;
+    const { description, name, ranking_weights, use_active_config } = parsed.data;
 
     const supabase = getSupabaseAdmin();
 
-    const { data: weightConfigRow, error: configError } = await supabase
-      .from("weight_configs")
-      .insert({
-        created_by: session.user?.email || "unknown",
-        description: description ?? null,
-        name: name ?? `Config ${new Date().toISOString()}`,
-        weights: ranking_weights,
-      })
-      .select()
-      .single();
+    let weightConfigId: string;
+    let weightConfigName: string | null = null;
 
-    if (configError || !weightConfigRow) {
-      console.error("[admin/recompute-scores] Failed to create weight config:", {
-        error: configError?.message || "Unknown error",
-      });
+    if (use_active_config === true) {
+      const { data: activeRow } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "active_weight_config_id")
+        .single();
+
+      const activeId =
+        activeRow?.value != null && typeof activeRow.value === "string"
+          ? activeRow.value
+          : null;
+
+      if (!activeId) {
+        return NextResponse.json(
+          {
+            error:
+              "No active weight config. Activate a config in Ranking Weights first.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const { data: configRow } = await supabase
+        .from("weight_configs")
+        .select("id, name")
+        .eq("id", activeId)
+        .single();
+
+      if (!configRow?.id) {
+        return NextResponse.json(
+          {
+            error: "Active weight config not found.",
+          },
+          { status: 400 }
+        );
+      }
+      weightConfigId = configRow.id;
+      weightConfigName = configRow.name ?? null;
+    } else if (ranking_weights != null) {
+      const { data: weightConfigRow, error: configError } = await supabase
+        .from("weight_configs")
+        .insert({
+          created_by: session.user?.email || "unknown",
+          description: description ?? null,
+          name: name ?? `Config ${new Date().toISOString()}`,
+          weights: ranking_weights,
+        })
+        .select()
+        .single();
+
+      if (configError || !weightConfigRow) {
+        console.error("[admin/recompute-scores] Failed to create weight config:", {
+          error: configError?.message || "Unknown error",
+        });
+        return NextResponse.json(
+          {
+            details: configError?.message || "Failed to create weight config",
+            error: "Database error",
+          },
+          { status: 500 }
+        );
+      }
+      weightConfigId = weightConfigRow.id;
+      weightConfigName = weightConfigRow.name;
+    } else {
       return NextResponse.json(
-        {
-          details: configError?.message || "Failed to create weight config",
-          error: "Database error",
-        },
-        { status: 500 }
+        { error: "Provide ranking_weights or use_active_config: true" },
+        { status: 400 }
       );
     }
 
-    // Create background job with weight_config_id
     const { data: jobRow, error: jobError } = await supabase
       .from("background_jobs")
       .insert({
         created_by: session.user?.email || "unknown",
-        max_retries: 3, // Default: retry up to 3 times on transient failures
-        params: { weight_config_id: weightConfigRow.id },
+        max_retries: 3,
+        params: { weight_config_id: weightConfigId },
         retry_count: 0,
         status: "pending",
         type: "recompute_final_scores",
@@ -85,14 +134,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      data: {
-        job_id: jobRow.id,
-        status: jobRow.status,
-        weight_config_id: weightConfigRow.id,
-        weight_config_name: weightConfigRow.name,
-      },
-    });
+    const data = {
+      job_id: jobRow.id,
+      status: jobRow.status,
+      weight_config_id: weightConfigId,
+      weight_config_name: weightConfigName,
+    };
+    return NextResponse.json({ data });
   } catch (error) {
     console.error("[admin/recompute-scores] Error:", {
       error: error instanceof Error ? error.message : "Unknown error",

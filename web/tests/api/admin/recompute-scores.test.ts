@@ -62,7 +62,7 @@ describe("POST /api/admin/recompute-scores", () => {
     expect(data.error).toBe("Unauthorized");
   });
 
-  it("should return 400 when ranking_weights is missing", async () => {
+  it("should return 400 when body has neither ranking_weights nor use_active_config", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: "test@example.com" },
     } as never);
@@ -76,9 +76,7 @@ describe("POST /api/admin/recompute-scores", () => {
 
     expect(response.status).toBe(400);
     expect(data.error).toBeDefined();
-    expect(
-      data.error === "ranking_weights is required" || data.error === "Required"
-    ).toBe(true);
+    expect(data.error).toContain("ranking_weights");
   });
 
   it("should return 400 when ranking_weights is not an object", async () => {

@@ -140,11 +140,23 @@ export const postsIgnoredBodySchema = z.object({
 export type PostsIgnoredBody = z.infer<typeof postsIgnoredBodySchema>;
 
 /** POST /api/admin/recompute-scores body */
-export const recomputeScoresBodySchema = z.object({
-  description: z.string().optional(),
-  name: z.string().optional(),
-  ranking_weights: rankingWeightsSchema,
-});
+export const recomputeScoresBodySchema = z
+  .object({
+    description: z.string().optional(),
+    name: z.string().optional(),
+    ranking_weights: rankingWeightsSchema.optional(),
+    use_active_config: z.literal(true).optional(),
+  })
+  .refine(
+    (data) =>
+      data.ranking_weights != null || data.use_active_config === true,
+    "Provide ranking_weights or use_active_config: true"
+  )
+  .refine(
+    (data) =>
+      data.ranking_weights == null || data.use_active_config !== true,
+    "Provide ranking_weights or use_active_config, not both"
+  );
 
 export type RecomputeScoresBody = z.infer<typeof recomputeScoresBodySchema>;
 

@@ -270,18 +270,31 @@ export default function SettingsPage() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch("/api/settings", {
+      const settingsResponse = await fetch("/api/settings", {
         body: JSON.stringify({ novelty_config: noveltyConfig }),
         headers: { "Content-Type": "application/json" },
         method: "PUT",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!settingsResponse.ok) {
+        const errorData = await settingsResponse.json();
         throw new Error(errorData.error || errorData.details || "Failed to save novelty config");
       }
 
-      setSuccessMessage("Novelty configuration saved. Changes apply to future recomputes.");
+      const recomputeResponse = await fetch("/api/admin/recompute-scores", {
+        body: JSON.stringify({ use_active_config: true }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+
+      if (!recomputeResponse.ok) {
+        const errorData = await recomputeResponse.json();
+        throw new Error(errorData.error || errorData.details || "Failed to start recompute");
+      }
+
+      setSuccessMessage(
+        "Novelty configuration saved and recompute job started. Scores will update when the job completes."
+      );
     } catch (err) {
       console.error("Error saving novelty config:", err);
       setError(err instanceof Error ? err.message : "Failed to save novelty config");
