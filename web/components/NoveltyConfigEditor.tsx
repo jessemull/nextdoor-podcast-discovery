@@ -86,10 +86,6 @@ export function NoveltyConfigEditor({
         The three thresholds define the frequency boundaries within the 30-day
         window.
       </p>
-      <div className="border-border bg-surface-hover mb-6 rounded border px-3 py-2 text-muted text-sm">
-        Recompute scores (via Ranking Weights &quot;Save & Recompute&quot;)
-        for novelty changes to take effect on the feed.
-      </div>
 
       <div className="mb-6 space-y-4">
         <div>
