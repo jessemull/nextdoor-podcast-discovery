@@ -129,6 +129,49 @@ Tracked list of product and system improvements to complete.
 
 ---
 
+## 14. Performance and latency
+
+- [ ] **Parallelize independent DB round-trips in API**
+  - **Posts feed:** After `get_posts_with_scores` or `get_posts_by_date` returns, run count RPC and fetch posts by IDs in parallel (e.g. `Promise.all`) instead of sequentially. Saves one round-trip per request.
+  - **Single post (GET /api/posts/[id] and getPostById):** Fetch post+neighborhood and `llm_scores` in parallel with `Promise.all`.
+  - **Search (POST /api/search):** After vector search, fetch `llm_scores` and `neighborhoods` in parallel with `Promise.all`.
+- [ ] **Cache active weight config id**
+  - Posts feed, bulk resolve, and related flows each do 1–2 DB calls to resolve `active_weight_config_id`. Add short-TTL in-memory cache (e.g. 30–60s) so repeated requests avoid repeated lookups; keep TTL short so config changes are seen quickly.
+- [ ] **Feed data caching and deduplication (frontend)**
+  - Feed uses raw `fetch` with no client cache; every filter change or remount refetches. Consider React Query (TanStack Query): cache by query key (filters + pagination), deduplicate in-flight requests, optional prefetch on “load more” or hover to reduce perceived latency.
+- [ ] **Batch DB writes in LLM scorer**
+  - **llm_scores:** Currently upserted one row per result in a loop. Build full list and call a single `.upsert(...).execute()` for the batch.
+  - **Topic frequencies:** One RPC or select+upsert per category per batch. Add or use a batch RPC that accepts multiple (category, increment) pairs (or single transaction) instead of one round-trip per category.
+- [ ] **Embedder: process in chunks instead of full-table load**
+  - `generate_and_store_embeddings()` loads all `posts` (id, text) and all `post_embeddings` (post_id) into memory. Use an RPC like `get_posts_without_embeddings(limit N)` or paginated/cursor query; process N posts at a time, then fetch next chunk. Avoid loading full tables into memory.
+- [ ] **Worker: throttle cancel checks and progress updates**
+  - Recompute job does a DB round-trip to check cancellation and one to update progress every batch. Check cancellation every N batches (e.g. 5); throttle progress updates (e.g. every N batches or every M seconds); still set final progress on completion.
+- [ ] **Post storage: batch neighborhood lookups**
+  - For each batch, collect unique neighborhood names; batch-fetch existing by slug (e.g. `in("slug", slugs)`); batch-insert missing; fill cache and use when building `posts_data`. Reduces round-trips when many distinct neighborhoods appear in one scrape batch.
+- [ ] **Scraper: tune scroll delay for speed vs reliability**
+  - Current `scroll_delay_ms` (2000, 5000) increases total scrape time. Consider lower range (e.g. 1–3s); document or monitor for rate limits/CAPTCHA; make range configurable via env if needed.
+- [ ] **(Optional) Shared embedding cache for search**
+  - In-memory cache is per serverless instance; repeated identical searches on other instances miss cache. If search traffic justifies it, consider shared cache (e.g. Vercel KV or Redis) for query embeddings. Document cost/benefit.
+- [ ] **(Optional) Cacheable responses for stable data**
+  - For read-heavy, relatively stable endpoints (e.g. GET /api/neighborhoods), add short-lived `Cache-Control` headers (e.g. `max-age=60`) so browsers/CDN can cache and reduce latency for repeat visits.
+
+| Area | Current behavior | Improvement |
+|------|------------------|-------------|
+| Posts feed API | Count then posts fetch (sequential) | Run count + posts fetch in parallel |
+| Post detail API / getPostById | Post+neighborhood then llm_scores (sequential) | Fetch both in parallel |
+| Search API | Scores then neighborhoods (sequential) | Fetch both in parallel |
+| active_weight_config_id | 1–2 DB calls per feed/bulk request | Short-TTL in-memory cache |
+| Feed frontend | No client cache, refetch on every change | React Query: cache, dedupe, optional prefetch |
+| LLM scorer save_scores | One upsert per llm_score row; one RPC per category | Batch upsert; batch topic-frequency update |
+| Embedder | Load all posts and all embedding post_ids | Chunked RPC or paginated query |
+| Worker recompute | Cancel + progress DB call every batch | Check cancel every N batches; throttle progress writes |
+| Post storage | One get/create per distinct new neighborhood | Batch resolve + batch create neighborhoods |
+| Scraper scroll | 2–5s random delay | Tune range (e.g. 1–3s); make configurable |
+| Embedding cache (optional) | In-memory per instance | Shared KV/Redis for cross-instance hits |
+| Neighborhoods API (optional) | No caching | Cache-Control for 60s or similar |
+
+---
+
 ## Future / backlog
 
 - [ ] **Optional: support negative dimension weights for penalization**
