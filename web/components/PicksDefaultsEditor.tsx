@@ -115,7 +115,7 @@ export function PicksDefaultsEditor({
             htmlFor="picks-min-podcast"
             style={{ opacity: 0.85 }}
           >
-            Min Podcast (optional)
+            Min Podcast (Optional)
           </label>
           <input
             className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"

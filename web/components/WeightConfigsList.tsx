@@ -431,7 +431,7 @@ export function WeightConfigsList({
       {activeConfig && (
         <Card className="mb-8 p-6">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-            Active Configuration
+            Active Weight Configuration
           </h2>
           <p
             className="text-foreground mb-6 text-sm"
@@ -532,7 +532,7 @@ export function WeightConfigsList({
               className="text-foreground mb-1 block text-sm"
               style={{ opacity: 0.85 }}
             >
-              Description (optional)
+              Description (Optional)
             </span>
             <textarea
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
