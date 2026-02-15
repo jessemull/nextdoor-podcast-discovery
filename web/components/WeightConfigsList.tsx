@@ -224,14 +224,6 @@ function ConfigCard({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            aria-label="Edit name"
-            className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
-            type="button"
-            onClick={() => onOpenRename(config)}
-          >
-            <Pencil aria-hidden className="h-4 w-4 text-foreground" />
-          </button>
           {canActivate && (
             <button
               aria-label="Activate"
@@ -241,17 +233,6 @@ function ConfigCard({
               onClick={() => onActivate(config.id)}
             >
               <Power aria-hidden className="h-4 w-4 text-foreground" />
-            </button>
-          )}
-          {canDelete && (
-            <button
-              aria-label="Delete"
-              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus disabled:opacity-50"
-              disabled={deletingConfigId === config.id}
-              type="button"
-              onClick={() => onDelete(config.id)}
-            >
-              <Trash2 aria-hidden className="h-4 w-4 text-destructive" />
             </button>
           )}
           <div className="relative" ref={menuOpen ? menuRef : null}>
@@ -271,7 +252,7 @@ function ConfigCard({
                 role="menu"
               >
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                   role="menuitem"
                   type="button"
                   onClick={() => {
@@ -280,7 +261,7 @@ function ConfigCard({
                   }}
                 >
                   <Pencil aria-hidden className="h-4 w-4" />
-                  Rename
+                  Edit
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
@@ -453,13 +434,13 @@ export function WeightConfigsList({
       {activeConfig && (
         <Card className="mb-8 p-6">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-            Active configuration
+            Active Configuration
           </h2>
           <p
             className="text-foreground mb-6 text-sm"
             style={{ opacity: 0.85 }}
           >
-            The configuration currently used for ranking. Shown again below in the list.
+            The configuration currently used for ranking.
           </p>
           <ConfigCard
             canActivate={getConfigState(activeConfig, activeConfigId, jobs).canActivate}
@@ -489,9 +470,7 @@ export function WeightConfigsList({
           className="text-foreground mb-6 text-sm"
           style={{ opacity: 0.85 }}
         >
-          Switch between different weight configurations. Only configs with
-          completed recompute jobs can be activated. You can only delete a config
-          when it is not active and has no job running.
+          Switch between different weight configurations.
         </p>
         <div className="max-h-96 space-y-3 overflow-y-auto">
           {configs.map((config) => {
