@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { JobStats } from "@/components/JobStats";
 import { JobsList } from "@/components/JobsList";
+import { JobsPageSkeleton } from "@/components/JobsPageSkeleton";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/lib/ToastContext";
@@ -13,15 +15,21 @@ import type { Job } from "@/lib/types";
 const JOBS_LIMIT = 50;
 const POLL_INTERVAL_MS = 8000;
 
-type StatusFilter = "" | "cancelled" | "completed" | "error" | "pending" | "running";
+type FinishedStatusFilter =
+  | ""
+  | "cancelled"
+  | "completed"
+  | "error";
 
 export default function JobsPage() {
   const { toast } = useToast();
   const [cancelConfirmJobId, setCancelConfirmJobId] = useState<null | string>(null);
   const [error, setError] = useState<null | string>(null);
+  const [finishedFilter, setFinishedFilter] =
+    useState<FinishedStatusFilter>("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
 
   const fetchJobs = useCallback(async () => {
     setError(null);
@@ -40,6 +48,8 @@ export default function JobsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setJobs([]);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -84,13 +94,8 @@ export default function JobsPage() {
     }
   }, [cancelConfirmJobId, fetchJobs, toast]);
 
-  const filteredJobs =
-    statusFilter === ""
-      ? jobs
-      : jobs.filter((j) => j.status === statusFilter);
-
-  // Two buckets: queue (pending/running) and finished (completed, error, cancelled). Badge shows outcome.
-  const queueJobs = filteredJobs
+  // Queue: all pending/running (no filter). Finished: filter by outcome.
+  const queueJobs = jobs
     .filter((j) => j.status === "pending" || j.status === "running")
     .sort((a, b) => {
       if (a.status === "running" && b.status !== "running") return -1;
@@ -99,18 +104,109 @@ export default function JobsPage() {
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
     });
-  const finishedJobs = filteredJobs
-    .filter(
-      (j) =>
-        j.status === "completed" || j.status === "error" || j.status === "cancelled"
-    )
-    .sort((a, b) => {
-      const aEnd =
-        a.completed_at ?? a.cancelled_at ?? a.created_at;
-      const bEnd =
-        b.completed_at ?? b.cancelled_at ?? b.created_at;
-      return new Date(bEnd).getTime() - new Date(aEnd).getTime();
-    });
+  const allFinished = jobs.filter(
+    (j) =>
+      j.status === "completed" || j.status === "error" || j.status === "cancelled"
+  );
+  const finishedJobs = (finishedFilter === ""
+    ? allFinished
+    : allFinished.filter((j) => j.status === finishedFilter)
+  ).sort((a, b) => {
+    const aEnd = a.completed_at ?? a.cancelled_at ?? a.created_at;
+    const bEnd = b.completed_at ?? b.cancelled_at ?? b.created_at;
+    return new Date(bEnd).getTime() - new Date(aEnd).getTime();
+  });
+
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!filterMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(e.target as Node)
+      ) {
+        setFilterMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFilterMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [filterMenuOpen]);
+
+  const finishedFilterOptions: { label: string; value: FinishedStatusFilter }[] =
+    [
+      { label: "All", value: "" },
+      { label: "Completed", value: "completed" },
+      { label: "Error", value: "error" },
+      { label: "Cancelled", value: "cancelled" },
+    ];
+
+  const finishedFilterControl = (
+    <div className="relative" ref={filterMenuRef}>
+      <button
+        aria-expanded={filterMenuOpen}
+        aria-haspopup="menu"
+        aria-label="Filter finished jobs"
+        className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+        type="button"
+        onClick={() => setFilterMenuOpen((o) => !o)}
+      >
+        <MoreHorizontal
+          aria-hidden
+          className="h-4 w-4 text-foreground"
+        />
+      </button>
+      {filterMenuOpen && (
+        <ul
+          className="border-border bg-surface absolute right-0 top-full z-50 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
+          role="menu"
+        >
+          {finishedFilterOptions.map((opt) => (
+            <li key={opt.value || "all"} role="none">
+              <button
+                className="cursor-pointer w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                role="menuitem"
+                type="button"
+                onClick={() => {
+                  setFinishedFilter(opt.value);
+                  setFilterMenuOpen(false);
+                }}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="mb-4 text-3xl font-semibold text-foreground">
+            Jobs
+          </h1>
+          <p
+            className="text-foreground mb-8 text-sm"
+            style={{ opacity: 0.85 }}
+          >
+            View stats and manage jobs.
+          </p>
+          <JobsPageSkeleton />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-8">
@@ -142,28 +238,6 @@ export default function JobsPage() {
           <JobStats jobs={jobs} />
         </Card>
 
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">
-              Filter by status:
-            </span>
-            <select
-              className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as StatusFilter)
-              }
-            >
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="running">Running</option>
-              <option value="completed">Completed</option>
-              <option value="error">Error</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </label>
-        </div>
-
         <JobsList
           description="Pending and running jobs, in queue order. One job runs at a time."
           emptyMessage="No jobs in queue."
@@ -178,6 +252,7 @@ export default function JobsPage() {
         <JobsList
           description="Jobs that are done—completed, failed, or cancelled. The badge on each card shows what happened."
           emptyMessage="No finished jobs."
+          headerRightContent={finishedFilterControl}
           jobs={finishedJobs}
           showManageLink={false}
           showStats={false}
