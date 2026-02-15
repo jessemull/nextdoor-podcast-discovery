@@ -151,12 +151,9 @@ export function JobsList({
                   className="rounded border border-border bg-surface-hover/50 p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className="text-foreground min-w-0 truncate text-base font-semibold">
-                        Job #{job.id.substring(0, 8)}
-                        {queuePosition !== null &&
-                          queuePosition > 0 &&
-                          ` (Queue #${queuePosition})`}
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                      <span className="text-foreground min-w-0 shrink-0 truncate text-base font-semibold">
+                        {formatJobType(job.type)} (#{job.id.substring(0, 8)})
                       </span>
                       <span className={statusBadgeClass}>
                         {formatStatusLabel(job.status)}
