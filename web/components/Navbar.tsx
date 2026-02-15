@@ -1,7 +1,7 @@
 "use client";
 
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { LogOut, Mic } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   useCallback,
@@ -17,7 +17,7 @@ const navLinkClass = cn(
 );
 
 export function Navbar() {
-  const { data: session, status } = useSession();
+  const { isLoading, user } = useUser();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +37,7 @@ export function Navbar() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [userMenuOpen, closeUserMenu]);
 
-  const initial = session?.user?.email?.slice(0, 1).toUpperCase() ?? "?";
+  const initial = user?.email?.slice(0, 1).toUpperCase() ?? "?";
 
   return (
     <nav className="border-border bg-surface border-b">
@@ -65,7 +65,7 @@ export function Navbar() {
             Settings
           </Link>
 
-          {status === "loading" ? (
+          {isLoading ? (
             <span
               aria-label="Loading user"
               className={cn(
@@ -75,7 +75,7 @@ export function Navbar() {
             >
               ?
             </span>
-          ) : session ? (
+          ) : user ? (
             <div className="relative" ref={userMenuRef}>
               <button
                 aria-expanded={userMenuOpen}
@@ -96,18 +96,15 @@ export function Navbar() {
                   className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
                   role="menu"
                 >
-                  <button
+                  <Link
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                    href="/auth/logout"
+                    onClick={closeUserMenu}
                     role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeUserMenu();
-                      signOut();
-                    }}
                   >
                     <LogOut aria-hidden className="h-4 w-4" />
                     Sign out
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>

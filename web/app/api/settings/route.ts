@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { settingsPutBodySchema } from "@/lib/validators";
 
@@ -15,8 +14,8 @@ import { settingsPutBodySchema } from "@/lib/validators";
  * settings.ranking_weights. This ensures consistency with the versioning system.
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const session = await auth0.getSession();
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -132,8 +131,8 @@ export async function GET() {
  * - search_defaults?: Record<string, unknown>
  */
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const session = await auth0.getSession();
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

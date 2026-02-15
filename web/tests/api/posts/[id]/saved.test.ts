@@ -3,12 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PATCH } from "@/app/api/posts/[id]/saved/route";
 
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,7 +23,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 const createParams = (id: string) => ({
   params: Promise.resolve({ id }),
@@ -48,7 +45,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest(`http://localhost:3000/api/posts/${VALID_ID}/saved`, {
       body: JSON.stringify({ saved: true }),
@@ -62,7 +59,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 for invalid UUID format", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -78,7 +75,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 when saved field is missing", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -94,7 +91,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 when saved is not a boolean", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -110,7 +107,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should update saved state and return post when valid", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -131,7 +128,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 

@@ -1,28 +1,33 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import { useUser } from "@auth0/nextjs-auth0/client";
+
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const { status } = useSession();
+  const { isLoading, user } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (!isLoading && user) {
       router.push("/");
     }
-  }, [status, router]);
+  }, [isLoading, user, router]);
 
-  if (status === "loading") {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="animate-pulse text-gray-400">Loading...</div>
       </div>
     );
+  }
+
+  if (user) {
+    return null;
   }
 
   return (
@@ -37,20 +42,19 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <button
-          aria-label="Sign in with your Google account"
+        <Link
+          aria-label="Sign in with Auth0"
           className={cn(
-            "w-full flex items-center justify-center gap-3",
+            "block w-full text-center",
             "bg-white border-2 border-gray-200 rounded-lg px-6 py-3",
             "text-gray-700 font-medium",
             "hover:bg-gray-50 hover:border-gray-300",
             "transition-all duration-200"
           )}
-          onClick={() => signIn("google", { callbackUrl: "/" })}
+          href="/auth/login"
         >
-          <GoogleIcon />
-          Sign in with Google
-        </button>
+          Sign in with Auth0
+        </Link>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Access is restricted to authorized users only.

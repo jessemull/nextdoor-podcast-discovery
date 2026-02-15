@@ -2,14 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/sports-fact/route";
 
-// Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock env.server
@@ -29,7 +24,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
   default: vi.fn(() => mockAnthropicInstance),
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/sports-fact", () => {
   beforeEach(() => {
@@ -37,7 +32,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const response = await GET();
     const data = await response.json();
@@ -47,7 +42,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should return 401 when session has no user", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       expires: "2099-01-01",
     } as never);
 
@@ -59,7 +54,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should return sports fact from Claude API", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     } as never);
@@ -93,7 +88,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should return 500 and error when Claude API fails", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     } as never);
@@ -108,7 +103,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should handle non-text content from Claude", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     } as never);
@@ -132,7 +127,7 @@ describe("GET /api/sports-fact", () => {
   });
 
   it("should handle empty content array from Claude", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     } as never);

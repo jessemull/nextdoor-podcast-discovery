@@ -4,14 +4,9 @@ import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vites
 import { clearEmbeddingCacheForTest } from "@/lib/embedding-cache.server";
 import { POST } from "@/app/api/search/route";
 
-// Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock server-only env module
@@ -49,7 +44,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 /** Chain for supabase.from().select().in() used when enriching search results. */
 const fromSelectInChain = () => ({
@@ -69,7 +64,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/search", {
       body: JSON.stringify({ query: "test query" }),
@@ -83,7 +78,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 400 when query is missing", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -102,7 +97,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 400 when query is empty string", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -118,7 +113,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 400 when query is too long", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -135,7 +130,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 500 when OpenAI API fails", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -153,7 +148,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return 500 when embedding is invalid", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -173,7 +168,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return empty results when no posts found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -199,7 +194,7 @@ describe("POST /api/search", () => {
   });
 
   it("should return search results with posts", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -249,7 +244,7 @@ describe("POST /api/search", () => {
   });
 
   it("should validate and clamp limit parameter", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -278,7 +273,7 @@ describe("POST /api/search", () => {
   });
 
   it("should validate and clamp similarity_threshold parameter", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 

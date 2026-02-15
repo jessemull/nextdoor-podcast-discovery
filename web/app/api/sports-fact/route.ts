@@ -1,8 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { CLAUDE_MODEL } from "@/lib/env.server";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
@@ -29,7 +28,7 @@ Rules:
 Example format: "In 1995, the Pittsburgh Penguins mascot Iceburgh was once ejected from a game for spraying silly string on a referee."`;
 
 export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
-  const session = await getServerSession(authOptions);
+  const session = await auth0.getSession();
 
   // Just require any authenticated user
 

@@ -20,23 +20,23 @@ function getEnvVar(name: string, required: boolean = true): string {
 }
 
 export const env = {
-  get ALLOWED_EMAILS() {
-    return getEnvVar("ALLOWED_EMAILS", false);
-  },
   get ANTHROPIC_API_KEY() {
     return getEnvVar("ANTHROPIC_API_KEY");
   },
-  get GOOGLE_CLIENT_ID() {
-    return getEnvVar("GOOGLE_CLIENT_ID");
+  get APP_BASE_URL() {
+    return getEnvVar("APP_BASE_URL");
   },
-  get GOOGLE_CLIENT_SECRET() {
-    return getEnvVar("GOOGLE_CLIENT_SECRET");
+  get AUTH0_CLIENT_ID() {
+    return getEnvVar("AUTH0_CLIENT_ID");
   },
-  get NEXTAUTH_SECRET() {
-    return getEnvVar("NEXTAUTH_SECRET");
+  get AUTH0_CLIENT_SECRET() {
+    return getEnvVar("AUTH0_CLIENT_SECRET");
   },
-  get NEXTAUTH_URL() {
-    return getEnvVar("NEXTAUTH_URL");
+  get AUTH0_DOMAIN() {
+    return getEnvVar("AUTH0_DOMAIN");
+  },
+  get AUTH0_SECRET() {
+    return getEnvVar("AUTH0_SECRET");
   },
   get OPENAI_API_KEY() {
     return getEnvVar("OPENAI_API_KEY");

@@ -1,67 +1,38 @@
-# Auth flow (current)
+# Auth flow (Auth0)
 
-How sign-in and protection work today.
+How sign-in and protection work.
 
 ---
 
 ## Step-through
 
 1. **User hits the app**  
-   Middleware (`middleware.ts`) runs. If the path is not `/login`, `api/auth`, or static assets, it checks for a **NextAuth session cookie**. No session → redirect to `/login`.
+   Middleware runs. If the path is not `/login` or static assets, it checks for an Auth0 session. No session → redirect to `/auth/login`.
 
-2. **User clicks “Sign in with Google”**  
-   NextAuth sends them to Google OAuth. User signs in with Google (password, 2FA, etc.). Google redirects back to the app with an auth code.
+2. **User clicks "Sign in with Auth0"** (on `/login` page) or is redirected to `/auth/login`  
+   Auth0 SDK handles `/auth/login` and redirects the user to Auth0. The user signs in with their Auth0 credentials (or IdP linked to Auth0). Auth0 redirects back to the app at `/auth/callback`.
 
-3. **NextAuth `signIn` callback** (`lib/auth.ts`)  
-   After Google confirms the user, NextAuth runs our `signIn` callback with `user.email`:
-   - If `user.email` is missing → reject (return `false`).
-   - **Whitelist check:** We read `ALLOWED_EMAILS` from the **environment** (one string, comma-separated, e.g. `"a@x.com,b@y.com"`). We split it, trim, and do `ALLOWED_EMAILS.includes(user.email)`.
-   - If `ALLOWED_EMAILS` is empty (env not set or empty string), we **reject everyone** and log a warning at startup and on each rejected sign-in.
-   - If the user’s email is not in that list → reject. Otherwise → allow; NextAuth creates a session.
+3. **Auth0 callback**  
+   The SDK exchanges the auth code for tokens and creates a session. The user is redirected to the app (e.g. home or the page they tried to access).
 
 4. **Session**  
-   NextAuth sets a session cookie. Later requests send that cookie. Middleware and API routes use `getServerSession(authOptions)` to get the session; no second call to Google.
+   Auth0 stores the session in a cookie. The middleware and API routes use `auth0.getSession()` to check authentication.
 
 5. **Protected API routes**  
-   Each protected route calls `getServerSession(authOptions)`. If `session == null` → 401 Unauthorized. If session exists → request is treated as authenticated (we don’t re-check the whitelist on every request; we only checked it at sign-in).
+   Each protected route calls `auth0.getSession()`. If `session?.user` is null → 401 Unauthorized. If session exists → request is treated as authenticated.
 
----
-
-## Current whitelist (problem)
-
-- **Source:** One env var, `ALLOWED_EMAILS`.
-- **Format:** A single string of comma-separated email addresses, e.g. `ALLOWED_EMAILS=alice@example.com,bob@example.com`.
-- **Effect:** Only those emails can sign in. Anyone else is rejected in the `signIn` callback.
-- **Limitations:** No UI to manage users; adding/removing someone requires changing env and redeploying. Easy to misconfigure (typos, spaces, wrong env in an environment). No audit trail. See **Improvements §6** for a task to replace this.
+**Who can sign in:** Managed in the Auth0 Dashboard. Configure Connections (e.g. Username-Password, Google) and optionally use Rules or Actions to restrict by email, domain, or other claims. No env-based whitelist in the app.
 
 ---
 
 ## Env vars involved
 
-| Variable           | Purpose                          |
-|--------------------|----------------------------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth app client ID       |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth app secret    |
-| `NEXTAUTH_SECRET`  | Encrypts the session cookie     |
-| `NEXTAUTH_URL`     | App URL (e.g. `http://localhost:3000`) |
-| `ALLOWED_EMAILS`   | Comma-separated list of emails that may sign in (optional in code but required in practice or nobody can sign in) |
+| Variable             | Purpose                                |
+|----------------------|----------------------------------------|
+| `AUTH0_DOMAIN`       | Auth0 tenant domain (e.g. `your-tenant.us.auth0.com`) |
+| `AUTH0_CLIENT_ID`    | Auth0 application client ID            |
+| `AUTH0_CLIENT_SECRET`| Auth0 application client secret        |
+| `AUTH0_SECRET`       | Random secret for session encryption |
+| `APP_BASE_URL`       | App URL (e.g. `http://localhost:3000`) |
 
-`USER_EMAIL` / `NEXT_PUBLIC_USER_EMAIL` are separate (used for features like Pittsburgh sports fact), not for the whitelist.
-
----
-
-## Alternatives to the env whitelist
-
-### Option A: Google OAuth “Test users” (no code change to allow list)
-
-- In **Google Cloud Console** → APIs & Services → **OAuth consent screen**, keep the app in **Testing** (don’t publish to Production).
-- Add **Test users** by email (same place: “Test users” section). Only those Google accounts can complete sign-in; Google blocks everyone else before they reach our app.
-- We can **remove** the `ALLOWED_EMAILS` check in `signIn` (or leave it as a no-op) and rely on Google’s list.
-- **Limitations:** Max 100 test users; Google may show a “This app isn’t verified” / testing warning. Fine for internal or small team tools.
-
-### Option B: Use Okta instead of Google
-
-- NextAuth supports **Okta** as a provider (`next-auth/providers/okta`). You’d use Okta as the only provider (or alongside Google).
-- In **Okta** you create an application and **assign users or groups** to it. Only those users can sign in; Okta enforces it. No env email list needed in our app.
-- **Env:** `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET`, `OKTA_ISSUER` (and callback `https://<your-domain>/api/auth/callback/okta` in Okta).
-- Good fit if you already use Okta for identity and want to manage “who can use this app” there.
+`USER_EMAIL` / `NEXT_PUBLIC_USER_EMAIL` are separate (used for features like Pittsburgh sports fact), not for access control.

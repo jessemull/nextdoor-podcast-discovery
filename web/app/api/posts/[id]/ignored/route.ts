@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
+import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { postsIgnoredBodySchema, UUID_REGEX } from "@/lib/validators";
 
@@ -18,8 +17,8 @@ interface RouteParams {
  * - ignored: boolean
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const session = await auth0.getSession();
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

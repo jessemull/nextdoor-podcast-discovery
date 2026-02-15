@@ -2,12 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/posts/[id]/route";
 
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,7 +18,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 const createParams = (id: string) => ({
   params: Promise.resolve({ id }),
@@ -33,7 +30,7 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const response = await GET(
       new Request("http://localhost:3000/api/posts/123e4567-e89b-12d3-a456-426614174000"),
@@ -46,7 +43,7 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 400 for invalid UUID format", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -61,7 +58,7 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return post with scores when found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 
@@ -112,7 +109,7 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 404 when post not found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
     });
 

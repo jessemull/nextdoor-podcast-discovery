@@ -4,13 +4,9 @@ import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vites
 import { GET } from "@/app/api/posts/route";
 
 // Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -28,7 +24,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
+import { auth0 } from "@/lib/auth0";
 
 describe("GET /api/posts", () => {
   beforeEach(() => {
@@ -36,7 +32,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/posts");
     const response = await GET(request);
@@ -47,7 +43,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return posts when authenticated using RPC", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -148,7 +144,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should pass p_ignored_only to RPC when ignored_only=true", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -225,7 +221,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return error when no active config found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -294,7 +290,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 400 for invalid query params", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -310,7 +306,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should cap limit at 100", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -339,7 +335,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return empty array when no posts found", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });
@@ -364,7 +360,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
       expires: "2099-01-01",
     });

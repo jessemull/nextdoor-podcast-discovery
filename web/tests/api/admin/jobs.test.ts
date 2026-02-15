@@ -1,17 +1,13 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { auth0 } from "@/lib/auth0";
 import { GET } from "@/app/api/admin/jobs/route";
 import type { MockSupabaseClient, MockSupabaseQueryBuilder } from "@/tests/mocks/types";
 
-// Mock next-auth
-vi.mock("next-auth", () => ({
-  getServerSession: vi.fn(),
-}));
-
-// Mock auth options
-vi.mock("@/lib/auth", () => ({
-  authOptions: {},
+// Mock Auth0
+vi.mock("@/lib/auth0", () => ({
+  auth0: { getSession: vi.fn() },
 }));
 
 // Mock Supabase
@@ -24,7 +20,6 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { getServerSession } from "next-auth";
 
 describe("GET /api/admin/jobs", () => {
   beforeEach(() => {
@@ -32,7 +27,7 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
+    vi.mocked(auth0.getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/jobs");
     const response = await GET(request);
@@ -43,9 +38,9 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return jobs when authenticated", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
-    } as never);
+    });
 
     const mockJobs = [
       {
@@ -79,9 +74,9 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should filter by type when provided", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
-    } as never);
+    });
 
     const mockSelect = vi.fn().mockReturnThis();
     const mockOrder = vi.fn().mockReturnThis();
@@ -110,9 +105,9 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return specific job when id is provided", async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
+    vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
-    } as never);
+    });
 
     const mockJob = {
       id: "550e8400-e29b-41d4-a716-446655440000",
