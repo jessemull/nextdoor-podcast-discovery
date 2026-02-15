@@ -6,7 +6,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
-import { SettingsScoreDistribution } from "@/components/SettingsScoreDistribution";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
@@ -417,8 +416,6 @@ export default function SettingsPage() {
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
         />
-
-        <SettingsScoreDistribution />
 
         <SettingsDefaultsSection
           noveltyConfig={noveltyConfig}
