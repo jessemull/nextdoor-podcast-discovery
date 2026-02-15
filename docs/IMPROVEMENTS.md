@@ -177,3 +177,58 @@ Tracked list of product and system improvements to complete.
 - [ ] **Optional: support negative dimension weights for penalization**
   - Define how final_score is bounded (e.g. clamp after weighted sum) and document in UI.
 - (Add more items here as we go.)
+
+---
+
+## Ranked checklist (high value, low effort first)
+
+Order: **security/auth first**, then **must-fix (correctness)**, then **high value / low effort**, then by increasing effort or lower value. Section numbers refer to sections above.
+
+**Security / auth (first)**
+
+- [ ] **§7 — Switch to Okta for auth:** Replace ENV-based email whitelist with Okta provider; manage allowed users in Okta (assign users/groups to the app). No env whitelist in our app. See docs/AUTH.md.
+
+**Must-fix (correctness)**
+
+- [ ] **§3 — Clamp final_score to [0, 10]** in `calculate_final_scores` (llm_scorer) and `calculate_final_score` (worker) so feed/UI semantics are consistent.
+- [ ] **§3 — Add ORDER BY id** to worker's llm_scores batch query for deterministic pagination and to avoid skip/duplicate rows during recompute.
+
+**High value, low effort**
+
+- [ ] **§13 — Cold-start novelty:** When `topic_frequencies` is empty or total scored posts \< N, use novelty multiplier 1.0 in scorer and worker instead of max boost.
+- [ ] **§13 — Validate weight config keys** against known SCORING_DIMENSIONS when saving (API/Settings); warn or reject unknown dimensions to avoid silent 5.0 fallbacks.
+- [ ] **§13 — Truncation signal in scoring prompt:** When post text is truncated, add a line (e.g. "[Text truncated at 2000 characters]") so the model and downstream logic can account for partial content.
+- [ ] **§14 — Parallelize posts feed API:** After `get_posts_with_scores` / `get_posts_by_date` returns, run count RPC and fetch posts by IDs in parallel (`Promise.all`). Same for getPostsByDate.
+- [ ] **§14 — Parallelize single post API:** In GET /api/posts/[id] and `getPostById`, fetch post+neighborhood and llm_scores in parallel with `Promise.all`.
+- [ ] **§14 — Parallelize search API:** After vector search, fetch llm_scores and neighborhoods in parallel with `Promise.all`.
+- [ ] **§14 — Worker: throttle cancel checks and progress updates:** Check cancellation every N batches (e.g. 5); throttle progress DB writes (e.g. every N batches or M seconds); still set final progress on completion.
+- [ ] **§13 — Reproducibility (temperature/seed):** Use temperature=0 for scoring if supported by the API, or document that 0.3 causes variance; use seed parameter if the API gains one.
+
+**Medium effort, good value**
+
+- [ ] **§13 — Store prompt_version or prompt_hash** in llm_scores (or run metadata) to support feedback loop and A/B tests.
+- [ ] **§13 — Score distribution visibility:** Add simple score stats (min, max, mean, p50, p90) per dimension and for final_score (e.g. Settings or Admin).
+- [ ] **§14 — Cache active weight config id:** Short TTL in-memory cache (e.g. 30–60s) so repeated feed/bulk/settings requests avoid repeated lookups.
+- [ ] **§14 — Batch DB writes in LLM scorer:** Single batch upsert for llm_scores; batch or single RPC for topic_frequencies instead of one round-trip per category.
+- [ ] **§6 — Loading and error states:** Audit every UI page for loading (skeletons/spinners) and error (message + recovery); fix or add where missing.
+- [ ] **§14 — Feed data caching (frontend):** Use React Query (TanStack Query): cache by query key (filters + pagination), dedupe in-flight requests, optional prefetch.
+- [ ] **§9 — Rubric and internal chain-of-thought:** Add explicit scale text per dimension and "think step-by-step" in scoring prompts; return only valid JSON.
+
+**Larger or product-dependent**
+
+- [ ] **§5 — Comments in the UI:** Surface comment count and/or content (post card/detail); clarify data source (scrape time vs live) and limits.
+- [ ] **§4 — Stale post data:** Identify fields that can change after scrape (e.g. comments, reactions); decide strategy (ignore, refresh, or "may have changed" in UI).
+- [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
+- [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
+- [ ] **§14 — Embedder: chunked processing:** Use RPC like `get_posts_without_embeddings(limit N)` or paginated query; process in chunks to avoid loading full tables.
+- [ ] **§14 — Post storage: batch neighborhood lookups:** Per batch, collect unique neighborhood names; batch-fetch by slug, batch-insert missing; use cache when building posts_data.
+- [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
+- [ ] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights.
+- [ ] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration.
+- [ ] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
+- [ ] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
+- [ ] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
+- [ ] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
+- [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors.
+- [ ] **§10 — Permalink queue and scraper job:** Queue for Nextdoor permalinks; job runs x/day to fetch, scrape, store and score single posts.
+- [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).
