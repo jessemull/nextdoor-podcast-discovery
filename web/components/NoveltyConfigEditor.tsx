@@ -105,7 +105,7 @@ export function NoveltyConfigEditor({
               htmlFor="min-multiplier"
               style={{ opacity: 0.85 }}
             >
-              Min Multiplier (very common topics)
+              Min Multiplier (Very Common Topics)
             </label>
             <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
               {minMult.toFixed(2)}
@@ -135,7 +135,7 @@ export function NoveltyConfigEditor({
               htmlFor="max-multiplier"
               style={{ opacity: 0.85 }}
             >
-              Max Multiplier (rare topics)
+              Max Multiplier (Rare Topics)
             </label>
             <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
               {maxMult.toFixed(2)}

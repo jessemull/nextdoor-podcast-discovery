@@ -226,7 +226,7 @@ export function RankingWeightsEditor({
           </label>
           <label className="block">
             <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
-              Description (optional)
+              Description (Optional)
             </span>
             <textarea
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
