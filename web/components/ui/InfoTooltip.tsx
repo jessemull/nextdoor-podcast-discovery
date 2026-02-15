@@ -15,16 +15,13 @@ interface InfoTooltipProps {
 
 /**
  * Small info icon that shows a styled tooltip on hover.
- * Icon matches label styling (text-foreground, opacity 0.85, text-sm size).
+ * Icon matches label color by inheriting from parent (label usually has text-foreground and opacity 0.85).
  */
 export function InfoTooltip({ description }: InfoTooltipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          className="cursor-help shrink-0 text-foreground text-sm"
-          style={{ opacity: 0.85 }}
-        >
+        <span className="cursor-help shrink-0 text-inherit">
           <Info className="h-3.5 w-3.5" />
         </span>
       </TooltipTrigger>
