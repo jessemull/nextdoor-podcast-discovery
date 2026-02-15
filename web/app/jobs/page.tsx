@@ -89,6 +89,29 @@ export default function JobsPage() {
       ? jobs
       : jobs.filter((j) => j.status === statusFilter);
 
+  // Two buckets: queue (pending/running) and finished (completed, error, cancelled). Badge shows outcome.
+  const queueJobs = filteredJobs
+    .filter((j) => j.status === "pending" || j.status === "running")
+    .sort((a, b) => {
+      if (a.status === "running" && b.status !== "running") return -1;
+      if (a.status !== "running" && b.status === "running") return 1;
+      return (
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    });
+  const finishedJobs = filteredJobs
+    .filter(
+      (j) =>
+        j.status === "completed" || j.status === "error" || j.status === "cancelled"
+    )
+    .sort((a, b) => {
+      const aEnd =
+        a.completed_at ?? a.cancelled_at ?? a.created_at;
+      const bEnd =
+        b.completed_at ?? b.cancelled_at ?? b.created_at;
+      return new Date(bEnd).getTime() - new Date(aEnd).getTime();
+    });
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-4xl">
@@ -141,26 +164,27 @@ export default function JobsPage() {
           </label>
         </div>
 
-        {filteredJobs.length === 0 && !error && (
-          <Card className="p-6">
-            <p className="text-muted text-sm">
-              {jobs.length === 0
-                ? "No jobs yet."
-                : `No jobs with status "${statusFilter}".`}
-            </p>
-          </Card>
-        )}
+        <JobsList
+          description="Pending and running jobs, in queue order. One job runs at a time."
+          emptyMessage="No jobs in queue."
+          jobs={queueJobs}
+          showManageLink={false}
+          showStats={false}
+          title="Job Queue"
+          variant="queue"
+          onCancel={handleRequestCancel}
+        />
 
-        {filteredJobs.length > 0 && (
-          <JobsList
-            description="Jobs run one at a time in queue order. Filter by status below or cancel pending and running jobs."
-            jobs={filteredJobs}
-            showManageLink={false}
-            showStats={false}
-            title="Job Queue"
-            onCancel={handleRequestCancel}
-          />
-        )}
+        <JobsList
+          description="Jobs that are done—completed, failed, or cancelled. The badge on each card shows what happened."
+          emptyMessage="No finished jobs."
+          jobs={finishedJobs}
+          showManageLink={false}
+          showStats={false}
+          title="Finished Jobs"
+          variant="finished"
+          onCancel={handleRequestCancel}
+        />
 
         <ConfirmModal
           cancelLabel="Cancel"
