@@ -1,0 +1,104 @@
+# Improvements & tasks
+
+Tracked list of product and system improvements to complete.
+
+---
+
+## 1. Runtime vs stored scores (preview + cutover)
+
+- [ ] **Toggle for runtime calculation versus actual scores saved in DB**
+  - Add DB function (or app path) that computes `final_score` from `llm_scores` + weight config (weights + novelty).
+  - Feed can use runtime for “preview” (any config, instant) or stored `post_scores` when available (fast).
+  - Let user try configs with runtime, then run recompute job to persist; feed uses stored path after job completes.
+
+---
+
+## 2. Recompute job with clean cutover
+
+- [ ] **System for recalculating scores with new weights with clean cutover**
+  - During recompute, avoid mixing old and new scores in the feed (no partial state for 2+ hours).
+  - Option: staging table — job writes to `post_scores_staging` (by job/config); on job success, one transaction: delete `post_scores` for that config, insert from staging, then clear staging for that job.
+  - Feed always reads `post_scores`; cutover happens once when the job completes.
+
+---
+
+## 3. Stale post data after scrape
+
+- [ ] **Figure out which data might update after we scrape it (e.g. more comments)**
+  - Identify fields that can change on Nextdoor after we store the post (comments count, reaction count, etc.).
+  - Decide: drop/ignore that data, or define an update strategy (e.g. periodic refresh, or only use immutable fields for ranking and show “may have changed” in UI).
+
+---
+
+## 4. Comments in the UI
+
+- [ ] **Show comments in the UI**
+  - Surface comment count and/or comment content where it makes sense (e.g. post card, post detail).
+  - Clarify data source (stored at scrape time vs live) and any limits.
+
+---
+
+## 5. Loading and error states
+
+- [ ] **Verify loading states and error states for each page in the UI**
+  - Audit every page: ensure loading (skeletons/spinners) and error (message + recovery) are implemented and consistent.
+  - Fix or add where missing.
+
+---
+
+## 6. Auth and whitelist
+
+- [ ] **Replace ENV-based email whitelist with a proper approach**
+  - Currently: `ALLOWED_EMAILS` is a single env var (comma-separated emails). No UI to add/remove users; changing access requires editing env and redeploying.
+  - **Options (see `docs/AUTH.md`):**
+    - **Google Test users:** Keep OAuth app in “Testing,” add allowed emails as Test users in GCP; remove or relax `ALLOWED_EMAILS` in app. (Max 100 users; testing warning.)
+    - **Okta:** Switch to Okta provider; manage allowed users in Okta (assign users/groups to the app). No env whitelist in our app.
+    - **DB-backed list:** Store allowed emails (or user ids) in DB; check in `signIn` callback; add admin UI to manage. No redeploy to add/remove users.
+
+---
+
+## 7. Structured scoring log and feedback loop
+
+- [ ] **Log (or store) scoring inputs/outputs and tie to outcomes**
+  - Persist for analysis: post id, prompt (or hash), model output (or summary), final_score, and whether the post later “made the show” (`used_on_episode`).
+  - Periodically review: “What did we include that scored low?” and “What did we miss that scored high?” Use to adjust prompts and weights.
+  - Enables a real feedback loop for scoring quality.
+
+---
+
+## 8. Rubric and internal chain-of-thought
+
+- [ ] **Add explicit rubric text and “think step-by-step” to scoring prompts**
+  - Per dimension, add explicit scale text (e.g. “0 = …, 3 = …, 5 = …”) so the model has a clear rubric.
+  - Instruct the model to reason internally and return only valid JSON (no visible CoT needed; improves consistency).
+
+---
+
+## 9. Human calibration and permalink queue
+
+- [ ] **Use saved + used_on_episode as human signal for calibration**
+  - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration.
+- [ ] **Permalink queue and scraper job for high-value posts**
+  - Allow adding Nextdoor permalinks to a queue (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
+
+---
+
+## 10. Two-pass scoring
+
+- [ ] **Pass 1: cheap keep/drop; Pass 2: full scoring on survivors**
+  - Pass 1: fast/cheap binary (or light) filter to drop clearly irrelevant posts.
+  - Pass 2: full multi-dimension LLM scoring only on survivors. Reduces cost and can improve average quality.
+
+---
+
+## 11. Ensemble scoring (3 runs, median)
+
+- [ ] **Score each post 3 times; store median (or average) of dimension scores**
+  - Run the same batch 3 times (e.g. same prompt, slight temperature or phrasing variation); aggregate per dimension (e.g. median) then compute final_score from aggregated dimensions. Reduces LLM noise.
+  - Cost: ~3× current scoring API cost for the same set of posts. Batching is unchanged (still batches of 5 posts per call; do 3 calls per logical batch). Implementation is straightforward.
+
+---
+
+## Future / backlog
+
+- (Add more items here as we go.)
