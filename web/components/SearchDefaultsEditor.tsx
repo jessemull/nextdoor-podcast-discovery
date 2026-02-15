@@ -111,7 +111,7 @@ export function SearchDefaultsEditor({
         title="Update Search Defaults"
       >
         <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
-          Save this value as the default similarity threshold for feed search.
+          Save the default similarity threshold for the search results on the feed.
         </p>
       </ConfirmModal>
     </Card>

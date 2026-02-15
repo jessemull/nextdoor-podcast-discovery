@@ -61,7 +61,7 @@ export function PicksDefaultsEditor({
       <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
         Adjust Defaults
       </h3>
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div>
           <label
             className="text-foreground mb-2 block text-sm font-medium"
@@ -71,7 +71,7 @@ export function PicksDefaultsEditor({
             Minimum Score
           </label>
           <input
-            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
+            className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
             id="picks-min"
             max={10}
             min={0}
@@ -85,9 +85,6 @@ export function PicksDefaultsEditor({
               })
             }
           />
-          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
-            Only show posts with final score ≥ this value (0–10).
-          </p>
         </div>
         <div>
           <label
@@ -98,7 +95,7 @@ export function PicksDefaultsEditor({
             Number of Picks
           </label>
           <input
-            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
+            className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
             id="picks-limit"
             max={20}
             min={1}
@@ -111,9 +108,6 @@ export function PicksDefaultsEditor({
               })
             }
           />
-          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
-            Max number of top picks to display (1–20).
-          </p>
         </div>
         <div>
           <label
@@ -121,14 +115,14 @@ export function PicksDefaultsEditor({
             htmlFor="picks-min-podcast"
             style={{ opacity: 0.85 }}
           >
-            Min Podcast Score (optional)
+            Min Podcast (optional)
           </label>
           <input
-            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
+            className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
             id="picks-min-podcast"
             max={10}
             min={0}
-            placeholder=""
+            placeholder="—"
             step={0.5}
             type="number"
             value={picksDefaults.picks_min_podcast ?? ""}
@@ -144,10 +138,6 @@ export function PicksDefaultsEditor({
               });
             }}
           />
-          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
-            If set, Picks filter by podcast score and only show posts with
-            podcast_worthy ≥ this (0–10). Leave empty to use Minimum Score only.
-          </p>
         </div>
       </div>
 
@@ -173,7 +163,7 @@ export function PicksDefaultsEditor({
         title="Update Picks Defaults"
       >
         <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
-          Save these values as the default for the Top Picks filter on the feed.
+          Save the default values for the top picks filter on the feed.
         </p>
       </ConfirmModal>
     </Card>
