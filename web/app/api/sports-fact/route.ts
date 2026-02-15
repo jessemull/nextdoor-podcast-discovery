@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { auth0 } from "@/lib/auth0";
 import { NextResponse } from "next/server";
 
+import { auth0 } from "@/lib/auth0";
 import { CLAUDE_MODEL } from "@/lib/env.server";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";

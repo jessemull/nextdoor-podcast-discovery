@@ -228,10 +228,10 @@ export function RankingWeightsEditor({
         cancelLabel="Cancel"
         confirmDisabled={saveModalName.trim().length < MIN_CONFIG_NAME_LENGTH}
         confirmLabel="Submit"
-        onCancel={() => setSaveModalOpen(false)}
-        onConfirm={handleConfirmSave}
         open={saveModalOpen}
         title="Adding Weight Configuration"
+        onCancel={() => setSaveModalOpen(false)}
+        onConfirm={handleConfirmSave}
       >
         <div className="space-y-3 py-1">
           <label className="block">
@@ -243,7 +243,7 @@ export function RankingWeightsEditor({
               <InfoTooltip description="Name for this weight configuration so you can identify it later." />
             </span>
             <input
-              autoFocus
+              autoFocus // eslint-disable-line jsx-a11y/no-autofocus
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
               placeholder="Enter a name..."
               type="text"

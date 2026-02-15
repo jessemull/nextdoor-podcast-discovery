@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
@@ -37,18 +38,7 @@ export async function GET() {
       );
     }
 
-    // Get active config ID
-    const activeConfigResult = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "active_weight_config_id")
-      .single();
-
-    const activeConfigId =
-      activeConfigResult.data?.value &&
-      typeof activeConfigResult.data.value === "string"
-        ? activeConfigResult.data.value
-        : null;
+    const activeConfigId = await getActiveWeightConfigId(supabase);
 
     // Use has_scores column from weight_configs (optimized via migration 007)
     // Falls back to querying post_scores if column doesn't exist (backward compatibility)

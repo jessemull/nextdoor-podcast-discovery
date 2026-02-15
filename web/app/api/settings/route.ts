@@ -1,6 +1,7 @@
-import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
+import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { settingsPutBodySchema } from "@/lib/validators";
 
@@ -22,18 +23,7 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
 
-    // Get active weight config ID
-    const activeConfigResult = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "active_weight_config_id")
-      .single();
-
-    const activeConfigId =
-      activeConfigResult.data?.value &&
-      typeof activeConfigResult.data.value === "string"
-        ? activeConfigResult.data.value
-        : null;
+    const activeConfigId = await getActiveWeightConfigId(supabase);
 
     // Fetch active weight config, search defaults, novelty config, picks defaults in parallel
     const [

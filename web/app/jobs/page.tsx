@@ -3,9 +3,9 @@
 import { MoreHorizontal } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { JobStats } from "@/components/JobStats";
 import { JobsList } from "@/components/JobsList";
 import { JobsPageSkeleton } from "@/components/JobsPageSkeleton";
+import { JobStats } from "@/components/JobStats";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/lib/ToastContext";
@@ -266,10 +266,10 @@ export default function JobsPage() {
           confirmLabel="Submit"
           confirmLoading={isCancelling}
           message="Are you sure you want to cancel this job? It will not finish processing."
-          onCancel={() => setCancelConfirmJobId(null)}
-          onConfirm={handleConfirmCancel}
           open={cancelConfirmJobId != null}
           title="Cancel job?"
+          onCancel={() => setCancelConfirmJobId(null)}
+          onConfirm={handleConfirmCancel}
         />
       </div>
     </main>

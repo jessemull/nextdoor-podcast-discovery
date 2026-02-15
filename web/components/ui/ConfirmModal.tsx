@@ -1,10 +1,12 @@
 import { type ReactNode } from "react";
 
-import { Button } from "./Button";
 import { cn } from "@/lib/utils";
+
+import { Button } from "./Button";
 
 export interface ConfirmModalProps {
   cancelLabel: string;
+  children?: ReactNode;
   confirmDisabled?: boolean;
   confirmLabel: string;
   confirmLoading?: boolean;
@@ -14,7 +16,6 @@ export interface ConfirmModalProps {
   onConfirm: () => void;
   open: boolean;
   title: string;
-  children?: ReactNode;
 }
 
 /**
@@ -38,10 +39,10 @@ export function ConfirmModal({
 
   return (
     <div
+      aria-labelledby="confirm-modal-title"
+      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-modal-title"
     >
       <div
         className={cn(
@@ -80,13 +81,13 @@ export function ConfirmModal({
               </div>
             )}
             <div className="flex justify-end gap-3">
-              <Button onClick={onCancel} variant="secondary">
+              <Button variant="secondary" onClick={onCancel}>
                 {cancelLabel}
               </Button>
               <Button
                 disabled={confirmDisabled || confirmLoading}
-                onClick={onConfirm}
                 variant="primary"
+                onClick={onConfirm}
               >
                 {confirmLoading ? "..." : confirmLabel}
               </Button>

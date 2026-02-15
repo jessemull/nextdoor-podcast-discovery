@@ -9,10 +9,15 @@ __all__ = [
     "BATCH_SIZE",
     "MAX_POST_LENGTH",
     "MAX_SUMMARY_LENGTH",
+    "PROMPT_VERSION",
+    "RUBRIC_SCALE",
     "SCORING_DIMENSIONS",
     "SCORING_PROMPT",
     "TOPIC_CATEGORIES",
 ]
+
+# Version string for feedback loop and A/B tests; bump when prompt changes
+PROMPT_VERSION = "v1"
 
 # Maximum characters to send to Claude (longer posts are truncated)
 MAX_POST_LENGTH = 2000
@@ -20,33 +25,39 @@ MAX_POST_LENGTH = 2000
 # Maximum characters for post summary
 MAX_SUMMARY_LENGTH = 500
 
-# Scoring dimensions with descriptions for the prompt
+# Shared rubric scale for scoring dimensions
+RUBRIC_SCALE = "0=skip, 3=low, 5=neutral, 7=good, 10=perfect"
+
+# Scoring dimensions with descriptions and explicit anchors
 # Order matches the JSON example in the prompt for consistency
 SCORING_DIMENSIONS = {
     "absurdity": (
         "How ridiculous, unhinged, or 'peak Nextdoor' is this post? "
-        "(1=mundane, 10=absolutely unhinged)"
+        "1=mundane, 5=moderate, 10=absolutely unhinged"
     ),
     "discussion_spark": (
-        "Would listeners want to discuss this? (1=boring, 10=everyone has an opinion)"
+        "Would listeners want to discuss this? "
+        "1=boring, 5=some debate, 10=everyone has an opinion"
     ),
     "drama": (
-        "Level of conflict, tension, or heated exchanges "
-        "(1=peaceful, 10=full-blown neighbor war)"
+        "Level of conflict, tension, or heated exchanges. "
+        "1=peaceful, 5=some friction, 10=full-blown neighbor war"
     ),
     "emotional_intensity": (
-        "Passion level - caps, exclamation marks, strong language "
-        "(1=calm, 10=screaming)"
+        "Passion level - caps, exclamation marks, strong language. "
+        "1=calm, 5=moderate, 10=screaming"
     ),
     "news_value": (
-        "Did something actually happen worth reporting? (1=nothing, 10=major incident)"
+        "Did something actually happen worth reporting? "
+        "1=nothing, 5=notable, 10=major incident"
     ),
     "podcast_worthy": (
-        "Would this work well on a comedy podcast? (1=skip, 10=perfect for the show)"
+        "Would this work well on a comedy podcast? "
+        "1=skip, 5=maybe, 10=perfect for the show"
     ),
     "readability": (
         "How easy and punchy is this to read aloud? Short, clear posts score higher; "
-        "walls of text score lower. (1=rambling/long, 10=concise and punchy)"
+        "walls of text score lower. 1=rambling/long, 5=ok, 10=concise and punchy"
     ),
 }
 
@@ -65,9 +76,11 @@ TOPIC_CATEGORIES = [
 # The scoring prompt template
 SCORING_PROMPT = """You are analyzing Nextdoor posts for a comedy podcast.
 
-Score this post on each dimension from 1-10:
+Score this post on each dimension from 1-10. Scale: {rubric_scale}
 
 {dimension_descriptions}
+
+Think step-by-step internally. Respond with ONLY valid JSON.
 
 Also assign 1-3 topic categories from this list: {categories}
 
@@ -99,8 +112,11 @@ BATCH_SIZE = 5
 
 BATCH_SCORING_PROMPT = """You are analyzing Nextdoor posts for a comedy podcast.
 
-Score each post on these dimensions (1-10):
+Score each post on these dimensions (1-10). Scale: {rubric_scale}
+
 {dimension_descriptions}
+
+Think step-by-step internally. Respond with ONLY valid JSON.
 
 Also assign 1-3 topic categories from this list to each post: {categories}
 

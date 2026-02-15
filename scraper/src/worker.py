@@ -123,7 +123,8 @@ def load_novelty_config(supabase: Client) -> dict[str, Any]:
     novelty_config: dict[str, Any] = {}
     rows = result.data if isinstance(result.data, list) else []
     if rows:
-        value = rows[0].get("value", {})
+        row = rows[0]
+        value = row.get("value", {}) if isinstance(row, dict) else {}
         if isinstance(value, dict):
             novelty_config = value
 

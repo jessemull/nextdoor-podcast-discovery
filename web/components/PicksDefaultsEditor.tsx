@@ -53,7 +53,7 @@ export function PicksDefaultsEditor({
         className="text-foreground mb-6 text-sm"
         style={{ opacity: 0.85 }}
       >
-        These values are used when "Top Picks" is enabled on the feed: only
+        These values are used when &quot;Top Picks&quot; is enabled on the feed: only
         posts that meet the minimum score (and optional podcast score) are
         shown, up to the configured limit. URL parameters can override these when
         present.
@@ -167,10 +167,10 @@ export function PicksDefaultsEditor({
       <ConfirmModal
         cancelLabel="Cancel"
         confirmLabel="Submit"
-        onCancel={() => setSaveConfirmOpen(false)}
-        onConfirm={handleConfirmSave}
         open={saveConfirmOpen}
         title="Update Picks Defaults"
+        onCancel={() => setSaveConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
       >
         <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
           Save the default values for the top picks filter on the feed.

@@ -42,18 +42,18 @@ export function SettingsDefaultsSection({
     <>
       <NoveltyConfigEditor
         noveltyConfig={noveltyConfig}
-        onSave={onSaveNovelty}
         setNoveltyConfig={setNoveltyConfig}
+        onSave={onSaveNovelty}
       />
       <PicksDefaultsEditor
-        onSave={onSavePicks}
         picksDefaults={picksDefaults}
         setPicksDefaults={setPicksDefaults}
+        onSave={onSavePicks}
       />
       <SearchDefaultsEditor
-        onSave={onSaveSearch}
         searchDefaults={searchDefaults}
         setSearchDefaults={setSearchDefaults}
+        onSave={onSaveSearch}
       />
     </>
   );

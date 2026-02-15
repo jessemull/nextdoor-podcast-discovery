@@ -107,10 +107,10 @@ export function SearchDefaultsEditor({
       <ConfirmModal
         cancelLabel="Cancel"
         confirmLabel="Submit"
-        onCancel={() => setSaveConfirmOpen(false)}
-        onConfirm={handleConfirmSave}
         open={saveConfirmOpen}
         title="Update Search Defaults"
+        onCancel={() => setSaveConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
       >
         <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
           Save the default similarity threshold for the search results on the feed.

@@ -6,9 +6,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
+import { SettingsScoreDistribution } from "@/components/SettingsScoreDistribution";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
-import { useToast } from "@/lib/ToastContext";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
+import { useToast } from "@/lib/ToastContext";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
@@ -86,10 +87,14 @@ export default function SettingsPage() {
   const [searchDefaults, setSearchDefaults] = useState({
     similarity_threshold: 0.2,
   });
-  const [picksDefaults, setPicksDefaults] = useState({
+  const [picksDefaults, setPicksDefaults] = useState<{
+    picks_limit: number;
+    picks_min: number;
+    picks_min_podcast?: number;
+  }>({
     picks_limit: 5,
     picks_min: 7,
-    picks_min_podcast: undefined as number | undefined,
+    picks_min_podcast: undefined,
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
@@ -124,7 +129,12 @@ export default function SettingsPage() {
             setSearchDefaults(settingsData.data.search_defaults);
           }
           if (settingsData.data.picks_defaults) {
-            setPicksDefaults(settingsData.data.picks_defaults);
+            const pd = settingsData.data.picks_defaults;
+            setPicksDefaults({
+              picks_limit: pd.picks_limit,
+              picks_min: pd.picks_min,
+              picks_min_podcast: pd.picks_min_podcast ?? undefined,
+            });
           }
         }
 
@@ -407,6 +417,8 @@ export default function SettingsPage() {
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}
         />
+
+        <SettingsScoreDistribution />
 
         <SettingsDefaultsSection
           noveltyConfig={noveltyConfig}

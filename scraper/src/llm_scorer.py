@@ -19,6 +19,8 @@ from src.llm_prompts import (
     BATCH_SIZE,
     MAX_POST_LENGTH,
     MAX_SUMMARY_LENGTH,
+    PROMPT_VERSION,
+    RUBRIC_SCALE,
     SCORING_DIMENSIONS,
     SCORING_PROMPT,
     TOPIC_CATEGORIES,
@@ -158,9 +160,10 @@ class LLMScorer:
             for i, p in enumerate(posts)
         )
         prompt = BATCH_SCORING_PROMPT.format(
-            dimension_descriptions=dimension_desc,
             categories=", ".join(TOPIC_CATEGORIES),
+            dimension_descriptions=dimension_desc,
             posts_text=posts_text,
+            rubric_scale=RUBRIC_SCALE,
         )
 
         max_attempts = 3
@@ -172,7 +175,7 @@ class LLMScorer:
             response = self.anthropic.messages.create(
                 max_tokens=500 * len(posts),
                 model=CLAUDE_MODEL,
-                messages=messages,
+                messages=cast("Any", messages),  # MessageParam-compatible dicts
                 temperature=0,  # Deterministic scoring for reproducibility
             )
 
@@ -194,24 +197,30 @@ class LLMScorer:
                     parse_error = e
                     continue
             else:
-                e = parse_error or json.JSONDecodeError("Invalid JSON", raw_response, 0)
+                err = parse_error or json.JSONDecodeError(
+                    "Invalid JSON", raw_response, 0
+                )
                 if attempt < max_attempts - 1:
                     logger.warning(
                         "Batch JSON parse error (attempt %d/%d, retrying with feedback): %s",
                         attempt + 1,
                         max_attempts,
-                        e,
+                        err,
                     )
                     messages.append({"role": "assistant", "content": raw_response})
                     messages.append(
                         {
                             "role": "user",
-                            "content": BATCH_SCORING_RETRY_PROMPT.format(error=str(e)),
+                            "content": BATCH_SCORING_RETRY_PROMPT.format(
+                                error=str(err)
+                            ),
                         }
                     )
                 else:
                     logger.warning(
-                        "Batch JSON parse error after %d attempts: %s", max_attempts, e
+                        "Batch JSON parse error after %d attempts: %s",
+                        max_attempts,
+                        err,
                     )
                     return [
                         PostScore(
@@ -219,7 +228,7 @@ class LLMScorer:
                             scores={},
                             categories=[],
                             summary="",
-                            error=f"JSON parse error: {e}",
+                            error=f"JSON parse error: {err}",
                             raw_response=raw_response,
                         )
                         for p in posts
@@ -328,9 +337,10 @@ class LLMScorer:
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
         )
         prompt = SCORING_PROMPT.format(
-            dimension_descriptions=dimension_desc,
             categories=", ".join(TOPIC_CATEGORIES),
+            dimension_descriptions=dimension_desc,
             post_text=sliced,
+            rubric_scale=RUBRIC_SCALE,
         )
 
         # Call Claude
@@ -447,35 +457,39 @@ class LLMScorer:
         """
         stats = {"errors": 0, "saved": 0, "skipped": 0}
         saved_results: list[PostScore] = []
+        all_rows: list[dict[str, Any]] = []
 
         for result in results:
             if result.error:
                 stats["skipped"] += 1
                 continue
 
-            try:
-                data = {
+            all_rows.append(
+                {
                     "categories": result.categories,
                     "final_score": result.final_score,
                     "model_version": CLAUDE_MODEL,
                     "post_id": result.post_id,
+                    "prompt_version": PROMPT_VERSION,
                     "scores": result.scores,
                     "summary": result.summary,
                     "why_podcast_worthy": result.why_podcast_worthy,
                 }
+            )
+            saved_results.append(result)
 
+        if all_rows:
+            try:
                 self.supabase.table("llm_scores").upsert(
-                    data,
+                    all_rows,
                     on_conflict="post_id",
                 ).execute()
-
-                stats["saved"] += 1
-                saved_results.append(result)
-
+                stats["saved"] = len(all_rows)
             except Exception as e:
-                # Intentionally broad: Supabase doesn't export specific exception types
-                log_supabase_error(f"Error saving score for post {result.post_id}", e)
-                stats["errors"] += 1
+                log_supabase_error("Error batch saving llm_scores", e)
+                stats["errors"] = len(all_rows)
+                stats["saved"] = 0
+                saved_results = []
 
         # Write post_scores for active weight config so the feed shows posts
         active_config_id = self._get_active_weight_config_id()
@@ -526,51 +540,66 @@ class LLMScorer:
             for cat in result.categories:
                 category_counts[cat] = category_counts.get(cat, 0) + 1
 
-        # Update database
+        if not category_counts:
+            return
 
-        for category, count in category_counts.items():
-            try:
-                # Increment count_30d for this category
+        # Batch update via RPC
 
-                self.supabase.rpc(
-                    "increment_topic_frequency",
-                    {"p_category": category, "p_increment": count},
-                ).execute()
+        p_updates = [
+            {"category": cat, "increment": count}
+            for cat, count in sorted(category_counts.items())
+        ]
 
-            except Exception as e:
-                # Intentionally broad: RPC may not exist or DB error; fall back
-                logger.debug(
-                    "RPC increment_topic_frequency failed (category=%s): %s",
-                    category,
-                    e,
-                )
+        try:
+            self.supabase.rpc(
+                "increment_topic_frequencies_batch",
+                {"p_updates": p_updates},
+            ).execute()
+        except Exception as e:
+            logger.debug(
+                "RPC increment_topic_frequencies_batch failed, falling back to per-category: %s",
+                e,
+            )
 
+            for category, count in category_counts.items():
                 try:
-                    freq_result = (
-                        self.supabase.table("topic_frequencies")
-                        .select("count_30d")
-                        .eq("category", category)
-                        .single()
-                        .execute()
-                    )
-
-                    freq_data = cast(dict[str, Any], freq_result.data)
-                    current = int(freq_data.get("count_30d", 0)) if freq_data else 0
-
-                    self.supabase.table("topic_frequencies").upsert(
-                        {
-                            "category": category,
-                            "count_30d": current + count,
-                            "last_updated": datetime.now(UTC).isoformat(),
-                        },
-                        on_conflict="category",
+                    self.supabase.rpc(
+                        "increment_topic_frequency",
+                        {"p_category": category, "p_increment": count},
                     ).execute()
-
                 except Exception as e2:
-                    # Intentionally broad: fallback update failed; log and continue
-                    logger.warning(
-                        "Failed to update frequency for %s: %s", category, e2
+                    logger.debug(
+                        "RPC increment_topic_frequency failed (category=%s): %s",
+                        category,
+                        e2,
                     )
+
+                    try:
+                        freq_result = (
+                            self.supabase.table("topic_frequencies")
+                            .select("count_30d")
+                            .eq("category", category)
+                            .single()
+                            .execute()
+                        )
+
+                        freq_data = cast(dict[str, Any], freq_result.data)
+                        current = int(freq_data.get("count_30d", 0)) if freq_data else 0
+
+                        self.supabase.table("topic_frequencies").upsert(
+                            {
+                                "category": category,
+                                "count_30d": current + count,
+                                "last_updated": datetime.now(UTC).isoformat(),
+                            },
+                            on_conflict="category",
+                        ).execute()
+                    except Exception as e3:
+                        logger.warning(
+                            "Failed to update frequency for %s: %s",
+                            category,
+                            e3,
+                        )
 
     def _get_weights(self) -> dict[str, float]:
         """Load ranking weights from settings.
@@ -591,10 +620,12 @@ class LLMScorer:
             )
             rows = result.data if isinstance(result.data, list) else []
             if rows:
-                value = rows[0].get("value", {})
-                if isinstance(value, dict):
-                    self._weights = value
-                    return self._weights
+                row = rows[0]
+                if isinstance(row, dict):
+                    value = row.get("value", {})
+                    if isinstance(value, dict):
+                        self._weights = value
+                        return self._weights
 
         except Exception as e:
             log_supabase_error("Failed to load ranking_weights from settings", e)
@@ -625,9 +656,11 @@ class LLMScorer:
             )
             rows = result.data if isinstance(result.data, list) else []
             if rows:
-                value = rows[0].get("value")
-                if isinstance(value, str) and value:
-                    return value
+                row = rows[0]
+                if isinstance(row, dict):
+                    value = row.get("value")
+                    if isinstance(value, str) and value:
+                        return value
             # Fallback: first active config
             config_result = (
                 self.supabase.table("weight_configs")
@@ -640,7 +673,9 @@ class LLMScorer:
                 config_result.data if isinstance(config_result.data, list) else []
             )
             if config_rows:
-                return config_rows[0].get("id")
+                cfg_row = config_rows[0]
+                if isinstance(cfg_row, dict):
+                    return cast("str | None", cfg_row.get("id"))
         except Exception as e:
             log_supabase_error("Failed to load active_weight_config_id", e)
         return None
@@ -664,10 +699,12 @@ class LLMScorer:
             )
             rows = result.data if isinstance(result.data, list) else []
             if rows:
-                value = rows[0].get("value", {})
-                if isinstance(value, dict):
-                    self._novelty_config = value
-                    return self._novelty_config
+                row = rows[0]
+                if isinstance(row, dict):
+                    value = row.get("value", {})
+                    if isinstance(value, dict):
+                        self._novelty_config = value
+                        return self._novelty_config
 
         except Exception as e:
             log_supabase_error("Failed to load novelty_config from settings", e)

@@ -91,7 +91,7 @@ function StatsSection({
   stats,
 }: {
   loading: boolean;
-  stats: StatsResponse | null;
+  stats: null | StatsResponse;
 }) {
   return (
     <section>
@@ -293,7 +293,8 @@ export function StatsPanel() {
   return (
     <div className="space-y-24">
       {embeddingBacklog > 100 ? (
-        <Card className="border-border-focus" role="alert">
+        <div role="alert">
+          <Card className="border-border-focus">
           <p className="text-muted text-sm">
             <strong className="text-foreground">
               {embeddingBacklog} posts need embeddings.
@@ -301,7 +302,8 @@ export function StatsPanel() {
             Semantic search may miss recent posts until the daily embed job runs.
             Embeddings are generated after each scrape.
           </p>
-        </Card>
+          </Card>
+        </div>
       ) : (
         <div aria-hidden className="h-0" />
       )}

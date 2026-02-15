@@ -15,7 +15,7 @@ const toast = {
   success: (message: string) => sonnerToast.success(message),
 };
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+const ToastContext = createContext<null | ToastContextValue>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (

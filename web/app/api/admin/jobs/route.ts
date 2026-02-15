@@ -1,6 +1,6 @@
-import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
+import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { adminJobsQuerySchema } from "@/lib/validators";
 

@@ -200,11 +200,11 @@ export function PostDetailClient({
             isMarkingIgnored={markingIgnored}
             isMarkingSaved={markingSaved}
             isMarkingUsed={markingUsed}
-            onMarkIgnored={handleMarkIgnored}
-            onMarkSaved={handleMarkSaved}
-            onMarkUsed={handleMarkUsed}
             post={post}
             showScoreBreakdown
+            onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
+            onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
+            onMarkUsed={handleMarkUsed}
           />
         </div>
 

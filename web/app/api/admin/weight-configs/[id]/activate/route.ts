@@ -1,6 +1,7 @@
-import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
+import { invalidateActiveConfigCache } from "@/lib/active-config-cache.server";
+import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -90,6 +91,8 @@ export async function PUT(
       .from("weight_configs")
       .update({ is_active: true })
       .eq("id", configId);
+
+    invalidateActiveConfigCache();
 
     return NextResponse.json({
       data: {

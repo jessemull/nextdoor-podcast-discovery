@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
-import { getPostIdsByQuery } from "@/lib/posts.bulk.server";
 import { logError } from "@/lib/log.server";
+import { getPostIdsByQuery } from "@/lib/posts.bulk.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { postsBulkBodySchema } from "@/lib/validators";
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       if (error) {
         logError("[posts/bulk] mark_used", error);
         return NextResponse.json(
-          { error: "Database error", details: error.message },
+          { details: error.message, error: "Database error" },
           { status: 500 }
         );
       }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       if (error) {
         logError("[posts/bulk] save", error);
         return NextResponse.json(
-          { error: "Database error", details: error.message },
+          { details: error.message, error: "Database error" },
           { status: 500 }
         );
       }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       if (error) {
         logError("[posts/bulk] ignore", error);
         return NextResponse.json(
-          { error: "Database error", details: error.message },
+          { details: error.message, error: "Database error" },
           { status: 500 }
         );
       }
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       if (error) {
         logError("[posts/bulk] unignore", error);
         return NextResponse.json(
-          { error: "Database error", details: error.message },
+          { details: error.message, error: "Database error" },
           { status: 500 }
         );
       }
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error", details: errorMessage },
+      { details: errorMessage, error: "Internal server error" },
       { status: 500 }
     );
   }

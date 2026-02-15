@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { auth0 } from "@/lib/auth0";
 import { SEARCH_SUGGESTIONS } from "@/lib/constants";
 import {
   getCachedEmbedding,
@@ -173,7 +173,7 @@ Return ONLY a JSON array of strings, e.g. ["phrase one", "phrase two"]. No other
   const prefixSet = new Set(
     prefixSuggestions.map((s) => s.toLowerCase().trim())
   );
-  const merged = [...prefixSuggestions];
+  const merged: string[] = [...prefixSuggestions];
   for (const s of llmSuggestions) {
     const key = s.toLowerCase().trim();
     if (key && !prefixSet.has(key) && merged.length < limit) {

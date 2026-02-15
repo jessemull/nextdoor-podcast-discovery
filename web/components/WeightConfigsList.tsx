@@ -82,9 +82,9 @@ function WeightBarChart({ weights }: { weights: RankingWeights }) {
                 <div
                   className="h-full rounded-full"
                   style={{
-                    width: `${pct}%`,
                     background: WEIGHT_BAR_GRADIENT,
                     opacity: 0.9,
+                    width: `${pct}%`,
                   }}
                 />
               </div>
@@ -153,7 +153,7 @@ function getConfigState(
   const canActivate =
     (hasCompletedJob || config.has_scores) && !isActive;
   const canDelete = !isActive && !hasRunningJob;
-  const status: "active" | "computing" | "ready" | "no_scores" =
+  const status: "active" | "computing" | "no_scores" | "ready" =
     isActive
       ? "active"
       : hasRunningJob
@@ -165,10 +165,10 @@ function getConfigState(
 }
 
 interface ConfigCardProps {
-  compactWeights?: boolean;
-  config: WeightConfig;
   canActivate: boolean;
   canDelete: boolean;
+  compactWeights?: boolean;
+  config: WeightConfig;
   deletingConfigId: null | string;
   isActivating: boolean;
   menuOpen: boolean;
@@ -177,14 +177,14 @@ interface ConfigCardProps {
   onDelete: (configId: string) => void;
   onMenuToggle: (configId: string) => void;
   onOpenRename: (config: WeightConfig) => void;
-  status: "active" | "computing" | "ready" | "no_scores";
+  status: "active" | "computing" | "no_scores" | "ready";
 }
 
 function ConfigCard({
-  compactWeights = false,
-  config,
   canActivate,
   canDelete,
+  compactWeights = false,
+  config,
   deletingConfigId,
   isActivating,
   menuOpen,
@@ -449,13 +449,13 @@ export function WeightConfigsList({
             isActivating={isActivating}
             menuOpen={menuOpenConfigId === activeConfig.id}
             menuRef={menuRef}
+            status="active"
             onActivate={onActivate}
             onDelete={onDelete}
             onMenuToggle={(id) =>
               setMenuOpenConfigId((current) => (current === id ? null : id))
             }
             onOpenRename={openRenameModal}
-            status="active"
           />
         </Card>
       )}
@@ -485,13 +485,13 @@ export function WeightConfigsList({
                 isActivating={isActivating}
                 menuOpen={menuOpen}
                 menuRef={menuRef}
+                status={state.status}
                 onActivate={onActivate}
                 onDelete={onDelete}
                 onMenuToggle={(id) =>
                   setMenuOpenConfigId((current) => (current === id ? null : id))
                 }
                 onOpenRename={openRenameModal}
-                status={state.status}
               />
             );
           })}
@@ -506,10 +506,10 @@ export function WeightConfigsList({
         confirmDisabled={!editName.trim()}
         confirmLabel="Save"
         confirmLoading={savingConfigId != null}
-        onCancel={closeRenameModal}
-        onConfirm={() => editingConfigId && saveRename(editingConfigId)}
         open={editingConfigId != null}
         title="Edit config name"
+        onCancel={closeRenameModal}
+        onConfirm={() => editingConfigId && saveRename(editingConfigId)}
       >
         <div className="space-y-3">
           <label className="block">
@@ -521,7 +521,7 @@ export function WeightConfigsList({
               <InfoTooltip description="Name for this weight configuration so you can identify it later." />
             </span>
             <input
-              autoFocus
+              autoFocus // eslint-disable-line jsx-a11y/no-autofocus
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
               placeholder="e.g. Comedy focus"
               type="text"

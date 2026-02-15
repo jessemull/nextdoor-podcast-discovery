@@ -140,6 +140,19 @@ export interface PostsResponse {
   total: number;
 }
 
+export interface ScoreDistributionStats {
+  max: number;
+  mean: number;
+  min: number;
+  p50: number;
+  p90: number;
+}
+
+export interface ScoreDistribution {
+  dimensions: Record<string, ScoreDistributionStats>;
+  final_score: ScoreDistributionStats;
+}
+
 export interface StatsResponse {
   embedding_backlog: number;
   last_scrape_at: null | string;
@@ -148,5 +161,6 @@ export interface StatsResponse {
   posts_total: number;
   posts_unscored: number;
   posts_used: number;
+  score_distribution?: null | ScoreDistribution;
   top_categories: TopicFrequency[];
 }
