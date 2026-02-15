@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface NoveltyConfig {
   frequency_thresholds?: {
@@ -40,9 +43,15 @@ export function NoveltyConfigEditor({
   onSave,
   setNoveltyConfig,
 }: NoveltyConfigEditorProps) {
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const thresholds = noveltyConfig.frequency_thresholds ?? DEFAULT_NOVELTY.frequency_thresholds!;
   const minMult = noveltyConfig.min_multiplier ?? DEFAULT_NOVELTY.min_multiplier!;
   const maxMult = noveltyConfig.max_multiplier ?? DEFAULT_NOVELTY.max_multiplier!;
+
+  const handleConfirmSave = () => {
+    setSaveConfirmOpen(false);
+    onSave();
+  };
 
   return (
     <Card className="mb-8 p-6">
@@ -87,19 +96,25 @@ export function NoveltyConfigEditor({
         window.
       </p>
 
+      <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+        Adjust Multipliers
+      </h3>
       <div className="mb-6 space-y-4">
-        <div>
+        <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label
-              className="text-muted-foreground text-sm font-medium"
+              className="text-foreground text-sm font-medium"
               htmlFor="min-multiplier"
+              style={{ opacity: 0.85 }}
             >
               Min Multiplier (very common topics)
             </label>
-            <span className="text-muted text-sm">{minMult.toFixed(2)}</span>
+            <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
+              {minMult.toFixed(2)}
+            </span>
           </div>
           <input
-            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-muted"
             id="min-multiplier"
             max={1}
             min={0.1}
@@ -115,18 +130,21 @@ export function NoveltyConfigEditor({
           />
         </div>
 
-        <div>
+        <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label
-              className="text-muted-foreground text-sm font-medium"
+              className="text-foreground text-sm font-medium"
               htmlFor="max-multiplier"
+              style={{ opacity: 0.85 }}
             >
               Max Multiplier (rare topics)
             </label>
-            <span className="text-muted text-sm">{maxMult.toFixed(2)}</span>
+            <span className="text-foreground text-sm" style={{ opacity: 0.85 }}>
+              {maxMult.toFixed(2)}
+            </span>
           </div>
           <input
-            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+            className="h-2 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-muted"
             id="max-multiplier"
             max={2}
             min={1}
@@ -142,15 +160,16 @@ export function NoveltyConfigEditor({
           />
         </div>
 
-        <div className="border-border border-t pt-4">
-          <h3 className="text-muted-foreground mb-3 text-sm font-medium">
-            Frequency Thresholds (30-day window)
+        <div className="pt-4">
+          <h3 className="text-foreground mb-3 text-base font-semibold uppercase tracking-wide">
+            Adjust Frequency
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label
-                className="text-muted-foreground mb-1 block text-xs"
+                className="text-foreground mb-2 block text-sm font-medium"
                 htmlFor="rare-threshold"
+                style={{ opacity: 0.85 }}
               >
                 Rare (≤)
               </label>
@@ -174,8 +193,9 @@ export function NoveltyConfigEditor({
             </div>
             <div>
               <label
-                className="text-muted-foreground mb-1 block text-xs"
+                className="text-foreground mb-2 block text-sm font-medium"
                 htmlFor="common-threshold"
+                style={{ opacity: 0.85 }}
               >
                 Common (≤)
               </label>
@@ -199,8 +219,9 @@ export function NoveltyConfigEditor({
             </div>
             <div>
               <label
-                className="text-muted-foreground mb-1 block text-xs"
+                className="text-foreground mb-2 block text-sm font-medium"
                 htmlFor="very-common-threshold"
+                style={{ opacity: 0.85 }}
               >
                 Very Common (≤)
               </label>
@@ -226,13 +247,36 @@ export function NoveltyConfigEditor({
         </div>
       </div>
 
-      <Button
-        disabled={isSaving}
-        variant="primary"
-        onClick={onSave}
+      <div className="mt-6 flex justify-end gap-4">
+        <Button
+          className="border border-border"
+          variant="ghost"
+          onClick={() => setNoveltyConfig({ ...DEFAULT_NOVELTY })}
+        >
+          Defaults
+        </Button>
+        <Button
+          disabled={isSaving}
+          variant="primary"
+          onClick={() => setSaveConfirmOpen(true)}
+        >
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Submit"
+        onCancel={() => setSaveConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
+        open={saveConfirmOpen}
+        title="Update Novelty Configuration"
       >
-        {isSaving ? "Saving..." : "Save Novelty Config"}
-      </Button>
+        <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
+          Updating the novelty configuration will kick off a compute job to
+          update the feed.
+        </p>
+      </ConfirmModal>
     </Card>
   );
 }
