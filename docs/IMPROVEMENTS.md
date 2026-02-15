@@ -22,7 +22,16 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 3. Stale post data after scrape
+## 3. Scoring and worker correctness
+
+- [ ] **Clamp final_score to [0, 10] in scorer and worker**
+  - Normalized × novelty can exceed 10 (e.g. 10 × 1.5 = 15). Clamp in `calculate_final_scores` (llm_scorer) and `calculate_final_score` (worker) so feed/UI semantics are consistent.
+- [ ] **Add ORDER BY id to worker's llm_scores batch query**
+  - Recompute job fetches batches without a stable order; add `.order("id")` (or `created_at`) for deterministic pagination and to avoid skip/duplicate rows.
+
+---
+
+## 4. Stale post data after scrape
 
 - [ ] **Figure out which data might update after we scrape it (e.g. more comments)**
   - Identify fields that can change on Nextdoor after we store the post (comments count, reaction count, etc.).
@@ -30,7 +39,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 4. Comments in the UI
+## 5. Comments in the UI
 
 - [ ] **Show comments in the UI**
   - Surface comment count and/or comment content where it makes sense (e.g. post card, post detail).
@@ -38,7 +47,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 5. Loading and error states
+## 6. Loading and error states
 
 - [ ] **Verify loading states and error states for each page in the UI**
   - Audit every page: ensure loading (skeletons/spinners) and error (message + recovery) are implemented and consistent.
@@ -46,7 +55,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 6. Auth and whitelist
+## 7. Auth and whitelist
 
 - [ ] **Replace ENV-based email whitelist with a proper approach**
   - Currently: `ALLOWED_EMAILS` is a single env var (comma-separated emails). No UI to add/remove users; changing access requires editing env and redeploying.
@@ -57,7 +66,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 7. Structured scoring log and feedback loop
+## 8. Structured scoring log and feedback loop
 
 - [ ] **Log (or store) scoring inputs/outputs and tie to outcomes**
   - Persist for analysis: post id, prompt (or hash), model output (or summary), final_score, and whether the post later “made the show” (`used_on_episode`).
@@ -66,7 +75,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 8. Rubric and internal chain-of-thought
+## 9. Rubric and internal chain-of-thought
 
 - [ ] **Add explicit rubric text and “think step-by-step” to scoring prompts**
   - Per dimension, add explicit scale text (e.g. “0 = …, 3 = …, 5 = …”) so the model has a clear rubric.
@@ -74,7 +83,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 9. Human calibration and permalink queue
+## 10. Human calibration and permalink queue
 
 - [ ] **Use saved + used_on_episode as human signal for calibration**
   - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration.
@@ -83,7 +92,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 10. Two-pass scoring
+## 11. Two-pass scoring
 
 - [ ] **Pass 1: cheap keep/drop; Pass 2: full scoring on survivors**
   - Pass 1: fast/cheap binary (or light) filter to drop clearly irrelevant posts.
@@ -91,7 +100,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 11. Ensemble scoring (3 runs, median)
+## 12. Ensemble scoring (3 runs, median)
 
 - [ ] **Score each post 3 times; store median (or average) of dimension scores**
   - Run the same batch 3 times (e.g. same prompt, slight temperature or phrasing variation); aggregate per dimension (e.g. median) then compute final_score from aggregated dimensions. Reduces LLM noise.
@@ -99,6 +108,29 @@ Tracked list of product and system improvements to complete.
 
 ---
 
+## 13. Scoring accuracy and tunability
+
+- [ ] **Store prompt_version or prompt_hash in llm_scores (or run metadata)**
+  - So we know which prompt produced which scores; supports feedback loop and A/B tests.
+- [ ] **Reproducibility (temperature / seed)**
+  - Consider temperature=0 for scoring if supported by the API for more deterministic scores; or document that 0.3 causes variance. If the API gains a seed parameter, use it for reproducibility.
+- [ ] **Score distribution visibility**
+  - Add simple score stats (min, max, mean, p50, p90) per dimension and for final_score, e.g. on Settings or Admin, so we can see distribution and tune prompts/weights.
+- [ ] **Truncation signal in scoring prompt**
+  - When post text is truncated, add a line to the prompt (e.g. “[Text truncated at 2000 characters]”) or a field in the expected JSON so the model and downstream logic can account for partial content.
+- [ ] **Few-shot examples in scoring prompt**
+  - Add 1–2 few-shot examples (short post → full JSON) to improve consistency; optional and tunable for token cost.
+- [ ] **New dimension backfill**
+  - When adding a new scoring dimension: document that existing posts get default (5.0) for that dimension unless re-scored; optionally support a backfill job to re-score only for the new dimension (or full re-score) for consistency.
+- [ ] **Cold-start novelty behavior**
+  - When topic_frequencies is empty or total scored posts < N, use novelty multiplier 1.0 (neutral) instead of max boost to avoid boosting all early posts.
+- [ ] **Validate weight config keys against known SCORING_DIMENSIONS**
+  - When saving (API/Settings), warn or reject unknown dimensions to avoid silent 5.0 fallbacks.
+
+---
+
 ## Future / backlog
 
+- [ ] **Optional: support negative dimension weights for penalization**
+  - Define how final_score is bounded (e.g. clamp after weighted sum) and document in UI.
 - (Add more items here as we go.)
