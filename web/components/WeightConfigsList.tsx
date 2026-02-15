@@ -197,9 +197,9 @@ function ConfigCard({
     <div
       className="rounded border border-border bg-surface-hover/50 p-4"
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="text-foreground min-w-0 truncate text-sm font-semibold">
+          <span className="text-foreground min-w-0 truncate text-base font-semibold">
             {config.name?.trim() || `Config ${config.id.slice(0, 8)}`}
           </span>
           {status === "active" && (
@@ -314,7 +314,7 @@ function ConfigCard({
         </div>
       </div>
 
-      <div className="mb-3">
+      <div className="mb-4">
         <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
           Description
         </h4>
