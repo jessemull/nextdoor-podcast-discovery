@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface PicksDefaults {
   picks_limit: number;
@@ -10,39 +13,113 @@ interface PicksDefaults {
 }
 
 interface PicksDefaultsEditorProps {
-  isSaving: boolean;
   onSave: () => void;
   picksDefaults: PicksDefaults;
   setPicksDefaults: (defaults: PicksDefaults) => void;
 }
 
+const DEFAULT_PICKS: PicksDefaults = {
+  picks_limit: 5,
+  picks_min: 7,
+  picks_min_podcast: undefined,
+};
+
 /**
  * PicksDefaultsEditor Component
  *
- * Allows users to configure default settings for the Podcast Picks section on the home page.
+ * Configures default values for the Top Picks filter on the feed (minimum score,
+ * limit, and optional podcast score). These defaults are used when the feed
+ * "Top Picks" checkbox is enabled.
  */
 export function PicksDefaultsEditor({
-  isSaving,
   onSave,
   picksDefaults,
   setPicksDefaults,
 }: PicksDefaultsEditorProps) {
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+
+  const handleConfirmSave = () => {
+    setSaveConfirmOpen(false);
+    onSave();
+  };
+
   return (
     <Card className="mb-8 p-6">
-      <h2 className="mb-4 text-foreground text-lg font-semibold">
+      <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
         Podcast Picks Defaults
       </h2>
-      <p className="text-muted mb-6 text-sm">
-        Configure default minimum score and limit for the Podcast Picks section.
-        URL params (?picks_min=7&picks_limit=5&picks_min_podcast=7) override
-        these when present.
+      <p
+        className="text-foreground mb-6 text-sm"
+        style={{ opacity: 0.85 }}
+      >
+        These values are used when "Top Picks" is enabled on the feed: only
+        posts that meet the minimum score (and optional podcast score) are
+        shown, up to the configured limit. URL parameters can override these when
+        present.
       </p>
 
+      <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+        Adjust Defaults
+      </h3>
       <div className="mb-6 space-y-4">
         <div>
           <label
-            className="text-muted-foreground mb-1 block text-sm font-medium"
+            className="text-foreground mb-2 block text-sm font-medium"
+            htmlFor="picks-min"
+            style={{ opacity: 0.85 }}
+          >
+            Minimum Score
+          </label>
+          <input
+            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
+            id="picks-min"
+            max={10}
+            min={0}
+            step={0.5}
+            type="number"
+            value={picksDefaults.picks_min}
+            onChange={(e) =>
+              setPicksDefaults({
+                ...picksDefaults,
+                picks_min: parseFloat(e.target.value) || 7,
+              })
+            }
+          />
+          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
+            Only show posts with final score ≥ this value (0–10).
+          </p>
+        </div>
+        <div>
+          <label
+            className="text-foreground mb-2 block text-sm font-medium"
+            htmlFor="picks-limit"
+            style={{ opacity: 0.85 }}
+          >
+            Number of Picks
+          </label>
+          <input
+            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
+            id="picks-limit"
+            max={20}
+            min={1}
+            type="number"
+            value={picksDefaults.picks_limit}
+            onChange={(e) =>
+              setPicksDefaults({
+                ...picksDefaults,
+                picks_limit: parseInt(e.target.value, 10) || 5,
+              })
+            }
+          />
+          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
+            Max number of top picks to display (1–20).
+          </p>
+        </div>
+        <div>
+          <label
+            className="text-foreground mb-2 block text-sm font-medium"
             htmlFor="picks-min-podcast"
+            style={{ opacity: 0.85 }}
           >
             Min Podcast Score (optional)
           </label>
@@ -67,68 +144,38 @@ export function PicksDefaultsEditor({
               });
             }}
           />
-          <p className="text-muted-foreground mt-1 text-xs">
-            If set, Picks sort by podcast score and only show posts with
-            podcast_worthy ≥ this (0–10). Leave empty to use Minimum Score
-            instead.
-          </p>
-        </div>
-        <div>
-          <label
-            className="text-muted-foreground mb-1 block text-sm font-medium"
-            htmlFor="picks-min"
-          >
-            Minimum Score
-          </label>
-          <input
-            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-            id="picks-min"
-            max={10}
-            min={0}
-            step={0.5}
-            type="number"
-            value={picksDefaults.picks_min}
-            onChange={(e) =>
-              setPicksDefaults({
-                ...picksDefaults,
-                picks_min: parseFloat(e.target.value) || 7,
-              })
-            }
-          />
-          <p className="text-muted-foreground mt-1 text-xs">
-            Only show posts with final score ≥ this value (0–10).
-          </p>
-        </div>
-        <div>
-          <label
-            className="text-muted-foreground mb-1 block text-sm font-medium"
-            htmlFor="picks-limit"
-          >
-            Number of Picks
-          </label>
-          <input
-            className="w-24 rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-            id="picks-limit"
-            max={20}
-            min={1}
-            type="number"
-            value={picksDefaults.picks_limit}
-            onChange={(e) =>
-              setPicksDefaults({
-                ...picksDefaults,
-                picks_limit: parseInt(e.target.value, 10) || 5,
-              })
-            }
-          />
-          <p className="text-muted-foreground mt-1 text-xs">
-            Max number of top picks to display (1–20).
+          <p className="text-foreground mt-1 text-xs" style={{ opacity: 0.85 }}>
+            If set, Picks filter by podcast score and only show posts with
+            podcast_worthy ≥ this (0–10). Leave empty to use Minimum Score only.
           </p>
         </div>
       </div>
 
-      <Button disabled={isSaving} variant="primary" onClick={onSave}>
-        {isSaving ? "Saving..." : "Save Podcast Picks Defaults"}
-      </Button>
+      <div className="mt-6 flex justify-end gap-4">
+        <Button
+          className="border border-border"
+          variant="ghost"
+          onClick={() => setPicksDefaults({ ...DEFAULT_PICKS })}
+        >
+          Defaults
+        </Button>
+        <Button variant="primary" onClick={() => setSaveConfirmOpen(true)}>
+          Save
+        </Button>
+      </div>
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Submit"
+        onCancel={() => setSaveConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
+        open={saveConfirmOpen}
+        title="Update Picks Defaults"
+      >
+        <p className="text-foreground text-sm" style={{ opacity: 0.85 }}>
+          Save these values as the default for the Top Picks filter on the feed.
+        </p>
+      </ConfirmModal>
     </Card>
   );
 }

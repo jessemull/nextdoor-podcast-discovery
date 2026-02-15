@@ -12,7 +12,6 @@ interface NoveltyConfig {
 }
 
 interface SettingsDefaultsSectionProps {
-  isSaving: boolean;
   noveltyConfig: NoveltyConfig;
   onSaveNovelty: () => Promise<void>;
   onSavePicks: () => Promise<void>;
@@ -29,7 +28,6 @@ interface SettingsDefaultsSectionProps {
 }
 
 export function SettingsDefaultsSection({
-  isSaving,
   noveltyConfig,
   onSaveNovelty,
   onSavePicks,
@@ -42,22 +40,20 @@ export function SettingsDefaultsSection({
 }: SettingsDefaultsSectionProps) {
   return (
     <>
-        <NoveltyConfigEditor
-          noveltyConfig={noveltyConfig}
-          onSave={onSaveNovelty}
-          setNoveltyConfig={setNoveltyConfig}
-        />
+      <NoveltyConfigEditor
+        noveltyConfig={noveltyConfig}
+        onSave={onSaveNovelty}
+        setNoveltyConfig={setNoveltyConfig}
+      />
       <PicksDefaultsEditor
-        isSaving={isSaving}
+        onSave={onSavePicks}
         picksDefaults={picksDefaults}
         setPicksDefaults={setPicksDefaults}
-        onSave={onSavePicks}
       />
       <SearchDefaultsEditor
-        isSaving={isSaving}
+        onSave={onSaveSearch}
         searchDefaults={searchDefaults}
         setSearchDefaults={setSearchDefaults}
-        onSave={onSaveSearch}
       />
     </>
   );

@@ -75,7 +75,6 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [error, setError] = useState<null | string>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [rankingWeights, setRankingWeights] = useState<RankingWeights>(DEFAULT_WEIGHTS);
   const [noveltyConfig, setNoveltyConfig] = useState<NoveltyConfig>({
     frequency_thresholds: { common: 30, rare: 5, very_common: 100 },
@@ -300,7 +299,6 @@ export default function SettingsPage() {
   }, [noveltyConfig, toast]);
 
   const handleSavePicksDefaults = useCallback(async () => {
-    setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
 
@@ -320,17 +318,14 @@ export default function SettingsPage() {
         throw new Error(errorData.error || errorData.details || "Failed to save picks defaults");
       }
 
-      setSuccessMessage("Podcast Picks defaults saved successfully");
+      toast.success("Settings saved.");
     } catch (err) {
       console.error("Error saving picks defaults:", err);
-      setError(err instanceof Error ? err.message : "Failed to save picks defaults");
-    } finally {
-      setIsSaving(false);
+      toast.error("Failed to save settings.");
     }
-  }, [picksDefaults]);
+  }, [picksDefaults, toast]);
 
   const handleSaveSearchDefaults = useCallback(async () => {
-    setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
 
@@ -350,14 +345,12 @@ export default function SettingsPage() {
         throw new Error(errorData.error || errorData.details || "Failed to save search defaults");
       }
 
-      setSuccessMessage("Search defaults saved successfully");
+      toast.success("Settings saved.");
     } catch (err) {
       console.error("Error saving search defaults:", err);
-      setError(err instanceof Error ? err.message : "Failed to save search defaults");
-    } finally {
-      setIsSaving(false);
+      toast.error("Failed to save settings.");
     }
-  }, [searchDefaults]);
+  }, [searchDefaults, toast]);
 
   if (isLoading) {
     return (
@@ -409,7 +402,6 @@ export default function SettingsPage() {
         />
 
         <SettingsDefaultsSection
-          isSaving={isSaving}
           noveltyConfig={noveltyConfig}
           picksDefaults={picksDefaults}
           searchDefaults={searchDefaults}
