@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface PicksDefaults {
   picks_limit: number;
@@ -68,7 +69,10 @@ export function PicksDefaultsEditor({
             htmlFor="picks-min"
             style={{ opacity: 0.85 }}
           >
-            Minimum Score
+            <span className="inline-flex items-center gap-1.5">
+              Minimum Score
+              <InfoTooltip description="Only posts with final score at or above this value are shown when top picks is enabled." />
+            </span>
           </label>
           <input
             className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
@@ -92,7 +96,10 @@ export function PicksDefaultsEditor({
             htmlFor="picks-limit"
             style={{ opacity: 0.85 }}
           >
-            Number of Picks
+            <span className="inline-flex items-center gap-1.5">
+              Number of Picks
+              <InfoTooltip description="Maximum number of posts to show in the top picks list." />
+            </span>
           </label>
           <input
             className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
@@ -115,7 +122,10 @@ export function PicksDefaultsEditor({
             htmlFor="picks-min-podcast"
             style={{ opacity: 0.85 }}
           >
-            Min Podcast (Optional)
+            <span className="inline-flex items-center gap-1.5">
+              Min Podcast (Optional)
+              <InfoTooltip description="When set, only posts with podcast_worthy score at or above this value are shown; leave empty to use minimum score only." />
+            </span>
           </label>
           <input
             className="w-full rounded border border-border bg-surface-hover px-3 py-2 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"

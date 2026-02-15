@@ -10,6 +10,7 @@ import {
 
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
@@ -513,10 +514,11 @@ export function WeightConfigsList({
         <div className="space-y-3">
           <label className="block">
             <span
-              className="text-foreground mb-1 block text-sm"
+              className="text-foreground mb-1 flex items-center gap-1.5 text-sm"
               style={{ opacity: 0.85 }}
             >
               Config name
+              <InfoTooltip description="Name for this weight configuration so you can identify it later." />
             </span>
             <input
               autoFocus
@@ -529,10 +531,11 @@ export function WeightConfigsList({
           </label>
           <label className="block">
             <span
-              className="text-foreground mb-1 block text-sm"
+              className="text-foreground mb-1 flex items-center gap-1.5 text-sm"
               style={{ opacity: 0.85 }}
             >
               Description (Optional)
+              <InfoTooltip description="Optional note describing when or why to use this configuration." />
             </span>
             <textarea
               className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
