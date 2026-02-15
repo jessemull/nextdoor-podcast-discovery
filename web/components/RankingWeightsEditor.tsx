@@ -13,7 +13,7 @@ const MIN_CONFIG_NAME_LENGTH = 3;
 
 interface RankingWeightsEditorProps {
   onReset: () => void;
-  onSave: (name: string) => void;
+  onSave: (name: string, description?: string) => void;
   rankingWeights: RankingWeights;
   setRankingWeights: (weights: RankingWeights) => void;
 }
@@ -93,6 +93,7 @@ export function RankingWeightsEditor({
   setRankingWeights,
 }: RankingWeightsEditorProps) {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveModalDescription, setSaveModalDescription] = useState("");
   const [saveModalName, setSaveModalName] = useState("");
 
   const activePresetName = useMemo(() => {
@@ -103,6 +104,7 @@ export function RankingWeightsEditor({
   }, [rankingWeights]);
 
   const handleOpenSaveModal = () => {
+    setSaveModalDescription("");
     setSaveModalName("");
     setSaveModalOpen(true);
   };
@@ -110,7 +112,10 @@ export function RankingWeightsEditor({
   const handleConfirmSave = () => {
     if (saveModalName.trim().length < MIN_CONFIG_NAME_LENGTH) return;
     setSaveModalOpen(false);
-    onSave(saveModalName.trim());
+    onSave(
+      saveModalName.trim(),
+      saveModalDescription.trim() || undefined
+    );
   };
 
   const description =
@@ -205,7 +210,7 @@ export function RankingWeightsEditor({
         open={saveModalOpen}
         title="Adding Weight Configuration"
       >
-        <div className="py-1">
+        <div className="space-y-3 py-1">
           <label className="block">
             <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
               Weight Configuration Name
@@ -217,6 +222,18 @@ export function RankingWeightsEditor({
               type="text"
               value={saveModalName}
               onChange={(e) => setSaveModalName(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="text-foreground mb-2 block text-sm" style={{ opacity: 0.85 }}>
+              Description (optional)
+            </span>
+            <textarea
+              className="border-border bg-surface-hover text-foreground placeholder-muted-foreground focus:border-border-focus w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              placeholder="Optional note"
+              rows={2}
+              value={saveModalDescription}
+              onChange={(e) => setSaveModalDescription(e.target.value)}
             />
           </label>
         </div>
