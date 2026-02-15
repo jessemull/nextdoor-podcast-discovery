@@ -42,12 +42,11 @@ export function SettingsDefaultsSection({
 }: SettingsDefaultsSectionProps) {
   return (
     <>
-      <NoveltyConfigEditor
-        isSaving={isSaving}
-        noveltyConfig={noveltyConfig}
-        setNoveltyConfig={setNoveltyConfig}
-        onSave={onSaveNovelty}
-      />
+        <NoveltyConfigEditor
+          noveltyConfig={noveltyConfig}
+          onSave={onSaveNovelty}
+          setNoveltyConfig={setNoveltyConfig}
+        />
       <PicksDefaultsEditor
         isSaving={isSaving}
         picksDefaults={picksDefaults}

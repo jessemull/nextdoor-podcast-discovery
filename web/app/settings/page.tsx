@@ -266,7 +266,6 @@ export default function SettingsPage() {
   }, [setActiveConfigId, setWeightConfigs]);
 
   const handleSaveNoveltyConfig = useCallback(async () => {
-    setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
 
@@ -297,8 +296,6 @@ export default function SettingsPage() {
     } catch (err) {
       console.error("Error saving novelty config:", err);
       toast.error("Recompute job failed.");
-    } finally {
-      setIsSaving(false);
     }
   }, [noveltyConfig, toast]);
 
