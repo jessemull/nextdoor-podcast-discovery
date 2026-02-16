@@ -21,24 +21,29 @@ export type QueueStatus = "pending" | "running" | null;
 
 function fetchPermalinkJobs(): Promise<Job[]> {
   return fetch(
-    `/api/admin/jobs?type=fetch_permalink&limit=${PERMALINK_JOBS_LIMIT}`
+    `/api/admin/jobs?type=fetch_permalink&limit=${PERMALINK_JOBS_LIMIT}`,
+    { cache: "no-store" }
   )
     .then((res) => (res.ok ? res.json() : { data: [] }))
     .then((body: JobsResponse) => body.data ?? []);
 }
 
+export type ActiveJobForPost = {
+  id: string;
+  status: "pending" | "running";
+};
+
 /**
- * Returns the queue status for a post by matching permalink jobs:
- * - job.params.post_id === post.id, or
- * - job.params.url === post.url
- * Uses the most recent matching job that is pending or running.
+ * Returns the matching active job for a post (same match as status).
+ * Only returns real jobs (id does not start with "opt-"); optimistic jobs cannot be cancelled.
  */
-function getQueueStatusForPostFromJobs(
+function getActiveJobForPostFromJobs(
   post: PostForQueueStatus,
   jobs: Job[]
-): QueueStatus {
+): ActiveJobForPost | null {
   const active = jobs.filter(
     (j) =>
+      !j.id.startsWith("opt-") &&
       (j.status === "pending" || j.status === "running") &&
       ((j.params as { post_id?: string })?.post_id === post.id ||
         (j.params as { url?: string })?.url === post.url)
@@ -48,7 +53,22 @@ function getQueueStatusForPostFromJobs(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
-  return byCreated[0].status === "running" ? "running" : "pending";
+  const job = byCreated[0];
+  return {
+    id: job.id,
+    status: job.status === "running" ? "running" : "pending",
+  };
+}
+
+/**
+ * Returns the queue status for a post by matching permalink jobs.
+ */
+function getQueueStatusForPostFromJobs(
+  post: PostForQueueStatus,
+  jobs: Job[]
+): QueueStatus {
+  const activeJob = getActiveJobForPostFromJobs(post, jobs);
+  return activeJob?.status ?? null;
 }
 
 export function usePermalinkJobs() {
@@ -81,7 +101,14 @@ export function usePermalinkJobs() {
     [permalinkJobs]
   );
 
+  const getActiveJobForPost = useCallback(
+    (post: PostForQueueStatus): ActiveJobForPost | null =>
+      getActiveJobForPostFromJobs(post, permalinkJobs),
+    [permalinkJobs]
+  );
+
   return {
+    getActiveJobForPost,
     getQueueStatusForPost,
     permalinkJobs,
     refetch,

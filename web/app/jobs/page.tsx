@@ -84,12 +84,16 @@ export default function JobsPage() {
 
   const handleConfirmCancel = useCallback(async () => {
     if (cancelConfirmJobId == null) return;
+    const job = jobs.find((j) => j.id === cancelConfirmJobId) ?? permalinkJobs.find((j) => j.id === cancelConfirmJobId);
+    const isPermalink = job?.type === "fetch_permalink";
     setIsCancelling(true);
     try {
-      const res = await fetch(
-        `/api/admin/jobs/${cancelConfirmJobId}/cancel`,
-        { method: "PUT" }
-      );
+      const url = isPermalink
+        ? `/api/admin/jobs/${cancelConfirmJobId}`
+        : `/api/admin/jobs/${cancelConfirmJobId}/cancel`;
+      const res = await fetch(url, {
+        method: isPermalink ? "DELETE" : "PUT",
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(
@@ -97,14 +101,14 @@ export default function JobsPage() {
         );
       }
       await fetchJobs();
-      toast.success("Job cancelled.");
+      toast.success(isPermalink ? "Removed from queue." : "Job cancelled.");
     } catch {
       toast.error("Failed to cancel job.");
     } finally {
       setCancelConfirmJobId(null);
       setIsCancelling(false);
     }
-  }, [cancelConfirmJobId, fetchJobs, toast]);
+  }, [cancelConfirmJobId, fetchJobs, jobs, permalinkJobs, toast]);
 
   // Queue: all pending/running (no filter). Finished: filter by outcome.
   const queueJobs = jobs
@@ -252,6 +256,7 @@ export default function JobsPage() {
 
         <section className="mb-8">
           <PermalinkQueueSection
+            onCancel={handleRequestCancel}
             permalinkJobs={permalinkJobs}
             setPermalinkJobs={setPermalinkJobs}
           />
