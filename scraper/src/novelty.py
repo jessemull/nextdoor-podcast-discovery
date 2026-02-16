@@ -4,15 +4,20 @@ Used by LLMScorer (scoring pipeline) and the background worker (recompute jobs)
 so topic frequency logic lives in one place.
 """
 
-__all__ = ["calculate_novelty"]
+__all__ = ["COLD_START_THRESHOLD", "calculate_novelty"]
 
 from typing import Any
+
+# When total scored posts is below this, use multiplier 1.0 to avoid boosting
+# all early posts before topic frequencies are meaningful.
+COLD_START_THRESHOLD = 30
 
 
 def calculate_novelty(
     categories: list[str],
     frequencies: dict[str, int],
     config: dict[str, Any],
+    total_scored_count: int | None = None,
 ) -> float:
     """Calculate novelty multiplier based on category frequency.
 
@@ -27,11 +32,16 @@ def calculate_novelty(
     - Very common topics (30-100 occurrences): Linear interpolation from 1.0x to 0.2x
     - Extremely common topics (>100 occurrences): Penalize by 0.2x
 
+    Cold start: When topic_frequencies is empty or total scored posts < N,
+    return 1.0 (neutral) to avoid boosting all early posts.
+
     Args:
         categories: List of topic categories for this post.
         frequencies: Dict of category -> count_30d.
         config: Novelty configuration (min_multiplier, max_multiplier,
             frequency_thresholds with rare, common, very_common).
+        total_scored_count: Total number of scored posts (llm_scores count).
+            When provided and < COLD_START_THRESHOLD, returns 1.0.
 
     Returns:
         Novelty multiplier (0.2 to 1.5).
@@ -41,6 +51,9 @@ def calculate_novelty(
 
     if not frequencies:
         return 1.0  # Cold start: no frequency data, use neutral multiplier
+
+    if total_scored_count is not None and total_scored_count < COLD_START_THRESHOLD:
+        return 1.0  # Cold start: too few scored posts, use neutral multiplier
 
     min_mult = float(config.get("min_multiplier", 0.2))
     max_mult = float(config.get("max_multiplier", 1.5))

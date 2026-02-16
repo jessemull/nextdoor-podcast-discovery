@@ -374,7 +374,13 @@ class TestProcessBatch:
         frequencies = {"pets": 10, "crime": 5}
 
         result = _process_batch(
-            mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies
+            mock_supabase,
+            batch_data,
+            "config-id",
+            weights,
+            novelty_config,
+            frequencies,
+            total_scored_count=100,
         )
 
         assert len(result) == 2
@@ -414,7 +420,13 @@ class TestProcessBatch:
         frequencies: dict[str, int] = {}
 
         result = _process_batch(
-            mock_supabase, batch_data, "config-id", weights, novelty_config, frequencies
+            mock_supabase,
+            batch_data,
+            "config-id",
+            weights,
+            novelty_config,
+            frequencies,
+            total_scored_count=100,
         )
 
         assert len(result) == 1
