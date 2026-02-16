@@ -14,9 +14,12 @@ import time
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from dotenv import load_dotenv
 from supabase import Client
 
 from src.config import ConfigurationError, validate_env
+
+load_dotenv()
 from src.llm_prompts import SCORING_DIMENSIONS
 from src.novelty import calculate_novelty
 from src.session_manager import SessionManager
