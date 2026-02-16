@@ -80,13 +80,42 @@ export function PodcastPicks() {
     return defaultMinPodcast;
   }, [searchParams, defaultMinPodcast]);
   const { toast } = useToast();
-  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
-    usePermalinkJobs();
+  const {
+    getActiveJobForPost,
+    getQueueStatusForPost,
+    refetch: refetchPermalinkJobs,
+  } = usePermalinkJobs();
+  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
   const [loading, setLoading] = useState(true);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [picks, setPicks] = useState<PostWithScores[]>([]);
   const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
+
+  const handleCancelRefresh = useCallback(
+    async (jobId: string) => {
+      if (cancellingJobId != null) return;
+      setCancellingJobId(jobId);
+      try {
+        const response = await fetch(`/api/admin/jobs/${jobId}`, {
+          method: "DELETE",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to remove");
+        }
+        await refetchPermalinkJobs();
+        toast.success("Removed from queue.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to remove from queue"
+        );
+      } finally {
+        setCancellingJobId(null);
+      }
+    },
+    [cancellingJobId, refetchPermalinkJobs, toast]
+  );
 
   const fetchPicks = useCallback(() => {
     setLoading(true);
@@ -227,11 +256,16 @@ export function PodcastPicks() {
           {picks.map((post) => (
             <PostCard
               key={post.id}
+              activeJobId={getActiveJobForPost(post)?.id ?? null}
               isMarkingSaved={markingSaved.has(post.id)}
               isMarkingUsed={markingUsed.has(post.id)}
+              isCancellingRefresh={
+                cancellingJobId === getActiveJobForPost(post)?.id
+              }
               isQueuingRefresh={queuingRefreshPostId === post.id}
               post={post}
               queueStatus={getQueueStatusForPost(post)}
+              onCancelRefresh={handleCancelRefresh}
               onMarkSaved={handleMarkSaved}
               onMarkUsed={handleMarkUsed}
               onQueueRefresh={handleQueueRefresh}

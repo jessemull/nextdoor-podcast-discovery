@@ -201,9 +201,38 @@ export function PostFeed({
     setError,
   });
   const { toast } = useToast();
-  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
-    usePermalinkJobs();
+  const {
+    getActiveJobForPost,
+    getQueueStatusForPost,
+    refetch: refetchPermalinkJobs,
+  } = usePermalinkJobs();
+  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
   const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
+
+  const handleCancelRefresh = useCallback(
+    async (jobId: string) => {
+      if (cancellingJobId != null) return;
+      setCancellingJobId(jobId);
+      try {
+        const response = await fetch(`/api/admin/jobs/${jobId}`, {
+          method: "DELETE",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to remove");
+        }
+        await refetchPermalinkJobs();
+        toast.success("Removed from queue.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to remove from queue"
+        );
+      } finally {
+        setCancellingJobId(null);
+      }
+    },
+    [cancellingJobId, refetchPermalinkJobs, toast]
+  );
 
   const handleQueueRefresh = useCallback(
     async (postId: string) => {
@@ -557,21 +586,30 @@ export function PostFeed({
             {!searchSlot.loading &&
               searchSlot.results.length > 0 && (
               <div className="space-y-4">
-                {searchSlot.results.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    isMarkingSaved={searchSlot.markingSaved.has(post.id)}
-                    isQueuingRefresh={queuingRefreshPostId === post.id}
-                    post={post}
-                    queueStatus={getQueueStatusForPost(post)}
-                    onMarkSaved={(id, saved) =>
-                      searchSlot.onMarkSaved(id, saved)
-                    }
-                    onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
-                    onQueueRefresh={handleQueueRefresh}
-                    onViewDetails={() => searchSlot.onViewDetails(post.id)}
-                  />
-                ))}
+                {searchSlot.results.map((post) => {
+                  const activeJob = getActiveJobForPost(post);
+                  return (
+                    <PostCard
+                      key={post.id}
+                      activeJobId={activeJob?.id ?? null}
+                      isMarkingSaved={searchSlot.markingSaved.has(post.id)}
+                      isCancellingRefresh={
+                        activeJob != null &&
+                        cancellingJobId === activeJob.id
+                      }
+                      isQueuingRefresh={queuingRefreshPostId === post.id}
+                      post={post}
+                      queueStatus={getQueueStatusForPost(post)}
+                      onCancelRefresh={handleCancelRefresh}
+                      onMarkSaved={(id, saved) =>
+                        searchSlot.onMarkSaved(id, saved)
+                      }
+                      onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
+                      onQueueRefresh={handleQueueRefresh}
+                      onViewDetails={() => searchSlot.onViewDetails(post.id)}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -709,14 +747,19 @@ export function PostFeed({
                   }}
                 >
                   <PostCard
+                    activeJobId={getActiveJobForPost(post)?.id ?? null}
                     isMarkingIgnored={markingIgnored.has(post.id)}
                     isMarkingSaved={markingSaved.has(post.id)}
                     isMarkingUsed={markingUsed.has(post.id)}
+                    isCancellingRefresh={
+                      cancellingJobId === getActiveJobForPost(post)?.id
+                    }
                     isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
                     queueStatus={getQueueStatusForPost(post)}
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
+                    onCancelRefresh={handleCancelRefresh}
                     onMarkIgnored={handleMarkIgnored}
                     onMarkSaved={handleMarkSaved}
                     onMarkUsed={handleMarkUsed}

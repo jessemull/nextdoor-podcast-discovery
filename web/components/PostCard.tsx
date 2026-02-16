@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   RefreshCw,
   Search,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,11 +42,14 @@ const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
 export type QueueStatus = "pending" | "running" | null;
 
 interface PostCardProps {
+  activeJobId?: null | string;
   defaultExpanded?: boolean;
+  isCancellingRefresh?: boolean;
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
   isQueuingRefresh?: boolean;
+  onCancelRefresh?: (jobId: string) => void;
   onMarkIgnored?: (postId: string, ignored: boolean) => void;
   onMarkSaved?: (postId: string, saved: boolean) => void;
   onMarkUsed?: (postId: string) => void;
@@ -60,11 +64,14 @@ interface PostCardProps {
 }
 
 export const PostCard = memo(function PostCard({
+  activeJobId = null,
   defaultExpanded = false,
+  isCancellingRefresh = false,
   isMarkingIgnored = false,
   isMarkingSaved = false,
   isMarkingUsed = false,
   isQueuingRefresh = false,
+  onCancelRefresh,
   onMarkIgnored,
   onMarkSaved,
   onMarkUsed,
@@ -400,24 +407,50 @@ export const PostCard = memo(function PostCard({
                     View on Nextdoor
                   </a>
                 )}
-                {post.url && onQueueRefresh && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isQueuingRefresh}
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onQueueRefresh(post.id);
-                    }}
-                  >
-                    <RefreshCw
-                      aria-hidden
-                      className={cn("h-4 w-4", isQueuingRefresh && "animate-spin")}
-                    />
-                    {isQueuingRefresh ? "Queuing…" : "Refresh Post"}
-                  </button>
-                )}
+                {post.url &&
+                  (queueStatus && activeJobId && onCancelRefresh ? (
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                      disabled={isCancellingRefresh}
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        onCancelRefresh(activeJobId);
+                      }}
+                    >
+                      <X
+                        aria-hidden
+                        className={cn(
+                          "h-4 w-4",
+                          isCancellingRefresh && "animate-pulse"
+                        )}
+                      />
+                      {isCancellingRefresh ? "Cancelling…" : "Cancel Refresh"}
+                    </button>
+                  ) : (
+                    onQueueRefresh && (
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                        disabled={isQueuingRefresh}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          closeMenu();
+                          onQueueRefresh(post.id);
+                        }}
+                      >
+                        <RefreshCw
+                          aria-hidden
+                          className={cn(
+                            "h-4 w-4",
+                            isQueuingRefresh && "animate-spin"
+                          )}
+                        />
+                        {isQueuingRefresh ? "Queuing…" : "Refresh Post"}
+                      </button>
+                    )
+                  ))}
                 {onMarkSaved && (
                   <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"

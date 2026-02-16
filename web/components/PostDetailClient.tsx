@@ -23,8 +23,12 @@ export function PostDetailClient({
 }: PostDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
-    usePermalinkJobs();
+  const {
+    getActiveJobForPost,
+    getQueueStatusForPost,
+    refetch: refetchPermalinkJobs,
+  } = usePermalinkJobs();
+  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
   const [error, setError] = useState<null | string>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
@@ -33,6 +37,31 @@ export function PostDetailClient({
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<PostWithScores[]>([]);
   const [queuingRefresh, setQueuingRefresh] = useState(false);
+
+  const handleCancelRefresh = useCallback(
+    async (jobId: string) => {
+      if (cancellingJobId != null) return;
+      setCancellingJobId(jobId);
+      try {
+        const response = await fetch(`/api/admin/jobs/${jobId}`, {
+          method: "DELETE",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to remove");
+        }
+        await refetchPermalinkJobs();
+        toast.success("Removed from queue.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to remove from queue"
+        );
+      } finally {
+        setCancellingJobId(null);
+      }
+    },
+    [cancellingJobId, refetchPermalinkJobs, toast]
+  );
 
   const fetchPost = useCallback(async () => {
     if (!postId) return;
@@ -226,14 +255,19 @@ export function PostDetailClient({
         {/* Post card (same as feed, with score breakdown and full text expanded) */}
         <div className="mb-8">
           <PostCard
+            activeJobId={getActiveJobForPost(post)?.id ?? null}
             defaultExpanded
             isMarkingIgnored={markingIgnored}
             isMarkingSaved={markingSaved}
             isMarkingUsed={markingUsed}
+            isCancellingRefresh={
+              cancellingJobId === getActiveJobForPost(post)?.id
+            }
             isQueuingRefresh={queuingRefresh}
             post={post}
             queueStatus={getQueueStatusForPost(post)}
             showScoreBreakdown
+            onCancelRefresh={handleCancelRefresh}
             onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
             onMarkUsed={handleMarkUsed}
