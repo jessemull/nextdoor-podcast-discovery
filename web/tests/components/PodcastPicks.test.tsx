@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PodcastPicks } from "@/components/PodcastPicks";
+import { ToastProvider } from "@/lib/ToastContext";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -38,13 +39,15 @@ const mockPost = {
 
 function WrappedPodcastPicks() {
   return (
-    <Suspense
-      fallback={
-        <div data-testid="suspense-fallback">Loading Podcast Picks...</div>
-      }
-    >
-      <PodcastPicks />
-    </Suspense>
+    <ToastProvider>
+      <Suspense
+        fallback={
+          <div data-testid="suspense-fallback">Loading Podcast Picks...</div>
+        }
+      >
+        <PodcastPicks />
+      </Suspense>
+    </ToastProvider>
   );
 }
 

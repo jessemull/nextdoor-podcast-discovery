@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { useToast } from "@/lib/ToastContext";
 
 import { PostCard } from "./PostCard";
@@ -79,6 +80,8 @@ export function PodcastPicks() {
     return defaultMinPodcast;
   }, [searchParams, defaultMinPodcast]);
   const { toast } = useToast();
+  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
+    usePermalinkJobs();
   const [loading, setLoading] = useState(true);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
@@ -171,6 +174,7 @@ export function PodcastPicks() {
           throw new Error(data.error || data.details || "Failed to queue refresh");
         }
         toast.success("Added to queue successfully.");
+        refetchPermalinkJobs();
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Failed to queue refresh"
@@ -179,7 +183,7 @@ export function PodcastPicks() {
         setQueuingRefreshPostId(null);
       }
     },
-    [picks, queuingRefreshPostId, toast]
+    [picks, queuingRefreshPostId, refetchPermalinkJobs, toast]
   );
 
   if (loading) {
@@ -227,6 +231,7 @@ export function PodcastPicks() {
               isMarkingUsed={markingUsed.has(post.id)}
               isQueuingRefresh={queuingRefreshPostId === post.id}
               post={post}
+              queueStatus={getQueueStatusForPost(post)}
               onMarkSaved={handleMarkSaved}
               onMarkUsed={handleMarkUsed}
               onQueueRefresh={handleQueueRefresh}

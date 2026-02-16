@@ -11,6 +11,7 @@ import {
   useBulkActions,
 } from "@/lib/hooks/useBulkActions";
 import { useFeedKeyboardNav } from "@/lib/hooks/useFeedKeyboardNav";
+import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { usePostFeedData } from "@/lib/hooks/usePostFeedData";
 import {
   DEFAULT_FILTERS,
@@ -200,6 +201,8 @@ export function PostFeed({
     setError,
   });
   const { toast } = useToast();
+  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
+    usePermalinkJobs();
   const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
 
   const handleQueueRefresh = useCallback(
@@ -220,6 +223,7 @@ export function PostFeed({
           throw new Error(data.error || data.details || "Failed to queue refresh");
         }
         toast.success("Added to queue successfully.");
+        refetchPermalinkJobs();
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Failed to queue refresh"
@@ -228,7 +232,7 @@ export function PostFeed({
         setQueuingRefreshPostId(null);
       }
     },
-    [posts, queuingRefreshPostId, searchSlot?.results, toast]
+    [posts, queuingRefreshPostId, refetchPermalinkJobs, searchSlot?.results, toast]
   );
 
   const {
@@ -559,6 +563,7 @@ export function PostFeed({
                     isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                     isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
+                    queueStatus={getQueueStatusForPost(post)}
                     onMarkSaved={(id, saved) =>
                       searchSlot.onMarkSaved(id, saved)
                     }
@@ -709,6 +714,7 @@ export function PostFeed({
                     isMarkingUsed={markingUsed.has(post.id)}
                     isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
+                    queueStatus={getQueueStatusForPost(post)}
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
                     onMarkIgnored={handleMarkIgnored}
