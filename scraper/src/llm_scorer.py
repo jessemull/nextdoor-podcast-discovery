@@ -497,7 +497,14 @@ class LLMScorer:
                 stats["saved"] = 0
                 saved_results = []
 
-        # Write post_scores for active weight config so the feed shows posts
+        # Update topic frequencies before computing post_scores so novelty matches
+        # Preview (which recomputes at query time with current frequencies).
+        self._update_topic_frequencies(results)
+
+        # Recompute final_scores with updated frequencies; write post_scores so
+        # stored feed matches Preview exactly.
+        self.calculate_final_scores(saved_results)
+
         active_config_id = self._get_active_weight_config_id()
         if active_config_id and saved_results:
             try:
@@ -515,10 +522,6 @@ class LLMScorer:
                 ).execute()
             except Exception as e:
                 log_supabase_error("Failed to write post_scores (feed may be empty)", e)
-
-        # Update topic frequencies
-
-        self._update_topic_frequencies(results)
 
         logger.info(
             "Saved %d scores, skipped %d, errors %d",
