@@ -91,6 +91,11 @@ class Selectors(TypedDict):
 
 
 # Scraper settings
+#
+# Mobile viewport (iPhone): Nextdoor's mobile UI is what we target; feed layout,
+# Filter-by flow, and selectors are built for this. Desktop uses different DOM
+# and would need different selectors. Mobile may also be less likely to trigger
+# bot detection than a headless desktop UA, but the main reason is UI consistency.
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
