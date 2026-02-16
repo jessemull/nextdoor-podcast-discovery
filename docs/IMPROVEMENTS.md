@@ -6,7 +6,7 @@ Tracked list of product and system improvements to complete.
 
 ## 1. Runtime vs stored scores (preview + cutover)
 
-- [ ] **Toggle for runtime calculation versus actual scores saved in DB**
+- [x] **Toggle for runtime calculation versus actual scores saved in DB**
   - Add DB function (or app path) that computes `final_score` from `llm_scores` + weight config (weights + novelty).
   - Feed can use runtime for “preview” (any config, instant) or stored `post_scores` when available (fast).
   - Let user try configs with runtime, then run recompute job to persist; feed uses stored path after job completes.
@@ -15,7 +15,7 @@ Tracked list of product and system improvements to complete.
 
 ## 2. Recompute job with clean cutover
 
-- [ ] **System for recalculating scores with new weights with clean cutover**
+- [x] **System for recalculating scores with new weights with clean cutover**
   - During recompute, avoid mixing old and new scores in the feed (no partial state for 2+ hours).
   - Option: staging table — job writes to `post_scores_staging` (by job/config); on job success, one transaction: delete `post_scores` for that config, insert from staging, then clear staging for that job.
   - Feed always reads `post_scores`; cutover happens once when the job completes.
@@ -233,8 +233,8 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [ ] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights.
 - [ ] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration.
 - [x] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
-- [ ] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
-- [ ] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
+- [x] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
+- [x] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
 - [ ] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors.
 - [ ] **§10 — Permalink queue and scraper job:** Queue for Nextdoor permalinks; job runs x/day to fetch, scrape, store and score single posts.
