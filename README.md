@@ -156,7 +156,7 @@ nextdoor/
 
 | Script | Purpose |
 | :----- | :------ |
-| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with `--score` and `--check-robots`, then `recount_topics`. Pings `HEALTHCHECK_URL` on success or `/fail` on failure. Needs repo `.venv` and `scraper/.env`. |
+| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), plus `--check-robots`, then `recount_topics`. Pings `HEALTHCHECK_URL` on success or `/fail` on failure. Needs repo `.venv` and `scraper/.env`. |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`; pings `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL`. |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
@@ -260,7 +260,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 4. **Scraper (one-off)**
    ```bash
    set -a && source scraper/.env && set +a
-   cd scraper && python -m src.main --feed-type recent --max-posts 5 --score
+   cd scraper && python -m src.main --feed-type recent --max-posts 5
    ```
 
 5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in with a whitelisted Google account.
@@ -279,7 +279,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 ## Scraper (Python)
 
-**Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--score`, `--embed`, `--dry-run`, `--check-robots`, `--extract-permalinks`, `--visible`, `--inspect`.
+**Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--dry-run`, `--check-robots`, `--visible`, `--inspect`. Scoring and embedding run by default; use `--no-score` or `--no-embed` to skip.
 
 **Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
 

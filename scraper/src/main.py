@@ -220,36 +220,49 @@ def _run_permalink_fetch(
 def main(
     check_robots: bool = False,
     dry_run: bool = False,
-    embed: bool = False,
+    embed: bool = True,
     feed_type: str = "recent",
     inspect: bool = False,
     max_posts: int | None = None,
+    no_embed: bool = False,
+    no_score: bool = False,
     permalink: str | None = None,
     post_id: str | None = None,
     repeat_threshold: int | None = None,
-    score: bool = False,
+    score: bool = True,
     score_only: bool = False,
     unscored_batch_limit: int = 50,
     visible: bool = False,
 ) -> int:
     """Run the scraper pipeline.
 
+    Default: scrape, score, and embed so posts are discoverable. Use --no-score
+    or --no-embed to skip those steps.
+
     Args:
         check_robots: If True, fetch robots.txt and exit with 1 if our paths are disallowed.
         dry_run: If True, don't make any changes to the database.
-        embed: If True, run embedding generation after scrape/score (so new posts are searchable).
+        embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
         feed_type: Which feed to scrape ("recent" or "trending").
-        inspect: If True, open browser (iPhone mobile), go to feed, then pause so you can inspect DOM (e.g. Filter by menu).
+        inspect: If True, open browser (iPhone mobile), go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
-        repeat_threshold: For Recent feed, stop after this many consecutive already-seen posts (default from config).
-        score: If True, run LLM scoring on unscored posts after scraping.
-        score_only: If True, skip scraping and only run score/embed (use to re-run scoring without re-scraping).
-        unscored_batch_limit: Max unscored posts to score per run (default 50; use env UNSCORED_BATCH_LIMIT or --unscored-limit for backfills).
+        no_embed: If True, skip embedding (overrides default).
+        no_score: If True, skip LLM scoring (overrides default).
+        permalink: If set, fetch single post by URL instead of scraping feed.
+        post_id: With --permalink, update existing post by UUID.
+        repeat_threshold: For Recent feed, stop after this many consecutive already-seen posts.
+        score: If True, run LLM scoring on unscored posts (default True; use --no-score to skip).
+        score_only: If True, skip scraping and only run score/embed.
+        unscored_batch_limit: Max unscored posts to score per run (default 50).
         visible: If True, run browser in visible mode (not headless).
 
     Returns:
         Exit code (0 for success, 1 for failure).
     """
+    if no_score:
+        score = False
+    if no_embed:
+        embed = False
     # Permalink mode: fetch single post by URL (insert or update)
     if permalink:
         return _run_permalink_fetch(
@@ -284,7 +297,9 @@ def main(
         max_posts = SCRAPER_CONFIG["max_posts_per_run"]
 
     if score_only and not score and not embed:
-        logger.error("--score-only requires at least one of --score or --embed")
+        logger.error(
+            "--score-only requires at least one of score or embed (don't use both --no-score and --no-embed with --score-only)"
+        )
         return 1
 
     logger.info(
@@ -532,9 +547,10 @@ if __name__ == "__main__":
         help="Run without making changes to the database",
     )
     parser.add_argument(
-        "--embed",
+        "--no-embed",
         action="store_true",
-        help="Run embedding generation after scrape/score so new posts are searchable",
+        dest="no_embed",
+        help="Skip embedding (default is to embed so new posts are searchable)",
     )
     parser.add_argument(
         "--feed-type",
@@ -575,9 +591,10 @@ if __name__ == "__main__":
         help="For Recent feed: stop after this many consecutive already-seen posts (default from config)",
     )
     parser.add_argument(
-        "--score",
+        "--no-score",
         action="store_true",
-        help="Run LLM scoring on unscored posts after scraping",
+        dest="no_score",
+        help="Skip LLM scoring (default is to score unscored posts after scraping)",
     )
     parser.add_argument(
         "--score-only",
@@ -609,14 +626,14 @@ if __name__ == "__main__":
         main(
             check_robots=args.check_robots,
             dry_run=args.dry_run,
-            embed=args.embed,
             feed_type=args.feed_type,
             inspect=args.inspect,
             max_posts=args.max_posts,
+            no_embed=getattr(args, "no_embed", False),
+            no_score=getattr(args, "no_score", False),
             permalink=args.permalink,
             post_id=args.post_id,
             repeat_threshold=args.repeat_threshold,
-            score=args.score,
             score_only=args.score_only,
             unscored_batch_limit=unscored_limit,
             visible=args.visible,
