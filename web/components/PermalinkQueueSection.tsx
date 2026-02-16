@@ -76,7 +76,9 @@ function truncateUrl(url: string, maxLen: number = 50): string {
   return url.slice(0, maxLen - 3) + "...";
 }
 
-function sortJobs(jobs: Job[]): Job[] {
+const PROCESSED_JOBS_LIMIT = 20;
+
+function sortQueueJobs(jobs: Job[]): Job[] {
   return [...jobs].sort((a, b) => {
     const aActive = a.status === "running" ? 2 : a.status === "pending" ? 1 : 0;
     const bActive = b.status === "running" ? 2 : b.status === "pending" ? 1 : 0;
@@ -85,6 +87,13 @@ function sortJobs(jobs: Job[]): Job[] {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   });
+}
+
+function sortProcessedJobs(jobs: Job[]): Job[] {
+  return [...jobs].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 }
 
 export function PermalinkQueueSection({
@@ -98,7 +107,27 @@ export function PermalinkQueueSection({
   const [menuOpenJobId, setMenuOpenJobId] = useState<null | string>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const sortedJobs = useMemo(() => sortJobs(permalinkJobs), [permalinkJobs]);
+  const queueJobs = useMemo(
+    () =>
+      sortQueueJobs(
+        permalinkJobs.filter(
+          (j) => j.status === "pending" || j.status === "running"
+        )
+      ),
+    [permalinkJobs]
+  );
+  const processedJobs = useMemo(
+    () =>
+      sortProcessedJobs(
+        permalinkJobs.filter(
+          (j) =>
+            j.status === "completed" ||
+            j.status === "error" ||
+            j.status === "cancelled"
+        )
+      ).slice(0, PROCESSED_JOBS_LIMIT),
+    [permalinkJobs]
+  );
 
   useEffect(() => {
     if (menuOpenJobId == null) return;
@@ -215,9 +244,9 @@ export function PermalinkQueueSection({
             before they run.
           </p>
         </div>
-        {sortedJobs.length > 0 ? (
+        {queueJobs.length > 0 ? (
           <div className="max-h-[48rem] space-y-3 overflow-y-auto">
-            {sortedJobs.map((job) => {
+            {queueJobs.map((job) => {
               const params = job.params as { post_id?: string; url?: string };
               const url = params?.url ?? "unknown";
               const postId = params?.post_id;
@@ -357,9 +386,130 @@ export function PermalinkQueueSection({
           </div>
         ) : (
           <p className="text-muted-foreground text-sm">
-            No permalink jobs yet. Add a URL above or use Refresh Post on a post
-            card.
+            No permalink jobs in queue. Add a URL above or use Refresh Post on a
+            post card.
           </p>
+        )}
+        {processedJobs.length > 0 && (
+          <>
+            <div className="mb-4 mt-8">
+              <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+                Processed
+              </h2>
+              <p
+                className="text-foreground text-sm"
+                style={{ opacity: 0.85 }}
+              >
+                Recent permalink jobs (completed, failed, or cancelled). Latest{" "}
+                {PROCESSED_JOBS_LIMIT} shown.
+              </p>
+            </div>
+            <div className="max-h-[24rem] space-y-3 overflow-y-auto">
+              {processedJobs.map((job) => {
+                const params = job.params as { post_id?: string; url?: string };
+                const url = params?.url ?? "unknown";
+                const menuOpen = menuOpenJobId === job.id;
+                return (
+                  <div
+                    key={job.id}
+                    className="rounded border border-border bg-surface-hover/50 p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <span
+                        className="text-foreground min-w-0 flex-1 truncate text-base font-semibold"
+                        title={url}
+                      >
+                        {truncateUrl(url, 56)}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span
+                          className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
+                        >
+                          {formatStatus(job.status)}
+                        </span>
+                        {url && url.startsWith("http") && (
+                          <a
+                            aria-label="View Post on Nextdoor"
+                            className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                            href={url}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                            title="View Post on Nextdoor"
+                          >
+                            <Eye
+                              aria-hidden
+                              className="h-4 w-4 text-foreground"
+                            />
+                          </a>
+                        )}
+                        <div
+                          className="relative"
+                          ref={menuOpen ? menuRef : null}
+                        >
+                          <button
+                            aria-expanded={menuOpen}
+                            aria-haspopup="menu"
+                            aria-label="More actions"
+                            className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                            type="button"
+                            onClick={() =>
+                              setMenuOpenJobId((id) =>
+                                id === job.id ? null : job.id
+                              )
+                            }
+                          >
+                            <MoreHorizontal
+                              aria-hidden
+                              className="h-4 w-4 text-foreground"
+                            />
+                          </button>
+                          {menuOpen && (
+                            <div
+                              className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                              role="menu"
+                            >
+                              {url && url.startsWith("http") && (
+                                <a
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                                  href={url}
+                                  rel="noopener noreferrer"
+                                  role="menuitem"
+                                  target="_blank"
+                                  onClick={() => setMenuOpenJobId(null)}
+                                >
+                                  <Eye aria-hidden className="h-4 w-4" />
+                                  View Post
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                        Submitted
+                      </h4>
+                      <p
+                        className="text-foreground text-xs"
+                        style={{ opacity: 0.85 }}
+                      >
+                        {formatRelativeTime(job.created_at)}
+                      </p>
+                    </div>
+                    {job.status === "error" && job.error_message && (
+                      <p
+                        className="text-destructive mt-2 text-xs"
+                        title={job.error_message}
+                      >
+                        {job.error_message}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </Card>
     </>
