@@ -432,6 +432,24 @@ class PostExtractor:
             timestamp_relative=raw.get("timestamp") or None,
         )
 
+    def _scroll_feed_back_after_drawer_close(self, container_index: int) -> None:
+        """Scroll the feed so we're not stuck at top after closing the comment drawer.
+
+        Opening the drawer often scrolls the page to top; we scroll the next post
+        into view so the next iteration targets the correct post and we don't
+        reopen the same drawer.
+        """
+        try:
+            containers = self.page.locator("div.post, div.js-media-post")
+            next_index = container_index + 1
+            if containers.count() > next_index:
+                containers.nth(next_index).scroll_into_view_if_needed()
+            else:
+                self.page.evaluate("window.scrollBy(0, window.innerHeight)")
+            self.page.wait_for_timeout(150)
+        except Exception:
+            pass
+
     def _count_consecutive_already_seen(self, raw_posts: list[dict[str, Any]]) -> int:
         """Count how many posts from the start of the batch are already in seen_hashes.
 
@@ -589,13 +607,29 @@ class PostExtractor:
                 self._logged_extracting_comments = True
 
             containers = self.page.locator("div.post, div.js-media-post")
-            if containers.count() <= container_index:
+            total_containers = containers.count()
+            if total_containers <= container_index:
+                logger.info(
+                    "Comments container_index=%s: skip (only %s containers)",
+                    container_index,
+                    total_containers,
+                )
                 return []
 
             container = containers.nth(container_index)
             reply_in_container = container.get_by_test_id("post-reply-button")
             if reply_in_container.count() == 0:
+                logger.info(
+                    "Comments container_index=%s: skip (no post-reply-button)",
+                    container_index,
+                )
                 return []
+
+            logger.info(
+                "Comments container_index=%s: opening drawer (containers on page=%s)",
+                container_index,
+                total_containers,
+            )
 
             btn = reply_in_container.first
             btn.scroll_into_view_if_needed()
@@ -613,8 +647,13 @@ class PostExtractor:
                     state="visible", timeout=self.COMMENT_DRAWER_TIMEOUT_MS
                 )
             except PlaywrightTimeoutError:
+                logger.info(
+                    "Comments container_index=%s: drawer did not become visible (timeout)",
+                    container_index,
+                )
                 self.page.keyboard.press("Escape")
                 self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+                self._scroll_feed_back_after_drawer_close(container_index)
                 return []
 
             # If "See previous comments" is visible, click to load all (scope to the
@@ -629,13 +668,39 @@ class PostExtractor:
             except Exception:
                 pass
 
-            # Extract comment data from DOM
-
-            comments_data = self.page.evaluate(
+            # Extract from the LAST visible comment drawer (the one we just opened).
+            # DOM order: old drawers stay in the DOM; the newly opened drawer is appended last.
+            result = self.page.evaluate(
                 """
-                () => {
-                    const nodes = document.querySelectorAll('.js-media-comment');
-                    return Array.from(nodes).map(el => {
+                (targetContainerIndex) => {
+                    const feed = document.querySelector('[data-testid="feed-container"]');
+                    const containers = feed
+                        ? feed.querySelectorAll('.comment-container')
+                        : document.querySelectorAll('.comment-container');
+                    let visibleWithComments = 0;
+                    let lastVisible = null;
+                    let lastIndex = -1;
+                    for (let i = 0; i < containers.length; i++) {
+                        const c = containers[i];
+                        const nodes = c.querySelectorAll('.js-media-comment');
+                        if (nodes.length === 0) continue;
+                        const rect = c.getBoundingClientRect();
+                        const isVisible = rect.height > 0 && rect.width > 0;
+                        if (!isVisible) continue;
+                        visibleWithComments++;
+                        lastVisible = { container: c, nodes, index: i };
+                        lastIndex = i;
+                    }
+                    const debug = {
+                        chosenIndex: lastIndex,
+                        firstAuthor: null,
+                        firstSnippet: null,
+                        targetContainerIndex,
+                        totalContainers: containers.length,
+                        visibleWithComments,
+                    };
+                    if (!lastVisible) return { comments: [], debug };
+                    const comments = Array.from(lastVisible.nodes).map(el => {
                         const detail = el.querySelector('[data-testid="comment-detail"]');
                         const body = el.querySelector('[data-testid="comment-detail-body"]');
                         const authorLink = detail?.querySelector('.comment-detail-scopeline a');
@@ -645,13 +710,36 @@ class PostExtractor:
                         const timestamp = ts?.textContent?.trim() ?? null;
                         return { author_name: author, text, timestamp_relative: timestamp };
                     });
+                    const first = comments[0];
+                    if (first) {
+                        debug.firstAuthor = first.author_name;
+                        debug.firstSnippet = (first.text || '').slice(0, 40);
+                    }
+                    return { comments, debug };
                 }
-            """
+                """,
+                container_index,
+            )
+            comments_data = result.get("comments") if isinstance(result, dict) else []
+            debug = result.get("debug") if isinstance(result, dict) else {}
+            logger.info(
+                "Comments container_index=%s: containers=%s visible_with_comments=%s chosen_index=%s count=%s fingerprint=%s|%s",
+                container_index,
+                debug.get("totalContainers", "?"),
+                debug.get("visibleWithComments", "?"),
+                debug.get("chosenIndex", "?"),
+                len(comments_data or []),
+                (debug.get("firstAuthor") or "")[:20],
+                (debug.get("firstSnippet") or "")[:30],
             )
 
             # Close the drawer (avoid clicking - top of viewport is Create Post prompt)
             self.page.keyboard.press("Escape")
             self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+
+            # Restore scroll position: opening the drawer often scrolls to top; scroll back
+            # down so we don't stay at top and reopen the same post's drawer on next iteration.
+            self._scroll_feed_back_after_drawer_close(container_index)
 
             out = [
                 RawComment(
@@ -667,12 +755,16 @@ class PostExtractor:
         except PlaywrightTimeoutError:
             try:
                 self.page.keyboard.press("Escape")
+                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+                self._scroll_feed_back_after_drawer_close(container_index)
             except Exception:
                 pass
             return []
         except Exception:
             try:
                 self.page.keyboard.press("Escape")
+                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
+                self._scroll_feed_back_after_drawer_close(container_index)
             except Exception:
                 pass
             return []
