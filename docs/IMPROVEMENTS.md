@@ -151,6 +151,8 @@ Tracked list of product and system improvements to complete.
   - Recompute job does a DB round-trip to check cancellation and one to update progress every batch. Check cancellation every N batches (e.g. 5); throttle progress updates (e.g. every N batches or every M seconds); still set final progress on completion.
 - [ ] **Post storage: batch neighborhood lookups**
   - For each batch, collect unique neighborhood names; batch-fetch existing by slug (e.g. `in("slug", slugs)`); batch-insert missing; fill cache and use when building `posts_data`. Reduces round-trips when many distinct neighborhoods appear in one scrape batch.
+- [ ] **Scraper: Fix programmatic scroll to trigger infinite-load**
+  - Manual scrolling loads new posts indefinitely; programmatic `window.scrollBy()` does not trigger Nextdoor's infinite scroll. Try wheel/touch simulation, Playwright native scroll, or scroll-into-view on sentinel elements so more posts load during extraction.
 - [ ] **Scraper: tune scroll delay for speed vs reliability**
   - Current `scroll_delay_ms` (2000, 5000) increases total scrape time. Consider lower range (e.g. 1–3s); document or monitor for rate limits/CAPTCHA; make range configurable via env if needed.
 - [ ] **(Optional) Shared embedding cache for search**
@@ -226,6 +228,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
 - [ ] **§14 — Embedder: chunked processing:** Use RPC like `get_posts_without_embeddings(limit N)` or paginated query; process in chunks to avoid loading full tables.
 - [ ] **§14 — Post storage: batch neighborhood lookups:** Per batch, collect unique neighborhood names; batch-fetch by slug, batch-insert missing; use cache when building posts_data.
+- [ ] **§14 — Scraper: Fix programmatic scroll to trigger infinite-load:** Use wheel/touch simulation, Playwright native scroll, or sentinel scroll-into-view so Nextdoor loads more posts during extraction.
 - [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
 - [ ] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights.
 - [ ] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration.
