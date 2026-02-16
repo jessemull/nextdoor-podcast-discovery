@@ -533,8 +533,7 @@ class PostExtractor:
             href = fb_link.get_attribute("href")
             post_url = self._parse_post_url_from_share_link(href)
 
-            # Close the modal and wait for close animation
-
+            # Close the modal (avoid clicking - top of viewport is Create Post prompt)
             self.page.keyboard.press("Escape")
             self.page.wait_for_timeout(SCRAPER_CONFIG["modal_close_delay_ms"])
 
@@ -546,7 +545,6 @@ class PostExtractor:
             )
 
             # Try to close any open modal
-
             try:
                 self.page.keyboard.press("Escape")
             except Exception as e:
@@ -651,8 +649,7 @@ class PostExtractor:
             """
             )
 
-            # Close the drawer
-
+            # Close the drawer (avoid clicking - top of viewport is Create Post prompt)
             self.page.keyboard.press("Escape")
             self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
 
