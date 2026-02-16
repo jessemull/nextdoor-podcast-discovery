@@ -14,8 +14,7 @@ function buildPostsQueryParams(
   filters: PostFeedFilters,
   debouncedMinPodcastWorthy: string,
   debouncedMinReactionCount: string,
-  debouncedMinScore: string,
-  debouncedPreviewWeights: PostFeedFilters["previewWeights"]
+  debouncedMinScore: string
 ): URLSearchParams {
   const searchParams = new URLSearchParams();
   searchParams.set("limit", String(POSTS_PER_PAGE));
@@ -55,10 +54,10 @@ function buildPostsQueryParams(
   if (filters.preview) {
     searchParams.set("preview", "true");
     if (
-      debouncedPreviewWeights &&
-      Object.keys(debouncedPreviewWeights).length > 0
+      filters.previewWeights &&
+      Object.keys(filters.previewWeights).length > 0
     ) {
-      searchParams.set("weights", JSON.stringify(debouncedPreviewWeights));
+      searchParams.set("weights", JSON.stringify(filters.previewWeights));
     }
   }
 
@@ -69,7 +68,6 @@ export interface UsePostFeedDataParams {
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
-  debouncedPreviewWeights: PostFeedFilters["previewWeights"];
   filters: PostFeedFilters;
 }
 
@@ -93,7 +91,6 @@ export function usePostFeedData(
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    debouncedPreviewWeights,
     filters,
   } = params;
 
@@ -101,8 +98,7 @@ export function usePostFeedData(
     filters,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
-    debouncedMinScore,
-    debouncedPreviewWeights
+    debouncedMinScore
   );
 
   const [manualError, setManualError] = useState<null | string>(null);
@@ -142,11 +138,11 @@ export function usePostFeedData(
       debouncedMinPodcastWorthy,
       debouncedMinReactionCount,
       debouncedMinScore,
-      debouncedPreviewWeights,
       filters.category,
       filters.ignoredOnly,
       filters.neighborhoodId,
       filters.preview,
+      filters.previewWeights,
       filters.savedOnly,
       filters.sort,
       filters.sortOrder,

@@ -121,7 +121,6 @@ export function PostFeed({
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    debouncedPreviewWeights,
     filterLoadError,
     filters,
     neighborhoods,
@@ -143,7 +142,6 @@ export function PostFeed({
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    debouncedPreviewWeights,
     filters,
   });
 

@@ -42,7 +42,6 @@ export interface UsePostFeedFiltersResult {
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
-  debouncedPreviewWeights: RankingWeights;
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
@@ -96,10 +95,6 @@ export function usePostFeedFilters(
     filters.minReactionCount,
     debounceDelayMs
   );
-  const debouncedPreviewWeights = useDebounce(
-    filters.previewWeights,
-    debounceDelayMs
-  );
 
   useEffect(() => {
     fetch("/api/neighborhoods")
@@ -121,7 +116,6 @@ export function usePostFeedFilters(
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    debouncedPreviewWeights,
     filterLoadError,
     filters,
     neighborhoods,
