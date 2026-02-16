@@ -422,6 +422,7 @@ class LLMScorer:
         """
         weights = self._get_weights()
         frequencies = self._get_topic_frequencies()
+        total_scored_count = self._get_scored_count()
 
         for result in results:
             if result.error or not result.scores:
@@ -439,7 +440,12 @@ class LLMScorer:
             # Calculate novelty multiplier based on categories
 
             config = self._get_novelty_config()
-            novelty = calculate_novelty(result.categories, frequencies, config)
+            novelty = calculate_novelty(
+                result.categories,
+                frequencies,
+                config,
+                total_scored_count=total_scored_count,
+            )
 
             raw_score = normalized * novelty
             result.final_score = min(10.0, max(0.0, raw_score))
@@ -742,6 +748,23 @@ class LLMScorer:
             log_supabase_error("Failed to load topic_frequencies table", e)
 
         return {}
+
+    def _get_scored_count(self) -> int | None:
+        """Get count of existing scored posts for cold-start novelty check.
+
+        Returns:
+            Count of llm_scores rows, or None on error.
+        """
+        try:
+            result = (
+                self.supabase.table("llm_scores")
+                .select("id", count=cast(Any, "exact"), head=True)
+                .execute()
+            )
+            return result.count if result.count is not None else None
+        except Exception as e:
+            log_supabase_error("Failed to count llm_scores for cold-start check", e)
+            return None
 
     def get_unscored_posts(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get posts that haven't been scored yet, oldest first.

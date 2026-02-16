@@ -145,6 +145,8 @@ class TestLLMScorer:
 
     def test_calculate_final_scores_applies_weights(self, scorer: LLMScorer) -> None:
         """Should apply weights when calculating final scores."""
+        scorer._get_scored_count = mock.MagicMock(return_value=100)
+
         results = [
             PostScore(
                 post_id="post1",
@@ -182,6 +184,8 @@ class TestLLMScorer:
 
     def test_calculate_final_scores_clamps_to_10(self, scorer: LLMScorer) -> None:
         """Should clamp final score to 10 when normalized * novelty exceeds 10."""
+        scorer._get_scored_count = mock.MagicMock(return_value=100)
+
         results = [
             PostScore(
                 post_id="post1",

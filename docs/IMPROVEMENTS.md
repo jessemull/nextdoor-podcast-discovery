@@ -125,7 +125,7 @@ Tracked list of product and system improvements to complete.
   - Add 1–2 few-shot examples (short post → full JSON) to improve consistency; optional and tunable for token cost.
 - [ ] **New dimension backfill**
   - When adding a new scoring dimension: document that existing posts get default (5.0) for that dimension unless re-scored; optionally support a backfill job to re-score only for the new dimension (or full re-score) for consistency.
-- [ ] **Cold-start novelty behavior**
+- [x] **Cold-start novelty behavior**
   - When topic_frequencies is empty or total scored posts < N, use novelty multiplier 1.0 (neutral) instead of max boost to avoid boosting all early posts.
 - [ ] **Validate weight config keys against known SCORING_DIMENSIONS**
   - When saving (API/Settings), warn or reject unknown dimensions to avoid silent 5.0 fallbacks.
@@ -193,29 +193,29 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 
 **Must-fix (correctness)**
 
-- [ ] **§3 — Clamp final_score to [0, 10]** in `calculate_final_scores` (llm_scorer) and `calculate_final_score` (worker) so feed/UI semantics are consistent.
-- [ ] **§3 — Add ORDER BY id** to worker's llm_scores batch query for deterministic pagination and to avoid skip/duplicate rows during recompute.
+- [x] **§3 — Clamp final_score to [0, 10]** in `calculate_final_scores` (llm_scorer) and `calculate_final_score` (worker) so feed/UI semantics are consistent.
+- [x] **§3 — Add ORDER BY id** to worker's llm_scores batch query for deterministic pagination and to avoid skip/duplicate rows during recompute.
 
 **High value, low effort**
 
-- [ ] **§13 — Cold-start novelty:** When `topic_frequencies` is empty or total scored posts \< N, use novelty multiplier 1.0 in scorer and worker instead of max boost.
-- [ ] **§13 — Validate weight config keys** against known SCORING_DIMENSIONS when saving (API/Settings); warn or reject unknown dimensions to avoid silent 5.0 fallbacks.
-- [ ] **§13 — Truncation signal in scoring prompt:** When post text is truncated, add a line (e.g. "[Text truncated at 2000 characters]") so the model and downstream logic can account for partial content.
-- [ ] **§14 — Parallelize posts feed API:** After `get_posts_with_scores` / `get_posts_by_date` returns, run count RPC and fetch posts by IDs in parallel (`Promise.all`). Same for getPostsByDate.
-- [ ] **§14 — Parallelize single post API:** In GET /api/posts/[id] and `getPostById`, fetch post+neighborhood and llm_scores in parallel with `Promise.all`.
-- [ ] **§14 — Parallelize search API:** After vector search, fetch llm_scores and neighborhoods in parallel with `Promise.all`.
-- [ ] **§14 — Worker: throttle cancel checks and progress updates:** Check cancellation every N batches (e.g. 5); throttle progress DB writes (e.g. every N batches or M seconds); still set final progress on completion.
-- [ ] **§13 — Reproducibility (temperature/seed):** Use temperature=0 for scoring if supported by the API, or document that 0.3 causes variance; use seed parameter if the API gains one.
+- [x] **§13 — Cold-start novelty:** When `topic_frequencies` is empty or total scored posts \< N, use novelty multiplier 1.0 in scorer and worker instead of max boost.
+- [x] **§13 — Validate weight config keys** against known SCORING_DIMENSIONS when saving (API/Settings); warn or reject unknown dimensions to avoid silent 5.0 fallbacks.
+- [x] **§13 — Truncation signal in scoring prompt:** When post text is truncated, add a line (e.g. "[Text truncated at 2000 characters]") so the model and downstream logic can account for partial content.
+- [x] **§14 — Parallelize posts feed API:** After `get_posts_with_scores` / `get_posts_by_date` returns, run count RPC and fetch posts by IDs in parallel (`Promise.all`). Same for getPostsByDate.
+- [x] **§14 — Parallelize single post API:** In GET /api/posts/[id] and `getPostById`, fetch post+neighborhood and llm_scores in parallel with `Promise.all`.
+- [x] **§14 — Parallelize search API:** After vector search, fetch llm_scores and neighborhoods in parallel with `Promise.all`.
+- [x] **§14 — Worker: throttle cancel checks and progress updates:** Check cancellation every N batches (e.g. 5); throttle progress DB writes (e.g. every N batches or M seconds); still set final progress on completion.
+- [x] **§13 — Reproducibility (temperature/seed):** Use temperature=0 for scoring if supported by the API, or document that 0.3 causes variance; use seed parameter if the API gains one.
 
 **Medium effort, good value**
 
-- [ ] **§13 — Store prompt_version or prompt_hash** in llm_scores (or run metadata) to support feedback loop and A/B tests.
-- [ ] **§13 — Score distribution visibility:** Add simple score stats (min, max, mean, p50, p90) per dimension and for final_score (e.g. Settings or Admin).
-- [ ] **§14 — Cache active weight config id:** Short TTL in-memory cache (e.g. 30–60s) so repeated feed/bulk/settings requests avoid repeated lookups.
-- [ ] **§14 — Batch DB writes in LLM scorer:** Single batch upsert for llm_scores; batch or single RPC for topic_frequencies instead of one round-trip per category.
-- [ ] **§6 — Loading and error states:** Audit every UI page for loading (skeletons/spinners) and error (message + recovery); fix or add where missing.
-- [ ] **§14 — Feed data caching (frontend):** Use React Query (TanStack Query): cache by query key (filters + pagination), dedupe in-flight requests, optional prefetch.
-- [ ] **§9 — Rubric and internal chain-of-thought:** Add explicit scale text per dimension and "think step-by-step" in scoring prompts; return only valid JSON.
+- [x] **§13 — Store prompt_version or prompt_hash** in llm_scores (or run metadata) to support feedback loop and A/B tests.
+- [x] **§13 — Score distribution visibility:** Add simple score stats (min, max, mean, p50, p90) per dimension and for final_score (e.g. Settings or Admin).
+- [x] **§14 — Cache active weight config id:** Short TTL in-memory cache (e.g. 30–60s) so repeated feed/bulk/settings requests avoid repeated lookups.
+- [x] **§14 — Batch DB writes in LLM scorer:** Single batch upsert for llm_scores; batch or single RPC for topic_frequencies instead of one round-trip per category.
+- [x] **§6 — Loading and error states:** Audit every UI page for loading (skeletons/spinners) and error (message + recovery); fix or add where missing.
+- [x] **§14 — Feed data caching (frontend):** Use React Query (TanStack Query): cache by query key (filters + pagination), dedupe in-flight requests, optional prefetch.
+- [x] **§9 — Rubric and internal chain-of-thought:** Add explicit scale text per dimension and "think step-by-step" in scoring prompts; return only valid JSON.
 
 **Larger or product-dependent**
 

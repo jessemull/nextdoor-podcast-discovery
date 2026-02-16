@@ -197,6 +197,7 @@ def _process_batch(
     weights: dict[str, float],
     novelty_config: dict[str, Any],
     frequencies: dict[str, int],
+    total_scored_count: int,
 ) -> list[dict[str, Any]]:
     """Process a batch of LLM scores and calculate final scores.
 
@@ -207,6 +208,7 @@ def _process_batch(
         weights: Weight multipliers for each dimension.
         novelty_config: Novelty configuration.
         frequencies: Topic frequency counts.
+        total_scored_count: Total number of scored posts (for cold-start novelty).
 
     Returns:
         List of post_scores records to upsert.
@@ -227,7 +229,12 @@ def _process_batch(
             continue
 
         # Calculate novelty
-        novelty = calculate_novelty(categories, frequencies, novelty_config)
+        novelty = calculate_novelty(
+            categories,
+            frequencies,
+            novelty_config,
+            total_scored_count=total_scored_count,
+        )
 
         # Calculate final score
         final_score = calculate_final_score(scores, weights, novelty)
@@ -430,6 +437,7 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 weights,
                 novelty_config,
                 frequencies,
+                total_scored_count=total,
             )
 
             # Bulk upsert to post_scores
