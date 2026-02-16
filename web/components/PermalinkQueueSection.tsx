@@ -171,36 +171,38 @@ export function PermalinkQueueSection({
   }, [inputUrl, isAdding, setPermalinkJobs, toast]);
 
   return (
-    <Card className="border-border bg-surface p-6">
-      <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-        Upsert Post
-      </h2>
-      <p
-        className="text-foreground mb-6 text-sm"
-        style={{ opacity: 0.85 }}
-      >
-        Add a permalink to update or add a post.
-      </p>
-      <div className="mb-6 flex gap-2">
-        <input
-          aria-label="Nextdoor permalink URL"
-          className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-border-focus focus:outline-none focus:ring-[1px] focus:ring-border-focus"
-          disabled={isAdding}
-          placeholder="https://nextdoor.com/p/sW7395ZTbKKJ"
-          type="url"
-          value={inputUrl}
-          onChange={(e) => setInputUrl(e.target.value)}
-        />
-        <Button
-          className="shrink-0"
-          disabled={isAdding || !inputUrl.trim()}
-          variant="primary"
-          onClick={handleAdd}
+    <>
+      <Card className="border-border bg-surface mb-8 p-6">
+        <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+          Upsert Post
+        </h2>
+        <p
+          className="text-foreground mb-6 text-sm"
+          style={{ opacity: 0.85 }}
         >
-          {isAdding ? "Submitting…" : "Submit"}
-        </Button>
-      </div>
-      <div>
+          Add a permalink to update or add a post.
+        </p>
+        <div className="flex gap-2">
+          <input
+            aria-label="Nextdoor permalink URL"
+            className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-border-focus focus:outline-none focus:ring-[1px] focus:ring-border-focus"
+            disabled={isAdding}
+            placeholder="https://nextdoor.com/p/sW7395ZTbKKJ"
+            type="url"
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+          />
+          <Button
+            className="shrink-0"
+            disabled={isAdding || !inputUrl.trim()}
+            variant="primary"
+            onClick={handleAdd}
+          >
+            {isAdding ? "Submitting…" : "Submit"}
+          </Button>
+        </div>
+      </Card>
+      <Card className="border-border bg-surface p-6">
         <div className="mb-4">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
             Post Queue
@@ -359,7 +361,7 @@ export function PermalinkQueueSection({
             card.
           </p>
         )}
-      </div>
-    </Card>
+      </Card>
+    </>
   );
 }
