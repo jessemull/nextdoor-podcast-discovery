@@ -243,15 +243,15 @@ export const PostCard = memo(function PostCard({
             {queueStatus === "pending" && (
               <>
                 <span className="text-muted-foreground text-sm">•</span>
-                <span className="text-amber-600 text-xs font-medium">
-                  In queue
+                <span className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                  Queued
                 </span>
               </>
             )}
             {queueStatus === "running" && (
               <>
                 <span className="text-muted-foreground text-sm">•</span>
-                <span className="text-blue-600 text-xs font-medium">
+                <span className="shrink-0 rounded border border-blue-500/70 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600">
                   Processing
                 </span>
               </>
