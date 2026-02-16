@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
+import { useToast } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -20,6 +21,7 @@ export function PostDetailClient({
   postId,
 }: PostDetailClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<null | string>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
@@ -27,6 +29,7 @@ export function PostDetailClient({
   const [post, setPost] = useState<null | PostWithScores>(initialPost);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<PostWithScores[]>([]);
+  const [queuingRefresh, setQueuingRefresh] = useState(false);
 
   const fetchPost = useCallback(async () => {
     if (!postId) return;
@@ -144,6 +147,29 @@ export function PostDetailClient({
     [postId, markingIgnored, fetchPost]
   );
 
+  const handleQueueRefresh = useCallback(async () => {
+    if (!post?.url || !postId || queuingRefresh) return;
+    setQueuingRefresh(true);
+    try {
+      const response = await fetch("/api/admin/permalink-queue", {
+        body: JSON.stringify({ post_id: postId, url: post.url }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || data.details || "Failed to queue refresh");
+      }
+      toast.success("Added to queue successfully.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to queue refresh"
+      );
+    } finally {
+      setQueuingRefresh(false);
+    }
+  }, [post?.url, postId, queuingRefresh, toast]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -200,11 +226,13 @@ export function PostDetailClient({
             isMarkingIgnored={markingIgnored}
             isMarkingSaved={markingSaved}
             isMarkingUsed={markingUsed}
+            isQueuingRefresh={queuingRefresh}
             post={post}
             showScoreBreakdown
             onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
             onMarkUsed={handleMarkUsed}
+            onQueueRefresh={handleQueueRefresh}
           />
         </div>
 

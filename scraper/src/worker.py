@@ -3,15 +3,18 @@
 This script polls for pending background jobs and processes them.
 Currently supports:
 - recompute_final_scores: Recalculates final_score for all posts using current weights.
+- fetch_permalink: Fetches a single post by Nextdoor permalink URL.
 """
 
 __all__ = ["main"]
 
 import argparse
 import logging
+import subprocess
 import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, cast
 
 from dotenv import load_dotenv
@@ -19,10 +22,10 @@ from supabase import Client
 
 from src.config import ConfigurationError, validate_env
 
-load_dotenv()
-from src.llm_prompts import SCORING_DIMENSIONS
-from src.novelty import calculate_novelty
-from src.session_manager import SessionManager
+load_dotenv()  # noqa: E402
+from src.llm_prompts import SCORING_DIMENSIONS  # noqa: E402
+from src.novelty import calculate_novelty  # noqa: E402
+from src.session_manager import SessionManager  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -534,6 +537,104 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         _handle_transient_error(supabase, job_id, error_msg)
 
 
+def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
+    """Process a fetch_permalink job by running the scraper in permalink mode.
+
+    Args:
+        supabase: Supabase client.
+        job: Job record from database.
+    """
+    job_id = job["id"]
+    params = job.get("params", {})
+
+    if not isinstance(params, dict):
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "Invalid params",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        return
+
+    url = params.get("url")
+    if not url or not isinstance(url, str):
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "Missing or invalid params.url",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        return
+
+    post_id = params.get("post_id")
+    if post_id is not None and not isinstance(post_id, str):
+        post_id = None
+
+    supabase.table("background_jobs").update(
+        {
+            "started_at": datetime.now(UTC).isoformat(),
+            "status": "running",
+        }
+    ).eq("id", job_id).execute()
+
+    scraper_dir = Path(__file__).resolve().parent.parent
+    cmd = [sys.executable, "-m", "src.main", "--permalink", url]
+    if post_id:
+        cmd.extend(["--post-id", post_id])
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(scraper_dir),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode == 0:
+            supabase.table("background_jobs").update(
+                {
+                    "completed_at": datetime.now(UTC).isoformat(),
+                    "status": "completed",
+                }
+            ).eq("id", job_id).execute()
+            logger.info("Permalink job %s completed successfully", job_id)
+        else:
+            error_msg = (
+                result.stderr
+                or result.stdout
+                or f"Scraper exited with {result.returncode}"
+            )
+            supabase.table("background_jobs").update(
+                {
+                    "completed_at": datetime.now(UTC).isoformat(),
+                    "error_message": error_msg[:1000],
+                    "status": "error",
+                }
+            ).eq("id", job_id).execute()
+            logger.error("Permalink job %s failed: %s", job_id, error_msg[:200])
+    except subprocess.TimeoutExpired:
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "Scraper timed out after 300s",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.error("Permalink job %s timed out", job_id)
+    except Exception as e:
+        error_msg = str(e)
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": error_msg[:1000],
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.exception("Permalink job %s failed: %s", job_id, e)
+
+
 def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -> None:
     """Poll for pending jobs and process them.
 
@@ -561,6 +662,8 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                 job = cast(dict[str, Any], result.data[0])
                 if job_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
+                elif job_type == "fetch_permalink":
+                    process_fetch_permalink_job(supabase, job)
                 else:
                     logger.warning("Unknown job type: %s", job_type)
 
@@ -643,6 +746,8 @@ def main() -> int:
                 job = cast(dict[str, Any], result.data[0])
                 if args.job_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
+                elif args.job_type == "fetch_permalink":
+                    process_fetch_permalink_job(supabase, job)
                 else:
                     logger.warning("Unknown job type: %s", args.job_type)
                     return 1

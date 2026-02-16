@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { JobsList } from "@/components/JobsList";
 import { JobsPageSkeleton } from "@/components/JobsPageSkeleton";
 import { JobStats } from "@/components/JobStats";
+import { PermalinkQueueSection } from "@/components/PermalinkQueueSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/lib/ToastContext";
@@ -30,13 +31,17 @@ export default function JobsPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
 
   const fetchJobs = useCallback(async () => {
     setError(null);
     try {
-      const res = await fetch(
-        `/api/admin/jobs?type=recompute_final_scores&limit=${JOBS_LIMIT}`
-      );
+      const [res, permalinkRes] = await Promise.all([
+        fetch(
+          `/api/admin/jobs?type=recompute_final_scores&limit=${JOBS_LIMIT}`
+        ),
+        fetch("/api/admin/jobs?type=fetch_permalink&limit=20"),
+      ]);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(
@@ -45,6 +50,10 @@ export default function JobsPage() {
       }
       const data: { data: Job[] } = await res.json();
       setJobs(data.data ?? []);
+      if (permalinkRes.ok) {
+        const permalinkData: { data: Job[] } = await permalinkRes.json();
+        setPermalinkJobs(permalinkData.data ?? []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setJobs([]);
@@ -237,6 +246,13 @@ export default function JobsPage() {
           </p>
           <JobStats jobs={jobs} />
         </Card>
+
+        <section className="mb-8">
+          <PermalinkQueueSection
+            permalinkJobs={permalinkJobs}
+            setPermalinkJobs={setPermalinkJobs}
+          />
+        </section>
 
         <JobsList
           description="Pending and running jobs, in queue order. One job runs at a time."

@@ -200,6 +200,36 @@ export function PostFeed({
     setError,
   });
   const { toast } = useToast();
+  const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
+
+  const handleQueueRefresh = useCallback(
+    async (postId: string) => {
+      const post =
+        posts.find((p) => p.id === postId) ??
+        searchSlot?.results?.find((p) => p.id === postId);
+      if (!post?.url || queuingRefreshPostId != null) return;
+      setQueuingRefreshPostId(postId);
+      try {
+        const response = await fetch("/api/admin/permalink-queue", {
+          body: JSON.stringify({ post_id: postId, url: post.url }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to queue refresh");
+        }
+        toast.success("Added to queue successfully.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to queue refresh"
+        );
+      } finally {
+        setQueuingRefreshPostId(null);
+      }
+    },
+    [posts, queuingRefreshPostId, searchSlot?.results, toast]
+  );
 
   const {
     focusedIndex,
@@ -527,11 +557,13 @@ export function PostFeed({
                   <PostCard
                     key={post.id}
                     isMarkingSaved={searchSlot.markingSaved.has(post.id)}
+                    isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
                     onMarkSaved={(id, saved) =>
                       searchSlot.onMarkSaved(id, saved)
                     }
                     onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
+                    onQueueRefresh={handleQueueRefresh}
                     onViewDetails={() => searchSlot.onViewDetails(post.id)}
                   />
                 ))}
@@ -675,12 +707,14 @@ export function PostFeed({
                     isMarkingIgnored={markingIgnored.has(post.id)}
                     isMarkingSaved={markingSaved.has(post.id)}
                     isMarkingUsed={markingUsed.has(post.id)}
+                    isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
                     onMarkIgnored={handleMarkIgnored}
                     onMarkSaved={handleMarkSaved}
                     onMarkUsed={handleMarkUsed}
+                    onQueueRefresh={handleQueueRefresh}
                     onSelect={toggleSelect}
                     onViewDetails={() => router.push(`/posts/${post.id}`)}
                   />

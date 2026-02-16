@@ -9,6 +9,7 @@ import {
   EyeOff,
   List,
   MoreHorizontal,
+  RefreshCw,
   Search,
 } from "lucide-react";
 import Image from "next/image";
@@ -42,9 +43,11 @@ interface PostCardProps {
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
+  isQueuingRefresh?: boolean;
   onMarkIgnored?: (postId: string, ignored: boolean) => void;
   onMarkSaved?: (postId: string, saved: boolean) => void;
   onMarkUsed?: (postId: string) => void;
+  onQueueRefresh?: (postId: string) => void;
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
   post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
@@ -58,9 +61,11 @@ export const PostCard = memo(function PostCard({
   isMarkingIgnored = false,
   isMarkingSaved = false,
   isMarkingUsed = false,
+  isQueuingRefresh = false,
   onMarkIgnored,
   onMarkSaved,
   onMarkUsed,
+  onQueueRefresh,
   onSelect,
   onViewDetails,
   post,
@@ -374,6 +379,24 @@ export const PostCard = memo(function PostCard({
                     <ExternalLink aria-hidden className="h-4 w-4" />
                     View on Nextdoor
                   </a>
+                )}
+                {post.url && onQueueRefresh && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isQueuingRefresh}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onQueueRefresh(post.id);
+                    }}
+                  >
+                    <RefreshCw
+                      aria-hidden
+                      className={cn("h-4 w-4", isQueuingRefresh && "animate-spin")}
+                    />
+                    {isQueuingRefresh ? "Queuing…" : "Refresh Post"}
+                  </button>
                 )}
                 {onMarkSaved && (
                   <button

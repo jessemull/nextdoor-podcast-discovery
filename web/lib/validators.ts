@@ -160,6 +160,28 @@ export const recomputeScoresBodySchema = z
 
 export type RecomputeScoresBody = z.infer<typeof recomputeScoresBodySchema>;
 
+/** Nextdoor permalink URL pattern (e.g. https://nextdoor.com/p/ABC123) */
+const NEXTDOOR_PERMALINK_REGEX =
+  /^https:\/\/(?:www\.)?nextdoor\.com\/p\/[A-Za-z0-9]+(?:\/)?(?:\?.*)?$/;
+
+/** POST /api/admin/permalink-queue body */
+export const permalinkQueueBodySchema = z.object({
+  post_id: z
+    .string()
+    .regex(UUID_REGEX, "post_id must be a valid UUID")
+    .optional(),
+  url: z
+    .string()
+    .trim()
+    .url("url must be a valid URL")
+    .refine(
+      (val) => NEXTDOOR_PERMALINK_REGEX.test(val),
+      "url must be a Nextdoor permalink (e.g. https://nextdoor.com/p/ABC123)"
+    ),
+});
+
+export type PermalinkQueueBody = z.infer<typeof permalinkQueueBodySchema>;
+
 /** PATCH /api/admin/weight-configs/:id body (name and/or description) */
 export const weightConfigPatchBodySchema = z
   .object({
