@@ -44,9 +44,12 @@ export async function GET(request: NextRequest) {
     neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
     order: searchParams.get("order") ?? undefined,
+    preview: searchParams.get("preview") ?? undefined,
     saved_only: searchParams.get("saved_only") ?? undefined,
     sort: searchParams.get("sort") ?? undefined,
     unused_only: searchParams.get("unused_only") ?? undefined,
+    weight_config_id: searchParams.get("weight_config_id") ?? undefined,
+    weights: searchParams.get("weights") ?? undefined,
   };
   const parsed = postsQuerySchema.safeParse(raw);
   if (!parsed.success) {
@@ -65,9 +68,12 @@ export async function GET(request: NextRequest) {
     neighborhood_id: neighborhoodId,
     offset,
     order,
+    preview,
     saved_only: savedOnly,
     sort,
     unused_only: unusedOnly,
+    weight_config_id: weightConfigIdParam,
+    weights: weightsParam,
   } = parsed.data;
   const orderAsc = order === "asc";
   const minScore =
@@ -78,6 +84,11 @@ export async function GET(request: NextRequest) {
     minReactionCountParam != null ? minReactionCountParam : null;
 
   const supabase = getSupabaseAdmin();
+
+  const weightConfigId =
+    weightConfigIdParam != null && weightConfigIdParam.trim()
+      ? weightConfigIdParam
+      : null;
 
   try {
     if (sort === "date") {
@@ -93,8 +104,11 @@ export async function GET(request: NextRequest) {
         neighborhoodId: neighborhoodId ?? null,
         offset,
         orderAsc,
+        preview: preview ?? false,
         savedOnly,
         unusedOnly,
+        weightConfigId,
+        weights: weightsParam ?? null,
       });
     } else {
       // For score or podcast_score sorting, use get_posts_with_scores
@@ -112,8 +126,11 @@ export async function GET(request: NextRequest) {
         offset,
         orderAsc,
         orderBy,
+        preview: preview ?? false,
         savedOnly,
         unusedOnly,
+        weightConfigId,
+        weights: weightsParam ?? null,
       });
     }
   } catch (error) {
@@ -141,8 +158,11 @@ interface QueryParams {
   offset: number;
   orderAsc: boolean;
   orderBy?: "podcast_worthy" | "score";
+  preview: boolean;
   savedOnly: boolean;
   unusedOnly: boolean;
+  weightConfigId: null | string;
+  weights: null | Record<string, number>;
 }
 
 /**
@@ -192,13 +212,26 @@ async function getPostsByScore(
     offset,
     orderAsc,
     orderBy = "score",
+    preview,
     savedOnly,
     unusedOnly,
+    weightConfigId: weightConfigIdParam,
+    weights: weightsParam,
   } = params;
 
   const activeConfigId = await getActiveWeightConfigId(supabase);
 
-  if (!activeConfigId) {
+  const hasInlineWeights =
+    weightsParam != null &&
+    Object.keys(weightsParam).length > 0 &&
+    params.preview;
+
+  const targetConfigId =
+    hasInlineWeights ? null : (weightConfigIdParam && weightConfigIdParam.trim()
+      ? weightConfigIdParam
+      : activeConfigId);
+
+  if (!hasInlineWeights && !targetConfigId) {
     const allConfigsResult = await supabase
       .from("weight_configs")
       .select("id, name")
@@ -225,11 +258,33 @@ async function getPostsByScore(
     );
   }
 
+  if (
+    !hasInlineWeights &&
+    weightConfigIdParam &&
+    weightConfigIdParam.trim()
+  ) {
+    const { data: configRow } = await supabase
+      .from("weight_configs")
+      .select("id")
+      .eq("id", weightConfigIdParam)
+      .single();
+
+    if (!configRow) {
+      return NextResponse.json(
+        {
+          details: "Weight config not found",
+          error: "Invalid weight_config_id",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   // Parse minScore
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
   const validMinScore = parsedMinScore && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
-  const rpcParams = {
+  const baseRpcParams = {
     p_category: category || null,
     p_ignored_only: ignoredOnly,
     p_min_podcast_worthy: minPodcastWorthy,
@@ -238,25 +293,53 @@ async function getPostsByScore(
     p_neighborhood_id: neighborhoodId,
     p_saved_only: savedOnly,
     p_unused_only: unusedOnly,
-    p_weight_config_id: activeConfigId,
   };
 
+  const rpcParams = preview
+    ? {
+        ...baseRpcParams,
+        p_weight_config_id: hasInlineWeights ? null : targetConfigId,
+        p_weights: hasInlineWeights ? weightsParam : null,
+      }
+    : {
+        ...baseRpcParams,
+        p_weight_config_id: targetConfigId,
+      };
+
+  const rpcName = preview
+    ? "get_posts_with_runtime_scores"
+    : "get_posts_with_scores";
+  const countRpcName = preview
+    ? "get_posts_with_runtime_scores_count"
+    : "get_posts_with_scores_count";
+
+  const scoresRpcParams =
+    rpcName === "get_posts_with_runtime_scores"
+      ? {
+          ...rpcParams,
+          p_limit: limit,
+          p_offset: offset,
+          p_order_asc: orderAsc,
+          p_order_by: orderBy,
+        }
+      : {
+          ...rpcParams,
+          p_limit: limit,
+          p_offset: offset,
+          p_order_asc: orderAsc,
+          p_order_by: orderBy,
+        };
+
   const [scoresResult, countResult] = await Promise.all([
-    supabase.rpc("get_posts_with_scores", {
-      ...rpcParams,
-      p_limit: limit,
-      p_offset: offset,
-      p_order_asc: orderAsc,
-      p_order_by: orderBy,
-    }),
-    supabase.rpc("get_posts_with_scores_count", rpcParams),
+    supabase.rpc(rpcName, scoresRpcParams),
+    supabase.rpc(countRpcName, rpcParams),
   ]);
 
   const { data: scoresData, error: scoresError } = scoresResult;
   const { data: countData, error: countError } = countResult;
 
   if (scoresError) {
-    logError("[posts] get_posts_with_scores", scoresError);
+    logError("[posts]", rpcName, scoresError);
     return NextResponse.json(
       {
         details: scoresError.message || "Database query failed",

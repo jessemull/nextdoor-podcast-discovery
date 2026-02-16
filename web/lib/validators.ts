@@ -8,7 +8,7 @@ import { z } from "zod";
 /** UUID v4 format (shared for route param validation). */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const VALID_WEIGHT_DIMENSIONS = [
+export const VALID_WEIGHT_DIMENSIONS = [
   "absurdity",
   "discussion_spark",
   "drama",
@@ -214,6 +214,10 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(0),
   order: z.enum(["asc", "desc"]).optional().default("desc"),
+  preview: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
   saved_only: z
     .string()
     .optional()
@@ -226,6 +230,44 @@ export const postsQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  weight_config_id: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? v : undefined))
+    .refine((v) => !v || UUID_REGEX.test(v), "Invalid weight_config_id"),
+  weights: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v || !v.trim()) return undefined;
+      try {
+        const parsed = JSON.parse(v) as unknown;
+        if (
+          parsed != null &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed)
+        ) {
+          return parsed as Record<string, number>;
+        }
+        return undefined;
+      } catch {
+        return undefined;
+      }
+    })
+    .refine(
+      (v) =>
+        v === undefined ||
+        (VALID_WEIGHT_DIMENSIONS.every(
+          (dim) =>
+            typeof v[dim] === "number" &&
+            v[dim] >= 0 &&
+            v[dim] <= 10
+        ) &&
+          Object.keys(v).every((k) =>
+            VALID_WEIGHT_DIMENSIONS.includes(k as (typeof VALID_WEIGHT_DIMENSIONS)[number])
+          )),
+      "Invalid weights format"
+    ),
 });
 
 export type PostsQuery = z.infer<typeof postsQuerySchema>;

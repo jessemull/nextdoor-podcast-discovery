@@ -374,8 +374,8 @@ class TestProcessBatch:
         frequencies = {"pets": 10, "crime": 5}
 
         result = _process_batch(
-            mock_supabase,
             batch_data,
+            "job-id",
             "config-id",
             weights,
             novelty_config,
@@ -384,6 +384,7 @@ class TestProcessBatch:
         )
 
         assert len(result) == 2
+        assert all(r["job_id"] == "job-id" for r in result)
         assert result[0]["post_id"] == "post-1"
         assert result[0]["weight_config_id"] == "config-id"
         assert "final_score" in result[0]
@@ -420,8 +421,8 @@ class TestProcessBatch:
         frequencies: dict[str, int] = {}
 
         result = _process_batch(
-            mock_supabase,
             batch_data,
+            "job-id",
             "config-id",
             weights,
             novelty_config,
@@ -430,6 +431,7 @@ class TestProcessBatch:
         )
 
         assert len(result) == 1
+        assert result[0]["job_id"] == "job-id"
         assert result[0]["post_id"] == "post-2"
 
 
@@ -518,7 +520,7 @@ class TestProcessRecomputeJob:
                 order_mock.range.return_value.execute.return_value = batch_mock
                 select_mock.order.return_value = order_mock
                 table_mock.select.return_value = select_mock
-            elif table_name == "post_scores":
+            elif table_name == "post_scores_staging":
                 table_mock.upsert.return_value.execute.return_value = update_mock
             elif table_name == "weight_configs":
                 weight_result = mock.MagicMock()
@@ -560,6 +562,12 @@ class TestProcessRecomputeJob:
             return table_mock
 
         supabase.table.side_effect = table_side_effect
+
+        # Mock RPC for cutover
+        rpc_mock = mock.MagicMock()
+        supabase.rpc.return_value = rpc_mock
+        rpc_mock.execute.return_value = mock.MagicMock()
+
         return supabase
 
     def test_processes_job_successfully(self, mock_supabase: mock.MagicMock) -> None:
