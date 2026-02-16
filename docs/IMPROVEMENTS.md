@@ -60,7 +60,7 @@ Tracked list of product and system improvements to complete.
 
 ## 7. Auth and whitelist
 
-- [ ] **Replace ENV-based email whitelist with a proper approach**
+- [x] **Replace ENV-based email whitelist with a proper approach**
   - Currently: `ALLOWED_EMAILS` is a single env var (comma-separated emails). No UI to add/remove users; changing access requires editing env and redeploying.
   - **Options (see `docs/AUTH.md`):**
     - **Google Test users:** Keep OAuth app in “Testing,” add allowed emails as Test users in GCP; remove or relax `ALLOWED_EMAILS` in app. (Max 100 users; testing warning.)
@@ -189,7 +189,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 
 **Security / auth (first)**
 
-- [ ] **§7 — Switch to Okta for auth:** Replace ENV-based email whitelist with Okta provider; manage allowed users in Okta (assign users/groups to the app). No env whitelist in our app. See docs/AUTH.md.
+- [x] **§7 — Switch to Okta for auth:** Replace ENV-based email whitelist with Okta provider; manage allowed users in Okta (assign users/groups to the app). No env whitelist in our app. See docs/AUTH.md.
 
 **Must-fix (correctness)**
 
@@ -229,7 +229,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
 - [ ] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights.
 - [ ] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration.
-- [ ] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
+- [x] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
 - [ ] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
 - [ ] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
 - [ ] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
