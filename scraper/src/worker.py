@@ -191,8 +191,8 @@ def _load_job_dependencies(
 
 
 def _process_batch(
-    supabase: Client,
     batch_data: list[dict[str, Any]],
+    job_id: str,
     weight_config_id: str,
     weights: dict[str, float],
     novelty_config: dict[str, Any],
@@ -202,8 +202,8 @@ def _process_batch(
     """Process a batch of LLM scores and calculate final scores.
 
     Args:
-        supabase: Supabase client.
         batch_data: List of score rows from llm_scores table.
+        job_id: UUID of the job (for staging table).
         weight_config_id: UUID of the weight config.
         weights: Weight multipliers for each dimension.
         novelty_config: Novelty configuration.
@@ -211,7 +211,7 @@ def _process_batch(
         total_scored_count: Total number of scored posts (for cold-start novelty).
 
     Returns:
-        List of post_scores records to upsert.
+        List of post_scores_staging records to insert.
     """
     post_scores_to_upsert: list[dict[str, Any]] = []
 
@@ -241,6 +241,7 @@ def _process_batch(
 
         post_scores_to_upsert.append(
             {
+                "job_id": job_id,
                 "post_id": post_id,
                 "weight_config_id": weight_config_id,
                 "final_score": final_score,
@@ -270,6 +271,20 @@ def _update_job_progress(
     ).eq("id", job_id).execute()
 
     logger.info("Processed %d / %d posts (%d%%)", processed, total, progress_pct)
+
+
+def _cleanup_staging(supabase: Client, job_id: str) -> None:
+    """Delete staging rows for a job (on error or cancel).
+
+    Args:
+        supabase: Supabase client.
+        job_id: UUID of the job.
+    """
+    try:
+        supabase.table("post_scores_staging").delete().eq("job_id", job_id).execute()
+        logger.debug("Cleaned up staging for job %s", job_id)
+    except Exception as e:
+        logger.warning("Failed to cleanup staging for job %s: %s", job_id, e)
 
 
 def _handle_transient_error(supabase: Client, job_id: str, error_msg: str) -> None:
@@ -313,10 +328,12 @@ def _handle_transient_error(supabase: Client, job_id: str, error_msg: str) -> No
             }
         ).eq("id", job_id).execute()
     else:
-        # Max retries exceeded: mark as error
+        # Max retries exceeded: cleanup staging and mark as error
         logger.error(
             "Job %s failed after %d retries, marking as error", job_id, max_retries
         )
+
+        _cleanup_staging(supabase, job_id)
 
         supabase.table("background_jobs").update(
             {
@@ -408,6 +425,7 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 )
                 if job_data and job_data.get("status") == "cancelled":
                     logger.info("Job %s was cancelled, stopping processing", job_id)
+                    _cleanup_staging(supabase, job_id)
                     supabase.table("background_jobs").update(
                         {
                             "completed_at": datetime.now(UTC).isoformat(),
@@ -430,9 +448,9 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
 
             batch_data = cast(list[dict[str, Any]], batch_result.data)
             # Process batch
-            post_scores_to_upsert = _process_batch(
-                supabase,
+            post_scores_to_insert = _process_batch(
                 batch_data,
+                job_id,
                 weight_config_id,
                 weights,
                 novelty_config,
@@ -440,13 +458,13 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
                 total_scored_count=total,
             )
 
-            # Bulk upsert to post_scores
-            if post_scores_to_upsert:
-                supabase.table("post_scores").upsert(
-                    post_scores_to_upsert, on_conflict="post_id,weight_config_id"
+            # Bulk insert to post_scores_staging
+            if post_scores_to_insert:
+                supabase.table("post_scores_staging").upsert(
+                    post_scores_to_insert, on_conflict="job_id,post_id"
                 ).execute()
 
-                processed += len(post_scores_to_upsert)
+                processed += len(post_scores_to_insert)
                 is_last_batch = offset + BATCH_SIZE >= total
                 if batch_index % PROGRESS_UPDATE_INTERVAL == 0 or is_last_batch:
                     _update_job_progress(supabase, job_id, processed, total)
@@ -454,7 +472,12 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             offset += BATCH_SIZE
             batch_index += 1
 
-        # Mark job as completed
+        # Apply staging to post_scores in one transaction, then mark job completed
+        supabase.rpc(
+            "apply_post_scores_from_staging",
+            {"p_job_id": job_id, "p_weight_config_id": weight_config_id},
+        ).execute()
+
         supabase.table("background_jobs").update(
             {
                 "completed_at": datetime.now(UTC).isoformat(),
@@ -471,6 +494,8 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         logger.error(
             "Permanent error processing job %s: %s", job_id, error_msg, exc_info=True
         )
+
+        _cleanup_staging(supabase, job_id)
 
         supabase.table("background_jobs").update(
             {

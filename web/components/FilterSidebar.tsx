@@ -1,8 +1,11 @@
 "use client";
 
-import { TOPIC_CATEGORIES } from "@/lib/constants";
-import { formatCategoryLabel } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import {
+  DEFAULT_PREVIEW_WEIGHTS,
+  TOPIC_CATEGORIES,
+} from "@/lib/constants";
+import { cn, formatCategoryLabel } from "@/lib/utils";
+import { VALID_WEIGHT_DIMENSIONS } from "@/lib/validators";
 
 import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
@@ -14,6 +17,7 @@ export interface PicksDefaultsSidebar {
 }
 
 export interface FilterSidebarProps {
+  activeConfigWeights: null | Record<string, number>;
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
@@ -61,6 +65,7 @@ function NumInput({
 }
 
 export function FilterSidebar({
+  activeConfigWeights,
   filterLoadError,
   filters,
   neighborhoods,
@@ -135,6 +140,69 @@ export function FilterSidebar({
             </label>
           ))}
         </div>
+
+        <h2 className={sectionHeadingClass}>Score Mode</h2>
+        <label className={checkboxLabelClass}>
+          <input
+            checked={filters.preview}
+            className="rounded border-border bg-surface-hover focus:ring-border-focus"
+            type="checkbox"
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                preview: e.target.checked,
+                previewWeights:
+                  e.target.checked && activeConfigWeights
+                    ? { ...DEFAULT_PREVIEW_WEIGHTS, ...activeConfigWeights }
+                    : prev.previewWeights,
+              }))
+            }
+          />
+          Preview Mode
+        </label>
+        {filters.preview && (
+          <div className="mt-3 space-y-2">
+            {VALID_WEIGHT_DIMENSIONS.map((dimension) => {
+              const value =
+                filters.previewWeights[dimension] ??
+                DEFAULT_PREVIEW_WEIGHTS[dimension as keyof typeof DEFAULT_PREVIEW_WEIGHTS] ??
+                1;
+              return (
+                <div key={dimension}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label
+                      className="text-muted-foreground text-xs"
+                      htmlFor={`filter-weight-${dimension}`}
+                    >
+                      {formatCategoryLabel(dimension)}
+                    </label>
+                    <span className="text-muted-foreground text-xs">
+                      {value.toFixed(1)}
+                    </span>
+                  </div>
+                  <input
+                    className="h-1.5 w-full appearance-none rounded-full bg-surface-hover focus:outline-none focus:ring-1 focus:ring-border-focus [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-muted"
+                    id={`filter-weight-${dimension}`}
+                    max={5}
+                    min={0}
+                    step={0.1}
+                    type="range"
+                    value={value}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        previewWeights: {
+                          ...prev.previewWeights,
+                          [dimension]: parseFloat(e.target.value),
+                        },
+                      }))
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <h2 className={sectionHeadingClass}>Status</h2>
         <div className="flex flex-col gap-2">

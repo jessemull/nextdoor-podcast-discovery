@@ -16,6 +16,7 @@ import {
   DEFAULT_FILTERS,
   usePostFeedFilters,
 } from "@/lib/hooks/usePostFeedFilters";
+import { useWeightConfigs } from "@/lib/hooks/useWeightConfigs";
 import { useToast } from "@/lib/ToastContext";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -113,10 +114,14 @@ export function PostFeed({
   const [selectAllChecked, setSelectAllChecked] = useState(false);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
+  const { activeConfigId, weightConfigs } = useWeightConfigs();
+  const activeConfigWeights =
+    weightConfigs.find((c) => c.id === activeConfigId)?.weights ?? null;
   const {
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
+    debouncedPreviewWeights,
     filterLoadError,
     filters,
     neighborhoods,
@@ -138,6 +143,7 @@ export function PostFeed({
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
+    debouncedPreviewWeights,
     filters,
   });
 
@@ -231,6 +237,7 @@ export function PostFeed({
     filters.maxPodcastWorthy,
     filters.maxReactionCount,
     filters.neighborhoodId,
+    filters.preview,
     filters.savedOnly,
     filters.unusedOnly,
   ].filter((v) => v !== "" && v !== false).length;
@@ -266,6 +273,7 @@ export function PostFeed({
       {/* Desktop sidebar */}
       <div className="hidden h-full w-64 shrink-0 md:block">
         <FilterSidebar
+          activeConfigWeights={activeConfigWeights}
           filterLoadError={filterLoadError}
           filters={filters}
           neighborhoods={neighborhoods}
@@ -298,6 +306,7 @@ export function PostFeed({
               </button>
             </div>
             <FilterSidebar
+              activeConfigWeights={activeConfigWeights}
               filterLoadError={filterLoadError}
               filters={filters}
               neighborhoods={neighborhoods}
@@ -580,6 +589,14 @@ export function PostFeed({
               </div>
             )}
 
+        {filters.preview && (
+          <div
+            className="border-primary bg-primary/10 mb-4 rounded-card border px-4 py-2 text-sm"
+            role="status"
+          >
+            Previewing scores — run Recompute to save
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground text-sm">
             Showing {posts.length} of {total} Posts

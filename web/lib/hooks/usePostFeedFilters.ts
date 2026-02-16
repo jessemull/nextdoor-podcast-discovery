@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { DEFAULT_PREVIEW_WEIGHTS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
+
+import type { RankingWeights } from "@/lib/types";
 
 type SortOption = "date" | "podcast_score" | "score";
 
@@ -18,6 +21,8 @@ export interface PostFeedFilters {
   minReactionCount: string;
   minScore: string;
   neighborhoodId: string;
+  preview: boolean;
+  previewWeights: RankingWeights;
   savedOnly: boolean;
   sort: SortOption;
   sortOrder: SortOrder;
@@ -37,6 +42,7 @@ export interface UsePostFeedFiltersResult {
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
+  debouncedPreviewWeights: RankingWeights;
   filterLoadError: null | string;
   filters: PostFeedFilters;
   neighborhoods: Neighborhood[];
@@ -53,6 +59,8 @@ export const DEFAULT_FILTERS: PostFeedFilters = {
   minReactionCount: "",
   minScore: "",
   neighborhoodId: "",
+  preview: false,
+  previewWeights: { ...DEFAULT_PREVIEW_WEIGHTS },
   savedOnly: false,
   sort: "score",
   sortOrder: "desc",
@@ -88,6 +96,10 @@ export function usePostFeedFilters(
     filters.minReactionCount,
     debounceDelayMs
   );
+  const debouncedPreviewWeights = useDebounce(
+    filters.previewWeights,
+    debounceDelayMs
+  );
 
   useEffect(() => {
     fetch("/api/neighborhoods")
@@ -109,6 +121,7 @@ export function usePostFeedFilters(
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
+    debouncedPreviewWeights,
     filterLoadError,
     filters,
     neighborhoods,

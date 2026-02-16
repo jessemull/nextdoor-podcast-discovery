@@ -1,6 +1,19 @@
+import type { RankingWeights } from "@/lib/types";
+
 /**
  * Shared constants used across the application.
  */
+
+/** Default ranking weights for feed preview mode (matches Settings default). */
+export const DEFAULT_PREVIEW_WEIGHTS: RankingWeights = {
+  absurdity: 2.0,
+  discussion_spark: 1.0,
+  drama: 1.5,
+  emotional_intensity: 1.2,
+  news_value: 1.0,
+  podcast_worthy: 2.0,
+  readability: 1.2,
+};
 
 /**
  * Valid topic categories for post filtering.
