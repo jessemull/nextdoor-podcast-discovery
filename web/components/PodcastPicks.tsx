@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { useToast } from "@/lib/ToastContext";
 
 import { PostCard } from "./PostCard";
 
@@ -77,10 +78,12 @@ export function PodcastPicks() {
     if (Number.isFinite(n) && n >= 0 && n <= 10) return n;
     return defaultMinPodcast;
   }, [searchParams, defaultMinPodcast]);
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
   const [picks, setPicks] = useState<PostWithScores[]>([]);
+  const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
 
   const fetchPicks = useCallback(() => {
     setLoading(true);
@@ -152,6 +155,33 @@ export function PodcastPicks() {
     [fetchPicks, markingUsed]
   );
 
+  const handleQueueRefresh = useCallback(
+    async (postId: string) => {
+      const post = picks.find((p) => p.id === postId);
+      if (!post?.url || queuingRefreshPostId != null) return;
+      setQueuingRefreshPostId(postId);
+      try {
+        const response = await fetch("/api/admin/permalink-queue", {
+          body: JSON.stringify({ post_id: postId, url: post.url }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to queue refresh");
+        }
+        toast.success("Added to queue successfully.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to queue refresh"
+        );
+      } finally {
+        setQueuingRefreshPostId(null);
+      }
+    },
+    [picks, queuingRefreshPostId, toast]
+  );
+
   if (loading) {
     return (
       <section className="mb-8">
@@ -195,9 +225,11 @@ export function PodcastPicks() {
               key={post.id}
               isMarkingSaved={markingSaved.has(post.id)}
               isMarkingUsed={markingUsed.has(post.id)}
+              isQueuingRefresh={queuingRefreshPostId === post.id}
               post={post}
               onMarkSaved={handleMarkSaved}
               onMarkUsed={handleMarkUsed}
+              onQueueRefresh={handleQueueRefresh}
               onViewDetails={() => router.push(`/posts/${post.id}`)}
             />
           ))}

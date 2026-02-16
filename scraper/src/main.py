@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ from src.exceptions import (
     ScraperError,
 )
 from src.llm_scorer import LLMScorer
+from src.post_extractor import PostExtractor
 from src.post_storage import PostStorage
 from src.robots import check_robots_allowed
 from src.scraper import NextdoorScraper
@@ -79,6 +81,138 @@ def _run_scoring(
     )
 
 
+def _run_scoring_for_post(supabase_client: Client, post_id: str) -> bool:
+    """Score a single post by ID.
+
+    Args:
+        supabase_client: Supabase client.
+        post_id: UUID of the post to score.
+
+    Returns:
+        True if scoring succeeded, False otherwise.
+    """
+    result = (
+        supabase_client.table("posts")
+        .select("id, text")
+        .eq("id", post_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data or len(result.data) == 0:
+        logger.warning("Post %s not found for scoring", post_id)
+        return False
+
+    anthropic = Anthropic(
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+        timeout=120.0,
+    )
+    scorer = LLMScorer(anthropic, supabase_client)
+    row = cast(dict[str, Any], result.data[0])
+    posts_data = [row]
+    results = scorer.score_posts(posts_data)
+    results = scorer.calculate_final_scores(results)
+    stats = scorer.save_scores(results)
+    logger.info(
+        "Scored post %s: saved=%d, skipped=%d, errors=%d",
+        post_id,
+        stats["saved"],
+        stats["skipped"],
+        stats["errors"],
+    )
+    return stats["saved"] > 0 or stats["skipped"] > 0
+
+
+def _run_permalink_fetch(
+    permalink: str,
+    post_id: str | None,
+    dry_run: bool,
+    visible: bool,
+) -> int:
+    """Fetch a single post by permalink URL; insert or update.
+
+    Args:
+        permalink: Nextdoor permalink URL (e.g. https://nextdoor.com/p/ABC123).
+        post_id: If set, update existing post; otherwise insert new.
+        dry_run: If True, don't write to DB.
+        visible: If True, run browser visible.
+
+    Returns:
+        Exit code (0 success, 1 failure).
+    """
+    try:
+        validate_env()
+        session_manager = SessionManager()
+        headless = not visible
+
+        with NextdoorScraper(headless=headless) as scraper:
+            cookies = session_manager.get_cookies()
+            if cookies:
+                scraper.load_cookies(cookies)
+                if not scraper.is_logged_in():
+                    cookies = None
+            if not cookies:
+                scraper.login()
+                if not dry_run:
+                    new_cookies = scraper.get_cookies()
+                    session_manager.save_cookies(new_cookies)
+
+            if not scraper.page:
+                logger.error("Browser page not available")
+                return 1
+
+            # Navigate to permalink URL
+            timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+            logger.info("Navigating to permalink: %s", permalink)
+            scraper.page.goto(permalink, timeout=timeout)
+
+            # Wait for post content
+            scraper.page.wait_for_selector(
+                "div.post, div.js-media-post",
+                timeout=timeout,
+            )
+
+            extractor = PostExtractor(scraper.page, feed_type="recent", max_posts=1)
+            post = extractor.extract_single_post_from_current_page(
+                page_url=permalink,
+                extract_comments=True,
+            )
+
+            if not post:
+                logger.error("No post found at permalink: %s", permalink)
+                return 1
+
+            if dry_run:
+                logger.info(
+                    "Dry run: would store post [%s] %s... (reactions=%d)",
+                    post.author_name,
+                    post.content[:80],
+                    post.reaction_count,
+                )
+                return 0
+
+            storage = PostStorage(session_manager.supabase)
+            result = storage.store_post_or_update(post, post_id=post_id)
+
+            if result["errors"]:
+                logger.error("Failed to store/update post")
+                return 1
+
+            if result["action"] == "inserted" and result.get("post_id"):
+                # Score the new post
+                _run_scoring_for_post(session_manager.supabase, result["post_id"])
+
+            logger.info(
+                "Permalink fetch complete: %s (post_id=%s)",
+                result["action"],
+                result.get("post_id"),
+            )
+            return 0
+
+    except Exception as e:
+        logger.exception("Permalink fetch failed: %s", e)
+        return 1
+
+
 def main(
     check_robots: bool = False,
     dry_run: bool = False,
@@ -86,6 +220,8 @@ def main(
     feed_type: str = "recent",
     inspect: bool = False,
     max_posts: int | None = None,
+    permalink: str | None = None,
+    post_id: str | None = None,
     repeat_threshold: int | None = None,
     score: bool = False,
     score_only: bool = False,
@@ -110,6 +246,15 @@ def main(
     Returns:
         Exit code (0 for success, 1 for failure).
     """
+    # Permalink mode: fetch single post by URL (insert or update)
+    if permalink:
+        return _run_permalink_fetch(
+            permalink=permalink,
+            post_id=post_id,
+            dry_run=dry_run,
+            visible=visible,
+        )
+
     # Optional robots.txt check before scraping
     if check_robots:
         base_url = LOGIN_URL.rstrip("/").rsplit("/", 1)[0] or "https://nextdoor.com"
@@ -405,6 +550,20 @@ if __name__ == "__main__":
         help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",  # noqa: E501
     )
     parser.add_argument(
+        "--permalink",
+        dest="permalink",
+        type=str,
+        default=None,
+        help="Fetch a single post by Nextdoor permalink URL (e.g. https://nextdoor.com/p/ABC123)",
+    )
+    parser.add_argument(
+        "--post-id",
+        dest="post_id",
+        type=str,
+        default=None,
+        help="When used with --permalink: update existing post by UUID instead of inserting new",
+    )
+    parser.add_argument(
         "--repeat-threshold",
         dest="repeat_threshold",
         type=int,
@@ -450,6 +609,8 @@ if __name__ == "__main__":
             feed_type=args.feed_type,
             inspect=args.inspect,
             max_posts=args.max_posts,
+            permalink=args.permalink,
+            post_id=args.post_id,
             repeat_threshold=args.repeat_threshold,
             score=args.score,
             score_only=args.score_only,

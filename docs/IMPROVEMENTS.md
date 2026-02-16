@@ -33,9 +33,9 @@ Tracked list of product and system improvements to complete.
 
 ## 4. Stale post data after scrape
 
-- [ ] **Figure out which data might update after we scrape it (e.g. more comments)**
-  - Identify fields that can change on Nextdoor after we store the post (comments count, reaction count, etc.).
-  - Decide: drop/ignore that data, or define an update strategy (e.g. periodic refresh, or only use immutable fields for ranking and show “may have changed” in UI).
+- [x] **Figure out which data might update after we scrape it (e.g. more comments)**
+  - Identified: reaction_count, comments, text, image_urls can change on Nextdoor after scrape.
+  - Strategy: Manual Update button on post detail; worker rescrapes and updates (e.g. periodic refresh, or only use immutable fields for ranking and show “may have changed” in UI).
 
 ---
 
@@ -90,8 +90,8 @@ Tracked list of product and system improvements to complete.
 
 - [ ] **Use saved + used_on_episode as human signal for calibration**
   - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration.
-- [ ] **Permalink queue and scraper job for high-value posts**
-  - Allow adding Nextdoor permalinks to a queue (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
+- [x] **Permalink queue and scraper job for high-value posts**
+  - Settings: permalink input; post detail Update button; fetch_permalink jobs (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
 
 ---
 
@@ -223,7 +223,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 
 - [ ] **§5 — Comments in the UI:** Surface comment count and/or content (post card/detail); clarify data source (scrape time vs live) and limits.
 - [ ] **§5 — Explore incorporating comments into scoring:** Comments are scraped but not used for scoring. Explore options (include top N, truncate, summarize); document tradeoffs (tokens vs accuracy).
-- [ ] **§4 — Stale post data:** Identify fields that can change after scrape (e.g. comments, reactions); decide strategy (ignore, refresh, or "may have changed" in UI).
+- [x] **§4 — Stale post data:** Manual Update button + permalink queue; worker rescrapes and updates reaction_count, comments, text, image_urls.
 - [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
 - [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
 - [ ] **§14 — Embedder: chunked processing:** Use RPC like `get_posts_without_embeddings(limit N)` or paginated query; process in chunks to avoid loading full tables.
@@ -237,5 +237,5 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
 - [ ] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors.
-- [ ] **§10 — Permalink queue and scraper job:** Queue for Nextdoor permalinks; job runs x/day to fetch, scrape, store and score single posts.
+- [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
 - [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).

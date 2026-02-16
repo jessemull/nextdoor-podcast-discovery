@@ -30,6 +30,7 @@ const POLL_BACKOFF_MULTIPLIER = 1.5; // Exponential backoff multiplier
  */
 export function useSettingsPolling() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
   const [weightConfigs, setWeightConfigs] = useState<WeightConfig[]>([]);
   const [activeConfigId, setActiveConfigId] = useState<null | string>(null);
 
@@ -45,19 +46,31 @@ export function useSettingsPolling() {
       if (!isPolling) return;
 
       try {
-        const [jobsResponse, configsResponse] = await Promise.all([
-          fetch("/api/admin/jobs?type=recompute_final_scores&limit=20"),
-          fetch("/api/admin/weight-configs"),
-        ]);
+        const [recomputeJobsResponse, permalinkJobsResponse, configsResponse] =
+          await Promise.all([
+            fetch("/api/admin/jobs?type=recompute_final_scores&limit=20"),
+            fetch("/api/admin/jobs?type=fetch_permalink&limit=20"),
+            fetch("/api/admin/weight-configs"),
+          ]);
 
-        if (jobsResponse.ok && configsResponse.ok) {
+        if (
+          recomputeJobsResponse.ok &&
+          permalinkJobsResponse.ok &&
+          configsResponse.ok
+        ) {
           // Reset on success
           consecutiveErrors = 0;
           pollInterval = POLL_INTERVAL_MS;
 
-          if (jobsResponse.ok) {
-            const jobsData: JobsResponse = await jobsResponse.json();
+          if (recomputeJobsResponse.ok) {
+            const jobsData: JobsResponse =
+              await recomputeJobsResponse.json();
             setJobs(jobsData.data || []);
+          }
+          if (permalinkJobsResponse.ok) {
+            const permalinkData: JobsResponse =
+              await permalinkJobsResponse.json();
+            setPermalinkJobs(permalinkData.data || []);
           }
 
           if (configsResponse.ok) {
@@ -66,7 +79,7 @@ export function useSettingsPolling() {
             setActiveConfigId(configsData.active_config_id);
           }
         } else {
-          // Increment error count and apply backoff
+          // Increment error count and apply backoff when any fetch fails
           consecutiveErrors++;
           pollInterval = Math.min(
             Math.floor(POLL_INTERVAL_MS * Math.pow(backoffMultiplier, consecutiveErrors)),
@@ -142,9 +155,11 @@ export function useSettingsPolling() {
   return {
     activeConfigId,
     jobs,
+    permalinkJobs,
     refetchWeightConfigs,
     setActiveConfigId,
     setJobs,
+    setPermalinkJobs,
     setWeightConfigs,
     weightConfigs,
   };

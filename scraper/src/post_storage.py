@@ -201,6 +201,173 @@ class PostStorage:
 
         return stats
 
+    def store_post_or_update(
+        self, post: RawPost, post_id: str | None = None
+    ) -> dict[str, Any]:
+        """Store a single post: insert if new, update if existing.
+
+        Args:
+            post: RawPost to store.
+            post_id: If provided, update existing post; otherwise insert new.
+
+        Returns:
+            Dict with keys: action ("inserted" | "updated"), post_id, errors (bool).
+        """
+        result: dict[str, Any] = {
+            "action": "inserted",
+            "errors": False,
+            "post_id": None,
+        }
+
+        if post_id:
+            success = self.update_post(post_id, post)
+            if success:
+                result["action"] = "updated"
+                result["post_id"] = post_id
+            else:
+                result["errors"] = True
+            return result
+
+        # Insert new post
+        neighborhood_id = self._get_or_create_neighborhood(post.neighborhood)
+        if not neighborhood_id:
+            logger.warning("Could not get neighborhood ID for: %s", post.neighborhood)
+            result["errors"] = True
+            return result
+
+        posted_at = parse_relative_timestamp(post.timestamp_relative)
+        comments_payload = [
+            {
+                "author_name": c.author_name,
+                "text": c.text,
+                "timestamp_relative": c.timestamp_relative,
+            }
+            for c in post.comments
+        ]
+        post_data: dict[str, Any] = {
+            "author_name": post.author_name or None,
+            "comments": comments_payload,
+            "hash": post.content_hash,
+            "image_urls": post.image_urls,
+            "neighborhood_id": neighborhood_id,
+            "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
+            "posted_at": posted_at.isoformat() if posted_at else None,
+            "reaction_count": post.reaction_count,
+            "text": post.content,
+            "url": post.post_url,
+            "user_id_hash": post.author_id,
+        }
+
+        try:
+            insert_result = (
+                self.supabase.table("posts").insert(cast(Any, post_data)).execute()
+            )
+            if insert_result.data and len(insert_result.data) > 0:
+                row = cast(dict[str, Any], insert_result.data[0])
+                result["post_id"] = row.get("id")
+            else:
+                result["errors"] = True
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "duplicate" in error_msg or "unique" in error_msg:
+                # Already exists - fetch by url
+                existing = self._get_post_by_url_or_hash(
+                    post.post_url, post.content_hash
+                )
+                if existing:
+                    result["action"] = "skipped"
+                    result["post_id"] = existing.get("id")
+            else:
+                logger.error(
+                    "Failed to insert post: %s (%s)",
+                    e,
+                    type(e).__name__,
+                )
+                result["errors"] = True
+        return result
+
+    def update_post(self, post_id: str, post: RawPost) -> bool:
+        """Update an existing post with fresh data (reaction_count, comments, etc.).
+
+        Args:
+            post_id: UUID of the post to update.
+            post: RawPost with fresh extracted data.
+
+        Returns:
+            True if update succeeded, False otherwise.
+        """
+        comments_payload = [
+            {
+                "author_name": c.author_name,
+                "text": c.text,
+                "timestamp_relative": c.timestamp_relative,
+            }
+            for c in post.comments
+        ]
+
+        update_data: dict[str, Any] = {
+            "comments": comments_payload,
+            "image_urls": post.image_urls,
+            "reaction_count": post.reaction_count,
+            "text": post.content,
+        }
+
+        # Only update author/url if we have them (preserve existing if extraction failed)
+        if post.author_name is not None:
+            update_data["author_name"] = post.author_name
+        if post.post_url:
+            update_data["url"] = post.post_url
+
+        try:
+            result = (
+                self.supabase.table("posts")
+                .update(cast(Any, update_data))
+                .eq("id", post_id)
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                logger.info(
+                    "Updated post %s (reactions=%d, comments=%d)",
+                    post_id,
+                    post.reaction_count,
+                    len(post.comments),
+                )
+                return True
+            return False
+        except Exception as e:
+            logger.error(
+                "Failed to update post %s: %s (%s)",
+                post_id,
+                e,
+                type(e).__name__,
+            )
+            return False
+
+    def _get_post_by_url_or_hash(
+        self, post_url: str | None, content_hash: str
+    ) -> dict[str, Any] | None:
+        """Get post by url or hash.
+
+        Args:
+            post_url: Post URL (may be None).
+            content_hash: Content hash.
+
+        Returns:
+            Post row dict or None.
+        """
+        if post_url:
+            post_id_ext = self._extract_post_id(post_url, content_hash)
+            result = (
+                self.supabase.table("posts")
+                .select("id")
+                .eq("post_id_ext", post_id_ext)
+                .limit(1)
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return cast(dict[str, Any], result.data[0])
+        return None
+
     def _get_or_create_neighborhood(self, name: str | None) -> str | None:
         """Get neighborhood ID by name, creating if needed.
 

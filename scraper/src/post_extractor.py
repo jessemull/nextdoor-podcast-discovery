@@ -342,6 +342,65 @@ class PostExtractor:
 
         logger.info("Batch extraction complete: %d posts yielded", total_yielded)
 
+    def extract_single_post_from_current_page(
+        self,
+        page_url: str | None = None,
+        extract_comments: bool = True,
+    ) -> RawPost | None:
+        """Extract a single post from the current page (e.g. permalink page).
+
+        Does not scroll. Uses page URL as permalink when on a single-post page.
+        Optionally opens the comment drawer for the first post.
+
+        Args:
+            page_url: Permalink URL (e.g. from page). If None, uses extract_permalink.
+            extract_comments: If True, open comment drawer and extract comments.
+
+        Returns:
+            RawPost or None if no post found.
+        """
+        extraction_script = _get_extraction_script(MIN_CONTENT_LENGTH)
+        raw_posts = self.page.evaluate(extraction_script)
+
+        if not raw_posts or len(raw_posts) == 0:
+            logger.warning("No posts found on current page")
+            return None
+
+        raw = raw_posts[0]
+        container_index = raw.get("containerIndex", raw.get("postIndex", 0))
+
+        post_url: str | None
+        if page_url:
+            post_url = page_url
+        else:
+            post_url = self.extract_permalink(container_index)
+
+        comments: list[RawComment] = []
+        if extract_comments:
+            comments = self._extract_comments_for_post(container_index)
+
+        author_id = raw.get("authorId", "")
+        author_name = raw.get("authorName", "")
+        content = raw.get("content", "")
+
+        if not author_id or not content or len(content) < MIN_CONTENT_LENGTH:
+            return None
+
+        content_hash = self._generate_hash(author_id, content)
+
+        return RawPost(
+            author_id=author_id,
+            author_name=author_name,
+            comments=comments,
+            content=content,
+            content_hash=content_hash,
+            image_urls=raw.get("imageUrls", []),
+            neighborhood=raw.get("neighborhood") or None,
+            post_url=post_url,
+            reaction_count=raw.get("reactionCount", 0),
+            timestamp_relative=raw.get("timestamp") or None,
+        )
+
     def _process_batch(
         self,
         raw_posts: list[dict[str, Any]],
