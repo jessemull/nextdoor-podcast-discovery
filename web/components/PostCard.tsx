@@ -38,6 +38,8 @@ const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
   readability: "Readability",
 };
 
+export type QueueStatus = "pending" | "running" | null;
+
 interface PostCardProps {
   defaultExpanded?: boolean;
   isMarkingIgnored?: boolean;
@@ -51,6 +53,7 @@ interface PostCardProps {
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
   post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
+  queueStatus?: QueueStatus;
   selected?: boolean;
   showCheckbox?: boolean;
   showScoreBreakdown?: boolean;
@@ -69,6 +72,7 @@ export const PostCard = memo(function PostCard({
   onSelect,
   onViewDetails,
   post,
+  queueStatus = null,
   selected = false,
   showCheckbox = false,
   showScoreBreakdown = false,
@@ -233,6 +237,22 @@ export const PostCard = memo(function PostCard({
                 >
                   {post.reaction_count} Reaction
                   {post.reaction_count !== 1 ? "s" : ""}
+                </span>
+              </>
+            )}
+            {queueStatus === "pending" && (
+              <>
+                <span className="text-muted-foreground text-sm">•</span>
+                <span className="text-amber-600 text-xs font-medium">
+                  In queue
+                </span>
+              </>
+            )}
+            {queueStatus === "running" && (
+              <>
+                <span className="text-muted-foreground text-sm">•</span>
+                <span className="text-blue-600 text-xs font-medium">
+                  Processing
                 </span>
               </>
             )}

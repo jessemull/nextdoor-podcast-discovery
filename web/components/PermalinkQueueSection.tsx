@@ -1,11 +1,34 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/lib/ToastContext";
+import { formatRelativeTime } from "@/lib/utils";
 
 import type { Job } from "@/lib/types";
+
+function makeOptimisticJob(url: string): Job {
+  return {
+    cancelled_at: null,
+    cancelled_by: null,
+    completed_at: null,
+    created_at: new Date().toISOString(),
+    created_by: null,
+    error_message: null,
+    id: `opt-${Date.now()}`,
+    last_retry_at: null,
+    max_retries: null,
+    params: { url },
+    progress: null,
+    retry_count: null,
+    started_at: null,
+    status: "pending",
+    total: null,
+    type: "fetch_permalink",
+  };
+}
 
 interface PermalinkQueueSectionProps {
   permalinkJobs: Job[];
@@ -49,6 +72,17 @@ function truncateUrl(url: string, maxLen: number = 50): string {
   return url.slice(0, maxLen - 3) + "...";
 }
 
+function sortJobs(jobs: Job[]): Job[] {
+  return [...jobs].sort((a, b) => {
+    const aActive = a.status === "running" ? 2 : a.status === "pending" ? 1 : 0;
+    const bActive = b.status === "running" ? 2 : b.status === "pending" ? 1 : 0;
+    if (bActive !== aActive) return bActive - aActive;
+    return (
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  });
+}
+
 export function PermalinkQueueSection({
   permalinkJobs,
   setPermalinkJobs,
@@ -56,6 +90,8 @@ export function PermalinkQueueSection({
   const { toast } = useToast();
   const [inputUrl, setInputUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+
+  const sortedJobs = useMemo(() => sortJobs(permalinkJobs), [permalinkJobs]);
 
   const handleAdd = useCallback(async () => {
     const url = inputUrl.trim();
@@ -78,12 +114,24 @@ export function PermalinkQueueSection({
       toast.success("Added to queue.");
       setInputUrl("");
 
+      const optimistic = makeOptimisticJob(url);
+      setPermalinkJobs((prev) => [optimistic, ...prev]);
+
       const jobsResponse = await fetch(
         "/api/admin/jobs?type=fetch_permalink&limit=20"
       );
       if (jobsResponse.ok) {
         const jobsData = await jobsResponse.json();
-        setPermalinkJobs(jobsData.data || []);
+        const serverJobs = jobsData.data || [];
+        setPermalinkJobs((prev) => {
+          const hasOurJob = serverJobs.some(
+            (j: Job) => (j.params as { url?: string })?.url === url
+          );
+          if (hasOurJob) return serverJobs;
+          const opt = prev.find((j) => j.id.startsWith("opt-"));
+          if (!opt) return serverJobs;
+          return [opt, ...serverJobs];
+        });
       }
     } catch (err) {
       toast.error(
@@ -124,37 +172,64 @@ export function PermalinkQueueSection({
           {isAdding ? "Adding…" : "Add"}
         </button>
       </div>
-      {permalinkJobs.length > 0 && (
-        <div>
-          <h3 className="text-foreground mb-2 text-sm font-medium">
-            Recent jobs
-          </h3>
+      <div>
+        <h3 className="text-foreground mb-2 text-sm font-medium">
+          Permalink jobs
+        </h3>
+        {sortedJobs.length > 0 ? (
           <ul className="space-y-2">
-            {permalinkJobs.map((job) => {
-              const url =
-                (job.params as { url?: string })?.url ?? "unknown";
+            {sortedJobs.map((job) => {
+              const params = job.params as { post_id?: string; url?: string };
+              const url = params?.url ?? "unknown";
+              const postId = params?.post_id;
               return (
                 <li
                   key={job.id}
-                  className="border-border flex items-center justify-between gap-4 rounded-md border bg-surface-hover px-3 py-2 text-sm"
+                  className="border-border flex flex-col gap-1 rounded-md border bg-surface-hover px-3 py-2 text-sm"
                 >
-                  <span
-                    className="text-muted-foreground truncate"
-                    title={url}
-                  >
-                    {truncateUrl(url)}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
-                  >
-                    {formatStatus(job.status)}
-                  </span>
+                  <div className="flex min-w-0 items-center justify-between gap-4">
+                    <span
+                      className="text-muted-foreground min-w-0 truncate"
+                      title={url}
+                    >
+                      {truncateUrl(url)}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
+                    >
+                      {formatStatus(job.status)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
+                    <span>{formatRelativeTime(job.created_at)}</span>
+                    {postId && (
+                      <Link
+                        className="hover:text-foreground text-primary"
+                        href={`/posts/${postId}`}
+                      >
+                        View post
+                      </Link>
+                    )}
+                  </div>
+                  {job.status === "error" && job.error_message && (
+                    <p
+                      className="text-destructive text-xs"
+                      title={job.error_message}
+                    >
+                      {job.error_message}
+                    </p>
+                  )}
                 </li>
               );
             })}
           </ul>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            No permalink jobs yet. Add a URL above or use Refresh Post on a post
+            card.
+          </p>
+        )}
+      </div>
     </Card>
   );
 }

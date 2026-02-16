@@ -67,13 +67,16 @@ export default function JobsPage() {
   }, [fetchJobs]);
 
   useEffect(() => {
-    const hasActive = jobs.some(
+    const hasActiveRecompute = jobs.some(
       (j) => j.status === "pending" || j.status === "running"
     );
-    if (!hasActive) return;
+    const hasActivePermalink = permalinkJobs.some(
+      (j) => j.status === "pending" || j.status === "running"
+    );
+    if (!hasActiveRecompute && !hasActivePermalink) return;
     const interval = setInterval(fetchJobs, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [jobs, fetchJobs]);
+  }, [jobs, fetchJobs, permalinkJobs]);
 
   const handleRequestCancel = useCallback((jobId: string) => {
     setCancelConfirmJobId(jobId);

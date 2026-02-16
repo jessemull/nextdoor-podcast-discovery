@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
+import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { useToast } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
@@ -22,6 +23,8 @@ export function PostDetailClient({
 }: PostDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { getQueueStatusForPost, refetch: refetchPermalinkJobs } =
+    usePermalinkJobs();
   const [error, setError] = useState<null | string>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
@@ -161,6 +164,7 @@ export function PostDetailClient({
         throw new Error(data.error || data.details || "Failed to queue refresh");
       }
       toast.success("Added to queue successfully.");
+      refetchPermalinkJobs();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to queue refresh"
@@ -168,7 +172,7 @@ export function PostDetailClient({
     } finally {
       setQueuingRefresh(false);
     }
-  }, [post?.url, postId, queuingRefresh, toast]);
+  }, [post?.url, postId, queuingRefresh, refetchPermalinkJobs, toast]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -228,6 +232,7 @@ export function PostDetailClient({
             isMarkingUsed={markingUsed}
             isQueuingRefresh={queuingRefresh}
             post={post}
+            queueStatus={getQueueStatusForPost(post)}
             showScoreBreakdown
             onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
