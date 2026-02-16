@@ -329,27 +329,8 @@ export function StatsPanel({
 
   if (!stats) return null;
 
-  const embeddingBacklog = stats.embedding_backlog ?? 0;
-  const showEmbeddingAlert =
-    variant !== "categories-only" && embeddingBacklog > 100;
-
   return (
     <div className={variant === "full" ? "space-y-24" : ""}>
-      {showEmbeddingAlert ? (
-        <div role="alert">
-          <Card className="border-border-focus">
-            <p className="text-muted text-sm">
-              <strong className="text-foreground">
-                {embeddingBacklog} posts need embeddings.
-              </strong>{" "}
-              Semantic search may miss recent posts until the daily embed job
-              runs. Embeddings are generated after each scrape.
-            </p>
-          </Card>
-        </div>
-      ) : (
-        <div aria-hidden className="h-0" />
-      )}
       {variant !== "categories-only" && (
         <StatsSection
           hideHeading={hideStatsHeading}

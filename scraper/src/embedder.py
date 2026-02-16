@@ -65,6 +65,54 @@ class Embedder:
             logger.error("Failed to generate embeddings: %s", e)
             raise
 
+    def embed_post(self, post_id: str, dry_run: bool = False) -> bool:
+        """Generate and store embedding for a single post. Overwrites if exists.
+
+        Args:
+            post_id: UUID of the post to embed.
+            dry_run: If True, don't store.
+
+        Returns:
+            True if embedding stored successfully, False otherwise.
+        """
+        result = (
+            self.supabase.table("posts")
+            .select("id, text")
+            .eq("id", post_id)
+            .limit(1)
+            .execute()
+        )
+        if not result.data or len(result.data) == 0:
+            logger.warning("Post %s not found for embedding", post_id)
+            return False
+        row = cast(dict[str, Any], result.data[0])
+        text = str(row.get("text", "")).strip()
+        if not text:
+            logger.warning("Post %s has no text to embed", post_id)
+            return False
+        try:
+            embeddings = self._generate_embeddings([text])
+            if not embeddings:
+                return False
+            if dry_run:
+                logger.info("DRY RUN: Would store embedding for post %s", post_id)
+                return True
+            to_store = [
+                {
+                    "embedding": embeddings[0],
+                    "model": EMBEDDING_MODEL,
+                    "post_id": post_id,
+                }
+            ]
+            self.supabase.table("post_embeddings").upsert(
+                to_store, on_conflict="post_id"
+            ).execute()
+            logger.info("Stored embedding for post %s", post_id)
+            return True
+        except Exception as e:
+            logger.error("Failed to embed post %s: %s", post_id, e)
+            return False
+
     def generate_and_store_embeddings(self, dry_run: bool = False) -> dict[str, int]:
         """Generate embeddings for posts without them and store in database.
 

@@ -214,13 +214,6 @@ export function FeedSearchBar({
         <p className="text-muted-foreground text-sm">Searching…</p>
       )}
 
-      {embeddingBacklog > 0 && (
-        <p className="text-muted text-xs">
-          {embeddingBacklog} post{embeddingBacklog !== 1 ? "s" : ""} still need
-          embeddings. Semantic search may miss some recent posts until the
-          daily embed job runs.
-        </p>
-      )}
     </div>
   );
 }

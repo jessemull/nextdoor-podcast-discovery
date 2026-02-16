@@ -197,14 +197,18 @@ def _run_permalink_fetch(
                 logger.error("Failed to store/update post")
                 return 1
 
-            if result["action"] == "inserted" and result.get("post_id"):
-                # Score the new post
-                _run_scoring_for_post(session_manager.supabase, result["post_id"])
+            stored_post_id = result.get("post_id")
+            if stored_post_id:
+                # Always score and embed (insert or update) so post is discoverable
+                _run_scoring_for_post(session_manager.supabase, stored_post_id)
+                openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                embedder = Embedder(session_manager.supabase, openai_client)
+                embedder.embed_post(stored_post_id, dry_run=False)
 
             logger.info(
                 "Permalink fetch complete: %s (post_id=%s)",
                 result["action"],
-                result.get("post_id"),
+                stored_post_id,
             )
             return 0
 
