@@ -17,6 +17,9 @@ from src.config import SCRAPER_CONFIG
 
 logger = logging.getLogger(__name__)
 
+# TEMP: disable comments and permalink during feed scrape to debug early exit on recent feed.
+_EXTRACT_COMMENTS_AND_PERMALINK = False
+
 # Minimum content length to consider a post valid (skip empty/stub posts)
 
 MIN_CONTENT_LENGTH = 10
@@ -208,17 +211,6 @@ class PostExtractor:
             if scroll_attempts == 0:
                 logger.info("First scroll found %d raw posts", len(raw_posts))
 
-            # Recent feed: stop when we see repeat_threshold consecutive already-seen posts
-
-            if self.feed_type == "recent" and self.repeat_threshold > 0:
-                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
-                if consecutive_seen >= self.repeat_threshold:
-                    logger.info(
-                        "Repeat threshold reached (%d consecutive already-seen), stopping",
-                        consecutive_seen,
-                    )
-                    break
-
             # Process extracted data
 
             new_count = self._process_batch(raw_posts, posts)
@@ -230,6 +222,20 @@ class PostExtractor:
                 len(posts),
                 self.max_posts,
             )
+
+            # Recent feed: stop only when many already-seen at top and no new posts this round
+            if (
+                self.feed_type == "recent"
+                and self.repeat_threshold > 0
+                and new_count == 0
+            ):
+                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
+                if consecutive_seen >= self.repeat_threshold:
+                    logger.info(
+                        "Repeat threshold reached (%d consecutive already-seen, 0 new), stopping",
+                        consecutive_seen,
+                    )
+                    break
 
             # Check if we're getting new content
 
@@ -299,15 +305,6 @@ class PostExtractor:
             if scroll_attempts == 0:
                 logger.info("First scroll found %d raw posts", len(raw_posts))
 
-            if self.feed_type == "recent" and self.repeat_threshold > 0:
-                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
-                if consecutive_seen >= self.repeat_threshold:
-                    logger.info(
-                        "Repeat threshold reached (%d consecutive already-seen), stopping",
-                        consecutive_seen,
-                    )
-                    return
-
             batch: list[RawPost] = []
             new_count = self._process_batch(raw_posts, batch, cap=safety_cap)
             total_yielded += len(batch)
@@ -318,6 +315,21 @@ class PostExtractor:
                 new_count,
                 total_yielded,
             )
+
+            # Recent feed: stop only when we see many already-seen at top and got no new posts
+            # (so we don't stop when new posts exist further down the list)
+            if (
+                self.feed_type == "recent"
+                and self.repeat_threshold > 0
+                and new_count == 0
+            ):
+                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
+                if consecutive_seen >= self.repeat_threshold:
+                    logger.info(
+                        "Repeat threshold reached (%d consecutive already-seen, 0 new), stopping",
+                        consecutive_seen,
+                    )
+                    return
 
             if new_count == 0:
                 no_new_posts_count += 1
@@ -468,14 +480,14 @@ class PostExtractor:
 
         content_hash = self._generate_hash(author_id, content)
 
-        # Always extract permalink (Share flow per post)
-
         container_index = raw.get("containerIndex", raw.get("postIndex", 0))
-        post_url = self.extract_permalink(container_index)
-
-        # Extract comments (open drawer, optionally "See previous", parse list)
-
-        comments = self._extract_comments_for_post(container_index)
+        # TEMP: skip permalink and comments to debug recent-feed early exit. Set _EXTRACT_COMMENTS_AND_PERMALINK True to re-enable.
+        if _EXTRACT_COMMENTS_AND_PERMALINK:
+            post_url = self.extract_permalink(container_index)
+            comments = self._extract_comments_for_post(container_index)
+        else:
+            post_url = None
+            comments = []
 
         return RawPost(
             author_id=author_id,
@@ -549,23 +561,45 @@ class PostExtractor:
         return hashlib.sha256(hash_input.encode()).hexdigest()
 
     def _scroll_down(self) -> None:
-        """Scroll down to load more posts."""
+        """Scroll down to load more posts.
+
+        On recent feed, infinite scroll often only loads more when the user is near
+        the bottom. We scroll to bottom so the 'load more' trigger fires, then wait
+        for new content. On trending, one viewport step is enough.
+        """
         min_delay, max_delay = SCRAPER_CONFIG["scroll_delay_ms"]
 
-        try:
-            # Scroll by viewport height
-
+        if self.feed_type == "recent":
+            # Scroll to bottom so infinite-scroll triggers; otherwise no new posts load
+            self.page.evaluate(
+                "() => { window.scrollTo(0, document.documentElement.scrollHeight); }"
+            )
+        else:
             self.page.evaluate("window.scrollBy(0, window.innerHeight)")
 
-            # Brief wait for new content; avoid long hang on infinite-scroll feeds
+        try:
             self.page.wait_for_load_state("networkidle", timeout=3000)
-
         except PlaywrightTimeoutError:
-            # Network didn't settle, that's okay - continue anyway
-            # This is expected when page has continuous loading (infinite scroll)
             logger.debug("Network didn't settle after scroll, continuing anyway")
 
-        # Random delay to seem human
+        # Wait for DOM to grow (new posts) on recent feed, up to 4s
+        if self.feed_type == "recent":
+            prev_height = self.page.evaluate(
+                "() => document.documentElement.scrollHeight"
+            )
+            for _ in range(4):
+                self.page.wait_for_timeout(1000)
+                new_height = self.page.evaluate(
+                    "() => document.documentElement.scrollHeight"
+                )
+                if new_height > prev_height:
+                    logger.debug(
+                        "Scroll: doc height grew %s -> %s after wait",
+                        prev_height,
+                        new_height,
+                    )
+                    break
+                prev_height = new_height
 
         delay = random.randint(min_delay, max_delay)
         self.page.wait_for_timeout(delay)
