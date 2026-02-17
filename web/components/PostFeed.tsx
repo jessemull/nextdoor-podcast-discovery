@@ -1,6 +1,15 @@
 "use client";
 
-import { Filter, RotateCcw, X } from "lucide-react";
+import {
+  Bookmark,
+  Check,
+  Eye,
+  EyeOff,
+  Filter,
+  RefreshCw,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -77,6 +86,26 @@ const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   save: "Save Posts",
   unignore: "Unignore Posts",
 };
+
+const BULK_ACTION_OPTIONS = [
+  { icon: <EyeOff aria-hidden className="h-4 w-4" />, label: "Ignore", value: "ignore" },
+  {
+    icon: <Check aria-hidden className="h-4 w-4" />,
+    label: "Mark As Used",
+    value: "mark_used",
+  },
+  {
+    icon: <RefreshCw aria-hidden className="h-4 w-4" />,
+    label: "Refresh Posts",
+    value: "reprocess",
+  },
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
+  {
+    icon: <Eye aria-hidden className="h-4 w-4" />,
+    label: "Unignore",
+    value: "unignore",
+  },
+].sort((a, b) => a.label.localeCompare(b.label));
 
 const SKELETON_CARD_COUNT = 8;
 
@@ -444,13 +473,8 @@ export function PostFeed({
                   <CustomSelect
                     ariaLabel="Bulk action"
                     className="h-10 min-w-[11rem] shrink-0"
-                    options={[
-                      { label: "Ignore", value: "ignore" },
-                      { label: "Mark As Used", value: "mark_used" },
-                      { label: "Refresh Posts", value: "reprocess" },
-                      { label: "Save", value: "save" },
-                      { label: "Unignore", value: "unignore" },
-                    ]}
+                    disabled={!selectAllChecked && selectedIds.size === 0}
+                    options={BULK_ACTION_OPTIONS}
                     placeholder="Actions"
                     value=""
                     onChange={async (val) => {
