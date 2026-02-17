@@ -8,6 +8,7 @@ import {
   ExternalLink,
   EyeOff,
   List,
+  MessageSquare,
   MoreHorizontal,
   RefreshCw,
   Search,
@@ -245,6 +246,25 @@ export const PostCard = memo(function PostCard({
                   {post.reaction_count} Reaction
                   {post.reaction_count !== 1 ? "s" : ""}
                 </span>
+              </>
+            )}
+            {Array.isArray(post.comments) && post.comments.length > 0 && (
+              <>
+                <span className="text-muted-foreground text-sm">•</span>
+                <Link
+                  className="text-foreground hover:underline text-sm font-medium"
+                  href={`/posts/${post.id}#comments`}
+                  title="View Comments"
+                >
+                  <MessageSquare
+                    aria-hidden
+                    className="inline h-3.5 w-3.5 align-middle"
+                  />
+                  <span className="ml-1">
+                    {post.comments.length} Comment
+                    {post.comments.length !== 1 ? "s" : ""}
+                  </span>
+                </Link>
               </>
             )}
             {queueStatus === "pending" && (

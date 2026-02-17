@@ -36,8 +36,16 @@ export interface Neighborhood {
   slug: string;
 }
 
+/** Comment from posts.comments (scraped at feed extraction). */
+export interface Comment {
+  author_name?: string;
+  text: string;
+  timestamp_relative?: string;
+}
+
 export interface Post {
   author_name?: null | string;
+  comments?: Comment[];
   created_at: string;
   hash: string;
   id: string;
