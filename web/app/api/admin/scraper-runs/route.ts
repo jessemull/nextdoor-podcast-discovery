@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { auth0 } from "@/lib/auth0";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 const DEFAULT_DAYS = 7;
+
+/** Run IDs that have a pending/running run_scraper job (params.scraper_run_id). */
+async function getQueuedRetryRunIds(
+  supabase: SupabaseClient
+): Promise<string[]> {
+  const { data: jobs } = await supabase
+    .from("background_jobs")
+    .select("params")
+    .eq("type", "run_scraper")
+    .in("status", ["pending", "running"]);
+  const ids: string[] = [];
+  for (const row of jobs ?? []) {
+    const params = row?.params as { scraper_run_id?: string } | null;
+    if (params?.scraper_run_id?.trim()) ids.push(params.scraper_run_id.trim());
+  }
+  return ids;
+}
 const MAX_DAYS = 90;
 const MAX_LIMIT = 100;
 
@@ -45,7 +64,11 @@ export async function GET(request: NextRequest) {
           { status: 500 }
         );
       }
-      return NextResponse.json({ data: data ?? [] });
+      const queuedRetryRunIds = await getQueuedRetryRunIds(supabase);
+      return NextResponse.json({
+        data: data ?? [],
+        queued_retry_run_ids: queuedRetryRunIds,
+      });
     }
 
     const days = Math.min(
@@ -69,7 +92,11 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ data: data ?? [] });
+    const queuedRetryRunIds = await getQueuedRetryRunIds(supabase);
+    return NextResponse.json({
+      data: data ?? [],
+      queued_retry_run_ids: queuedRetryRunIds,
+    });
   } catch (err) {
     console.error("[admin/scraper-runs] Error:", err);
     return NextResponse.json(

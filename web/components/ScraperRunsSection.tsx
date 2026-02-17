@@ -41,7 +41,9 @@ function feedLabel(feedType: string): string {
   return feedType;
 }
 
-function statusBadgeClass(status: string): string {
+function statusBadgeClass(status: string, isQueued: boolean): string {
+  if (isQueued)
+    return "shrink-0 rounded border border-sky-500/50 bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-600";
   return status === "completed"
     ? "shrink-0 rounded border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600"
     : "shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600";
@@ -50,6 +52,7 @@ function statusBadgeClass(status: string): string {
 interface ScraperRunsSectionProps {
   emptyMessage?: string;
   onRetry?: (run: ScraperRun) => void | Promise<void>;
+  queuedRetryRunIds?: string[];
   runs: ScraperRun[];
   title?: string;
 }
@@ -57,9 +60,11 @@ interface ScraperRunsSectionProps {
 export function ScraperRunsSection({
   emptyMessage = "No scraper runs in the last seven days.",
   onRetry,
+  queuedRetryRunIds = [],
   runs,
   title = "Scraper runs",
 }: ScraperRunsSectionProps) {
+  const queuedRetrySet = new Set(queuedRetryRunIds);
   return (
     <Card className="mb-8 p-6">
       <div className="mb-4">
@@ -76,9 +81,15 @@ export function ScraperRunsSection({
       {runs.length > 0 ? (
         <div className="max-h-96 space-y-3 overflow-y-auto">
           {runs.map((run) => {
-            const badgeClass = statusBadgeClass(run.status);
-            const statusLabel =
-              run.status === "completed" ? "Completed" : "Failed";
+            const isQueued = queuedRetrySet.has(run.id);
+            const statusLabel = isQueued
+              ? "Queued"
+              : run.status === "completed"
+                ? "Completed"
+                : "Failed";
+            const badgeClass = statusBadgeClass(run.status, isQueued);
+            const showRetry =
+              run.status === "error" && onRetry && !isQueued;
             return (
               <div
                 key={run.id}
@@ -90,9 +101,9 @@ export function ScraperRunsSection({
                   </span>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className={badgeClass}>{statusLabel}</span>
-                    {run.status === "error" && onRetry && (
+                    {showRetry && (
                       <button
-                        className="border-emerald-500/70 bg-emerald-500/10 text-emerald-600 hover:bg-surface-hover shrink-0 rounded border px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-border-focus"
                         type="button"
                         onClick={() => onRetry(run)}
                       >

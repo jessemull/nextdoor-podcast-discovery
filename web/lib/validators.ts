@@ -349,7 +349,7 @@ export const adminJobsQuerySchema = z.object({
     .default(10)
     .transform((n) => Math.min(50, Math.max(1, n))),
   type: z
-    .enum(["fetch_permalink", "recompute_final_scores"])
+    .enum(["fetch_permalink", "recompute_final_scores", "run_scraper"])
     .optional(),
 });
 
