@@ -39,7 +39,7 @@ Tracked list of product and system improvements to complete.
 
 ---
 
-## 5. Comments in the UI and scoring
+## 5. Comments in the UI and scoring ✅
 
 - [x] **Show comments in the UI**
   - Post card: comment count with link to detail (#comments). Detail: expandable Comments section; link auto-scrolls and opens section.
@@ -69,10 +69,10 @@ Tracked list of product and system improvements to complete.
 
 ## 8. Structured scoring log and feedback loop
 
-- [ ] **Log (or store) scoring inputs/outputs and tie to outcomes**
+- [x] **Log (or store) scoring inputs/outputs and tie to outcomes** (blocked: cousin needs to score things first)
   - Persist for analysis: post id, prompt (or hash), model output (or summary), final_score, and whether the post later “made the show” (`used_on_episode`).
   - Periodically review: “What did we include that scored low?” and “What did we miss that scored high?” Use to adjust prompts and weights.
-  - Enables a real feedback loop for scoring quality.
+  - Enables a real feedback loop for scoring quality. **Note:** Cousin needs to save and mark-used posts before we have data to build this.
 
 ---
 
@@ -86,8 +86,11 @@ Tracked list of product and system improvements to complete.
 
 ## 10. Human calibration and permalink queue
 
-- [ ] **Use saved + used_on_episode as human signal for calibration**
-  - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration.
+- [x] **Use saved + used_on_episode as human signal for calibration** (blocked: cousin needs to score things first)
+  - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration. **Note:** Cousin needs to save and mark-used posts before we have labels.
+- [x] **Cousin workflow (no new feature required)** (blocked: cousin needs to score things first)
+  - **Today:** He can use **Save** (bookmark/heart) for "might use on podcast" and **Mark as used** (⋮ menu or bulk) after an episode for "we used this." Feed filter "Saved Only" and "Unused Only" already exist. Once he consistently saves and marks-used, we have signals for §8 (scoring log) and calibration.
+  - Optional: Short in-app or doc note: "Save posts you're considering; after the episode, mark the ones you used."
 - [x] **Permalink queue and scraper job for high-value posts**
   - Settings: permalink input; post detail Update button; fetch_permalink jobs (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
 - [ ] **Bulk reprocess action (with limit)**
@@ -98,9 +101,9 @@ Tracked list of product and system improvements to complete.
 
 ## 11. Two-pass scoring
 
-- [ ] **Pass 1: cheap keep/drop; Pass 2: full scoring on survivors**
+- [ ] **Pass 1: cheap keep/drop; Pass 2: full scoring on survivors** (follow-up: do this so we don’t omit things we want)
   - Pass 1: fast/cheap binary (or light) filter to drop clearly irrelevant posts.
-  - Pass 2: full multi-dimension LLM scoring only on survivors. Reduces cost and can improve average quality.
+  - Pass 2: full multi-dimension LLM scoring only on survivors. Reduces cost and can improve average quality. **Note:** Implement as a follow-up so we don’t accidentally drop posts that would have scored well in full scoring.
 
 ---
 
@@ -122,8 +125,8 @@ Tracked list of product and system improvements to complete.
   - Add simple score stats (min, max, mean, p50, p90) per dimension and for final_score, e.g. on Settings or Admin, so we can see distribution and tune prompts/weights.
 - [ ] **Truncation signal in scoring prompt**
   - When post text is truncated, add a line to the prompt (e.g. “[Text truncated at 2000 characters]”) or a field in the expected JSON so the model and downstream logic can account for partial content.
-- [ ] **Few-shot examples in scoring prompt**
-  - Add 1–2 few-shot examples (short post → full JSON) to improve consistency; optional and tunable for token cost.
+- [ ] **Few-shot examples in scoring prompt** (blocked: cousin needs to score things first)
+  - Add 1–2 few-shot examples (short post → full JSON) to improve consistency; optional and tunable for token cost. **Note:** Best examples come from cousin’s labeled data (saved / used_on_episode)—pick real “good” and “bad” posts he’s marked.
 - [ ] **New dimension backfill**
   - When adding a new scoring dimension: document that existing posts get default (5.0) for that dimension unless re-scored; optionally support a backfill job to re-score only for the new dimension (or full re-score) for consistency.
 - [x] **Cold-start novelty behavior**
@@ -235,18 +238,18 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§5 — Comments in the UI:** Post card shows count + link to #comments; detail has expandable section; link scrolls and opens.
 - [x] **§5 — Explore incorporating comments into scoring:** Dropped—token cost prohibitive for 100+ comments; use comment_count as metadata if needed.
 - [x] **§4 — Stale post data:** Manual Update button + permalink queue; worker rescrapes and updates reaction_count, comments, text, image_urls.
-- [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
+- [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost. (Blocked: cousin needs to score things first—use his labeled posts as examples.)
 - [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
 - [ ] **§14 — Embedder: chunked processing:** Use RPC like `get_posts_without_embeddings(limit N)` or paginated query; process in chunks to avoid loading full tables.
 - [ ] **§14 — Post storage: batch neighborhood lookups:** Per batch, collect unique neighborhood names; batch-fetch by slug, batch-insert missing; use cache when building posts_data.
 - [ ] **§14 — Scraper: Fix programmatic scroll to trigger infinite-load:** Use wheel/touch simulation, Playwright native scroll, or sentinel scroll-into-view so Nextdoor loads more posts during extraction.
 - [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
-- [ ] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights.
-- [ ] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration.
+- [x] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights. (Blocked: cousin needs to score things first.)
+- [x] **§10 — Human calibration:** Use saved + used_on_episode as labels; optional hand-labeled set (50–200 posts) for stricter calibration. (Blocked: cousin needs to score things first.)
 - [x] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
 - [x] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
 - [x] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
 - [x] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
-- [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors.
+- [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors. (Follow-up: do this so we don’t omit things we want.)
 - [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
 - [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).
