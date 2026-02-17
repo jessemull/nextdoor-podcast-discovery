@@ -9,8 +9,9 @@ import { postsBulkBodySchema } from "@/lib/validators";
 /**
  * POST /api/posts/bulk
  *
- * Apply a single action (mark_used, save, ignore, unignore) to a set of posts.
+ * Apply a single action (mark_used, save, ignore, unignore, reprocess) to a set of posts.
  * Body: { action, post_ids?: string[] } or { action, apply_to_query: true, query }.
+ * reprocess: creates one fetch_permalink job per post that has a url; returns jobs_queued and skipped.
  * Requires authentication.
  */
 export async function POST(request: NextRequest) {
@@ -55,10 +56,65 @@ export async function POST(request: NextRequest) {
   }
 
   if (postIds.length === 0) {
-    return NextResponse.json({ data: { updated: 0 } });
+    return NextResponse.json(
+      action === "reprocess"
+        ? { data: { jobs_queued: 0, skipped: 0 } }
+        : { data: { updated: 0 } }
+    );
   }
 
   try {
+    if (action === "reprocess") {
+      const { data: postsWithUrl, error: fetchError } = await supabase
+        .from("posts")
+        .select("id, url")
+        .in("id", postIds);
+
+      if (fetchError) {
+        logError("[posts/bulk] reprocess fetch", fetchError);
+        return NextResponse.json(
+          { details: fetchError.message, error: "Database error" },
+          { status: 500 }
+        );
+      }
+
+      const rowsWithUrl = (postsWithUrl ?? []).filter(
+        (row): row is { id: string; url: string } =>
+          row.url != null && typeof row.url === "string" && row.url.trim() !== ""
+      );
+
+      const createdBy = session.user?.email ?? "unknown";
+      for (const row of rowsWithUrl) {
+        const { error: insertError } = await supabase
+          .from("background_jobs")
+          .insert({
+            created_by: createdBy,
+            max_retries: 3,
+            params: { post_id: row.id, url: row.url },
+            retry_count: 0,
+            status: "pending",
+            type: "fetch_permalink",
+          });
+        if (insertError) {
+          logError("[posts/bulk] reprocess insert", insertError);
+          return NextResponse.json(
+            {
+              details: insertError.message,
+              error: "Database error",
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      return NextResponse.json({
+        data: {
+          jobs_queued: rowsWithUrl.length,
+          skipped: postIds.length - rowsWithUrl.length,
+        },
+      });
+    }
+
     if (action === "mark_used") {
       const { error } = await supabase
         .from("posts")

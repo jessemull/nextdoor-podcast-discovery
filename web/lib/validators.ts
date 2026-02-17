@@ -321,7 +321,7 @@ export type PostsBulkCountBody = z.infer<typeof postsBulkCountBodySchema>;
 /** POST /api/posts/bulk body. Either post_ids or (apply_to_query and query). */
 export const postsBulkBodySchema = z
   .object({
-    action: z.enum(["ignore", "mark_used", "save", "unignore"]),
+    action: z.enum(["ignore", "mark_used", "reprocess", "save", "unignore"]),
     apply_to_query: z.boolean().optional(),
     post_ids: z.array(z.string().regex(UUID_REGEX)).optional(),
     query: postsBulkQuerySchema.optional(),

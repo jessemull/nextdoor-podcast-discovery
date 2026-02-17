@@ -537,12 +537,24 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         _handle_transient_error(supabase, job_id, error_msg)
 
 
-def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
+def _fetch_permalink_job_was_cancelled(supabase: Client, job_id: str) -> bool:
+    """Return True if the job was cancelled (e.g. by user removing from queue)."""
+    result = (
+        supabase.table("background_jobs")
+        .select("status")
+        .eq("id", job_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data or len(result.data) == 0:
+        return False
+    return (result.data[0].get("status") or "") == "cancelled"
+
+
+def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
     """Process a fetch_permalink job by running the scraper in permalink mode.
 
-    Args:
-        supabase: Supabase client.
-        job: Job record from database.
+    Returns True if the job was cancelled (do not start the next job this cycle).
     """
     job_id = job["id"]
     params = job.get("params", {})
@@ -555,7 +567,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        return
+        return False
 
     url = params.get("url")
     if not url or not isinstance(url, str):
@@ -566,7 +578,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        return
+        return False
 
     post_id = params.get("post_id")
     if post_id is not None and not isinstance(post_id, str):
@@ -578,6 +590,10 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
             "status": "running",
         }
     ).eq("id", job_id).execute()
+
+    if _fetch_permalink_job_was_cancelled(supabase, job_id):
+        logger.info("Permalink job %s was cancelled before run, skipping", job_id)
+        return True
 
     scraper_dir = Path(__file__).resolve().parent.parent
     cmd = [sys.executable, "-m", "src.main", "--permalink", url]
@@ -592,6 +608,9 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
             text=True,
             timeout=300,
         )
+        if _fetch_permalink_job_was_cancelled(supabase, job_id):
+            logger.info("Permalink job %s was cancelled during run, not updating", job_id)
+            return True
         if result.returncode == 0:
             supabase.table("background_jobs").update(
                 {
@@ -614,7 +633,11 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
                 }
             ).eq("id", job_id).execute()
             logger.error("Permalink job %s failed: %s", job_id, error_msg[:200])
+        return False
     except subprocess.TimeoutExpired:
+        if _fetch_permalink_job_was_cancelled(supabase, job_id):
+            logger.info("Permalink job %s was cancelled (timed out), not updating", job_id)
+            return True
         supabase.table("background_jobs").update(
             {
                 "completed_at": datetime.now(UTC).isoformat(),
@@ -623,7 +646,11 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
             }
         ).eq("id", job_id).execute()
         logger.error("Permalink job %s timed out", job_id)
+        return False
     except Exception as e:
+        if _fetch_permalink_job_was_cancelled(supabase, job_id):
+            logger.info("Permalink job %s was cancelled, not updating", job_id)
+            return True
         error_msg = str(e)
         supabase.table("background_jobs").update(
             {
@@ -633,6 +660,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> None:
             }
         ).eq("id", job_id).execute()
         logger.exception("Permalink job %s failed: %s", job_id, e)
+        return False
 
 
 def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -> None:
@@ -663,7 +691,13 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                 if job_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
                 elif job_type == "fetch_permalink":
-                    process_fetch_permalink_job(supabase, job)
+                    was_cancelled = process_fetch_permalink_job(supabase, job)
+                    if was_cancelled:
+                        logger.debug(
+                            "Previous permalink job was cancelled, waiting %d seconds before next poll",
+                            poll_interval,
+                        )
+                        time.sleep(poll_interval)
                 else:
                     logger.warning("Unknown job type: %s", job_type)
 
@@ -748,6 +782,7 @@ def main() -> int:
                     process_recompute_job(supabase, job)
                 elif args.job_type == "fetch_permalink":
                     process_fetch_permalink_job(supabase, job)
+                    # Return value (cancelled) only matters for continuous poll loop
                 else:
                     logger.warning("Unknown job type: %s", args.job_type)
                     return 1

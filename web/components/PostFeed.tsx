@@ -57,6 +57,7 @@ export interface PostFeedSearchSlotProps {
 const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   ignore: "Ignore",
   mark_used: "Mark As Used",
+  reprocess: "Refresh Posts",
   save: "Save",
   unignore: "Unignore",
 };
@@ -64,6 +65,7 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
 const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
   ignore: "Ignored",
   mark_used: "Marked as used",
+  reprocess: "Queued for refresh",
   save: "Saved",
   unignore: "Unignored",
 };
@@ -71,6 +73,7 @@ const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
 const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   ignore: "Ignore Posts",
   mark_used: "Mark Posts As Used",
+  reprocess: "Refresh Posts",
   save: "Save Posts",
   unignore: "Unignore Posts",
 };
@@ -444,6 +447,7 @@ export function PostFeed({
                     options={[
                       { label: "Ignore", value: "ignore" },
                       { label: "Mark As Used", value: "mark_used" },
+                      { label: "Refresh Posts", value: "reprocess" },
                       { label: "Save", value: "save" },
                       { label: "Unignore", value: "unignore" },
                     ]}
@@ -823,7 +827,21 @@ export function PostFeed({
           handleBulkAction(action, {
             applyToQuery,
             onError: (message) => toast.error(message),
-            onSuccess: () => toast.success(successMessage),
+            onSuccess: (data) => {
+              if (
+                action === "reprocess" &&
+                data?.data?.jobs_queued != null
+              ) {
+                let msg = `${data.data.jobs_queued} post(s) queued for reprocessing.`;
+                if ((data.data.skipped ?? 0) > 0) {
+                  msg += ` ${data.data.skipped} skipped (no URL).`;
+                }
+                toast.success(msg);
+                refetchPermalinkJobs();
+              } else {
+                toast.success(successMessage);
+              }
+            },
           });
         }}
       />

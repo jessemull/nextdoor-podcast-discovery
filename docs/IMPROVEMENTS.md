@@ -93,8 +93,8 @@ Tracked list of product and system improvements to complete.
   - Optional: Short in-app or doc note: "Save posts you're considering; after the episode, mark the ones you used."
 - [x] **Permalink queue and scraper job for high-value posts**
   - Settings: permalink input; post detail Update button; fetch_permalink jobs (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
-- [ ] **Bulk reprocess action (with limit)**
-  - Allow reprocessing multiple posts (re-fetch, re-score, re-embed) in bulk—e.g. from feed selection or a "Reprocess" admin action. Cannot reprocess all data; add a limit (e.g. max 50–100 per run) to avoid runaway cost and load. Define UI and API for selection + limit.
+- [ ] **Bulk reprocess action**
+  - Enable reprocess (re-fetch, re-score, re-embed) as a bulk action on selected posts in the feed—same pattern as “Mark as used.” Ship without a per-run limit first; see how it’s used. Add a cap (e.g. max 50–100 per run) later if cost or load becomes an issue.
 
 
 ---
