@@ -10,12 +10,13 @@ from src.exceptions import ConfigurationError
 __all__ = [
     "CLAUDE_MAX_TOKENS",
     "CLAUDE_MODEL",
-    "ENSEMBLE_RUNS",
-    "ENSEMBLE_TEMPERATURE",
     "ConfigurationError",
     "EMBEDDING_BATCH_SIZE",
+    "EMBEDDING_CHUNK_SIZE",
     "EMBEDDING_DIMENSIONS",
     "EMBEDDING_MODEL",
+    "ENSEMBLE_RUNS",
+    "ENSEMBLE_TEMPERATURE",
     "FEED_URLS",
     "LOGIN_URL",
     "log_supabase_error",
@@ -38,6 +39,7 @@ ENSEMBLE_TEMPERATURE = 0.3
 # OpenAI settings
 
 EMBEDDING_BATCH_SIZE = 100
+EMBEDDING_CHUNK_SIZE = 500
 EMBEDDING_DIMENSIONS = 1536
 EMBEDDING_MODEL = "text-embedding-3-small"
 

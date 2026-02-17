@@ -52,7 +52,7 @@ def calculate_final_score(
     Returns:
         Final score (0-10).
     """
-    # Use dimension list from weight config so new dimensions don't require code changes
+    # Missing dimension (e.g. newly added) defaults to 5.0; see docs on new dimension backfill
     weighted_sum = sum(scores.get(dim, 5.0) * w for dim, w in weights.items())
     max_possible = sum(10 * w for w in weights.values())
     if max_possible == 0:
