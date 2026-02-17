@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
   let llmSuggestions: string[] = [];
 
   try {
-    let queryEmbedding: null | number[] = getCachedEmbedding(
+    let queryEmbedding: null | number[] = await getCachedEmbedding(
       q,
       CACHE_KEY_THRESHOLD
     );
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         });
         queryEmbedding = embeddingResponse.data[0].embedding;
         if (queryEmbedding) {
-          setCachedEmbedding(q, CACHE_KEY_THRESHOLD, queryEmbedding);
+          await setCachedEmbedding(q, CACHE_KEY_THRESHOLD, queryEmbedding);
         }
       } catch (err) {
         logError("[suggestions] embedding", err);

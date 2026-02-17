@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { DEFAULT_PREVIEW_WEIGHTS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
@@ -73,9 +74,23 @@ export const DEFAULT_FILTERS: PostFeedFilters = {
 export function usePostFeedFilters(
   debounceDelayMs: number
 ): UsePostFeedFiltersResult {
-  const [filterLoadError, setFilterLoadError] = useState<null | string>(null);
   const [filters, setFilters] = useState<PostFeedFilters>(DEFAULT_FILTERS);
-  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
+
+  const { data: neighborhoodsData, isError: neighborhoodsError } = useQuery({
+    queryFn: async () => {
+      const res = await fetch("/api/neighborhoods");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return { data: [] as Neighborhood[] };
+      return json as { data: Neighborhood[] };
+    },
+    queryKey: ["neighborhoods"],
+    staleTime: 60_000,
+  });
+
+  const neighborhoods = neighborhoodsData?.data ?? [];
+  const filterLoadError = neighborhoodsError
+    ? "Could not load filter options. Some filters may be empty."
+    : null;
 
   const debouncedMaxPodcastWorthy = useDebounce(
     filters.maxPodcastWorthy,
@@ -95,19 +110,6 @@ export function usePostFeedFilters(
     filters.minReactionCount,
     debounceDelayMs
   );
-
-  useEffect(() => {
-    fetch("/api/neighborhoods")
-      .then((res) => (res.ok ? res.json() : { data: [] }))
-      .then((result) => {
-        setFilterLoadError(null);
-        setNeighborhoods(result.data || []);
-      })
-      .catch((err) => {
-        console.error("Failed to load filter options (neighborhoods):", err);
-        setFilterLoadError("Could not load filter options. Some filters may be empty.");
-      });
-  }, []);
 
   return {
     debouncedMaxPodcastWorthy,

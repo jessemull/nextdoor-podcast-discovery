@@ -33,5 +33,8 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ data: data || [] });
+  return NextResponse.json(
+    { data: data || [] },
+    { headers: { "Cache-Control": "private, max-age=60" } }
+  );
 }

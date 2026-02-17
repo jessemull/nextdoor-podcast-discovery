@@ -152,7 +152,9 @@ export async function GET() {
       top_categories: frequenciesResult.data || [],
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: { "Cache-Control": "private, max-age=30" },
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;

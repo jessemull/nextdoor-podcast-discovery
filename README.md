@@ -240,7 +240,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 - **Config file:** `web/.env.local` (copy from `.env.example`)
 - **Required:** Supabase URL/keys (public + service), NextAuth secret/URL, Google OAuth id/secret, `ALLOWED_EMAILS`
-- **Optional:** `USER_EMAIL`, `NEXT_PUBLIC_USER_EMAIL`, `ANTHROPIC_API_KEY` (sports fact)
+- **Optional:** `USER_EMAIL`, `NEXT_PUBLIC_USER_EMAIL`, `ANTHROPIC_API_KEY` (sports fact), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
 
 ## Setup & quick start
 
