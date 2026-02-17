@@ -29,6 +29,34 @@ from src.robots import check_robots_allowed
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
 
+# Max length for error_message stored in scraper_runs
+SCRAPER_RUN_ERROR_MESSAGE_MAX_LEN = 500
+
+
+def _record_scraper_run(
+    supabase: Client,
+    feed_type: str,
+    status: str,
+    error_message: str | None = None,
+) -> None:
+    """Insert one row into scraper_runs for Jobs page (self-reported outcome)."""
+    try:
+        row: dict[str, Any] = {
+            "feed_type": feed_type,
+            "run_at": datetime.now(UTC).isoformat(),
+            "status": status,
+        }
+        if error_message:
+            row["error_message"] = error_message[:SCRAPER_RUN_ERROR_MESSAGE_MAX_LEN]
+        supabase.table("scraper_runs").insert(row).execute()
+    except Exception as e:
+        logger.warning(
+            "Failed to record scraper run: %s (%s)",
+            e,
+            type(e).__name__,
+        )
+
+
 # Load environment variables from .env file
 
 load_dotenv()
@@ -511,6 +539,9 @@ def main(
                         e,
                         type(e).__name__,
                     )
+                _record_scraper_run(
+                    session_manager.supabase, feed_type, "completed"
+                )
 
         return 0
 
@@ -520,17 +551,33 @@ def main(
     except CaptchaRequiredError as e:
         logger.error("CAPTCHA required: %s", e)
         logger.error("Manual intervention needed - run with --visible to solve CAPTCHA")
+        try:
+            _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
+        except NameError:
+            pass
         return 1
     except LoginFailedError as e:
         logger.error("Login failed: %s", e)
+        try:
+            _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
+        except NameError:
+            pass
         return 1
     except ScraperError as e:
         logger.error("Scraper error: %s", e)
+        try:
+            _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
+        except NameError:
+            pass
         return 1
     except Exception as e:
         # Last-resort catch so pipeline exits cleanly with code 1 (PR_REVIEW: intentional;
         # known exceptions handled above; broad catch avoids unhandled tracebacks in cron)
         logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
+        try:
+            _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
+        except NameError:
+            pass
         return 1
 
 

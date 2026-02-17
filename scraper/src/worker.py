@@ -663,34 +663,130 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
         return False
 
 
+def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
+    """Process a run_scraper job by running scripts/run-scrape.sh.
+
+    Args:
+        supabase: Supabase client.
+        job: Job record from database.
+    """
+    job_id = job["id"]
+    params = job.get("params", {}) or {}
+    feed_type = params.get("feed_type") or "recent"
+    if feed_type not in ("recent", "trending"):
+        feed_type = "recent"
+
+    logger.info("Processing run_scraper job %s (feed_type=%s)", job_id, feed_type)
+
+    supabase.table("background_jobs").update(
+        {
+            "started_at": datetime.now(UTC).isoformat(),
+            "status": "running",
+        }
+    ).eq("id", job_id).execute()
+
+    repo_root = Path(__file__).resolve().parent.parent
+    script = repo_root / "scripts" / "run-scrape.sh"
+    if not script.is_file():
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "scripts/run-scrape.sh not found",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.error("run_scraper job %s: script not found at %s", job_id, script)
+        return
+
+    try:
+        result = subprocess.run(
+            [str(script), feed_type],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=7200,
+        )
+        if result.returncode == 0:
+            supabase.table("background_jobs").update(
+                {
+                    "completed_at": datetime.now(UTC).isoformat(),
+                    "status": "completed",
+                }
+            ).eq("id", job_id).execute()
+            logger.info("run_scraper job %s completed successfully", job_id)
+        else:
+            error_msg = (
+                result.stderr
+                or result.stdout
+                or f"run-scrape.sh exited with {result.returncode}"
+            )
+            supabase.table("background_jobs").update(
+                {
+                    "completed_at": datetime.now(UTC).isoformat(),
+                    "error_message": error_msg[:1000],
+                    "status": "error",
+                }
+            ).eq("id", job_id).execute()
+            logger.error(
+                "run_scraper job %s failed: %s", job_id, error_msg[:200]
+            )
+    except subprocess.TimeoutExpired:
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "Scraper timed out after 7200s",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.error("run_scraper job %s timed out", job_id)
+    except Exception as e:
+        error_msg = str(e)
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": error_msg[:1000],
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.exception("run_scraper job %s failed: %s", job_id, e)
+
+
 def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -> None:
     """Poll for pending jobs and process them.
 
     Args:
         supabase: Supabase client.
-        job_type: Type of job to process (e.g., 'recompute_final_scores').
+        job_type: Type(s) of job to process (e.g. 'recompute_final_scores' or
+            'recompute_final_scores,run_scraper' for multiple).
         poll_interval: Seconds between polls when no jobs found.
     """
-    logger.info("Starting worker for job type: %s", job_type)
+    job_types = [t.strip() for t in job_type.split(",") if t.strip()]
+    if not job_types:
+        job_types = ["recompute_final_scores"]
+    logger.info("Starting worker for job type(s): %s", job_types)
 
     while True:
         try:
-            # Look for pending job
-            result = (
+            query = (
                 supabase.table("background_jobs")
                 .select("*")
-                .eq("type", job_type)
                 .eq("status", "pending")
                 .order("created_at", desc=False)
                 .limit(1)
-                .execute()
             )
+            if len(job_types) == 1:
+                query = query.eq("type", job_types[0])
+            else:
+                query = query.in_("type", job_types)
+
+            result = query.execute()
 
             if result.data and len(result.data) > 0:
                 job = cast(dict[str, Any], result.data[0])
-                if job_type == "recompute_final_scores":
+                actual_type = job.get("type") or ""
+                if actual_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
-                elif job_type == "fetch_permalink":
+                elif actual_type == "fetch_permalink":
                     was_cancelled = process_fetch_permalink_job(supabase, job)
                     if was_cancelled:
                         logger.debug(
@@ -698,8 +794,10 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                             poll_interval,
                         )
                         time.sleep(poll_interval)
+                elif actual_type == "run_scraper":
+                    process_run_scraper_job(supabase, job)
                 else:
-                    logger.warning("Unknown job type: %s", job_type)
+                    logger.warning("Unknown job type: %s", actual_type)
 
             else:
                 # No jobs, wait before polling again
@@ -712,8 +810,8 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
         except Exception as e:
             # Catch any error to keep poll loop running; log and continue
             logger.error(
-                "Error in worker loop (job_type=%s): %s (%s)",
-                job_type,
+                "Error in worker loop (job_types=%s): %s (%s)",
+                job_types,
                 e,
                 type(e).__name__,
                 exc_info=True,
@@ -766,25 +864,33 @@ def main() -> int:
 
         if args.once:
             # Process one job and exit
-            result = (
+            job_types = [
+                t.strip() for t in args.job_type.split(",") if t.strip()
+            ] or ["recompute_final_scores"]
+            query = (
                 supabase.table("background_jobs")
                 .select("*")
-                .eq("type", args.job_type)
                 .eq("status", "pending")
                 .order("created_at", desc=False)
                 .limit(1)
-                .execute()
             )
+            if len(job_types) == 1:
+                query = query.eq("type", job_types[0])
+            else:
+                query = query.in_("type", job_types)
+            result = query.execute()
 
             if result.data and len(result.data) > 0:
                 job = cast(dict[str, Any], result.data[0])
-                if args.job_type == "recompute_final_scores":
+                actual_type = job.get("type") or ""
+                if actual_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
-                elif args.job_type == "fetch_permalink":
+                elif actual_type == "fetch_permalink":
                     process_fetch_permalink_job(supabase, job)
-                    # Return value (cancelled) only matters for continuous poll loop
+                elif actual_type == "run_scraper":
+                    process_run_scraper_job(supabase, job)
                 else:
-                    logger.warning("Unknown job type: %s", args.job_type)
+                    logger.warning("Unknown job type: %s", actual_type)
                     return 1
             else:
                 logger.info("No pending jobs found")

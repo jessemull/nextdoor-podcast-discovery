@@ -125,6 +125,15 @@ export interface Job {
   type: string;
 }
 
+/** Self-reported scrape run from scraper_runs table. */
+export interface ScraperRun {
+  error_message: null | string;
+  feed_type: string;
+  id: string;
+  run_at: string;
+  status: string;
+}
+
 /** Weight configuration from API. */
 export interface WeightConfig {
   created_at: string;

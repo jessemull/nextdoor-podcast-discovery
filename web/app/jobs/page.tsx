@@ -7,11 +7,12 @@ import { JobsList } from "@/components/JobsList";
 import { JobsPageSkeleton } from "@/components/JobsPageSkeleton";
 import { JobStats } from "@/components/JobStats";
 import { PermalinkQueueSection } from "@/components/PermalinkQueueSection";
+import { ScraperRunsSection } from "@/components/ScraperRunsSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/lib/ToastContext";
 
-import type { Job } from "@/lib/types";
+import type { Job, ScraperRun } from "@/lib/types";
 
 const JOBS_LIMIT = 50;
 const POLL_INTERVAL_MS = 8000;
@@ -29,9 +30,11 @@ export default function JobsPage() {
   const [finishedFilter, setFinishedFilter] =
     useState<FinishedStatusFilter>("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
+  const [scraperRuns, setScraperRuns] = useState<ScraperRun[]>([]);
 
   const fetchJobs = useCallback(async () => {
     setError(null);
@@ -62,9 +65,24 @@ export default function JobsPage() {
     }
   }, []);
 
+  const fetchScraperRuns = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/scraper-runs?days=7");
+      if (!res.ok) return;
+      const json: { data: ScraperRun[] } = await res.json();
+      setScraperRuns(json.data ?? []);
+    } catch {
+      // Non-fatal; leave scraper runs as-is
+    }
+  }, []);
+
   useEffect(() => {
     void fetchJobs();
   }, [fetchJobs]);
+
+  useEffect(() => {
+    void fetchScraperRuns();
+  }, [fetchScraperRuns]);
 
   useEffect(() => {
     const hasActiveRecompute = jobs.some(
@@ -107,6 +125,55 @@ export default function JobsPage() {
       setIsCancelling(false);
     }
   }, [cancelConfirmJobId, fetchJobs, jobs, permalinkJobs, toast]);
+
+  const handleRetry = useCallback(
+    async (jobId: string) => {
+      setIsRetrying(true);
+      try {
+        const res = await fetch(`/api/admin/jobs/${jobId}/retry`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            (data as { error?: string }).error ?? "Failed to retry job"
+          );
+        }
+        await fetchJobs();
+        toast.success("Job queued for retry.");
+      } catch {
+        toast.error("Failed to retry job.");
+      } finally {
+        setIsRetrying(false);
+      }
+    },
+    [fetchJobs, toast]
+  );
+
+  const handleScraperRetry = useCallback(
+    async (run: ScraperRun) => {
+      try {
+        const res = await fetch("/api/admin/trigger-scrape", {
+          body: JSON.stringify({
+            feed_type: run.feed_type === "trending" ? "trending" : "recent",
+          }),
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            (data as { error?: string }).error ?? "Failed to trigger scrape"
+          );
+        }
+        await fetchScraperRuns();
+        toast.success("Scrape job queued; the worker will run it shortly.");
+      } catch {
+        toast.error("Failed to trigger scrape.");
+      }
+    },
+    [fetchScraperRuns, toast]
+  );
 
   // Queue: all pending/running (no filter). Finished: filter by outcome.
   const queueJobs = jobs
@@ -252,6 +319,11 @@ export default function JobsPage() {
           <JobStats jobs={jobs} />
         </Card>
 
+        <ScraperRunsSection
+          onRetry={handleScraperRetry}
+          runs={scraperRuns}
+        />
+
         <section className="mb-8">
           <PermalinkQueueSection
             onCancel={handleRequestCancel}
@@ -281,6 +353,7 @@ export default function JobsPage() {
           title="Finished Jobs"
           variant="finished"
           onCancel={handleRequestCancel}
+          onRetry={isRetrying ? undefined : handleRetry}
         />
 
         <ConfirmModal
