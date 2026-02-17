@@ -24,7 +24,7 @@ export default function Home() {
       </section>
 
       {/* Content: sports fact and stats; same fade duration and gap as above */}
-      <div className="mx-auto max-w-5xl px-6 pb-16 pt-20">
+      <div className="mx-auto max-w-5xl space-y-16 px-6 pb-16 pt-20">
         <div
           className="animate-fade-in-up-slow opacity-0"
           style={{ animationDelay: "2.8s" } as React.CSSProperties}

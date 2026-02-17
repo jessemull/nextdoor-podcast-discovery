@@ -96,13 +96,13 @@ function StatsSection({
   stats: null | StatsResponse;
 }) {
   return (
-    <section>
+    <section className="min-w-0">
       {!hideHeading && (
         <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
           Stats
         </h2>
       )}
-      <div className={STATS_GRID_CLASS}>
+      <div className={`min-w-0 overflow-x-auto ${STATS_GRID_CLASS}`}>
         {loading
           ? [...Array(8)].map((_, i) => (
               <div
@@ -188,13 +188,13 @@ function CategoriesSection({
   loading: boolean;
 }) {
   return (
-    <section>
+    <section className="min-w-0">
       {!hideHeading && (
         <h3 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
           Top Categories (30 Days)
         </h3>
       )}
-      <div className={STATS_GRID_CLASS}>
+      <div className={`min-w-0 overflow-x-auto ${STATS_GRID_CLASS}`}>
         {loading
           ? [...Array(8)].map((_, i) => (
               <div
