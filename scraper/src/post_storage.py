@@ -87,12 +87,20 @@ class PostStorage:
         if not posts:
             return stats
 
+        # Resolve all unique neighborhood names in one batch
+        unique_names = sorted(
+            {post.neighborhood or "Unknown" for post in posts},
+            key=str,
+        )
+        name_to_id = self._resolve_neighborhoods_batch(unique_names)
+
         # Prepare all post data for batch insert
 
         posts_data = []
 
         for post in posts:
-            neighborhood_id = self._get_or_create_neighborhood(post.neighborhood)
+            name = post.neighborhood or "Unknown"
+            neighborhood_id = name_to_id.get(name)
             if not neighborhood_id:
                 logger.warning(
                     "Could not get neighborhood ID for: %s", post.neighborhood
@@ -447,6 +455,61 @@ class PostStorage:
                 return neighborhood_id
 
         return None
+
+    def _resolve_neighborhoods_batch(
+        self, names: list[str]
+    ) -> dict[str, str]:
+        """Resolve neighborhood names to IDs in one batch.
+
+        Batch-selects existing neighborhoods by slug, inserts missing ones,
+        and updates the cache.
+
+        Args:
+            names: Unique neighborhood names (use "Unknown" for None).
+
+        Returns:
+            Dict mapping name -> neighborhood_id.
+        """
+        if not names:
+            return {}
+
+        # Build name -> slug and slug -> name (for reverse lookup)
+        name_to_slug: dict[str, str] = {}
+        for name in names:
+            if name not in name_to_slug:
+                name_to_slug[name] = self._name_to_slug(name)
+        slugs = list(name_to_slug.values())
+        slug_to_name = {v: k for k, v in name_to_slug.items()}
+
+        # Batch select existing neighborhoods
+        result = (
+            self.supabase.table("neighborhoods")
+            .select("id, slug")
+            .in_("slug", slugs)
+            .execute()
+        )
+        found_slugs: set[str] = set()
+        name_to_id: dict[str, str] = {}
+        for row in result.data or []:
+            row_dict = cast(dict[str, str], row)
+            slug = row_dict.get("slug")
+            neighborhood_id = row_dict.get("id")
+            if slug and neighborhood_id:
+                found_slugs.add(slug)
+                name = slug_to_name.get(slug, slug)
+                name_to_id[name] = neighborhood_id
+                self._neighborhood_cache[name] = neighborhood_id
+
+        # Insert missing neighborhoods one-by-one (with race-condition retry)
+        for name, slug in name_to_slug.items():
+            if slug in found_slugs:
+                continue
+            neighborhood_id = self._get_or_create_neighborhood(name)
+            if neighborhood_id:
+                name_to_id[name] = neighborhood_id
+                found_slugs.add(slug)
+
+        return name_to_id
 
     def _name_to_slug(self, name: str) -> str:
         """Convert neighborhood name to slug.

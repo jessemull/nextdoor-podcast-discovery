@@ -127,8 +127,8 @@ Tracked list of product and system improvements to complete.
   - When post text is truncated, add a line to the prompt (e.g. “[Text truncated at 2000 characters]”) or a field in the expected JSON so the model and downstream logic can account for partial content.
 - [ ] **Few-shot examples in scoring prompt** (blocked: cousin needs to score things first)
   - Add 1–2 few-shot examples (short post → full JSON) to improve consistency; optional and tunable for token cost. **Note:** Best examples come from cousin’s labeled data (saved / used_on_episode)—pick real “good” and “bad” posts he’s marked.
-- [ ] **New dimension backfill**
-  - When adding a new scoring dimension: document that existing posts get default (5.0) for that dimension unless re-scored; optionally support a backfill job to re-score only for the new dimension (or full re-score) for consistency.
+- [x] **New dimension backfill**
+  - When adding a new scoring dimension: document that existing posts get default (5.0) for that dimension unless re-scored; optionally support a backfill job to re-score only for the new dimension (or full re-score) for consistency. Documented in docs/IMPROVEMENTS_BACKFILL_EMBEDDER_STORAGE.md; backfill via full re-score from Settings.
 - [x] **Cold-start novelty behavior**
   - When topic_frequencies is empty or total scored posts < N, use novelty multiplier 1.0 (neutral) instead of max boost to avoid boosting all early posts.
 - [ ] **Validate weight config keys against known SCORING_DIMENSIONS**
@@ -149,12 +149,12 @@ Tracked list of product and system improvements to complete.
 - [ ] **Batch DB writes in LLM scorer**
   - **llm_scores:** Currently upserted one row per result in a loop. Build full list and call a single `.upsert(...).execute()` for the batch.
   - **Topic frequencies:** One RPC or select+upsert per category per batch. Add or use a batch RPC that accepts multiple (category, increment) pairs (or single transaction) instead of one round-trip per category.
-- [ ] **Embedder: process in chunks instead of full-table load**
-  - `generate_and_store_embeddings()` loads all `posts` (id, text) and all `post_embeddings` (post_id) into memory. Use an RPC like `get_posts_without_embeddings(limit N)` or paginated/cursor query; process N posts at a time, then fetch next chunk. Avoid loading full tables into memory.
+- [x] **Embedder: process in chunks instead of full-table load**
+  - `generate_and_store_embeddings()` loads all `posts` (id, text) and all `post_embeddings` (post_id) into memory. Use an RPC like `get_posts_without_embeddings(limit N)` or paginated/cursor query; process N posts at a time, then fetch next chunk. Avoid loading full tables into memory. Implemented: RPC `get_posts_without_embeddings(lim)`; embedder loops until chunk empty.
 - [ ] **Worker: throttle cancel checks and progress updates**
   - Recompute job does a DB round-trip to check cancellation and one to update progress every batch. Check cancellation every N batches (e.g. 5); throttle progress updates (e.g. every N batches or every M seconds); still set final progress on completion.
-- [ ] **Post storage: batch neighborhood lookups**
-  - For each batch, collect unique neighborhood names; batch-fetch existing by slug (e.g. `in("slug", slugs)`); batch-insert missing; fill cache and use when building `posts_data`. Reduces round-trips when many distinct neighborhoods appear in one scrape batch.
+- [x] **Post storage: batch neighborhood lookups**
+  - For each batch, collect unique neighborhood names; batch-fetch existing by slug (e.g. `in("slug", slugs)`); batch-insert missing; fill cache and use when building `posts_data`. Reduces round-trips when many distinct neighborhoods appear in one scrape batch. Implemented: `_resolve_neighborhoods_batch()` in post_storage.py.
 - [ ] **Scraper: Fix programmatic scroll to trigger infinite-load**
   - Manual scrolling loads new posts indefinitely; programmatic `window.scrollBy()` does not trigger Nextdoor's infinite scroll. Try wheel/touch simulation, Playwright native scroll, or scroll-into-view on sentinel elements so more posts load during extraction.
 - [ ] **Scraper: tune scroll delay for speed vs reliability**
@@ -239,9 +239,9 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§5 — Explore incorporating comments into scoring:** Dropped—token cost prohibitive for 100+ comments; use comment_count as metadata if needed.
 - [x] **§4 — Stale post data:** Manual Update button + permalink queue; worker rescrapes and updates reaction_count, comments, text, image_urls.
 - [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost. (Blocked: cousin needs to score things first—use his labeled posts as examples.)
-- [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
-- [ ] **§14 — Embedder: chunked processing:** Use RPC like `get_posts_without_embeddings(limit N)` or paginated query; process in chunks to avoid loading full tables.
-- [ ] **§14 — Post storage: batch neighborhood lookups:** Per batch, collect unique neighborhood names; batch-fetch by slug, batch-insert missing; use cache when building posts_data.
+- [x] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; backfill via full re-score from Settings. See docs/IMPROVEMENTS_BACKFILL_EMBEDDER_STORAGE.md.
+- [x] **§14 — Embedder: chunked processing:** RPC `get_posts_without_embeddings(lim)`; embedder loops until chunk empty; bounded memory.
+- [x] **§14 — Post storage: batch neighborhood lookups:** `_resolve_neighborhoods_batch()` batch-selects by slug, inserts missing; one map for posts_data.
 - [ ] **§14 — Scraper: Fix programmatic scroll to trigger infinite-load:** Use wheel/touch simulation, Playwright native scroll, or sentinel scroll-into-view so Nextdoor loads more posts during extraction.
 - [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
 - [x] **§8 — Structured scoring log and feedback loop:** Persist post id, prompt hash, model output summary, final_score, used_on_episode; use for tuning prompts/weights. (Blocked: cousin needs to score things first.)

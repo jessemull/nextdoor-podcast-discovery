@@ -87,6 +87,7 @@ def _aggregate_ensemble_results(
         # Median per dimension
         aggregated_scores: dict[str, float] = {}
         for dim in SCORING_DIMENSIONS:
+            # Missing dimension defaults to 5.0; see docs on new dimension backfill
             values = [
                 r.scores.get(dim, 5.0)
                 for r in valid_runs
@@ -111,6 +112,7 @@ def _aggregate_ensemble_results(
         categories = [c for c, _ in sorted_cats[:3]]
 
         # Summary and why_podcast_worthy from run closest to median podcast_worthy
+        # Missing podcast_worthy defaults to 5.0; see docs on new dimension backfill
         median_pw = statistics.median(
             r.scores.get("podcast_worthy", 5.0) for r in valid_runs
         )
@@ -521,8 +523,7 @@ class LLMScorer:
             if result.error or not result.scores:
                 continue
 
-            # Calculate weighted score
-
+            # Calculate weighted score; missing dimension defaults to 5.0 (see docs)
             weighted_sum = sum(
                 result.scores.get(dim, 5.0) * weights.get(dim, 1.0)
                 for dim in SCORING_DIMENSIONS

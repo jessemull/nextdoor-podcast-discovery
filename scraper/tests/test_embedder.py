@@ -76,12 +76,9 @@ class TestEmbedder:
 
     def test_generate_and_store_embeddings_no_posts(self, embedder: Embedder) -> None:
         """Should return zero stats when no posts need embeddings."""
-        embedder.supabase.table.return_value.select.return_value.not_.is_.return_value.execute.return_value.data = (
-            []
-        )
-        embedder.supabase.table.return_value.select.return_value.execute.return_value.data = (
-            []
-        )
+        rpc_result = mock.MagicMock()
+        rpc_result.data = []
+        embedder.supabase.rpc.return_value.execute.return_value = rpc_result
 
         stats = embedder.generate_and_store_embeddings()
 
@@ -90,19 +87,15 @@ class TestEmbedder:
     def test_generate_and_store_embeddings_skips_existing(
         self, embedder: Embedder
     ) -> None:
-        """Should skip posts that already have embeddings."""
-        # Mock posts
-        posts_data = [
-            {"id": "post-1", "text": "First post"},
-            {"id": "post-2", "text": "Second post"},
-        ]
-        embedder.supabase.table.return_value.select.return_value.not_.is_.return_value.execute.return_value.data = (
-            posts_data
-        )
-
-        # Mock existing embeddings
-        embedder.supabase.table.return_value.select.return_value.execute.return_value.data = [
-            {"post_id": "post-1"}
+        """Should skip posts that already have embeddings (RPC filters DB-side)."""
+        # First RPC call returns post without embedding; second returns empty (chunk done)
+        rpc_first = mock.MagicMock()
+        rpc_first.data = [{"id": "post-2", "text": "Second post"}]
+        rpc_second = mock.MagicMock()
+        rpc_second.data = []
+        embedder.supabase.rpc.return_value.execute.side_effect = [
+            rpc_first,
+            rpc_second,
         ]
 
         # Mock OpenAI response for post-2
@@ -128,13 +121,14 @@ class TestEmbedder:
 
     def test_generate_and_store_embeddings_dry_run(self, embedder: Embedder) -> None:
         """Should not store embeddings in dry run mode."""
-        posts_data = [{"id": "post-1", "text": "Test post"}]
-        embedder.supabase.table.return_value.select.return_value.not_.is_.return_value.execute.return_value.data = (
-            posts_data
-        )
-        embedder.supabase.table.return_value.select.return_value.execute.return_value.data = (
-            []
-        )
+        rpc_first = mock.MagicMock()
+        rpc_first.data = [{"id": "post-1", "text": "Test post"}]
+        rpc_second = mock.MagicMock()
+        rpc_second.data = []
+        embedder.supabase.rpc.return_value.execute.side_effect = [
+            rpc_first,
+            rpc_second,
+        ]
 
         mock_response = mock.MagicMock()
         mock_response.data = [mock.MagicMock(embedding=[0.1] * EMBEDDING_DIMENSIONS)]
@@ -147,18 +141,19 @@ class TestEmbedder:
         embedder.supabase.table.return_value.upsert.assert_not_called()
 
     def test_generate_and_store_embeddings_batches(self, embedder: Embedder) -> None:
-        """Should process posts in batches."""
-        # Create more posts than batch size
+        """Should process posts in batches within chunk."""
         posts_data = [
             {"id": f"post-{i}", "text": f"Post {i}"}
             for i in range(EMBEDDING_BATCH_SIZE + 10)
         ]
-        embedder.supabase.table.return_value.select.return_value.not_.is_.return_value.execute.return_value.data = (
-            posts_data
-        )
-        embedder.supabase.table.return_value.select.return_value.execute.return_value.data = (
-            []
-        )
+        rpc_first = mock.MagicMock()
+        rpc_first.data = posts_data
+        rpc_second = mock.MagicMock()
+        rpc_second.data = []
+        embedder.supabase.rpc.return_value.execute.side_effect = [
+            rpc_first,
+            rpc_second,
+        ]
 
         # Mock embeddings response
         mock_response = mock.MagicMock()

@@ -84,10 +84,12 @@ class TestPostStorage:
         self, storage: PostStorage, sample_post: RawPost
     ) -> None:
         """Should insert posts successfully."""
-        # Mock neighborhood lookup
+        # Mock batch neighborhood lookup (in_ returns existing)
         neighborhood_result = mock.MagicMock()
-        neighborhood_result.data = [{"id": "neighborhood-uuid"}]
-        storage.supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+        neighborhood_result.data = [
+            {"id": "neighborhood-uuid", "slug": "test-neighborhood"}
+        ]
+        storage.supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = (
             neighborhood_result
         )
 
@@ -108,10 +110,12 @@ class TestPostStorage:
         self, storage: PostStorage, sample_post: RawPost
     ) -> None:
         """Should fall back to individual inserts when batch fails."""
-        # Mock neighborhood lookup
+        # Mock batch neighborhood lookup
         neighborhood_result = mock.MagicMock()
-        neighborhood_result.data = [{"id": "neighborhood-uuid"}]
-        storage.supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+        neighborhood_result.data = [
+            {"id": "neighborhood-uuid", "slug": "test-neighborhood"}
+        ]
+        storage.supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = (
             neighborhood_result
         )
 
@@ -136,10 +140,12 @@ class TestPostStorage:
         self, storage: PostStorage, sample_post: RawPost
     ) -> None:
         """Should skip duplicate posts."""
-        # Mock neighborhood lookup
+        # Mock batch neighborhood lookup
         neighborhood_result = mock.MagicMock()
-        neighborhood_result.data = [{"id": "neighborhood-uuid"}]
-        storage.supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+        neighborhood_result.data = [
+            {"id": "neighborhood-uuid", "slug": "test-neighborhood"}
+        ]
+        storage.supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = (
             neighborhood_result
         )
 
@@ -159,10 +165,12 @@ class TestPostStorage:
         self, storage: PostStorage, sample_post: RawPost
     ) -> None:
         """Should handle duplicate errors in individual inserts."""
-        # Mock neighborhood lookup
+        # Mock batch neighborhood lookup
         neighborhood_result = mock.MagicMock()
-        neighborhood_result.data = [{"id": "neighborhood-uuid"}]
-        storage.supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+        neighborhood_result.data = [
+            {"id": "neighborhood-uuid", "slug": "test-neighborhood"}
+        ]
+        storage.supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = (
             neighborhood_result
         )
 
@@ -180,6 +188,56 @@ class TestPostStorage:
 
         assert result["skipped"] == 1
         assert result["errors"] == 0
+
+    def test_store_posts_batch_neighborhood_lookup(
+        self, storage: PostStorage
+    ) -> None:
+        """Should use batch neighborhood lookup for multiple distinct neighborhoods."""
+        posts = [
+            RawPost(
+                author_id="a1",
+                author_name="A",
+                content="Post 1",
+                content_hash="h1",
+                image_urls=[],
+                neighborhood="Hood A",
+                post_url="https://nextdoor.com/p/X1",
+                reaction_count=0,
+                timestamp_relative="1h",
+            ),
+            RawPost(
+                author_id="a2",
+                author_name="B",
+                content="Post 2",
+                content_hash="h2",
+                image_urls=[],
+                neighborhood="Hood B",
+                post_url="https://nextdoor.com/p/X2",
+                reaction_count=0,
+                timestamp_relative="2h",
+            ),
+        ]
+        # Batch select returns both neighborhoods
+        neighborhood_result = mock.MagicMock()
+        neighborhood_result.data = [
+            {"id": "uuid-a", "slug": "hood-a"},
+            {"id": "uuid-b", "slug": "hood-b"},
+        ]
+        storage.supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = (
+            neighborhood_result
+        )
+        insert_result = mock.MagicMock()
+        insert_result.data = [{"id": "p1"}, {"id": "p2"}]
+        storage.supabase.table.return_value.upsert.return_value.execute.return_value = (
+            insert_result
+        )
+
+        result = storage.store_posts(posts)
+
+        assert result["inserted"] == 2
+        assert result["errors"] == 0
+        # Batch neighborhood select should be called once (in_ not per-neighborhood)
+        storage.supabase.table.return_value.select.return_value.in_.assert_called_once()
 
     def test_get_or_create_neighborhood_returns_existing(
         self, storage: PostStorage
