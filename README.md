@@ -1,6 +1,6 @@
 # Nextdoor Podcast Discovery Platform
 
-Automatically discover, analyze, and curate interesting Nextdoor posts for podcast content. This monorepo contains the **scraper** (Python), **web dashboard** (Next.js), **database migrations**, and **scripts**—all designed to run on free tiers and minimal API cost (~$1–2/month).
+Automatically discover, analyze, and curate interesting Nextdoor posts for podcast content. This monorepo contains the **scraper** (Python), **web dashboard** (Next.js), **database migrations**, and **scripts**—all designed to run on free tiers and minimal API cost (~$2–4/month).
 
 ## Table of Contents
 
@@ -56,7 +56,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 | Automated scraping | Playwright (Chromium), mobile viewport; scroll-based extraction from Recent or Trending feed |
 | Session persistence | Encrypted Nextdoor cookies in Supabase; reuse login across runs (fewer CAPTCHAs) |
 | Deduplication | Content hash + `(neighborhood_id, hash)`; duplicates skipped at insert |
-| LLM scoring | Claude Haiku: absurdity, drama, humor, relatability; tags, summary; configurable weights |
+| LLM scoring | Claude Haiku: ensemble (3 runs, median aggregation) for absurdity, drama, humor, relatability; tags, summary; configurable weights; ~3x API cost |
 | Novelty adjustment | 30-day topic frequency boosts rare topics, dampens over-posted ones (e.g. coyote #47) |
 | Embeddings | Standalone `embed` script: OpenAI embeddings for unscored posts (no browser); powers semantic search |
 | Topic recount | `recount_topics` updates 30-day topic counts for novelty |
@@ -283,7 +283,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 **Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
 
-**Scoring:** `LLMScorer` fetches unscored posts, batches them, calls Claude Haiku, computes final score (weights + novelty), and upserts `llm_scores` and topic frequencies.
+**Scoring:** `LLMScorer` fetches unscored posts, batches them, runs each batch 3 times (temperature 0.3) for ensemble variance, aggregates with median per dimension, computes final score (weights + novelty), and upserts `llm_scores` and topic frequencies.
 
 **Embeddings:** `python -m src.embed` (no browser) reads posts with scores but no embedding, batches to OpenAI, and writes `post_embeddings`.
 
@@ -332,16 +332,16 @@ Both scrape workflows use GitHub Secrets (Nextdoor, Supabase, Anthropic, OpenAI,
 
 ## Cost
 
-Target **~$1–2/month**:
+Target **~$2–4/month**:
 
 | Service | Cost |
 | :------ | :--- |
 | Supabase | Free (500MB) |
 | Vercel | Free (Hobby) |
 | GitHub Actions | Free (2,000 min/month; scrape uses a few min/day) |
-| Claude Haiku | ~$0.50–1.00 (scoring + sports facts) |
+| Claude Haiku | ~$1.50–3.00 (ensemble scoring 3x + sports facts) |
 | OpenAI embeddings | ~$0.10–0.50 |
-| **Total** | **~$1–2/month** |
+| **Total** | **~$2–4/month** |
 
 More posts → more tokens; stay within Supabase 500MB (roughly tens of thousands of posts with embeddings).
 

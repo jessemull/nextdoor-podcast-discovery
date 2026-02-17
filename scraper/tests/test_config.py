@@ -11,6 +11,8 @@ from src.config import (
     EMBEDDING_BATCH_SIZE,
     EMBEDDING_DIMENSIONS,
     EMBEDDING_MODEL,
+    ENSEMBLE_RUNS,
+    ENSEMBLE_TEMPERATURE,
     REQUIRED_ENV_VARS,
     SCRAPER_CONFIG,
     validate_env,
@@ -27,6 +29,14 @@ class TestConstants:
     def test_claude_max_tokens_is_reasonable(self) -> None:
         """Max tokens should be reasonable for scoring responses."""
         assert 100 <= CLAUDE_MAX_TOKENS <= 1000
+
+    def test_ensemble_runs_is_three(self) -> None:
+        """Ensemble scoring should run 3 times per batch."""
+        assert ENSEMBLE_RUNS == 3
+
+    def test_ensemble_temperature(self) -> None:
+        """Ensemble temperature should be set for variance."""
+        assert 0 < ENSEMBLE_TEMPERATURE <= 1.0
 
     def test_embedding_model_is_small(self) -> None:
         """Should use small embedding model for cost optimization."""

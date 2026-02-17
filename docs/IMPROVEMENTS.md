@@ -92,6 +92,9 @@ Tracked list of product and system improvements to complete.
   - Saved = “interesting for podcast”; used_on_episode = “actually made the show.” Use these as labels to compare system scores vs human behavior and tune prompts/weights. Optional: add a small hand-labeled set (50–200 posts) for stricter calibration.
 - [x] **Permalink queue and scraper job for high-value posts**
   - Settings: permalink input; post detail Update button; fetch_permalink jobs (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
+- [ ] **Bulk reprocess action (with limit)**
+  - Allow reprocessing multiple posts (re-fetch, re-score, re-embed) in bulk—e.g. from feed selection or a "Reprocess" admin action. Cannot reprocess all data; add a limit (e.g. max 50–100 per run) to avoid runaway cost and load. Define UI and API for selection + limit.
+
 
 ---
 
@@ -105,9 +108,9 @@ Tracked list of product and system improvements to complete.
 
 ## 12. Ensemble scoring (3 runs, median)
 
-- [ ] **Score each post 3 times; store median (or average) of dimension scores**
-  - Run the same batch 3 times (e.g. same prompt, slight temperature or phrasing variation); aggregate per dimension (e.g. median) then compute final_score from aggregated dimensions. Reduces LLM noise.
-  - Cost: ~3× current scoring API cost for the same set of posts. Batching is unchanged (still batches of 5 posts per call; do 3 calls per logical batch). Implementation is straightforward.
+- [x] **Score each post 3 times; store median (or average) of dimension scores**
+  - Run the same batch 3 times (temperature 0.3); aggregate per dimension with median; majority vote for categories; summary/why from run closest to median podcast_worthy. Reduces LLM noise.
+  - Cost: ~3× scoring API cost. Batching unchanged (5 posts per call; 3 calls per logical batch).
 
 ---
 
@@ -174,6 +177,16 @@ Tracked list of product and system improvements to complete.
 | Scraper scroll | 2–5s random delay | Tune range (e.g. 1–3s); make configurable |
 | Embedding cache (optional) | In-memory per instance | Shared KV/Redis for cross-instance hits |
 | Neighborhoods API (optional) | No caching | Cache-Control for 60s or similar |
+
+---
+
+## Permalink queue (completed)
+
+- [x] Upsert Post section with input and Submit button
+- [x] Post Queue shows only pending/running; Processed section shows recent completed/failed/cancelled (last 20)
+- [x] Delete (remove from queue) for pending/running; View Post opens Nextdoor permalink
+- [x] Permalink fetch job always runs score + embed (no flags needed)
+- [x] Validation allows underscores in permalink IDs
 
 ---
 
