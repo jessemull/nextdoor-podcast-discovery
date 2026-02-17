@@ -88,12 +88,10 @@ export default function JobsPage() {
     const isPermalink = job?.type === "fetch_permalink";
     setIsCancelling(true);
     try {
-      const url = isPermalink
-        ? `/api/admin/jobs/${cancelConfirmJobId}`
-        : `/api/admin/jobs/${cancelConfirmJobId}/cancel`;
-      const res = await fetch(url, {
-        method: isPermalink ? "DELETE" : "PUT",
-      });
+      const res = await fetch(
+        `/api/admin/jobs/${cancelConfirmJobId}/cancel`,
+        { method: "PUT" }
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(

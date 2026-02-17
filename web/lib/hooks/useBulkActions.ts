@@ -2,7 +2,12 @@
 
 import { useCallback, useState } from "react";
 
-export type BulkActionType = "ignore" | "mark_used" | "save" | "unignore";
+export type BulkActionType =
+  | "ignore"
+  | "mark_used"
+  | "reprocess"
+  | "save"
+  | "unignore";
 
 export interface BulkQuery {
   category?: string;
@@ -27,7 +32,9 @@ export interface UseBulkActionsParams {
 export interface BulkActionOptions {
   applyToQuery: boolean;
   onError?: (message: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (data?: {
+    data?: { jobs_queued?: number; skipped?: number; updated?: number };
+  }) => void;
 }
 
 export interface UseBulkActionsResult {
@@ -93,9 +100,10 @@ export function useBulkActions({
           throw new Error(data.error ?? "Bulk action failed");
         }
 
+        const data = await response.json();
         setSelectedIds(new Set());
         await fetchPosts(offset);
-        onSuccess?.();
+        onSuccess?.(data);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Bulk action failed";
