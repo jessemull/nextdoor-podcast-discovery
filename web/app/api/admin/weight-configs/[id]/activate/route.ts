@@ -92,7 +92,7 @@ export async function PUT(
       .update({ is_active: true })
       .eq("id", configId);
 
-    invalidateActiveConfigCache();
+    await invalidateActiveConfigCache();
 
     return NextResponse.json({
       data: {

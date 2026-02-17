@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       similarity_threshold: validThreshold,
     } = parsed.data;
 
-    let queryEmbedding: null | number[] = getCachedEmbedding(
+    let queryEmbedding: null | number[] = await getCachedEmbedding(
       trimmedQuery,
       validThreshold
     );
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       queryEmbedding = embeddingResponse.data[0].embedding;
 
       if (queryEmbedding) {
-        setCachedEmbedding(trimmedQuery, validThreshold, queryEmbedding);
+        await setCachedEmbedding(trimmedQuery, validThreshold, queryEmbedding);
       }
     }
 

@@ -24,9 +24,9 @@ Tracked list of product and system improvements to complete.
 
 ## 3. Scoring and worker correctness
 
-- [ ] **Clamp final_score to [0, 10] in scorer and worker**
+- [x] **Clamp final_score to [0, 10] in scorer and worker**
   - Normalized × novelty can exceed 10 (e.g. 10 × 1.5 = 15). Clamp in `calculate_final_scores` (llm_scorer) and `calculate_final_score` (worker) so feed/UI semantics are consistent.
-- [ ] **Add ORDER BY id to worker's llm_scores batch query**
+- [x] **Add ORDER BY id to worker's llm_scores batch query**
   - Recompute job fetches batches without a stable order; add `.order("id")` (or `created_at`) for deterministic pagination and to avoid skip/duplicate rows.
 
 ---
@@ -254,3 +254,15 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
 - [x] **§10 — Bulk reprocess (Refresh Posts):** Bulk action on selected posts to queue fetch_permalink jobs; no per-run limit initially.
 - [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).
+
+---
+
+## Remaining tasks (implementable now)
+
+Items below are **not** blocked on cousin scoring / human labels. Cousin-dependent items (e.g. §8 scoring log, §10 calibration, §13 few-shot examples) are omitted from this list.
+
+- [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors. Implement as follow-up so we don’t omit posts that would have scored well in full scoring.
+- [ ] **§14 — Scraper: Fix programmatic scroll to trigger infinite-load:** Use wheel/touch simulation, Playwright native scroll, or sentinel scroll-into-view so Nextdoor loads more posts during extraction.
+- [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
+- [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) for cross-instance cache hits.
+- [ ] **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods) for browser/CDN caching.
