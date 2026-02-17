@@ -93,7 +93,7 @@ Tracked list of product and system improvements to complete.
   - Optional: Short in-app or doc note: "Save posts you're considering; after the episode, mark the ones you used."
 - [x] **Permalink queue and scraper job for high-value posts**
   - Settings: permalink input; post detail Update button; fetch_permalink jobs (e.g. cousin finds posts we don’t scrape). Job runs x times per day: fetch each permalink page, scrape the single post, store and score it. Ensures high-value posts from outside the main feed get into the system.
-- [ ] **Bulk reprocess action**
+- [x] **Bulk reprocess action**
   - Enable reprocess (re-fetch, re-score, re-embed) as a bulk action on selected posts in the feed—same pattern as “Mark as used.” Ship without a per-run limit first; see how it’s used. Add a cap (e.g. max 50–100 per run) later if cost or load becomes an issue.
 
 
@@ -252,4 +252,5 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors. (Follow-up: do this so we don’t omit things we want.)
 - [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
+- [x] **§10 — Bulk reprocess (Refresh Posts):** Bulk action on selected posts to queue fetch_permalink jobs; no per-run limit initially.
 - [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).
