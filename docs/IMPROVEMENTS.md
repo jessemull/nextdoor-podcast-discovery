@@ -159,10 +159,10 @@ Tracked list of product and system improvements to complete.
   - Manual scrolling loads new posts indefinitely; programmatic `window.scrollBy()` does not trigger Nextdoor's infinite scroll. Try wheel/touch simulation, Playwright native scroll, or scroll-into-view on sentinel elements so more posts load during extraction.
 - [ ] **Scraper: tune scroll delay for speed vs reliability**
   - Current `scroll_delay_ms` (2000, 5000) increases total scrape time. Consider lower range (e.g. 1–3s); document or monitor for rate limits/CAPTCHA; make range configurable via env if needed.
-- [ ] **(Optional) Shared embedding cache for search**
-  - In-memory cache is per serverless instance; repeated identical searches on other instances miss cache. If search traffic justifies it, consider shared cache (e.g. Vercel KV or Redis) for query embeddings. Document cost/benefit.
-- [ ] **(Optional) Cacheable responses for stable data**
-  - For read-heavy, relatively stable endpoints (e.g. GET /api/neighborhoods), add short-lived `Cache-Control` headers (e.g. `max-age=60`) so browsers/CDN can cache and reduce latency for repeat visits.
+- [x] **(Optional) Shared embedding cache for search**
+  - In-memory cache is per serverless instance; repeated identical searches on other instances miss cache. Implemented: Upstash Redis for query embeddings (L1 in-memory + Redis); Cache-Control for GET /api/neighborhoods and GET /api/stats; neighborhoods via React Query. See web/lib/redis.server.ts and docs.
+- [x] **(Optional) Cacheable responses for stable data**
+  - For read-heavy, relatively stable endpoints (e.g. GET /api/neighborhoods), add short-lived `Cache-Control` headers (e.g. `max-age=60`) so browsers/CDN can cache and reduce latency for repeat visits. Implemented: private, max-age=60 for neighborhoods, max-age=30 for stats.
 
 | Area | Current behavior | Improvement |
 |------|------------------|-------------|
@@ -253,7 +253,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors. (Follow-up: do this so we don’t omit things we want.)
 - [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
 - [x] **§10 — Bulk reprocess (Refresh Posts):** Bulk action on selected posts to queue fetch_permalink jobs; no per-run limit initially.
-- [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).
+- [x] **§14 — (Optional) Shared embedding cache** for search (Upstash Redis + L1 in-memory) and **§14 — (Optional) Cacheable responses** (Cache-Control for GET /api/neighborhoods, GET /api/stats); neighborhoods via React Query.
 
 ---
 
@@ -264,5 +264,3 @@ Items below are **not** blocked on cousin scoring / human labels. Cousin-depende
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors. Implement as follow-up so we don’t omit posts that would have scored well in full scoring.
 - [ ] **§14 — Scraper: Fix programmatic scroll to trigger infinite-load:** Use wheel/touch simulation, Playwright native scroll, or sentinel scroll-into-view so Nextdoor loads more posts during extraction.
 - [ ] **§14 — Scraper: tune scroll delay:** Lower range (e.g. 1–3s), make configurable via env; document/monitor for rate limits/CAPTCHA.
-- [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) for cross-instance cache hits.
-- [ ] **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods) for browser/CDN caching.
