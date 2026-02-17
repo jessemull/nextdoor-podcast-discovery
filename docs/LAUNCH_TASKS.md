@@ -18,13 +18,11 @@ Single list of remaining work, bucketed by before vs after go-live. After go-liv
 
 - [x] Add **Retry** button in Jobs UI for jobs in `error` and `cancelled`.
 
-- [x] **Scraper runs section on Jobs page** — Scraper self-reports each run (success/error) to `scraper_runs`; Jobs page shows last 7 days and Retry for failed runs (creates `run_scraper` job).
+- [x] **Scraper runs section on Jobs page** — Scraper self-reports each run (success/error) to `scraper_runs`; Jobs page shows last 7 days, Retry for failed runs (creates `run_scraper` with `scraper_run_id`), and Queued state from DB per run.
 
 - [ ] Document prod env vars for laptop (see [Deployment](DEPLOYMENT.md#prod-env-vars-laptop-scraperworker)).
 
 - [ ] Write and test `scripts/setup-laptop-server.sh` (or equivalent) for your OS.
-
-- [ ] Set up Healthchecks.io (or similar) and set `HEALTHCHECK_URL` in scraper env (optional; for cron/alerting only; scraper run history is in our DB).
 
 - [ ] Document backup export (e.g. which tables, pg_dump command) and restore steps for your setup.
 
