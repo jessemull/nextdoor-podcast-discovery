@@ -54,6 +54,7 @@ interface JobsListProps {
   headerRightContent?: ReactNode;
   jobs: Job[];
   onCancel: (jobId: string) => void;
+  onRetry?: (jobId: string) => void | Promise<void>;
   showManageLink?: boolean;
   showStats?: boolean;
   title?: string;
@@ -86,6 +87,7 @@ export function JobsList({
   headerRightContent,
   jobs,
   onCancel,
+  onRetry,
   showManageLink = true,
   showStats = true,
   title = "Recent jobs",
@@ -153,7 +155,20 @@ export function JobsList({
                         Cancel
                       </button>
                     ) : (
-                      statusBadge
+                      <div className="flex shrink-0 items-center gap-2">
+                        {statusBadge}
+                        {onRetry &&
+                          (job.status === "error" ||
+                            job.status === "cancelled") && (
+                            <button
+                              className="border-emerald-500/70 bg-emerald-500/10 text-emerald-600 hover:bg-surface-hover shrink-0 rounded border px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-border-focus"
+                              type="button"
+                              onClick={() => onRetry(job.id)}
+                            >
+                              Retry
+                            </button>
+                          )}
+                      </div>
                     )}
                   </div>
 
