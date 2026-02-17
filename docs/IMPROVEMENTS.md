@@ -41,12 +41,10 @@ Tracked list of product and system improvements to complete.
 
 ## 5. Comments in the UI and scoring
 
-- [ ] **Show comments in the UI**
-  - Surface comment count and/or comment content where it makes sense (e.g. post card, post detail).
-  - Clarify data source (stored at scrape time vs live) and any limits.
-- [ ] **Explore incorporating comments into scoring**
-  - Comments are scraped and stored in `posts.comments` but not passed to the LLM scorer. Comments can be funny, add context, or boost podcast-worthiness.
-  - Tradeoff: more tokens per post (higher API cost) vs potentially more accurate scoring. Options to explore: include top N comments (truncated), summarize comments, or make it configurable. Document findings and recommend approach.
+- [x] **Show comments in the UI**
+  - Post card: comment count with link to detail. Post detail: expandable Comments section with author, text, timestamp; note "From scrape time — may have changed on Nextdoor."
+- [x] **Explore incorporating comments into scoring** (dropped)
+  - Token cost prohibitive—posts can have 100+ comments; full content would 2–4x token usage. Use `comment_count` as metadata in the prompt if a lightweight signal is needed.
 
 ---
 
@@ -234,8 +232,8 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 
 **Larger or product-dependent**
 
-- [ ] **§5 — Comments in the UI:** Surface comment count and/or content (post card/detail); clarify data source (scrape time vs live) and limits.
-- [ ] **§5 — Explore incorporating comments into scoring:** Comments are scraped but not used for scoring. Explore options (include top N, truncate, summarize); document tradeoffs (tokens vs accuracy).
+- [x] **§5 — Comments in the UI:** Post card shows count + link; detail page has expandable Comments section with scrape-time note.
+- [x] **§5 — Explore incorporating comments into scoring:** Dropped—token cost prohibitive for 100+ comments; use comment_count as metadata if needed.
 - [x] **§4 — Stale post data:** Manual Update button + permalink queue; worker rescrapes and updates reaction_count, comments, text, image_urls.
 - [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
 - [ ] **§13 — New dimension backfill:** Document default 5.0 for new dimensions; optional backfill job to re-score for new dimension or full re-score.
@@ -248,7 +246,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 - [x] **§7 — Replace ENV-based email whitelist:** Choose and implement one of Google Test users, Okta, or DB-backed list with admin UI (see docs/AUTH.md).
 - [x] **§1 — Runtime vs stored scores:** DB/app path to compute final_score from llm_scores + weights; feed toggle for "preview" (runtime) vs stored (after recompute).
 - [x] **§2 — Recompute job with clean cutover:** Staging table (e.g. post_scores_staging); on success, one transaction to replace post_scores for config and clear staging.
-- [ ] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
+- [x] **§12 — Ensemble scoring (3 runs, median):** Score each post 3 times; store median (or mean) per dimension then compute final_score; ~3× API cost.
 - [ ] **§11 — Two-pass scoring:** Pass 1 cheap keep/drop; Pass 2 full LLM scoring on survivors.
 - [x] **§10 — Permalink queue and scraper job:** Settings input + post detail Update button; fetch_permalink jobs; worker runs scraper --permalink; job monitoring in Settings.
 - [ ] **§14 — (Optional) Shared embedding cache** for search (e.g. Vercel KV/Redis) and **§14 — (Optional) Cacheable responses** (e.g. Cache-Control for GET /api/neighborhoods).

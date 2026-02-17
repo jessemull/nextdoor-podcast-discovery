@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
@@ -28,7 +28,9 @@ export function PostDetailClient({
     getQueueStatusForPost,
     refetch: refetchPermalinkJobs,
   } = usePermalinkJobs();
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
+  const commentsRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<null | string>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
@@ -204,6 +206,23 @@ export function PostDetailClient({
   }, [post?.url, postId, queuingRefresh, refetchPermalinkJobs, toast]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#comments") {
+      setCommentsExpanded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (
+      commentsExpanded &&
+      typeof window !== "undefined" &&
+      window.location.hash === "#comments"
+    ) {
+      commentsRef.current?.scrollIntoView({ behavior: "smooth" });
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [commentsExpanded]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
@@ -274,6 +293,61 @@ export function PostDetailClient({
             onQueueRefresh={handleQueueRefresh}
           />
         </div>
+
+        {/* Comments (expandable) */}
+        {(Array.isArray(post.comments) ? post.comments.length : 0) > 0 && (
+          <div
+            id="comments"
+            ref={commentsRef}
+          >
+            <Card className="mb-8">
+            <button
+              aria-expanded={commentsExpanded}
+              className="flex w-full items-center justify-between px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-border-focus"
+              type="button"
+              onClick={() => setCommentsExpanded((e) => !e)}
+            >
+              <h3 className="text-foreground text-base font-semibold">
+                Comments ({post.comments!.length})
+              </h3>
+              {commentsExpanded ? (
+                <ChevronUp aria-hidden className="h-5 w-5 text-muted" />
+              ) : (
+                <ChevronDown aria-hidden className="h-5 w-5 text-muted" />
+              )}
+            </button>
+            {commentsExpanded && (
+              <div className="pt-2">
+                <ul className="space-y-3">
+                  {post.comments!.map((comment, index) => (
+                    <li
+                      key={`${index}-${comment.text.slice(0, 20)}`}
+                      className="text-foreground border-border rounded-md border bg-surface-hover/50 px-3 py-2 text-sm"
+                    >
+                      {comment.author_name && (
+                        <span className="font-medium">
+                          {comment.author_name}
+                          {comment.timestamp_relative && (
+                            <span className="text-muted-foreground ml-2 font-normal">
+                              {comment.timestamp_relative}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      <p
+                        className="mt-1"
+                        style={{ opacity: 0.9 }}
+                      >
+                        {comment.text}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            </Card>
+          </div>
+        )}
 
         {/* Related posts */}
         <section>
