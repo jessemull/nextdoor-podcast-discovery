@@ -62,7 +62,7 @@ export function ScraperRunsSection({
   onRetry,
   queuedRetryRunIds = [],
   runs,
-  title = "Scraper runs",
+  title = "Scraper Runs",
 }: ScraperRunsSectionProps) {
   const queuedRetrySet = new Set(queuedRetryRunIds);
   return (
@@ -75,7 +75,7 @@ export function ScraperRunsSection({
           className="text-foreground text-sm"
           style={{ opacity: 0.85 }}
         >
-          Last seven days of scraper jobs.
+          Last seven days of scraper runs.
         </p>
       </div>
       {runs.length > 0 ? (
