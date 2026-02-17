@@ -42,7 +42,7 @@ Tracked list of product and system improvements to complete.
 ## 5. Comments in the UI and scoring
 
 - [x] **Show comments in the UI**
-  - Post card: comment count with link to detail. Post detail: expandable Comments section with author, text, timestamp; note "From scrape time — may have changed on Nextdoor."
+  - Post card: comment count with link to detail (#comments). Detail: expandable Comments section; link auto-scrolls and opens section.
 - [x] **Explore incorporating comments into scoring** (dropped)
   - Token cost prohibitive—posts can have 100+ comments; full content would 2–4x token usage. Use `comment_count` as metadata in the prompt if a lightweight signal is needed.
 
@@ -232,7 +232,7 @@ Order: **security/auth first**, then **must-fix (correctness)**, then **high val
 
 **Larger or product-dependent**
 
-- [x] **§5 — Comments in the UI:** Post card shows count + link; detail page has expandable Comments section with scrape-time note.
+- [x] **§5 — Comments in the UI:** Post card shows count + link to #comments; detail has expandable section; link scrolls and opens.
 - [x] **§5 — Explore incorporating comments into scoring:** Dropped—token cost prohibitive for 100+ comments; use comment_count as metadata if needed.
 - [x] **§4 — Stale post data:** Manual Update button + permalink queue; worker rescrapes and updates reaction_count, comments, text, image_urls.
 - [ ] **§13 — Few-shot examples:** Add 1–2 few-shot examples to scoring prompt; optional for token cost.
