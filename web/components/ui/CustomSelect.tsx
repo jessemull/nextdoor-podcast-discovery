@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -11,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export interface CustomSelectOption {
+  icon?: ReactNode;
   label: string;
   value: string;
 }
@@ -18,6 +20,7 @@ export interface CustomSelectOption {
 interface CustomSelectProps {
   ariaLabel: string;
   className?: string;
+  disabled?: boolean;
   onChange: (value: string) => void;
   options: CustomSelectOption[];
   placeholder?: string;
@@ -31,6 +34,7 @@ interface CustomSelectProps {
 export function CustomSelect({
   ariaLabel,
   className,
+  disabled = false,
   onChange,
   options,
   placeholder,
@@ -42,7 +46,7 @@ export function CustomSelect({
   const selectedOption =
     value !== ""
       ? options.find((o) => o.value === value) ?? options[0]
-      : { label: placeholder ?? options[0]?.label ?? "", value: "" };
+      : { icon: undefined, label: placeholder ?? options[0]?.label ?? "", value: "" };
   const listOptions = placeholder != null ? options.filter((o) => o.value !== "") : options;
 
   const close = useCallback(() => setOpen(false), []);
@@ -69,18 +73,27 @@ export function CustomSelect({
         aria-label={ariaLabel}
         className={cn(
           "border-border bg-surface-hover text-foreground flex h-full min-h-0 w-full cursor-pointer items-center justify-between gap-2 rounded-card border pl-3 pr-3 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus",
+          disabled && "cursor-not-allowed opacity-60",
           className
         )}
+        disabled={disabled}
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => !disabled && setOpen((prev) => !prev)}
       >
-        <span className="min-w-0 truncate">{selectedOption.label}</span>
+        <span className="flex min-w-0 items-center gap-2 truncate">
+          {selectedOption.icon != null ? (
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+              {selectedOption.icon}
+            </span>
+          ) : null}
+          {selectedOption.label}
+        </span>
         <ChevronDown
           aria-hidden
           className={cn("h-4 w-4 shrink-0 text-muted-foreground", open && "rotate-180")}
         />
       </button>
-      {open && (
+      {open && !disabled && (
         <ul
           className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 min-w-full max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
           role="listbox"
@@ -90,7 +103,7 @@ export function CustomSelect({
               key={opt.value}
               aria-selected={opt.value === value}
               className={cn(
-                "cursor-pointer px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
+                "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
                 opt.value === value && "bg-surface-hover"
               )}
               role="option"
@@ -100,6 +113,11 @@ export function CustomSelect({
                 close();
               }}
             >
+              {opt.icon != null ? (
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+                  {opt.icon}
+                </span>
+              ) : null}
               {opt.label}
             </li>
           ))}

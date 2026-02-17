@@ -330,7 +330,25 @@ export const PostCard = memo(function PostCard({
                   )}
                 </div>
               )}
-              {onViewDetails && (
+              {onMarkSaved && (
+            <button
+              aria-label={post.saved ? "Unsave" : "Save"}
+              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+              disabled={isMarkingSaved}
+              title={post.saved ? "Unsave" : "Save"}
+              type="button"
+              onClick={() => onMarkSaved(post.id, !post.saved)}
+            >
+              <Bookmark
+                aria-hidden
+                className={cn(
+                  "h-4 w-4",
+                  post.saved ? "fill-current text-red-600" : "text-foreground"
+                )}
+              />
+            </button>
+          )}
+          {onViewDetails && (
             <button
               aria-label="View Details"
               className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -353,24 +371,6 @@ export const PostCard = memo(function PostCard({
               <ExternalLink aria-hidden className="h-4 w-4 text-foreground" />
             </a>
           )}
-          {onMarkSaved && (
-            <button
-              aria-label={post.saved ? "Unsave" : "Save"}
-              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
-              disabled={isMarkingSaved}
-              title={post.saved ? "Unsave" : "Save"}
-              type="button"
-              onClick={() => onMarkSaved(post.id, !post.saved)}
-            >
-              <Bookmark
-                aria-hidden
-                className={cn(
-                  "h-4 w-4",
-                  post.saved ? "fill-current text-red-600" : "text-foreground"
-                )}
-              />
-            </button>
-          )}
           {/* Actions dropdown */}
           <div className="relative" ref={menuRef}>
             <button
@@ -388,20 +388,6 @@ export const PostCard = memo(function PostCard({
                 className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
                 role="menu"
               >
-                {onViewDetails && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onViewDetails(post.id);
-                    }}
-                  >
-                    <List aria-hidden className="h-4 w-4" />
-                    View details
-                  </button>
-                )}
                 <Link
                   className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
                   href={`/feed?q=${encodeURIComponent(
@@ -413,19 +399,39 @@ export const PostCard = memo(function PostCard({
                   <Search aria-hidden className="h-4 w-4" />
                   Find similar
                 </Link>
-                {post.url && (
-                  <a
-                    aria-label="View on Nextdoor"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                    href={post.url}
-                    rel="noopener noreferrer"
+                {onMarkIgnored && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isMarkingIgnored}
                     role="menuitem"
-                    target="_blank"
-                    onClick={closeMenu}
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onMarkIgnored(post.id, !post.ignored);
+                    }}
                   >
-                    <ExternalLink aria-hidden className="h-4 w-4" />
-                    View on Nextdoor
-                  </a>
+                    <EyeOff aria-hidden className="h-4 w-4" />
+                    {isMarkingIgnored
+                      ? "..."
+                      : post.ignored
+                        ? "Unignore"
+                        : "Ignore"}
+                  </button>
+                )}
+                {!post.used_on_episode && onMarkUsed && (
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                    disabled={isMarkingUsed}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      onMarkUsed(post.id);
+                    }}
+                  >
+                    <Check aria-hidden className="h-4 w-4" />
+                    {isMarkingUsed ? "Marking..." : "Mark as used"}
+                  </button>
                 )}
                 {post.url &&
                   (queueStatus && activeJobId && onCancelRefresh ? (
@@ -490,39 +496,33 @@ export const PostCard = memo(function PostCard({
                         : "Save"}
                   </button>
                 )}
-                {onMarkIgnored && (
+                {onViewDetails && (
                   <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isMarkingIgnored}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                     role="menuitem"
                     type="button"
                     onClick={() => {
                       closeMenu();
-                      onMarkIgnored(post.id, !post.ignored);
+                      onViewDetails(post.id);
                     }}
                   >
-                    <EyeOff aria-hidden className="h-4 w-4" />
-                    {isMarkingIgnored
-                      ? "..."
-                      : post.ignored
-                        ? "Unignore"
-                        : "Ignore"}
+                    <List aria-hidden className="h-4 w-4" />
+                    View details
                   </button>
                 )}
-                {!post.used_on_episode && onMarkUsed && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isMarkingUsed}
+                {post.url && (
+                  <a
+                    aria-label="View on Nextdoor"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                    href={post.url}
+                    rel="noopener noreferrer"
                     role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onMarkUsed(post.id);
-                    }}
+                    target="_blank"
+                    onClick={closeMenu}
                   >
-                    <Check aria-hidden className="h-4 w-4" />
-                    {isMarkingUsed ? "Marking..." : "Mark as used"}
-                  </button>
+                    <ExternalLink aria-hidden className="h-4 w-4" />
+                    View on Nextdoor
+                  </a>
                 )}
               </div>
             )}
