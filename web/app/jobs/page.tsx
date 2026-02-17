@@ -34,6 +34,8 @@ export default function JobsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
+  const [queuedRetryRunIds, setQueuedRetryRunIds] = useState<string[]>([]);
+  const [runScraperJobs, setRunScraperJobs] = useState<Job[]>([]);
   const [scraperRuns, setScraperRuns] = useState<ScraperRun[]>([]);
 
   const fetchJobs = useCallback(async () => {
@@ -69,10 +71,25 @@ export default function JobsPage() {
     try {
       const res = await fetch("/api/admin/scraper-runs?days=7");
       if (!res.ok) return;
-      const json: { data: ScraperRun[] } = await res.json();
+      const json: {
+        data: ScraperRun[];
+        queued_retry_run_ids?: string[];
+      } = await res.json();
       setScraperRuns(json.data ?? []);
+      setQueuedRetryRunIds(json.queued_retry_run_ids ?? []);
     } catch {
       // Non-fatal; leave scraper runs as-is
+    }
+  }, []);
+
+  const fetchRunScraperJobs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/jobs?type=run_scraper&limit=20");
+      if (!res.ok) return;
+      const json: { data: Job[] } = await res.json();
+      setRunScraperJobs(json.data ?? []);
+    } catch {
+      // Non-fatal
     }
   }, []);
 
@@ -85,16 +102,35 @@ export default function JobsPage() {
   }, [fetchScraperRuns]);
 
   useEffect(() => {
+    void fetchRunScraperJobs();
+  }, [fetchRunScraperJobs]);
+
+  useEffect(() => {
     const hasActiveRecompute = jobs.some(
       (j) => j.status === "pending" || j.status === "running"
     );
     const hasActivePermalink = permalinkJobs.some(
       (j) => j.status === "pending" || j.status === "running"
     );
-    if (!hasActiveRecompute && !hasActivePermalink) return;
-    const interval = setInterval(fetchJobs, POLL_INTERVAL_MS);
+    const hasActiveRunScraper = runScraperJobs.some(
+      (j) => j.status === "pending" || j.status === "running"
+    );
+    if (!hasActiveRecompute && !hasActivePermalink && !hasActiveRunScraper)
+      return;
+    const interval = setInterval(() => {
+      void fetchJobs();
+      void fetchRunScraperJobs();
+      if (hasActiveRunScraper) void fetchScraperRuns();
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [jobs, fetchJobs, permalinkJobs]);
+  }, [
+    fetchJobs,
+    fetchRunScraperJobs,
+    fetchScraperRuns,
+    jobs,
+    permalinkJobs,
+    runScraperJobs,
+  ]);
 
   const handleRequestCancel = useCallback((jobId: string) => {
     setCancelConfirmJobId(jobId);
@@ -156,6 +192,7 @@ export default function JobsPage() {
         const res = await fetch("/api/admin/trigger-scrape", {
           body: JSON.stringify({
             feed_type: run.feed_type === "trending" ? "trending" : "recent",
+            scraper_run_id: run.id,
           }),
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -321,6 +358,7 @@ export default function JobsPage() {
 
         <ScraperRunsSection
           onRetry={handleScraperRetry}
+          queuedRetryRunIds={queuedRetryRunIds}
           runs={scraperRuns}
         />
 

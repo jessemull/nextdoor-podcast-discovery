@@ -9,7 +9,8 @@ const FEED_TYPES = ["recent", "trending"] as const;
  * POST /api/admin/trigger-scrape
  *
  * Creates a run_scraper background job so the worker runs the scraper.
- * Body: { feed_type: "recent" | "trending" }.
+ * Body: { feed_type: "recent" | "trending", scraper_run_id?: string }.
+ * scraper_run_id ties the retry to a specific failed run (for UI "Queued" state).
  * Requires authentication.
  */
 export async function POST(request: NextRequest) {
@@ -28,13 +29,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const scraperRunId =
+      typeof body.scraper_run_id === "string" && body.scraper_run_id.trim()
+        ? body.scraper_run_id.trim()
+        : undefined;
+    const params: { feed_type: string; scraper_run_id?: string } = {
+      feed_type: feedType,
+    };
+    if (scraperRunId) params.scraper_run_id = scraperRunId;
 
     const supabase = getSupabaseAdmin();
     const { data: jobRow, error } = await supabase
       .from("background_jobs")
       .insert({
         created_by: session.user?.email || "unknown",
-        params: { feed_type: feedType },
+        params,
         status: "pending",
         type: "run_scraper",
       })
