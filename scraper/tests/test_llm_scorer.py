@@ -7,7 +7,12 @@ import pytest
 from anthropic import Anthropic
 from supabase import Client
 
-from src.llm_scorer import SCORING_DIMENSIONS, LLMScorer, PostScore
+from src.llm_scorer import (
+    SCORING_DIMENSIONS,
+    LLMScorer,
+    PostScore,
+    _aggregate_ensemble_results,
+)
 from src.novelty import calculate_novelty
 
 
@@ -107,6 +112,7 @@ class TestLLMScorer:
         assert results[0].post_id == "post1"
         assert results[0].scores["absurdity"] == 5.0
         assert "lost_pet" in results[0].categories
+        assert scorer.anthropic.messages.create.call_count == 3
 
     def test_score_posts_handles_empty_post_text(self, scorer: LLMScorer) -> None:
         """Should return error PostScore for empty post text."""
@@ -331,3 +337,109 @@ class TestLLMScorer:
 
         assert len(posts) == 1
         assert posts[0]["id"] == "post1"
+
+    def test_aggregate_ensemble_results_median_per_dimension(
+        self, scorer: LLMScorer
+    ) -> None:
+        """Should compute median per dimension across runs."""
+        run1 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 5.0, "drama": 3.0, "podcast_worthy": 7.0},
+                categories=["humor"],
+                summary="S1",
+            )
+        ]
+        run2 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 7.0, "drama": 5.0, "podcast_worthy": 7.0},
+                categories=["drama"],
+                summary="S2",
+            )
+        ]
+        run3 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 6.0, "drama": 4.0, "podcast_worthy": 8.0},
+                categories=["humor"],
+                summary="S3",
+            )
+        ]
+        result = _aggregate_ensemble_results([run1, run2, run3])
+        assert len(result) == 1
+        assert result[0].scores["absurdity"] == 6.0
+        assert result[0].scores["drama"] == 4.0
+        assert result[0].scores["podcast_worthy"] == 7.0
+
+    def test_aggregate_ensemble_results_single_run_passthrough(
+        self, scorer: LLMScorer
+    ) -> None:
+        """Should pass through when only one run succeeds."""
+        run1 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 8.0, "drama": 2.0, "podcast_worthy": 9.0},
+                categories=["humor"],
+                summary="Only run",
+            )
+        ]
+        result = _aggregate_ensemble_results([run1])
+        assert len(result) == 1
+        assert result[0].scores["absurdity"] == 8.0
+        assert result[0].summary == "Only run"
+
+    def test_aggregate_ensemble_results_majority_vote_categories(
+        self, scorer: LLMScorer
+    ) -> None:
+        """Should use majority vote for categories."""
+        run1 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 5.0, "podcast_worthy": 5.0},
+                categories=["humor", "drama"],
+                summary="S1",
+            )
+        ]
+        run2 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 5.0, "podcast_worthy": 5.0},
+                categories=["humor", "wildlife"],
+                summary="S2",
+            )
+        ]
+        run3 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 5.0, "podcast_worthy": 5.0},
+                categories=["humor"],
+                summary="S3",
+            )
+        ]
+        result = _aggregate_ensemble_results([run1, run2, run3])
+        assert "humor" in result[0].categories
+        assert result[0].categories[0] == "humor"
+
+    def test_aggregate_ensemble_results_two_runs_median(
+        self, scorer: LLMScorer
+    ) -> None:
+        """Should use median of 2 when only 2 runs succeed."""
+        run1 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 4.0, "podcast_worthy": 6.0},
+                categories=["drama"],
+                summary="S1",
+            )
+        ]
+        run2 = [
+            PostScore(
+                post_id="p1",
+                scores={"absurdity": 8.0, "podcast_worthy": 6.0},
+                categories=["drama"],
+                summary="S2",
+            )
+        ]
+        result = _aggregate_ensemble_results([run1, run2])
+        assert result[0].scores["absurdity"] == 6.0

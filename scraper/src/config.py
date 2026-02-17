@@ -10,6 +10,8 @@ from src.exceptions import ConfigurationError
 __all__ = [
     "CLAUDE_MAX_TOKENS",
     "CLAUDE_MODEL",
+    "ENSEMBLE_RUNS",
+    "ENSEMBLE_TEMPERATURE",
     "ConfigurationError",
     "EMBEDDING_BATCH_SIZE",
     "EMBEDDING_DIMENSIONS",
@@ -30,6 +32,8 @@ __all__ = [
 
 CLAUDE_MAX_TOKENS = 500
 CLAUDE_MODEL = "claude-3-haiku-20240307"
+ENSEMBLE_RUNS = 3
+ENSEMBLE_TEMPERATURE = 0.3
 
 # OpenAI settings
 

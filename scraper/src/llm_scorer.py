@@ -4,6 +4,7 @@ __all__ = ["LLMScorer", "PostScore", "SCORING_DIMENSIONS"]
 
 import json
 import logging
+import statistics
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -12,7 +13,12 @@ from anthropic import Anthropic
 from supabase import Client
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import CLAUDE_MODEL, log_supabase_error
+from src.config import (
+    CLAUDE_MODEL,
+    ENSEMBLE_RUNS,
+    ENSEMBLE_TEMPERATURE,
+    log_supabase_error,
+)
 from src.llm_prompts import (
     BATCH_SCORING_PROMPT,
     BATCH_SCORING_RETRY_PROMPT,
@@ -42,6 +48,92 @@ def _strip_json_from_markdown(text: str) -> str:
                 text = text[:-3].strip()
             return text
     return text
+
+
+def _aggregate_ensemble_results(
+    run_results: list[list["PostScore"]],
+) -> list["PostScore"]:
+    """Aggregate multiple scoring runs into one result per post.
+
+    Uses median per dimension, majority vote for categories, and picks
+    summary/why from the run whose podcast_worthy is closest to median.
+    """
+    if not run_results:
+        return []
+
+    num_posts = len(run_results[0])
+    aggregated: list[PostScore] = []
+
+    for post_idx in range(num_posts):
+        post_id = run_results[0][post_idx].post_id
+        runs_for_post = [run[post_idx] for run in run_results]
+
+        # Skip runs with errors
+        valid_runs = [r for r in runs_for_post if not r.error and r.scores]
+
+        if not valid_runs:
+            err_run = runs_for_post[0]
+            aggregated.append(
+                PostScore(
+                    post_id=post_id,
+                    scores={},
+                    categories=[],
+                    summary="",
+                    error=err_run.error or "No valid runs",
+                )
+            )
+            continue
+
+        # Median per dimension
+        aggregated_scores: dict[str, float] = {}
+        for dim in SCORING_DIMENSIONS:
+            values = [
+                r.scores.get(dim, 5.0)
+                for r in valid_runs
+                if isinstance(r.scores.get(dim), (int, float))
+            ]
+            if values:
+                med = statistics.median(values)
+                aggregated_scores[dim] = min(10.0, max(1.0, float(med)))
+            else:
+                aggregated_scores[dim] = 5.0
+
+        # Majority vote for categories
+        cat_counts: dict[str, int] = {}
+        for r in valid_runs:
+            for c in r.categories:
+                if c in TOPIC_CATEGORIES:
+                    cat_counts[c] = cat_counts.get(c, 0) + 1
+        sorted_cats = sorted(
+            cat_counts.items(),
+            key=lambda x: (-x[1], x[0]),
+        )
+        categories = [c for c, _ in sorted_cats[:3]]
+
+        # Summary and why_podcast_worthy from run closest to median podcast_worthy
+        median_pw = statistics.median(
+            r.scores.get("podcast_worthy", 5.0) for r in valid_runs
+        )
+        best_run = min(
+            valid_runs,
+            key=lambda r: abs(r.scores.get("podcast_worthy", 5.0) - median_pw),
+        )
+        summary = (best_run.summary or "")[:MAX_SUMMARY_LENGTH]
+        why_podcast_worthy = (best_run.why_podcast_worthy or "")[
+            :MAX_SUMMARY_LENGTH
+        ].strip() or None
+
+        aggregated.append(
+            PostScore(
+                post_id=post_id,
+                scores=aggregated_scores,
+                categories=categories,
+                summary=summary,
+                why_podcast_worthy=why_podcast_worthy,
+            )
+        )
+
+    return aggregated
 
 
 @dataclass
@@ -134,17 +226,51 @@ class LLMScorer:
         wait=wait_exponential(multiplier=1, min=2, max=10),
     )
     def _score_batch(self, posts: list[dict[str, Any]]) -> list[PostScore]:
-        """Score a batch of posts in one API call.
-
-        Args:
-            posts: List of post dicts with 'id' and 'text' keys.
-
-        Returns:
-            List of PostScore results.
-        """
+        """Score a batch of posts using ensemble (3 runs, median aggregation)."""
         if len(posts) == 1:
-            return [self._score_single_post(posts[0])]
+            pt = posts[0].get("text", "")
+            if not pt or not pt.strip():
+                return [
+                    PostScore(
+                        post_id=posts[0].get("id", "unknown"),
+                        scores={},
+                        categories=[],
+                        summary="",
+                        error="Empty post text",
+                    )
+                ]
 
+        successful_runs: list[list[PostScore]] = []
+        last_error: Exception | None = None
+
+        for _ in range(ENSEMBLE_RUNS):
+            try:
+                run_result = self._score_batch_single_run(posts, ENSEMBLE_TEMPERATURE)
+                successful_runs.append(run_result)
+            except Exception as e:
+                logger.warning("Ensemble run failed: %s", e)
+                last_error = e
+
+        if not successful_runs:
+            return [
+                PostScore(
+                    post_id=p.get("id", "unknown"),
+                    scores={},
+                    categories=[],
+                    summary="",
+                    error=str(last_error) if last_error else "All ensemble runs failed",
+                )
+                for p in posts
+            ]
+
+        return _aggregate_ensemble_results(successful_runs)
+
+    def _score_batch_single_run(
+        self,
+        posts: list[dict[str, Any]],
+        temperature: float,
+    ) -> list[PostScore]:
+        """Score a batch in one API call. Raises on failure."""
         dimension_desc = "\n".join(
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
         )
@@ -175,8 +301,8 @@ class LLMScorer:
             response = self.anthropic.messages.create(
                 max_tokens=500 * len(posts),
                 model=CLAUDE_MODEL,
-                messages=cast("Any", messages),  # MessageParam-compatible dicts
-                temperature=0,  # Deterministic scoring for reproducibility
+                messages=cast("Any", messages),
+                temperature=temperature,
             )
 
             content_block = response.content[0]
@@ -217,39 +343,15 @@ class LLMScorer:
                         }
                     )
                 else:
-                    logger.warning(
-                        "Batch JSON parse error after %d attempts: %s",
-                        max_attempts,
-                        err,
-                    )
-                    return [
-                        PostScore(
-                            post_id=p.get("id", "unknown"),
-                            scores={},
-                            categories=[],
-                            summary="",
-                            error=f"JSON parse error: {err}",
-                            raw_response=raw_response,
-                        )
-                        for p in posts
-                    ]
+                    raise ValueError(
+                        f"JSON parse error after {max_attempts} attempts: {err}"
+                    ) from err
                 continue
 
             break
 
         if not isinstance(parsed, list):
-            logger.warning("Batch response not a list: %s", type(parsed))
-            return [
-                PostScore(
-                    post_id=p.get("id", "unknown"),
-                    scores={},
-                    categories=[],
-                    summary="",
-                    error="Invalid batch response format",
-                    raw_response=raw_response,
-                )
-                for p in posts
-            ]
+            raise ValueError("Invalid batch response format: not a list")
 
         results = []
         parsed_by_index: dict[int, dict[str, Any]] = {
@@ -261,16 +363,7 @@ class LLMScorer:
         for i, post in enumerate(posts):
             item = parsed_by_index.get(i)
             if not item:
-                results.append(
-                    PostScore(
-                        post_id=post.get("id", "unknown"),
-                        scores={},
-                        categories=[],
-                        summary="",
-                        error="Missing result in batch response",
-                    )
-                )
-                continue
+                raise ValueError(f"Missing result in batch response for post index {i}")
 
             scores = item.get("scores", {})
             validated_scores = {}
