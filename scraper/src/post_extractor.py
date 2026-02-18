@@ -17,9 +17,6 @@ from src.config import SCRAPER_CONFIG
 
 logger = logging.getLogger(__name__)
 
-# TEMP: disable comments and permalink during feed scrape to debug early exit on recent feed.
-_EXTRACT_COMMENTS_AND_PERMALINK = False
-
 # Minimum content length to consider a post valid (skip empty/stub posts)
 
 MIN_CONTENT_LENGTH = 10
@@ -481,13 +478,8 @@ class PostExtractor:
         content_hash = self._generate_hash(author_id, content)
 
         container_index = raw.get("containerIndex", raw.get("postIndex", 0))
-        # TEMP: skip permalink and comments to debug recent-feed early exit. Set _EXTRACT_COMMENTS_AND_PERMALINK True to re-enable.
-        if _EXTRACT_COMMENTS_AND_PERMALINK:
-            post_url = self.extract_permalink(container_index)
-            comments = self._extract_comments_for_post(container_index)
-        else:
-            post_url = None
-            comments = []
+        post_url = self.extract_permalink(container_index)
+        comments = self._extract_comments_for_post(container_index)
 
         return RawPost(
             author_id=author_id,

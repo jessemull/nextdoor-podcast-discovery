@@ -551,7 +551,7 @@ export function PostFeed({
                 </div>
               ) : (
                 <button
-                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
+                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-[7.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
                   type="button"
                   onClick={() => setBulkMode(true)}
                 >
