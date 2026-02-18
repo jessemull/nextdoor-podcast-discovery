@@ -22,7 +22,7 @@ function SearchRedirect() {
   }, [searchParams]);
 
   return (
-    <main className="min-h-screen p-4 sm:p-8">
+    <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-4xl">
         <p className="text-muted-foreground">Redirecting to feed...</p>
       </div>
@@ -34,7 +34,7 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen p-4 sm:p-8">
+        <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto max-w-4xl">
             <p className="text-muted-foreground">Loading...</p>
           </div>
