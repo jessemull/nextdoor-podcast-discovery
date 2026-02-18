@@ -8,7 +8,7 @@ Single list of remaining work, bucketed by before vs after go-live. After go-liv
 
 - [x] **Scraper: fix programmatic scroll to trigger infinite-load** — Fixed for recent feed: scroll to bottom of document so infinite-scroll loads more; wait for DOM to grow; only stop on repeat threshold when 0 new posts. See `post_extractor._scroll_down()` and repeat-threshold logic.
 
-- [ ] **Dedicated backfill job for new dimension** — When a new scoring dimension is added, support “backfill only missing dimension X”: prompt that returns only that dimension and an update path that merges into existing `llm_scores.scores`. See docs/IMPROVEMENTS_BACKFILL_EMBEDDER_STORAGE.md.
+- [x] **Dedicated backfill job for new dimension** — When a new scoring dimension is added, support “backfill only missing dimension X”: prompt that returns only that dimension and an update path that merges into existing `llm_scores.scores`. Job type `backfill_dimension`; trigger via POST `/api/admin/backfill-dimension`. Run after adding a new key to `SCORING_DIMENSIONS`.
 
 - [ ] Create two Supabase projects (dev, prod) and run migrations on both.
 

@@ -29,6 +29,8 @@ from src.llm_prompts import (
     RUBRIC_SCALE,
     SCORING_DIMENSIONS,
     SCORING_PROMPT,
+    SINGLE_DIMENSION_SCORING_PROMPT,
+    SINGLE_DIMENSION_SCORING_RETRY_PROMPT,
     TOPIC_CATEGORIES,
 )
 from src.novelty import calculate_novelty
@@ -396,6 +398,145 @@ class LLMScorer:
             )
 
         return results
+
+    def score_single_dimension(
+        self,
+        posts: list[dict[str, Any]],
+        dimension: str,
+    ) -> list[tuple[str, float]]:
+        """Score only one dimension for each post (for backfill). Does not write to DB.
+
+        Args:
+            posts: List of dicts with 'id' and 'text' keys.
+            dimension: Dimension key (must be in SCORING_DIMENSIONS).
+
+        Returns:
+            List of (post_id, value) with value in [1, 10].
+        """
+        if dimension not in SCORING_DIMENSIONS:
+            raise ValueError(
+                f"Unknown dimension: {dimension}. Must be one of {list(SCORING_DIMENSIONS)}"
+            )
+        results: list[tuple[str, float]] = []
+        for i in range(0, len(posts), BATCH_SIZE):
+            batch = posts[i : i + BATCH_SIZE]
+            batch_results = self._score_single_dimension_batch(batch, dimension)
+            results.extend(batch_results)
+        return results
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+    )
+    def _score_single_dimension_batch(
+        self,
+        posts: list[dict[str, Any]],
+        dimension: str,
+    ) -> list[tuple[str, float]]:
+        """Score one dimension for a batch of posts. Raises on parse failure after retries."""
+        def _truncate_with_signal(text: str) -> str:
+            t = text[:MAX_POST_LENGTH]
+            if len(text) > MAX_POST_LENGTH:
+                t += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
+            return t
+
+        description = SCORING_DIMENSIONS[dimension]
+        if isinstance(description, tuple):
+            description = description[0] if description else ""
+        else:
+            description = str(description)
+        posts_text = "\n\n".join(
+            f"[Post {i}] (id={p.get('id')})\n{_truncate_with_signal(p.get('text', ''))}"
+            for i, p in enumerate(posts)
+        )
+        prompt = SINGLE_DIMENSION_SCORING_PROMPT.format(
+            dimension=dimension,
+            description=description,
+            posts_text=posts_text,
+            rubric_scale=RUBRIC_SCALE,
+        )
+
+        max_attempts = 3
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        parsed: Any = None
+        raw_response = ""
+
+        for attempt in range(max_attempts):
+            response = self.anthropic.messages.create(
+                max_tokens=500 * len(posts),
+                model=CLAUDE_MODEL,
+                messages=cast("Any", messages),
+                temperature=0,
+            )
+            content_block = response.content[0]
+            raw_response = getattr(content_block, "text", "")
+
+            parse_error: json.JSONDecodeError | None = None
+            for text_to_parse in (
+                raw_response,
+                _strip_json_from_markdown(raw_response),
+            ):
+                if not text_to_parse:
+                    continue
+                try:
+                    parsed = json.loads(text_to_parse)
+                    parse_error = None
+                    break
+                except json.JSONDecodeError as e:
+                    parse_error = e
+                    continue
+            else:
+                err = parse_error or json.JSONDecodeError(
+                    "Invalid JSON", raw_response, 0
+                )
+                if attempt < max_attempts - 1:
+                    logger.warning(
+                        "Single-dimension batch JSON parse error (attempt %d/%d): %s",
+                        attempt + 1,
+                        max_attempts,
+                        err,
+                    )
+                    messages.append({"role": "assistant", "content": raw_response})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": SINGLE_DIMENSION_SCORING_RETRY_PROMPT.format(
+                                error=str(err),
+                                dimension=dimension,
+                            ),
+                        },
+                    )
+                else:
+                    raise ValueError(
+                        f"JSON parse error after {max_attempts} attempts: {err}"
+                    ) from err
+                continue
+
+            break
+
+        if not isinstance(parsed, list):
+            raise ValueError("Invalid single-dimension response: not a list")
+
+        parsed_by_index: dict[int, dict[str, Any]] = {
+            int(item.get("post_index", idx)): item
+            for idx, item in enumerate(parsed)
+            if isinstance(item, dict)
+        }
+        out: list[tuple[str, float]] = []
+        for i, post in enumerate(posts):
+            item = parsed_by_index.get(i)
+            if not item:
+                raise ValueError(
+                    f"Missing result in single-dimension response for post index {i}"
+                )
+            scores = item.get("scores") or {}
+            raw = scores.get(dimension)
+            if isinstance(raw, (int, float)) and 1 <= raw <= 10:
+                value = float(raw)
+            else:
+                value = 5.0
+            out.append((post.get("id", "unknown"), value))
+        return out
 
     @retry(
         stop=stop_after_attempt(3),

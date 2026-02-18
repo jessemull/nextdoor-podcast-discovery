@@ -13,6 +13,8 @@ __all__ = [
     "RUBRIC_SCALE",
     "SCORING_DIMENSIONS",
     "SCORING_PROMPT",
+    "SINGLE_DIMENSION_SCORING_PROMPT",
+    "SINGLE_DIMENSION_SCORING_RETRY_PROMPT",
     "TOPIC_CATEGORIES",
 ]
 
@@ -137,3 +139,26 @@ One object per post, in order. Format:
 BATCH_SCORING_RETRY_PROMPT = """Your previous response had invalid JSON: {error}
 
 Please respond again with ONLY a valid JSON array. No markdown, no code blocks, no trailing commas. Escape double quotes inside strings with \\"."""
+
+# Single-dimension backfill: score only one dimension (1-10) for each post
+SINGLE_DIMENSION_SCORING_PROMPT = """You are analyzing Nextdoor posts for a comedy podcast.
+
+Score each post on ONLY this dimension (1-10): {dimension}
+
+Description: {description}
+
+Scale: {rubric_scale}
+
+Respond with ONLY a valid JSON array—no markdown, no code fences, no trailing commas.
+One object per post, in order. Format:
+[
+  {{"post_index": 0, "scores": {{"{dimension}": <1-10>}}}},
+  {{"post_index": 1, "scores": {{"{dimension}": <1-10>}}}}
+]
+
+Posts to analyze (each numbered):
+{posts_text}"""
+
+SINGLE_DIMENSION_SCORING_RETRY_PROMPT = """Your previous response had invalid JSON: {error}
+
+Please respond again with ONLY a valid JSON array. No markdown, no code blocks. Format: [{{"post_index": 0, "scores": {{"{dimension}": N}}}}, ...]"""

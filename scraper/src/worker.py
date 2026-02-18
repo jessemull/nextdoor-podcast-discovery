@@ -2,8 +2,10 @@
 
 This script polls for pending background jobs and processes them.
 Currently supports:
-- recompute_final_scores: Recalculates final_score for all posts using current weights.
+- backfill_dimension: Backfill a single scoring dimension into existing llm_scores.
 - fetch_permalink: Fetches a single post by Nextdoor permalink URL.
+- recompute_final_scores: Recalculates final_score for all posts using current weights.
+- run_scraper: Runs the scraper pipeline for a feed type.
 """
 
 __all__ = ["main"]
@@ -17,6 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from supabase import Client
 
@@ -24,6 +27,7 @@ from src.config import ConfigurationError, validate_env
 
 load_dotenv()  # noqa: E402
 from src.llm_prompts import SCORING_DIMENSIONS  # noqa: E402
+from src.llm_scorer import LLMScorer  # noqa: E402
 from src.novelty import calculate_novelty  # noqa: E402
 from src.session_manager import SessionManager  # noqa: E402
 
@@ -35,6 +39,9 @@ BATCH_SIZE = 500
 # Throttle DB round-trips: check cancellation and update progress every N batches
 CANCEL_CHECK_INTERVAL = 5
 PROGRESS_UPDATE_INTERVAL = 5
+
+# Backfill dimension: batch size for get_posts_missing_dimension and LLM calls
+BACKFILL_DIMENSION_BATCH_SIZE = 20
 
 
 def calculate_final_score(
@@ -751,6 +758,133 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
         logger.exception("run_scraper job %s failed: %s", job_id, e)
 
 
+def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> None:
+    """Process a backfill_dimension job: score one dimension for posts missing it and merge.
+
+    Args:
+        supabase: Supabase client.
+        job: Job record from database (params.dimension required).
+    """
+    job_id = job["id"]
+    params = job.get("params") or {}
+    if not isinstance(params, dict):
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": "Invalid params",
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.error("backfill_dimension job %s: params must be a dict", job_id)
+        return
+
+    dimension = params.get("dimension") if isinstance(params.get("dimension"), str) else None
+    if not dimension or dimension not in SCORING_DIMENSIONS:
+        error_msg = (
+            f"Invalid or missing dimension. Must be one of: {list(SCORING_DIMENSIONS)}"
+        )
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": error_msg[:1000],
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.error("backfill_dimension job %s: %s", job_id, error_msg)
+        return
+
+    logger.info("Processing backfill_dimension job %s for dimension %s", job_id, dimension)
+
+    supabase.table("background_jobs").update(
+        {
+            "started_at": datetime.now(UTC).isoformat(),
+            "status": "running",
+        }
+    ).eq("id", job_id).execute()
+
+    try:
+        anthropic = Anthropic()
+        scorer = LLMScorer(anthropic, supabase)
+        processed = 0
+        batch_index = 0
+
+        while True:
+            if batch_index % CANCEL_CHECK_INTERVAL == 0:
+                job_status_result = (
+                    supabase.table("background_jobs")
+                    .select("status")
+                    .eq("id", job_id)
+                    .single()
+                    .execute()
+                )
+                job_data = (
+                    cast(dict[str, Any], job_status_result.data)
+                    if job_status_result.data
+                    else None
+                )
+                if job_data and job_data.get("status") == "cancelled":
+                    logger.info("Job %s was cancelled", job_id)
+                    supabase.table("background_jobs").update(
+                        {"completed_at": datetime.now(UTC).isoformat(), "progress": processed}
+                    ).eq("id", job_id).execute()
+                    return
+
+            result = supabase.rpc(
+                "get_posts_missing_dimension",
+                {
+                    "p_dimension": dimension,
+                    "p_limit": BACKFILL_DIMENSION_BATCH_SIZE,
+                },
+            ).execute()
+
+            rows = result.data or []
+            if not rows:
+                break
+
+            posts = [
+                {"id": str(row.get("id")), "text": row.get("text") or ""}
+                for row in rows
+            ]
+            updates = scorer.score_single_dimension(posts, dimension)
+            if not updates:
+                break
+
+            p_updates = [
+                {"post_id": post_id, "value": value}
+                for post_id, value in updates
+            ]
+            supabase.rpc(
+                "merge_dimension_into_llm_scores",
+                {"p_dimension": dimension, "p_updates": p_updates},
+            ).execute()
+
+            processed += len(updates)
+            supabase.table("background_jobs").update(
+                {"progress": processed}
+            ).eq("id", job_id).execute()
+            batch_index += 1
+
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "progress": processed,
+                "status": "completed",
+            }
+        ).eq("id", job_id).execute()
+        logger.info("backfill_dimension job %s completed: %d posts updated", job_id, processed)
+
+    except Exception as e:
+        error_msg = str(e)
+        supabase.table("background_jobs").update(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "error_message": error_msg[:1000],
+                "status": "error",
+            }
+        ).eq("id", job_id).execute()
+        logger.exception("backfill_dimension job %s failed: %s", job_id, e)
+
+
 def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -> None:
     """Poll for pending jobs and process them.
 
@@ -796,6 +930,8 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                         time.sleep(poll_interval)
                 elif actual_type == "run_scraper":
                     process_run_scraper_job(supabase, job)
+                elif actual_type == "backfill_dimension":
+                    process_backfill_dimension_job(supabase, job)
                 else:
                     logger.warning("Unknown job type: %s", actual_type)
 
@@ -889,6 +1025,8 @@ def main() -> int:
                     process_fetch_permalink_job(supabase, job)
                 elif actual_type == "run_scraper":
                     process_run_scraper_job(supabase, job)
+                elif actual_type == "backfill_dimension":
+                    process_backfill_dimension_job(supabase, job)
                 else:
                     logger.warning("Unknown job type: %s", actual_type)
                     return 1
