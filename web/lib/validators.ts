@@ -160,6 +160,24 @@ export const recomputeScoresBodySchema = z
 
 export type RecomputeScoresBody = z.infer<typeof recomputeScoresBodySchema>;
 
+/** Allowed dimension keys for backfill (must match scraper SCORING_DIMENSIONS). */
+export const BACKFILL_DIMENSION_KEYS = [
+  "absurdity",
+  "discussion_spark",
+  "drama",
+  "emotional_intensity",
+  "news_value",
+  "podcast_worthy",
+  "readability",
+] as const;
+
+/** POST /api/admin/backfill-dimension body */
+export const backfillDimensionBodySchema = z.object({
+  dimension: z.enum(BACKFILL_DIMENSION_KEYS),
+});
+
+export type BackfillDimensionBody = z.infer<typeof backfillDimensionBodySchema>;
+
 /** Nextdoor permalink URL pattern (e.g. https://nextdoor.com/p/ABC123 or rfNcrGdG_bC_) */
 const NEXTDOOR_PERMALINK_REGEX =
   /^https:\/\/(?:www\.)?nextdoor\.com\/p\/[A-Za-z0-9_-]+(?:\/)?(?:\?.*)?$/;
@@ -349,7 +367,12 @@ export const adminJobsQuerySchema = z.object({
     .default(10)
     .transform((n) => Math.min(50, Math.max(1, n))),
   type: z
-    .enum(["fetch_permalink", "recompute_final_scores", "run_scraper"])
+    .enum([
+      "backfill_dimension",
+      "fetch_permalink",
+      "recompute_final_scores",
+      "run_scraper",
+    ])
     .optional(),
 });
 

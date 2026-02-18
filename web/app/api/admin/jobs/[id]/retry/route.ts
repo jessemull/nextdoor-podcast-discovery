@@ -75,7 +75,10 @@ export async function POST(
       status: "pending",
       type: job.type,
     };
-    if (job.type === "recompute_final_scores") {
+    if (
+      job.type === "backfill_dimension" ||
+      job.type === "recompute_final_scores"
+    ) {
       insertRow.max_retries = 3;
     }
 
