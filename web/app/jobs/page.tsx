@@ -309,7 +309,7 @@ export default function JobsPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-4 sm:p-6 md:p-8">
+      <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Jobs
@@ -327,7 +327,7 @@ export default function JobsPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 md:p-8">
+    <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-4 text-3xl font-semibold text-foreground">Jobs</h1>
         <p

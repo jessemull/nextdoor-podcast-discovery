@@ -423,7 +423,7 @@ export function PostFeed({
       )}
 
       {/* Main content */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pl-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pl-6 sm:pr-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
         <h1 className="text-foreground mb-4 text-2xl font-semibold text-left sm:text-3xl">
           Nextdoor Discovery
         </h1>

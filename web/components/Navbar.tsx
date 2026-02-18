@@ -218,15 +218,25 @@ export function Navbar() {
           <div
             aria-label="Navigation menu"
             aria-modal="true"
-            className="border-border bg-surface fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] border-l shadow-lg md:hidden"
+            className="border-border bg-surface fixed inset-y-0 right-0 z-50 flex w-72 max-w-[85vw] flex-col border-l shadow-lg md:hidden"
             ref={mobileMenuRef}
             role="dialog"
           >
-            <div className="flex flex-col gap-1 p-4 pt-16">
+            <div className="flex shrink-0 items-center justify-end border-b border-border p-3">
+              <button
+                aria-label="Close menu"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={closeMobileMenu}
+              >
+                <X aria-hidden className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-0 overflow-y-auto p-3">
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
-                  className="focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-3 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
                   href={href}
                   onClick={closeMobileMenu}
                 >
@@ -235,7 +245,7 @@ export function Navbar() {
               ))}
               {user && !isLoading && (
                 <Link
-                  className="focus:bg-surface-hover flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="focus:bg-surface-hover flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
                   href="/auth/logout"
                   onClick={closeMobileMenu}
                 >
