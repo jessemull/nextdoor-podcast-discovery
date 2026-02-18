@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 /**
@@ -23,10 +24,7 @@ export async function GET() {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("[neighborhoods] Error fetching:", {
-      code: error.code,
-      error: error.message,
-    });
+    logError("[neighborhoods] Error fetching", error);
     return NextResponse.json(
       { details: error.message || "Failed to fetch neighborhoods", error: "Database error" },
       { status: 500 }

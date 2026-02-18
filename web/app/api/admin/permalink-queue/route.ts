@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { permalinkQueueBodySchema } from "@/lib/validators";
 
@@ -69,9 +70,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (jobError || !jobRow) {
-      console.error("[admin/permalink-queue] Failed to create job:", {
-        error: jobError?.message ?? "Unknown error",
-      });
+      logError("[admin/permalink-queue] Failed to create job", jobError ?? new Error("No job row"));
       return NextResponse.json(
         {
           details: jobError?.message ?? "Failed to create background job",
@@ -87,10 +86,7 @@ export async function POST(request: NextRequest) {
     };
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("[admin/permalink-queue] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/permalink-queue]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

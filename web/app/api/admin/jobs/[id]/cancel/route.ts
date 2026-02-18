@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -84,9 +85,7 @@ export async function PUT(
       .eq("id", jobId);
 
     if (updateError) {
-      console.error("[admin/jobs/cancel] Error cancelling job:", {
-        error: updateError.message,
-      });
+      logError("[admin/jobs/cancel] Error cancelling job", updateError);
       
       // Check if error is due to missing columns (migration not run)
       if (updateError.message.includes("column") && updateError.message.includes("does not exist")) {
@@ -116,10 +115,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("[admin/jobs/cancel] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/jobs/cancel]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -74,9 +75,7 @@ export async function DELETE(
       .eq("id", jobId);
 
     if (deleteError) {
-      console.error("[admin/jobs/delete] Error deleting job:", {
-        error: deleteError.message,
-      });
+      logError("[admin/jobs/delete] Error deleting job", deleteError);
       return NextResponse.json(
         {
           details: deleteError.message,
@@ -90,10 +89,7 @@ export async function DELETE(
       data: { deleted: true, job_id: jobId },
     });
   } catch (error) {
-    console.error("[admin/jobs/delete] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/jobs/delete]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

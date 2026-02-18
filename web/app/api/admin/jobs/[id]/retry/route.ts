@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -89,9 +90,7 @@ export async function POST(
       .single();
 
     if (insertError || !newJob) {
-      console.error("[admin/jobs/retry] Error creating job:", {
-        error: insertError?.message,
-      });
+      logError("[admin/jobs/retry] Error creating job", insertError ?? new Error("No job row"));
       return NextResponse.json(
         {
           details: insertError?.message || "Failed to create retry job",
@@ -103,10 +102,7 @@ export async function POST(
 
     return NextResponse.json({ data: newJob });
   } catch (error) {
-    console.error("[admin/jobs/retry] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/jobs/retry]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { invalidateActiveConfigCache } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -68,9 +69,7 @@ export async function PUT(
       );
 
     if (updateError) {
-      console.error("[admin/weight-configs/activate] Error updating settings:", {
-        error: updateError.message,
-      });
+      logError("[admin/weight-configs/activate] Error updating settings", updateError);
       return NextResponse.json(
         {
           details: updateError.message,
@@ -102,10 +101,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("[admin/weight-configs/activate] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/weight-configs/activate]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

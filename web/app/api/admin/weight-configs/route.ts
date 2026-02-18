@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 /**
@@ -26,9 +27,7 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[admin/weight-configs] Error fetching configs:", {
-        error: error.message,
-      });
+      logError("[admin/weight-configs] Error fetching configs", error);
       return NextResponse.json(
         {
           details: error.message,
@@ -60,10 +59,7 @@ export async function GET() {
       data: configsWithActive,
     });
   } catch (error) {
-    console.error("[admin/weight-configs] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/weight-configs]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

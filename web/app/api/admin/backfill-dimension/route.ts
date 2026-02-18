@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { backfillDimensionBodySchema } from "@/lib/validators";
 
@@ -44,9 +45,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !jobRow) {
-      console.error("[admin/backfill-dimension] Failed to create job:", {
-        error: error?.message ?? "Unknown error",
-      });
+      logError("[admin/backfill-dimension] Failed to create job", error ?? new Error("No job row"));
       return NextResponse.json(
         {
           details: error?.message ?? "Failed to create background job",
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: jobRow });
   } catch (err) {
-    console.error("[admin/backfill-dimension] Error:", err);
+    logError("[admin/backfill-dimension]", err);
     return NextResponse.json(
       {
         details: err instanceof Error ? err.message : "Unknown error",

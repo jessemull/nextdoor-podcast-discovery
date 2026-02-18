@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
 import { CLAUDE_MODEL } from "@/lib/env.server";
+import { logError } from "@/lib/log.server";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
 
@@ -54,7 +55,7 @@ export async function GET(): Promise<NextResponse<ErrorResponse | SportsFactResp
 
     return NextResponse.json({ fact });
   } catch (error) {
-    console.error("Failed to generate sports fact:", error);
+    logError("[sports-fact]", error);
 
     // We do not use a fallback fact; keep behavior simple and surface the failure.
     return NextResponse.json(

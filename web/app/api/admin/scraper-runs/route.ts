@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const DEFAULT_DAYS = 7;
 
@@ -58,9 +59,9 @@ export async function GET(request: NextRequest) {
         .limit(limit);
 
       if (error) {
-        console.error("[admin/scraper-runs] Error:", error.message);
+        logError("[admin/scraper-runs]", error);
         return NextResponse.json(
-          { error: "Database error", details: error.message },
+          { details: error.message, error: "Database error" },
           { status: 500 }
         );
       }
@@ -86,9 +87,9 @@ export async function GET(request: NextRequest) {
       .order("run_at", { ascending: false });
 
     if (error) {
-      console.error("[admin/scraper-runs] Error:", error.message);
+      logError("[admin/scraper-runs]", error);
       return NextResponse.json(
-        { error: "Database error", details: error.message },
+        { details: error.message, error: "Database error" },
         { status: 500 }
       );
     }
@@ -98,11 +99,11 @@ export async function GET(request: NextRequest) {
       queued_retry_run_ids: queuedRetryRunIds,
     });
   } catch (err) {
-    console.error("[admin/scraper-runs] Error:", err);
+    logError("[admin/scraper-runs]", err);
     return NextResponse.json(
       {
-        error: "Internal server error",
         details: err instanceof Error ? err.message : "Unknown error",
+        error: "Internal server error",
       },
       { status: 500 }
     );
