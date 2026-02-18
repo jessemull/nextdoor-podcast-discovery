@@ -125,7 +125,7 @@ nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
 ├── .github/workflows/     # deploy.yml, scrape.yml, scrape-trending.yml
 ├── database/
-│   ├── migrations/        # 001–024 SQL (run in numeric order in Supabase)
+│   ├── migrations/        # 001–036 SQL (run in numeric order in Supabase)
 │   └── seeds/             # seed_neighborhoods.sql
 ├── scraper/               # Python scraper + workers
 │   ├── src/
@@ -254,7 +254,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 2. **Env files** — Create `scraper/.env` and `web/.env.local` from the example files; fill in all required variables.
 
 3. **Database**
-   - **Production:** Create a Supabase project and run all migrations 001–024 in numeric order in the SQL Editor (see [Database](#database)).
+   - **Production:** Create a Supabase project and run all migrations 001–036 in numeric order in the SQL Editor (see [Database](#database)).
    - **Local:** `make db-up` then `make db-migrate-local`.
 
 4. **Scraper (one-off)**
@@ -269,7 +269,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 ## Database
 
-**Production:** Supabase. Run all files in `database/migrations/` in numeric order (001_initial_schema.sql through 026_function_search_path.sql) in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`.
+**Production:** Supabase. Run all files in `database/migrations/` in numeric order (001_initial_schema.sql through 036_backfill_dimension.sql) in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`. For two projects (dev + prod), see [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md).
 
 **Local dev:** `docker-compose up -d db` (pgvector/pg16), then `make db-migrate-local` to pipe migrations and seeds into the container.
 
