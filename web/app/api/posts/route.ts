@@ -339,7 +339,7 @@ async function getPostsByScore(
   const { data: countData, error: countError } = countResult;
 
   if (scoresError) {
-    logError("[posts]", rpcName, scoresError);
+    logError(`[posts] ${rpcName}`, scoresError);
     return NextResponse.json(
       {
         details: scoresError.message || "Database query failed",

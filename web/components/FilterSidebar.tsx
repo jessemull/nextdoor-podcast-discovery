@@ -33,7 +33,7 @@ const inputClass =
 const sectionHeadingClass =
   "text-foreground mb-2 mt-4 text-sm font-semibold first:mt-0";
 const checkboxLabelClass =
-  "flex cursor-pointer items-center gap-2 text-muted-foreground text-sm";
+  "flex min-h-[44px] cursor-pointer items-center gap-2 py-2 text-muted-foreground text-sm";
 
 function NumInput({
   id,

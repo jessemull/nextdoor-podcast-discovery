@@ -54,7 +54,7 @@ interface JobsListProps {
   headerRightContent?: ReactNode;
   jobs: Job[];
   onCancel: (jobId: string) => void;
-  onRetry?: (jobId: string) => void | Promise<void>;
+  onRetry?: (jobId: string) => Promise<void> | void;
   showManageLink?: boolean;
   showStats?: boolean;
   title?: string;
@@ -96,8 +96,8 @@ export function JobsList({
   return (
     <Card className="mb-8 p-6">
       <div className="mb-4">
-        <div className="mb-2 flex items-center justify-between gap-4">
-          <h2 className="text-foreground min-w-0 flex-1 text-2xl font-semibold tracking-wide">
+        <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
+          <h2 className="text-foreground min-w-0 flex-1 text-xl font-semibold tracking-wide sm:text-2xl">
             {title}
           </h2>
           {showManageLink && (
@@ -109,7 +109,7 @@ export function JobsList({
             </Link>
           )}
         </div>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
           <p
             className="text-foreground min-w-0 flex-1 text-sm"
             style={{ opacity: 0.85 }}

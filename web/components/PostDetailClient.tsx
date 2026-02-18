@@ -242,7 +242,7 @@ export function PostDetailClient({
 
   if (error || !post) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl">
           <Card className="border-destructive bg-destructive/10">
             <p className="text-destructive">{error || "Post not found"}</p>
@@ -260,7 +260,7 @@ export function PostDetailClient({
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="mx-auto max-w-4xl">
         {/* Back link */}
         <Link
@@ -276,12 +276,12 @@ export function PostDetailClient({
           <PostCard
             activeJobId={getActiveJobForPost(post)?.id ?? null}
             defaultExpanded
-            isMarkingIgnored={markingIgnored}
-            isMarkingSaved={markingSaved}
-            isMarkingUsed={markingUsed}
             isCancellingRefresh={
               cancellingJobId === getActiveJobForPost(post)?.id
             }
+            isMarkingIgnored={markingIgnored}
+            isMarkingSaved={markingSaved}
+            isMarkingUsed={markingUsed}
             isQueuingRefresh={queuingRefresh}
             post={post}
             queueStatus={getQueueStatusForPost(post)}

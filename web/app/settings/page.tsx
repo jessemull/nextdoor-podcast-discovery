@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings
@@ -387,7 +387,7 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary>
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings

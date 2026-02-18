@@ -257,11 +257,11 @@ export function PodcastPicks() {
             <PostCard
               key={post.id}
               activeJobId={getActiveJobForPost(post)?.id ?? null}
-              isMarkingSaved={markingSaved.has(post.id)}
-              isMarkingUsed={markingUsed.has(post.id)}
               isCancellingRefresh={
                 cancellingJobId === getActiveJobForPost(post)?.id
               }
+              isMarkingSaved={markingSaved.has(post.id)}
+              isMarkingUsed={markingUsed.has(post.id)}
               isQueuingRefresh={queuingRefreshPostId === post.id}
               post={post}
               queueStatus={getQueueStatusForPost(post)}

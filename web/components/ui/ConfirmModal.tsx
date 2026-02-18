@@ -47,7 +47,7 @@ export function ConfirmModal({
       <div
         className={cn(
           "rounded-card border border-border bg-surface p-6 shadow-lg",
-          "w-full max-w-md"
+          "mx-4 w-full max-w-md"
         )}
       >
         <h2

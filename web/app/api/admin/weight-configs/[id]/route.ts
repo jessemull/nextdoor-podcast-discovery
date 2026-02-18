@@ -86,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error";
-    logError("[admin/weight-configs/patch] Unexpected error", error);
+    logError("[admin/weight-configs/patch] Unexpected error", err);
     return NextResponse.json(
       { details: errorMessage, error: "Internal server error" },
       { status: 500 }

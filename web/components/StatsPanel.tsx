@@ -297,7 +297,7 @@ export function StatsPanel({
 
   if (loading) {
     return (
-      <div className={variant === "full" ? "space-y-24" : ""}>
+      <div className={variant === "full" ? "space-y-16" : ""}>
         {variant !== "categories-only" && (
           <>
             <div aria-hidden className="h-0" />
@@ -330,7 +330,7 @@ export function StatsPanel({
   if (!stats) return null;
 
   return (
-    <div className={variant === "full" ? "space-y-24" : ""}>
+    <div className={variant === "full" ? "space-y-16" : ""}>
       {variant !== "categories-only" && (
         <StatsSection
           hideHeading={hideStatsHeading}
