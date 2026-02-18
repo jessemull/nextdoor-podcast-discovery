@@ -194,8 +194,8 @@ export default function JobsPage() {
             feed_type: run.feed_type === "trending" ? "trending" : "recent",
             scraper_run_id: run.id,
           }),
-          method: "POST",
           headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -309,7 +309,7 @@ export default function JobsPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Jobs
@@ -327,7 +327,7 @@ export default function JobsPage() {
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-4 text-3xl font-semibold text-foreground">Jobs</h1>
         <p
@@ -357,16 +357,16 @@ export default function JobsPage() {
         </Card>
 
         <ScraperRunsSection
-          onRetry={handleScraperRetry}
           queuedRetryRunIds={queuedRetryRunIds}
           runs={scraperRuns}
+          onRetry={handleScraperRetry}
         />
 
         <section className="mb-8">
           <PermalinkQueueSection
-            onCancel={handleRequestCancel}
             permalinkJobs={permalinkJobs}
             setPermalinkJobs={setPermalinkJobs}
+            onCancel={handleRequestCancel}
           />
         </section>
 

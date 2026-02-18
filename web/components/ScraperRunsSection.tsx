@@ -51,7 +51,7 @@ function statusBadgeClass(status: string, isQueued: boolean): string {
 
 interface ScraperRunsSectionProps {
   emptyMessage?: string;
-  onRetry?: (run: ScraperRun) => void | Promise<void>;
+  onRetry?: (run: ScraperRun) => Promise<void> | void;
   queuedRetryRunIds?: string[];
   runs: ScraperRun[];
   title?: string;

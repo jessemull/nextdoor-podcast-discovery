@@ -124,7 +124,7 @@ export default function StatsPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Stats
@@ -144,7 +144,7 @@ export default function StatsPage() {
   const scoreDistribution = stats?.score_distribution ?? null;
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-4 text-3xl font-semibold text-foreground">Stats</h1>
         <p

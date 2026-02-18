@@ -18,9 +18,9 @@
 
 import { Redis } from "@upstash/redis";
 
-let redisClient: Redis | null = null;
+let redisClient: null | Redis = null;
 
-function getRedisClient(): Redis | null {
+function getRedisClient(): null | Redis {
   if (redisClient != null) {
     return redisClient;
   }
@@ -37,6 +37,6 @@ function getRedisClient(): Redis | null {
  * Returns the Redis client when Upstash env vars are configured; otherwise null.
  * Use for embedding cache, active config cache, and optional response caches.
  */
-export function getRedis(): Redis | null {
+export function getRedis(): null | Redis {
   return getRedisClient();
 }

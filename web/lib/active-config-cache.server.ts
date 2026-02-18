@@ -5,9 +5,9 @@
  * the same value. When Redis is not set (local dev, tests), in-memory only.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { getRedis } from "@/lib/redis.server";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TTL_MS = 45_000;
 const TTL_SEC = 45;

@@ -1,8 +1,9 @@
 "use client";
 
 import { useUser } from "@auth0/nextjs-auth0/client";
-import { LogOut, Mic } from "lucide-react";
+import { LogOut, Menu, Mic, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -16,12 +17,23 @@ const navLinkClass = cn(
   "flex items-center gap-2 text-muted hover:text-foreground transition-colors"
 );
 
+const NAV_LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/feed", label: "Feed" },
+  { href: "/jobs", label: "Jobs" },
+  { href: "/stats", label: "Stats" },
+  { href: "/settings", label: "Settings" },
+] as const;
+
 export function Navbar() {
   const { isLoading, user } = useUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -37,6 +49,25 @@ export function Navbar() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [userMenuOpen, closeUserMenu]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(e.target as Node)
+      ) {
+        closeMobileMenu();
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [mobileMenuOpen, closeMobileMenu]);
+
+  const pathname = usePathname();
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   const initial = user?.email?.slice(0, 1).toUpperCase() ?? "?";
 
   return (
@@ -51,22 +82,17 @@ export function Navbar() {
           Nextdoor Discovery
         </Link>
 
-        <div className="flex items-center gap-4">
-          <Link className={navLinkClass} href="/">
-            Home
-          </Link>
-          <Link className={navLinkClass} href="/feed">
-            Feed
-          </Link>
-          <Link className={navLinkClass} href="/jobs">
-            Jobs
-          </Link>
-          <Link className={navLinkClass} href="/stats">
-            Stats
-          </Link>
-          <Link className={navLinkClass} href="/settings">
-            Settings
-          </Link>
+        {/* Desktop nav: visible from md up */}
+        <div className="hidden items-center gap-4 md:flex">
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              className={navLinkClass}
+              href={href}
+            >
+              {label}
+            </Link>
+          ))}
 
           {isLoading ? (
             <span
@@ -113,7 +139,114 @@ export function Navbar() {
             </div>
           ) : null}
         </div>
+
+        {/* Mobile: hamburger + user avatar (or loading) */}
+        <div className="flex items-center gap-2 md:hidden">
+          {user && !isLoading && (
+            <div className="relative" ref={userMenuRef}>
+              <button
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Open user menu"
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium transition-colors",
+                  "hover:bg-surface-hover/80 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
+                )}
+                type="button"
+                onClick={() => setUserMenuOpen((o) => !o)}
+              >
+                <span aria-hidden>{initial}</span>
+              </button>
+
+              {userMenuOpen && (
+                <div
+                  className="border-border bg-surface absolute right-0 top-full z-50 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
+                  role="menu"
+                >
+                  <Link
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                    href="/auth/logout"
+                    role="menuitem"
+                    onClick={() => {
+                      closeUserMenu();
+                      closeMobileMenu();
+                    }}
+                  >
+                    <LogOut aria-hidden className="h-4 w-4" />
+                    Sign out
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+          {isLoading && (
+            <span
+              aria-label="Loading user"
+              className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium opacity-60 pointer-events-none"
+            >
+              ?
+            </span>
+          )}
+
+          <button
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition-colors",
+              "hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+            )}
+            type="button"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+          >
+            {mobileMenuOpen ? (
+              <X aria-hidden className="h-6 w-6" />
+            ) : (
+              <Menu aria-hidden className="h-6 w-6" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile menu drawer */}
+      {mobileMenuOpen && (
+        <>
+          <div
+            aria-hidden
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={closeMobileMenu}
+          />
+          <div
+            aria-label="Navigation menu"
+            aria-modal="true"
+            className="border-border bg-surface fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] border-l shadow-lg md:hidden"
+            ref={mobileMenuRef}
+            role="dialog"
+          >
+            <div className="flex flex-col gap-1 p-4 pt-16">
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  className="focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-3 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  href={href}
+                  onClick={closeMobileMenu}
+                >
+                  {label}
+                </Link>
+              ))}
+              {user && !isLoading && (
+                <Link
+                  className="focus:bg-surface-hover flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  href="/auth/logout"
+                  onClick={closeMobileMenu}
+                >
+                  <LogOut aria-hidden className="h-5 w-5" />
+                  Sign out
+                </Link>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </nav>
   );
 }

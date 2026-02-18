@@ -1,9 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import { Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +16,7 @@ import { useToast } from "@/lib/ToastContext";
 import { formatRelativeTime } from "@/lib/utils";
 
 import type { Job } from "@/lib/types";
+import type { Dispatch, SetStateAction } from "react";
 
 function makeOptimisticJob(url: string): Job {
   return {
@@ -36,7 +42,7 @@ function makeOptimisticJob(url: string): Job {
 interface PermalinkQueueSectionProps {
   onCancel?: (jobId: string) => void;
   permalinkJobs: Job[];
-  setPermalinkJobs: (jobs: Job[]) => void;
+  setPermalinkJobs: Dispatch<SetStateAction<Job[]>>;
 }
 
 function formatStatus(status: string): string {

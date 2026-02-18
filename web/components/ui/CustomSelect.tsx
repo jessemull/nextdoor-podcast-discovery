@@ -82,7 +82,7 @@ export function CustomSelect({
       >
         <span className="flex min-w-0 items-center gap-2 truncate">
           {selectedOption.icon != null ? (
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+            <span aria-hidden className="flex h-4 w-4 shrink-0 items-center justify-center">
               {selectedOption.icon}
             </span>
           ) : null}
@@ -90,7 +90,10 @@ export function CustomSelect({
         </span>
         <ChevronDown
           aria-hidden
-          className={cn("h-4 w-4 shrink-0 text-muted-foreground", open && "rotate-180")}
+          className={cn(
+            "h-4 w-4 shrink-0 text-muted-foreground",
+            open && "rotate-180"
+          )}
         />
       </button>
       {open && !disabled && (
@@ -114,7 +117,7 @@ export function CustomSelect({
               }}
             >
               {opt.icon != null ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+                <span aria-hidden className="flex h-4 w-4 shrink-0 items-center justify-center">
                   {opt.icon}
                 </span>
               ) : null}

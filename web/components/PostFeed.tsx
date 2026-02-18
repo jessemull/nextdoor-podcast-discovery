@@ -366,7 +366,9 @@ export function PostFeed({
       {/* Desktop sidebar */}
       <div className="hidden h-full w-64 shrink-0 md:block">
         <FilterSidebar
-          activeConfigWeights={activeConfigWeights}
+          activeConfigWeights={
+            activeConfigWeights as null | Record<string, number>
+          }
           filterLoadError={filterLoadError}
           filters={filters}
           neighborhoods={neighborhoods}
@@ -386,20 +388,23 @@ export function PostFeed({
             className="fixed inset-0 z-40 bg-black/50 md:hidden"
             onClick={() => setOpenFilterDrawer(false)}
           />
-          <div className="border-border bg-surface fixed left-0 top-0 z-50 h-full w-72 overflow-y-auto border-r p-4 shadow-lg md:hidden">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="border-border bg-surface fixed left-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col overflow-hidden border-r shadow-lg md:hidden">
+            <div className="border-border flex shrink-0 items-center justify-between border-b p-4">
               <h2 className="text-foreground text-lg font-semibold">Filters</h2>
               <button
                 aria-label="Close filters"
-                className="rounded p-1 text-muted hover:bg-surface-hover hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
+                className="flex h-10 min-h-[44px] min-w-10 items-center justify-center rounded text-muted hover:bg-surface-hover hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
                 type="button"
                 onClick={() => setOpenFilterDrawer(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <FilterSidebar
-              activeConfigWeights={activeConfigWeights}
+              activeConfigWeights={
+                activeConfigWeights as null | Record<string, number>
+              }
               filterLoadError={filterLoadError}
               filters={filters}
               neighborhoods={neighborhoods}
@@ -412,18 +417,19 @@ export function PostFeed({
               }}
               onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
             />
+            </div>
           </div>
         </>
       )}
 
       {/* Main content */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pr-6">
-        <h1 className="text-foreground mb-4 text-3xl font-semibold text-left">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 pl-4 pt-4 pr-4 sm:pb-6 sm:pt-6 sm:pl-6 sm:pr-6">
+        <h1 className="text-foreground mb-4 text-2xl font-semibold text-left sm:text-3xl">
           Nextdoor Discovery
         </h1>
         {searchSlot && (
-          <div className="mb-2 flex w-full items-stretch">
-            <div className="mr-3 flex h-10 min-w-0 max-w-full flex-1">
+          <div className="mb-2 flex w-full flex-wrap items-stretch gap-3">
+            <div className="flex h-10 min-w-0 w-full flex-1 basis-full sm:mr-0 sm:basis-0">
               <FeedSearchBar
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
@@ -435,9 +441,9 @@ export function PostFeed({
                 onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
               />
             </div>
-            <div className="flex h-10 min-w-0 shrink-0 items-center">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
               <button
-                className="border-border bg-surface hover:bg-surface-hover flex h-10 items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                className="border-border bg-surface hover:bg-surface-hover flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
                 type="button"
                 onClick={() => setOpenFilterDrawer(true)}
               >
@@ -451,7 +457,7 @@ export function PostFeed({
               </button>
               <CustomSelect
                 ariaLabel="Sort Posts"
-                className="h-10 min-w-[11rem] shrink-0"
+                className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
                 options={SORT_OPTIONS.map((o, i) => ({
                   label: o.label,
                   value: String(i),
@@ -469,10 +475,10 @@ export function PostFeed({
                 }}
               />
               {bulkMode ? (
-                <div className="ml-3 flex items-center gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <CustomSelect
                     ariaLabel="Bulk action"
-                    className="h-10 min-w-[11rem] shrink-0"
+                    className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
                     disabled={!selectAllChecked && selectedIds.size === 0}
                     options={BULK_ACTION_OPTIONS}
                     placeholder="Actions"
@@ -532,7 +538,7 @@ export function PostFeed({
                     }}
                   />
                   <button
-                    className="text-foreground hover:opacity-80 flex h-10 w-28 shrink-0 items-center justify-center rounded-card border border-border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
                     type="button"
                     onClick={() => {
                       setBulkMode(false);
@@ -545,7 +551,7 @@ export function PostFeed({
                 </div>
               ) : (
                 <button
-                  className="text-foreground hover:opacity-80 ml-3 flex h-10 w-28 shrink-0 items-center justify-center rounded-card border border-border bg-transparent text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
                   type="button"
                   onClick={() => setBulkMode(true)}
                 >
@@ -555,7 +561,7 @@ export function PostFeed({
               {(searchSlot.query.trim() || activeFilterCount > 0) && (
                 <button
                   aria-label="Reset filters"
-                  className="text-foreground hover:opacity-80 flex h-10 min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                   type="button"
                   onClick={() => {
                     handleResetFilters();
@@ -620,11 +626,11 @@ export function PostFeed({
                     <PostCard
                       key={post.id}
                       activeJobId={activeJob?.id ?? null}
-                      isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                       isCancellingRefresh={
                         activeJob != null &&
                         cancellingJobId === activeJob.id
                       }
+                      isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                       isQueuingRefresh={queuingRefreshPostId === post.id}
                       post={post}
                       queueStatus={getQueueStatusForPost(post)}
@@ -644,49 +650,47 @@ export function PostFeed({
         ) : (
           <>
             {!searchSlot && (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    className="border-border bg-surface hover:bg-surface-hover flex items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                    type="button"
-                    onClick={() => setOpenFilterDrawer(true)}
-                  >
-                    <Filter className="h-4 w-4" />
-                    Filters
-                    {activeFilterCount > 0 && (
-                      <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                  <CustomSelect
-                    ariaLabel="Sort Posts"
-                    className="h-10 min-w-[11rem]"
-                    options={SORT_OPTIONS.map((o, i) => ({
-                      label: o.label,
-                      value: String(i),
-                    }))}
-                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
-                    onChange={(val) => {
-                      const opt = SORT_OPTIONS[Number(val)];
-                      if (opt) {
-                        setFilters((prev) => ({
-                          ...prev,
-                          sort: opt.sort,
-                          sortOrder: opt.sortOrder,
-                        }));
-                      }
-                    }}
-                  />
-                  <button
-                    aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-10 min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={handleResetFilters}
-                  >
-                    <RotateCcw className="h-5 w-5" />
-                  </button>
-                </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  className="border-border bg-surface hover:bg-surface-hover flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                  type="button"
+                  onClick={() => setOpenFilterDrawer(true)}
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <CustomSelect
+                  ariaLabel="Sort Posts"
+                  className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                  options={SORT_OPTIONS.map((o, i) => ({
+                    label: o.label,
+                    value: String(i),
+                  }))}
+                  value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+                  onChange={(val) => {
+                    const opt = SORT_OPTIONS[Number(val)];
+                    if (opt) {
+                      setFilters((prev) => ({
+                        ...prev,
+                        sort: opt.sort,
+                        sortOrder: opt.sortOrder,
+                      }));
+                    }
+                  }}
+                />
+                <button
+                  aria-label="Reset filters"
+                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={handleResetFilters}
+                >
+                  <RotateCcw className="h-5 w-5" />
+                </button>
               </div>
             )}
 
@@ -698,12 +702,12 @@ export function PostFeed({
             Previewing scores — run Recompute to save
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-sm">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <span className="text-muted-foreground shrink-0 text-sm">
             Showing {posts.length} of {total} Posts
           </span>
           {bulkMode && (
-            <label className="flex cursor-pointer items-center gap-2 pr-4">
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-2">
               <span className="text-muted-foreground text-sm">
                 Select All
               </span>
@@ -776,12 +780,12 @@ export function PostFeed({
                 >
                   <PostCard
                     activeJobId={getActiveJobForPost(post)?.id ?? null}
-                    isMarkingIgnored={markingIgnored.has(post.id)}
-                    isMarkingSaved={markingSaved.has(post.id)}
-                    isMarkingUsed={markingUsed.has(post.id)}
                     isCancellingRefresh={
                       cancellingJobId === getActiveJobForPost(post)?.id
                     }
+                    isMarkingIgnored={markingIgnored.has(post.id)}
+                    isMarkingSaved={markingSaved.has(post.id)}
+                    isMarkingUsed={markingUsed.has(post.id)}
                     isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
                     queueStatus={getQueueStatusForPost(post)}
