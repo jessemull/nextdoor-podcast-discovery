@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 import type { StatsResponse } from "@/lib/types";
@@ -76,10 +77,7 @@ export async function GET() {
     // Check for errors
 
     if (postsResult.error) {
-      console.error("[stats] Error fetching posts count:", {
-        code: postsResult.error.code,
-        error: postsResult.error.message,
-      });
+      logError("[stats] Error fetching posts count", postsResult.error);
       return NextResponse.json(
         {
           details: postsResult.error.message || "Failed to fetch posts count",
@@ -90,10 +88,7 @@ export async function GET() {
     }
 
     if (scoresResult.error) {
-      console.error("[stats] Error fetching scores count:", {
-        code: scoresResult.error.code,
-        error: scoresResult.error.message,
-      });
+      logError("[stats] Error fetching scores count", scoresResult.error);
       return NextResponse.json(
         {
           details: scoresResult.error.message || "Failed to fetch scores count",
@@ -104,10 +99,7 @@ export async function GET() {
     }
 
     if (usedResult.error) {
-      console.error("[stats] Error fetching used count:", {
-        code: usedResult.error.code,
-        error: usedResult.error.message,
-      });
+      logError("[stats] Error fetching used count", usedResult.error);
       return NextResponse.json(
         {
           details: usedResult.error.message || "Failed to fetch used posts count",
@@ -118,10 +110,7 @@ export async function GET() {
     }
 
     if (frequenciesResult.error) {
-      console.error("[stats] Error fetching frequencies:", {
-        code: frequenciesResult.error.code,
-        error: frequenciesResult.error.message,
-      });
+      logError("[stats] Error fetching frequencies", frequenciesResult.error);
       return NextResponse.json(
         {
           details: frequenciesResult.error.message || "Failed to fetch topic frequencies",
@@ -158,10 +147,7 @@ export async function GET() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
-    console.error("[stats] Unexpected error:", {
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[stats] Unexpected error", error);
     return NextResponse.json(
       {
         details: errorDetails,

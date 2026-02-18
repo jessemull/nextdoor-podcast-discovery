@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { postsSavedBodySchema, UUID_REGEX } from "@/lib/validators";
 
@@ -48,11 +49,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (error) {
-      console.error("[posts/saved] Error updating post:", {
-        code: error.code,
-        error: error.message,
-        postId: id,
-      });
+      logError("[posts/saved] Error updating post", error);
       return NextResponse.json(
         { details: error.message || "Failed to update post", error: "Database error" },
         { status: 500 }
@@ -69,10 +66,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ data });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("[posts/saved] Unexpected error:", {
-      error: errorMessage,
-      postId: id,
-    });
+    logError("[posts/saved] Unexpected error", error);
     return NextResponse.json(
       { details: errorMessage, error: "Internal server error" },
       { status: 500 }

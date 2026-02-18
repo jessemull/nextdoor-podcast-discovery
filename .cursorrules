@@ -211,7 +211,7 @@ it("should [expected behavior] when [condition]", () => {
 ### API Routes
 - Validate request data before processing
 - Return consistent JSON responses: `{ data }` or `{ error }`
-- Use `getServerSession` for auth checks
+- Use `auth0.getSession()` for auth checks
 
 ### Database
 - Use `getSupabase()` from `lib/supabase.client.ts` for client-side
@@ -219,9 +219,9 @@ it("should [expected behavior] when [condition]", () => {
 - Never expose service keys to client
 
 ### Auth
-- NextAuth.js with Google OAuth
-- Email whitelist in `lib/auth.ts`
-- Protect routes with middleware or `getServerSession`
+- Auth0 (see `lib/auth0.ts`)
+- Access controlled by Auth0 only; no server-side email whitelist
+- Protect routes with middleware or `auth0.getSession()`
 
 ---
 
@@ -276,8 +276,7 @@ it("should [expected behavior] when [condition]", () => {
 - Environment variable: `SUPABASE_SERVICE_KEY` (consistent across Python and TypeScript)
 
 ### Special Features
-- Pittsburgh sports facts: Only for user with USER_EMAIL env var
-- Uses Claude Haiku, called on login
+- Pittsburgh sports facts: Shown to all logged-in users on the home page; uses Claude Haiku
 
 ---
 

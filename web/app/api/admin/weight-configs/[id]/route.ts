@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import {
   UUID_REGEX,
@@ -71,10 +72,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           { status: 404 }
         );
       }
-      console.error("[admin/weight-configs/patch] Error updating config:", {
-        configId,
-        error: error.message,
-      });
+      logError("[admin/weight-configs/patch] Error updating config", error);
       return NextResponse.json(
         {
           details: error.message || "Failed to update config",
@@ -88,10 +86,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error";
-    console.error("[admin/weight-configs/patch] Unexpected error:", {
-      configId,
-      error: errorMessage,
-    });
+    logError("[admin/weight-configs/patch] Unexpected error", error);
     return NextResponse.json(
       { details: errorMessage, error: "Internal server error" },
       { status: 500 }
@@ -166,9 +161,7 @@ export async function DELETE(
       .in("status", ["pending", "running"]);
 
     if (jobsError) {
-      console.error("[admin/weight-configs/delete] Error checking jobs:", {
-        error: jobsError.message,
-      });
+      logError("[admin/weight-configs/delete] Error checking jobs", jobsError);
       return NextResponse.json(
         {
           details: jobsError.message,
@@ -220,9 +213,7 @@ export async function DELETE(
       .eq("id", configId);
 
     if (deleteError) {
-      console.error("[admin/weight-configs/delete] Error deleting config:", {
-        error: deleteError.message,
-      });
+      logError("[admin/weight-configs/delete] Error deleting config", deleteError);
       return NextResponse.json(
         {
           details: deleteError.message,
@@ -240,10 +231,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error("[admin/weight-configs/delete] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/weight-configs/delete]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

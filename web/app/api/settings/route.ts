@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { settingsPutBodySchema } from "@/lib/validators";
 
@@ -96,10 +97,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[settings] Error fetching settings:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[settings] Error fetching settings", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",
@@ -176,10 +174,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ data: { success: true } });
   } catch (error) {
-    console.error("[settings] Error updating settings:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[settings] Error updating settings", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

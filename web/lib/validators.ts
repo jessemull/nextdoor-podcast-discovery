@@ -178,6 +178,18 @@ export const backfillDimensionBodySchema = z.object({
 
 export type BackfillDimensionBody = z.infer<typeof backfillDimensionBodySchema>;
 
+/** POST /api/admin/trigger-scrape body */
+export const triggerScrapeBodySchema = z.object({
+  feed_type: z.enum(["recent", "trending"]).default("recent"),
+  scraper_run_id: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === "" || v == null ? undefined : v)),
+});
+
+export type TriggerScrapeBody = z.infer<typeof triggerScrapeBodySchema>;
+
 /** Nextdoor permalink URL pattern (e.g. https://nextdoor.com/p/ABC123 or rfNcrGdG_bC_) */
 const NEXTDOOR_PERMALINK_REGEX =
   /^https:\/\/(?:www\.)?nextdoor\.com\/p\/[A-Za-z0-9_-]+(?:\/)?(?:\?.*)?$/;

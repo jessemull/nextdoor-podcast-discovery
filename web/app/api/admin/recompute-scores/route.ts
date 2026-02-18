@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { recomputeScoresBodySchema } from "@/lib/validators";
 
@@ -79,9 +80,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (configError || !weightConfigRow) {
-        console.error("[admin/recompute-scores] Failed to create weight config:", {
-          error: configError?.message || "Unknown error",
-        });
+        logError(
+          "[admin/recompute-scores] Failed to create weight config",
+          configError ?? new Error("No weight config row")
+        );
         return NextResponse.json(
           {
             details: configError?.message || "Failed to create weight config",
@@ -113,9 +115,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (jobError || !jobRow) {
-      console.error("[admin/recompute-scores] Failed to create job:", {
-        error: jobError?.message || "Unknown error",
-      });
+      logError(
+        "[admin/recompute-scores] Failed to create job",
+        jobError ?? new Error("No job row")
+      );
       return NextResponse.json(
         {
           details: jobError?.message || "Failed to create background job",
@@ -133,10 +136,7 @@ export async function POST(request: NextRequest) {
     };
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("[admin/recompute-scores] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/recompute-scores]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",

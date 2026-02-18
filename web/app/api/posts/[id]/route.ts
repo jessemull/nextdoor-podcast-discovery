@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
@@ -44,11 +45,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           { status: 404 }
         );
       }
-      console.error("[posts/[id]] Error fetching post:", {
-        code: postError.code,
-        error: postError.message,
-        postId: id,
-      });
+      logError("[posts/[id]] Error fetching post", postError);
       return NextResponse.json(
         { details: postError.message || "Failed to fetch post", error: "Database error" },
         { status: 500 }
@@ -69,11 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (scoreError && scoreError.code !== "PGRST116") {
-      console.error("[posts/[id]] Error fetching LLM score:", {
-        code: scoreError.code,
-        error: scoreError.message,
-        postId: id,
-      });
+      logError("[posts/[id]] Error fetching LLM score", scoreError);
     }
 
     const postRow = post as {
@@ -115,11 +108,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
-    console.error("[posts/[id]] Unexpected error:", {
-      error: errorMessage,
-      postId: id,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[posts/[id]] Unexpected error", error);
     return NextResponse.json(
       { details: errorDetails, error: "Internal server error" },
       { status: 500 }

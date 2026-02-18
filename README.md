@@ -43,7 +43,7 @@ The platform exists to **find podcast-worthy Nextdoor posts**: absurd, dramatic,
 - **Score** — Claude Haiku scores posts (absurdity, drama, humor, relatability) with novelty-adjusted topic frequency.
 - **Store** — Supabase (PostgreSQL + pgvector); optional embeddings for semantic search.
 - **Curate** — Private web dashboard: filter, search, mark “used on episode,” avoid duplicates.
-- **Pittsburgh sports facts** — Random fact for a specific user (e.g. Matt) on login, powered by Claude Haiku.
+- **Pittsburgh sports facts** — Random fact shown to all logged-in users on the home page, powered by Claude Haiku.
 
 The **podcast** consumes this data: hosts pick posts from the dashboard to discuss on air; the system tracks which posts were used and on which episode date.
 
@@ -67,7 +67,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 
 | Feature | Description |
 | :------ | :----------- |
-| Authentication | NextAuth.js + Google OAuth; email whitelist (`ALLOWED_EMAILS`) |
+| Authentication | Auth0; access controlled by Auth0 (no server-side email whitelist) |
 | Post feed | Paginated, filterable; sort by score or “podcast worthy”; filter by neighborhood, min reactions, episode date; “why podcast worthy” and tags |
 | Search | Keyword (full-text) + semantic (embedding) search; configurable similarity threshold; defaults from settings |
 | Post detail | Single post + related posts (semantic similarity) |
@@ -75,7 +75,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 | Episode tracking | Mark “used on episode” with date; filter by episode date; avoid reuse |
 | Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults |
 | Admin / jobs | List jobs, stats, cancel job, activate weight config |
-| Pittsburgh sports fact | Shown on login for configured user; Claude Haiku; fallback if API fails |
+| Pittsburgh sports fact | Shown to all logged-in users on home page; Claude Haiku; error message if API fails |
 | Stats panel | Post counts, embedding backlog, etc. |
 
 ### Worker
@@ -89,7 +89,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 
 **Scraper:** Python 3.11+, Playwright, Anthropic (Claude Haiku), OpenAI, Supabase Python client, Cryptography (Fernet), Tenacity.
 
-**Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), NextAuth.js, Zod, Vitest + Testing Library.
+**Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), Auth0, Zod, Vitest + Testing Library.
 
 **Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby), GitHub Actions.
 
@@ -115,7 +115,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Scraper** — Writes `posts`; optionally scoring + topic recount. Reads/writes `sessions` for cookies. Uses Supabase **service key** (same as web server-side).
 - **Embedder** (`src.embed`) — Reads `posts` and `llm_scores`; writes `post_embeddings`. No browser.
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
-- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require NextAuth session; `ALLOWED_EMAILS` in env.
+- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Auth0 session; access is controlled solely by Auth0 (no server-side email whitelist).
 - **Vercel** — Hosts Next.js only. Scraper and worker run in GitHub Actions and/or your own machine.
 
 ## Repository structure
@@ -123,7 +123,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 ```
 nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
-├── .github/workflows/     # deploy.yml, scrape.yml, scrape-trending.yml
+├── .github/workflows/     # ci.yml, deploy.yml, scrape.yml, scrape-trending.yml
 ├── database/
 │   ├── migrations/        # 001–036 SQL (run in numeric order in Supabase)
 │   └── seeds/             # seed_neighborhoods.sql
@@ -239,8 +239,8 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 ### Web
 
 - **Config file:** `web/.env.local` (copy from `.env.example`)
-- **Required:** Supabase URL/keys (public + service), NextAuth secret/URL, Google OAuth id/secret, `ALLOWED_EMAILS`
-- **Optional:** `USER_EMAIL`, `NEXT_PUBLIC_USER_EMAIL`, `ANTHROPIC_API_KEY` (sports fact), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
+- **Required:** Supabase URL/keys (public + service), Auth0 domain/client/secret, `APP_BASE_URL`
+- **Optional:** `ANTHROPIC_API_KEY` (sports fact on home page), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
 
 ## Setup & quick start
 
@@ -263,7 +263,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
    cd scraper && python -m src.main --feed-type recent --max-posts 5
    ```
 
-5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in with a whitelisted Google account.
+5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in with Auth0.
 
 6. **Worker (optional)** — With scraper env loaded: `cd scraper && python -m src.worker --job-type recompute_final_scores` (or `--once`).
 
@@ -297,7 +297,7 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 **API routes:** `GET/POST /api/posts`, `GET/POST /api/posts/[id]`, `POST /api/posts/[id]/saved`, `POST /api/posts/[id]/used`, `GET /api/search`, `GET/PUT /api/settings`, `GET /api/neighborhoods`, `GET /api/episodes`, `GET /api/stats`, `GET /api/sports-fact`, plus admin: jobs, recompute-scores, weight-configs.
 
-**Auth:** NextAuth + Google; middleware / `getServerSession`; `ALLOWED_EMAILS` whitelist.
+**Auth:** Auth0; middleware and API routes use `auth0.getSession()`; access controlled by Auth0 only.
 
 **Data:** Server components and API routes use the Supabase server client; the client uses React Query against the API. Helpers and embedding cache live in `lib/`.
 
@@ -311,19 +311,20 @@ Processes `recompute_final_scores` jobs created when a user clicks “Save & Rec
 
 - **Lint** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats scraper code.
 - **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase and NextAuth.
-- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search.
+- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. Web tests mock Auth0.
 
 ## Security
 
 - **Secrets** — Environment variables and GitHub Secrets only; never committed.
 - **Scraper** — `make security-scraper` runs bandit and pip-audit.
 - **Web** — `make security-web` runs npm audit.
-- **Auth** — Email whitelist; server-side session checks on all mutation and admin API routes.
+- **Auth** — Auth0; server-side session checks on all mutation and admin API routes; no server-side email whitelist.
 
 ## CI/CD & deployment
 
 | Workflow | Trigger / schedule | What it does |
 | :------- | :----------------- | :----------- |
+| **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
 | **Deploy (web)** | Push to `main` (changes under `web/` or workflow file) | Vercel deploy. Uses `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. |
 | **scrape.yml** | Daily 2:00 AM UTC (or manual) | Recent feed → score → recount → embed. On failure: create/update issue with label `scraper-failure`. |
 | **scrape-trending.yml** | Daily 6:00 PM UTC (or manual) | Trending feed → same pipeline; same failure handling. |

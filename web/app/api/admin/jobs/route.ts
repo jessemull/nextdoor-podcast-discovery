@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "@/lib/auth0";
+import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { adminJobsQuerySchema } from "@/lib/validators";
 
@@ -69,9 +70,7 @@ export async function GET(request: NextRequest) {
     const { data: jobs, error } = await query;
 
     if (error) {
-      console.error("[admin/jobs] Error fetching jobs:", {
-        error: error.message,
-      });
+      logError("[admin/jobs] Error fetching jobs", error);
       return NextResponse.json(
         {
           details: error.message,
@@ -86,10 +85,7 @@ export async function GET(request: NextRequest) {
       total: jobs?.length || 0,
     });
   } catch (error) {
-    console.error("[admin/jobs] Error:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    logError("[admin/jobs]", error);
     return NextResponse.json(
       {
         details: error instanceof Error ? error.message : "Unknown error",
