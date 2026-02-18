@@ -7,10 +7,12 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, cast
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import httpx
 from openai import OpenAI
 from supabase import Client
 
@@ -57,9 +59,9 @@ def _record_scraper_run(
         )
 
 
-# Load environment variables from .env file
-
-load_dotenv()
+# Load environment variables from scraper/.env (works whether run from repo root or scraper/)
+_scraper_dir = Path(__file__).resolve().parent.parent
+load_dotenv(_scraper_dir / ".env")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -569,6 +571,12 @@ def main(
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
         except NameError:
             pass
+        return 1
+    except httpx.ConnectError as e:
+        logger.exception("Cannot reach Supabase (%s): %s", type(e).__name__, e)
+        logger.error(
+            "Check scraper/.env: SUPABASE_URL and SUPABASE_SERVICE_KEY must point to a valid project."
+        )
         return 1
     except Exception as e:
         # Last-resort catch so pipeline exits cleanly with code 1 (PR_REVIEW: intentional;
