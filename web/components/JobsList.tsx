@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { CircleSlash, MoreHorizontal, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -164,52 +164,76 @@ export function JobsList({
                   className="rounded border border-border bg-surface-hover/50 p-4"
                 >
                   {(variant === "queue" || variant === "finished") && (
-                    <div className="-mt-1 mb-0.5 flex items-center justify-between gap-2 sm:hidden">
+                    <div className="-mt-1 mb-3 flex items-center justify-between gap-2 sm:hidden">
                       <span className="text-foreground text-base font-semibold">
                         Job
                       </span>
-                      {variant === "queue" ? (
-                      <div
-                        className="relative z-10 shrink-0"
-                        ref={menuOpenJobId === job.id ? menuRef : null}
-                      >
-                        <button
-                          aria-expanded={menuOpenJobId === job.id}
-                          aria-haspopup="menu"
-                          aria-label="More actions"
-                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                          type="button"
-                          onClick={() =>
-                            setMenuOpenJobId((id) =>
-                              id === job.id ? null : job.id
-                            )
-                          }
+                      {(variant === "queue" ||
+                        (variant === "finished" &&
+                          onRetry &&
+                          (job.status === "error" ||
+                            job.status === "cancelled"))) && (
+                        <div
+                          className="relative z-10 shrink-0"
+                          ref={menuOpenJobId === job.id ? menuRef : null}
                         >
-                          <MoreHorizontal
-                            aria-hidden
-                            className="h-4 w-4 text-foreground"
-                          />
-                        </button>
-                        {menuOpenJobId === job.id && (
-                          <div
-                            className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
-                            role="menu"
+                          <button
+                            aria-expanded={menuOpenJobId === job.id}
+                            aria-haspopup="menu"
+                            aria-label="More actions"
+                            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                            type="button"
+                            onClick={() =>
+                              setMenuOpenJobId((id) =>
+                                id === job.id ? null : job.id
+                              )
+                            }
                           >
-                            <button
-                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover"
-                              role="menuitem"
-                              type="button"
-                              onClick={() => {
-                                setMenuOpenJobId(null);
-                                onCancel(job.id);
-                              }}
+                            <MoreHorizontal
+                              aria-hidden
+                              className="h-4 w-4 text-foreground"
+                            />
+                          </button>
+                          {menuOpenJobId === job.id && (
+                            <div
+                              className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                              role="menu"
                             >
-                              Cancel
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      ) : null}
+                              {variant === "queue" ? (
+                                <button
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover"
+                                  role="menuitem"
+                                  type="button"
+                                  onClick={() => {
+                                    setMenuOpenJobId(null);
+                                    onCancel(job.id);
+                                  }}
+                                >
+                                  <CircleSlash aria-hidden className="h-4 w-4" />
+                                  Cancel
+                                </button>
+                              ) : (
+                                onRetry &&
+                                (job.status === "error" ||
+                                  job.status === "cancelled") && (
+                                  <button
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                                    role="menuitem"
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuOpenJobId(null);
+                                      void onRetry(job.id);
+                                    }}
+                                  >
+                                    <RotateCcw aria-hidden className="h-4 w-4" />
+                                    Retry
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
@@ -241,7 +265,7 @@ export function JobsList({
                         Cancel
                       </button>
                     ) : (
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="hidden shrink-0 items-center gap-2 sm:flex">
                         {statusBadge}
                         {onRetry &&
                           (job.status === "error" ||
@@ -260,7 +284,7 @@ export function JobsList({
 
                   <div className="mb-4">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                      {variant === "queue" && (
+                      {(variant === "queue" || variant === "finished") && (
                         <DetailRow label="Status">
                           {statusBadge}
                         </DetailRow>
