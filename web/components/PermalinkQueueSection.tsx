@@ -217,10 +217,10 @@ export function PermalinkQueueSection({
         >
           Add a permalink to update or add a post.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
           <input
             aria-label="Nextdoor permalink URL"
-            className="border-border bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-border-focus focus:outline-none focus:ring-[1px] focus:ring-border-focus"
+            className="border-border bg-background text-foreground min-w-0 w-full flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-border-focus focus:outline-none focus:ring-[1px] focus:ring-border-focus"
             disabled={isAdding}
             placeholder="https://nextdoor.com/p/sW7395ZTbKKJ"
             type="url"
@@ -228,7 +228,7 @@ export function PermalinkQueueSection({
             onChange={(e) => setInputUrl(e.target.value)}
           />
           <Button
-            className="shrink-0"
+            className="shrink-0 w-full sm:w-auto"
             disabled={isAdding || !inputUrl.trim()}
             variant="primary"
             onClick={handleAdd}
@@ -265,15 +265,96 @@ export function PermalinkQueueSection({
                 <div
                   key={job.id}
                   className="rounded border border-border bg-surface-hover/50 p-4"
+                  ref={menuOpen ? menuRef : null}
                 >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <span
-                      className="text-foreground min-w-0 flex-1 truncate text-base font-semibold"
-                      title={url}
-                    >
-                      {truncateUrl(url, 56)}
+                  <div className="mb-0.5 flex items-center justify-between sm:hidden">
+                    <span className="text-foreground text-base font-semibold">
+                      Post
                     </span>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="relative z-10 shrink-0">
+                      <button
+                        aria-expanded={menuOpen}
+                        aria-haspopup="menu"
+                        aria-label="More actions"
+                        className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() =>
+                          setMenuOpenJobId((id) =>
+                            id === job.id ? null : job.id
+                          )
+                        }
+                      >
+                        <MoreHorizontal
+                          aria-hidden
+                          className="h-4 w-4 text-foreground"
+                        />
+                      </button>
+                      {menuOpen && (
+                        <div
+                          className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                          role="menu"
+                        >
+                          {url && url.startsWith("http") && (
+                            <a
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                              href={url}
+                              rel="noopener noreferrer"
+                              role="menuitem"
+                              target="_blank"
+                              onClick={() => setMenuOpenJobId(null)}
+                            >
+                              <Eye aria-hidden className="h-4 w-4" />
+                              View Post
+                            </a>
+                          )}
+                          {canCancel && (
+                            <button
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover"
+                              role="menuitem"
+                              type="button"
+                              onClick={() => {
+                                setMenuOpenJobId(null);
+                                onCancel?.(job.id);
+                              }}
+                            >
+                              <Trash2 aria-hidden className="h-4 w-4" />
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
+                        URL
+                      </h4>
+                      <span
+                        className="text-foreground block break-all sm:truncate"
+                        title={url}
+                      >
+                        <span
+                          className="text-xs sm:hidden"
+                          style={{ opacity: 0.85 }}
+                        >
+                          {url}
+                        </span>
+                        <span className="hidden text-sm font-semibold sm:inline">
+                          {truncateUrl(url, 56)}
+                        </span>
+                      </span>
+                      {(job.status === "running" ||
+                        job.status === "completed" ||
+                        job.status === "error") && (
+                        <span
+                          className={`mt-1 block sm:hidden ${statusClass(job.status)} shrink-0 rounded border px-2 py-0.5 text-xs font-medium`}
+                        >
+                          {formatStatus(job.status)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="hidden shrink-0 items-center gap-1 sm:flex">
                       {(job.status === "running" ||
                         job.status === "completed" ||
                         job.status === "error") && (
@@ -286,7 +367,7 @@ export function PermalinkQueueSection({
                       {url && url.startsWith("http") && (
                         <a
                           aria-label="View Post on Nextdoor"
-                          className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                           href={url}
                           rel="noopener noreferrer"
                           target="_blank"
@@ -298,7 +379,7 @@ export function PermalinkQueueSection({
                       {canCancel && (
                         <button
                           aria-label="Delete"
-                          className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                           title="Delete"
                           type="button"
                           onClick={() => onCancel?.(job.id)}
@@ -309,15 +390,12 @@ export function PermalinkQueueSection({
                           />
                         </button>
                       )}
-                      <div
-                        className="relative"
-                        ref={menuOpen ? menuRef : null}
-                      >
+                      <div className="relative">
                         <button
                           aria-expanded={menuOpen}
                           aria-haspopup="menu"
                           aria-label="More actions"
-                          className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                           type="button"
                           onClick={() =>
                             setMenuOpenJobId((id) =>
@@ -419,15 +497,78 @@ export function PermalinkQueueSection({
                   <div
                     key={job.id}
                     className="rounded border border-border bg-surface-hover/50 p-4"
+                    ref={menuOpen ? menuRef : null}
                   >
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <span
-                        className="text-foreground min-w-0 flex-1 truncate text-base font-semibold"
-                        title={url}
-                      >
-                        {truncateUrl(url, 56)}
+                    <div className="mb-0.5 flex items-center justify-between sm:hidden">
+                      <span className="text-foreground text-base font-semibold">
+                        Post
                       </span>
-                      <div className="flex shrink-0 items-center gap-1">
+                      <div className="relative z-10 shrink-0">
+                        <button
+                          aria-expanded={menuOpen}
+                          aria-haspopup="menu"
+                          aria-label="More actions"
+                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() =>
+                            setMenuOpenJobId((id) =>
+                              id === job.id ? null : job.id
+                            )
+                          }
+                        >
+                          <MoreHorizontal
+                            aria-hidden
+                            className="h-4 w-4 text-foreground"
+                          />
+                        </button>
+                        {menuOpen && (
+                          <div
+                            className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                            role="menu"
+                          >
+                            {url && url.startsWith("http") && (
+                              <a
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                                href={url}
+                                rel="noopener noreferrer"
+                                role="menuitem"
+                                target="_blank"
+                                onClick={() => setMenuOpenJobId(null)}
+                              >
+                                <Eye aria-hidden className="h-4 w-4" />
+                                View Post
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
+                          URL
+                        </h4>
+                        <span
+                          className="text-foreground block break-all sm:truncate"
+                          title={url}
+                        >
+                          <span
+                            className="text-xs sm:hidden"
+                            style={{ opacity: 0.85 }}
+                          >
+                            {url}
+                          </span>
+                          <span className="hidden text-sm font-semibold sm:inline">
+                            {truncateUrl(url, 56)}
+                          </span>
+                        </span>
+                        <span
+                          className={`mt-1 block sm:hidden ${statusClass(job.status)} shrink-0 rounded border px-2 py-0.5 text-xs font-medium`}
+                        >
+                          {formatStatus(job.status)}
+                        </span>
+                      </div>
+                      <div className="hidden shrink-0 items-center gap-1 sm:flex">
                         <span
                           className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
                         >
@@ -436,7 +577,7 @@ export function PermalinkQueueSection({
                         {url && url.startsWith("http") && (
                           <a
                             aria-label="View Post on Nextdoor"
-                            className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                             href={url}
                             rel="noopener noreferrer"
                             target="_blank"
@@ -448,15 +589,12 @@ export function PermalinkQueueSection({
                             />
                           </a>
                         )}
-                        <div
-                          className="relative"
-                          ref={menuOpen ? menuRef : null}
-                        >
+                        <div className="relative">
                           <button
                             aria-expanded={menuOpen}
                             aria-haspopup="menu"
                             aria-label="More actions"
-                            className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+                            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                             type="button"
                             onClick={() =>
                               setMenuOpenJobId((id) =>
