@@ -204,133 +204,120 @@ export const PostCard = memo(function PostCard({
             ? "border-emerald-600"
             : "border-emerald-500";
 
-  return (
-    <Card className="px-4 py-5 transition-colors hover:border-border-focus">
-      {/* Header: score column (when present) | metadata + tags | actions */}
-      <div className="mb-6 flex items-start justify-between gap-3">
-        {scores?.final_score != null && (
-          <div className="flex w-16 shrink-0 items-center justify-center self-stretch">
+  const breadcrumbs = (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+      {post.author_name && (
+        <>
+          <span className="text-foreground text-sm">{post.author_name}</span>
+          <span className="text-muted-foreground text-sm">•</span>
+        </>
+      )}
+      <span className="text-foreground text-sm font-medium tracking-wide">
+        {neighborhoodName}
+      </span>
+      <span className="text-muted-foreground text-sm">•</span>
+      <span className="text-foreground text-sm">
+        {formatRelativeTime(post.created_at)}
+      </span>
+      {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
+        <>
+          <span className="text-muted-foreground text-sm">•</span>
+          <span
+            className="text-foreground text-sm font-medium"
+            title="Reactions On Nextdoor"
+          >
+            {post.reaction_count} Reaction
+            {post.reaction_count !== 1 ? "s" : ""}
+          </span>
+        </>
+      )}
+      {Array.isArray(post.comments) && post.comments.length > 0 && (
+        <>
+          <span className="text-muted-foreground text-sm">•</span>
+          <Link
+            className="text-foreground hover:underline text-sm font-medium"
+            href={`/posts/${post.id}#comments`}
+            title="View Comments"
+          >
+            <MessageSquare
+              aria-hidden
+              className="inline h-3.5 w-3.5 align-middle"
+            />
+            <span className="ml-1">
+              {post.comments.length} Comment
+              {post.comments.length !== 1 ? "s" : ""}
+            </span>
+          </Link>
+        </>
+      )}
+      {queueStatus === "pending" && (
+        <>
+          <span className="text-muted-foreground text-sm">•</span>
+          <span className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+            Queued
+          </span>
+        </>
+      )}
+      {queueStatus === "running" && (
+        <>
+          <span className="text-muted-foreground text-sm">•</span>
+          <span className="shrink-0 rounded border border-blue-500/70 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600">
+            Processing
+          </span>
+        </>
+      )}
+    </div>
+  );
+
+  const tagsBlock =
+    scores?.categories && scores.categories.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {scores.categories.slice(0, 5).map((category: string, index: number) => (
+          <span
+            key={`${category}-${index}`}
+            className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
+          >
+            {formatCategoryLabel(category)}
+          </span>
+        ))}
+      </div>
+    ) : null;
+
+  const actionsBlock = (
+    <div className="flex shrink-0 items-center gap-1">
+      {showCheckbox && onSelect ? (
+        <input
+          aria-label={`Select post from ${neighborhoodName}`}
+          checked={selected}
+          className="rounded border-border bg-surface-hover"
+          type="checkbox"
+          onChange={(e) => onSelect(post.id, e.target.checked)}
+        />
+      ) : (
+        <>
+          {post.similarity != null && (
             <span
-              className={cn(
-                "inline-flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold",
-                scoreColorClass || "text-foreground",
-                scoreCircleBorderClass || "border-border"
-              )}
+              className="text-muted text-xs"
+              title="Semantic Similarity To Search Query"
             >
-              {scores.final_score.toFixed(1)}
+              Sim: {post.similarity.toFixed(2)}
             </span>
-          </div>
-        )}
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-            {post.author_name && (
-              <>
-                <span className="text-foreground text-sm">{post.author_name}</span>
-                <span className="text-muted-foreground text-sm">•</span>
-              </>
-            )}
-            <span className="text-foreground text-sm font-medium tracking-wide">
-              {neighborhoodName}
-            </span>
-            <span className="text-muted-foreground text-sm">•</span>
-            <span className="text-foreground text-sm">
-              {formatRelativeTime(post.created_at)}
-            </span>
-            {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
-              <>
-                <span className="text-muted-foreground text-sm">•</span>
-                <span
-                  className="text-foreground text-sm font-medium"
-                  title="Reactions On Nextdoor"
-                >
-                  {post.reaction_count} Reaction
-                  {post.reaction_count !== 1 ? "s" : ""}
+          )}
+          {(post.ignored || post.used_on_episode) && (
+            <div className="flex flex-wrap justify-end gap-1">
+              {post.ignored && (
+                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                  Ignored
                 </span>
-              </>
-            )}
-            {Array.isArray(post.comments) && post.comments.length > 0 && (
-              <>
-                <span className="text-muted-foreground text-sm">•</span>
-                <Link
-                  className="text-foreground hover:underline text-sm font-medium"
-                  href={`/posts/${post.id}#comments`}
-                  title="View Comments"
-                >
-                  <MessageSquare
-                    aria-hidden
-                    className="inline h-3.5 w-3.5 align-middle"
-                  />
-                  <span className="ml-1">
-                    {post.comments.length} Comment
-                    {post.comments.length !== 1 ? "s" : ""}
-                  </span>
-                </Link>
-              </>
-            )}
-            {queueStatus === "pending" && (
-              <>
-                <span className="text-muted-foreground text-sm">•</span>
-                <span className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
-                  Queued
+              )}
+              {post.used_on_episode && (
+                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
+                  Used
                 </span>
-              </>
-            )}
-            {queueStatus === "running" && (
-              <>
-                <span className="text-muted-foreground text-sm">•</span>
-                <span className="shrink-0 rounded border border-blue-500/70 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600">
-                  Processing
-                </span>
-              </>
-            )}
-          </div>
-          {scores?.categories && scores.categories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {scores.categories.slice(0, 5).map((category: string, index: number) => (
-                <span
-                  key={`${category}-${index}`}
-                  className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
-                >
-                  {formatCategoryLabel(category)}
-                </span>
-              ))}
+              )}
             </div>
           )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {showCheckbox && onSelect ? (
-            <input
-              aria-label={`Select post from ${neighborhoodName}`}
-              checked={selected}
-              className="rounded border-border bg-surface-hover"
-              type="checkbox"
-              onChange={(e) => onSelect(post.id, e.target.checked)}
-            />
-          ) : (
-            <>
-              {post.similarity != null && (
-                <span
-                  className="text-muted text-xs"
-                  title="Semantic Similarity To Search Query"
-                >
-                  Sim: {post.similarity.toFixed(2)}
-                </span>
-              )}
-              {(post.ignored || post.used_on_episode) && (
-                <div className="flex flex-wrap justify-end gap-1">
-                  {post.ignored && (
-                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                      Ignored
-                    </span>
-                  )}
-                  {post.used_on_episode && (
-                    <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                      Used
-                    </span>
-                  )}
-                </div>
-              )}
-              {onMarkSaved && (
+          {onMarkSaved && (
             <button
               aria-label={post.saved ? "Unsave" : "Save"}
               className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -371,7 +358,6 @@ export const PostCard = memo(function PostCard({
               <ExternalLink aria-hidden className="h-4 w-4 text-foreground" />
             </a>
           )}
-          {/* Actions dropdown */}
           <div className="relative" ref={menuRef}>
             <button
               aria-expanded={menuOpen}
@@ -470,67 +456,49 @@ export const PostCard = memo(function PostCard({
                           aria-hidden
                           className={cn(
                             "h-4 w-4",
-                            isQueuingRefresh && "animate-spin"
+                            isQueuingRefresh && "animate-pulse"
                           )}
                         />
                         {isQueuingRefresh ? "Queuing…" : "Refresh Post"}
                       </button>
                     )
                   ))}
-                {onMarkSaved && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isMarkingSaved}
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onMarkSaved(post.id, !post.saved);
-                    }}
-                  >
-                    <Bookmark aria-hidden className="h-4 w-4" />
-                    {isMarkingSaved
-                      ? "Saving..."
-                      : post.saved
-                        ? "Unsave"
-                        : "Save"}
-                  </button>
-                )}
-                {onViewDetails && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onViewDetails(post.id);
-                    }}
-                  >
-                    <List aria-hidden className="h-4 w-4" />
-                    View details
-                  </button>
-                )}
-                {post.url && (
-                  <a
-                    aria-label="View on Nextdoor"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                    href={post.url}
-                    rel="noopener noreferrer"
-                    role="menuitem"
-                    target="_blank"
-                    onClick={closeMenu}
-                  >
-                    <ExternalLink aria-hidden className="h-4 w-4" />
-                    View on Nextdoor
-                  </a>
-                )}
               </div>
             )}
           </div>
-            </>
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <Card className="px-4 py-5 transition-colors hover:border-border-focus">
+      {/* Mobile: compact row (score + breadcrumbs + actions) then tags row; desktop: original layout */}
+      <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="flex min-w-0 items-start gap-2 sm:contents">
+          {scores?.final_score != null && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:w-16 sm:items-start sm:justify-start">
+              <span
+                className={cn(
+                  "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold sm:h-14 sm:w-14 sm:text-base",
+                  scoreColorClass || "text-foreground",
+                  scoreCircleBorderClass || "border-border"
+                )}
+              >
+                {scores.final_score.toFixed(1)}
+              </span>
+            </div>
           )}
+          <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:gap-3">
+            {breadcrumbs}
+            <div className="hidden sm:block">{tagsBlock}</div>
           </div>
+          {actionsBlock}
         </div>
+        {tagsBlock != null && (
+          <div className="sm:hidden">{tagsBlock}</div>
+        )}
+      </div>
 
       {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
       {imageUrls.length > 0 && (
