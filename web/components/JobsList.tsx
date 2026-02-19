@@ -1,4 +1,8 @@
+"use client";
+
+import { MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
 
@@ -93,6 +97,23 @@ export function JobsList({
   title = "Recent jobs",
   variant = "queue",
 }: JobsListProps) {
+  const [menuOpenJobId, setMenuOpenJobId] = useState<null | string>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (menuOpenJobId == null) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpenJobId(null);
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [menuOpenJobId]);
+
   return (
     <Card className="mb-8 p-6">
       <div className="mb-4">
@@ -142,13 +163,78 @@ export function JobsList({
                   key={job.id}
                   className="rounded border border-border bg-surface-hover/50 p-4"
                 >
-                  <div className="mb-3 flex items-start justify-between gap-2">
-                    <span className="text-foreground min-w-0 flex-1 truncate text-base font-semibold">
-                      {formatJobType(job.type)} (#{job.id.substring(0, 8)})
-                    </span>
+                  {(variant === "queue" || variant === "finished") && (
+                    <div className="-mt-1 mb-0.5 flex items-center justify-between gap-2 sm:hidden">
+                      <span className="text-foreground text-base font-semibold">
+                        Job
+                      </span>
+                      {variant === "queue" ? (
+                      <div
+                        className="relative z-10 shrink-0"
+                        ref={menuOpenJobId === job.id ? menuRef : null}
+                      >
+                        <button
+                          aria-expanded={menuOpenJobId === job.id}
+                          aria-haspopup="menu"
+                          aria-label="More actions"
+                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() =>
+                            setMenuOpenJobId((id) =>
+                              id === job.id ? null : job.id
+                            )
+                          }
+                        >
+                          <MoreHorizontal
+                            aria-hidden
+                            className="h-4 w-4 text-foreground"
+                          />
+                        </button>
+                        {menuOpenJobId === job.id && (
+                          <div
+                            className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                            role="menu"
+                          >
+                            <button
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover"
+                              role="menuitem"
+                              type="button"
+                              onClick={() => {
+                                setMenuOpenJobId(null);
+                                onCancel(job.id);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
+                        Title
+                      </h4>
+                      <span
+                        className="text-foreground block break-all sm:truncate"
+                        title={`${formatJobType(job.type)} (#${job.id.substring(0, 8)})`}
+                      >
+                        <span
+                          className="text-xs sm:hidden"
+                          style={{ opacity: 0.85 }}
+                        >
+                          {formatJobType(job.type)} (#{job.id.substring(0, 8)})
+                        </span>
+                        <span className="hidden text-base font-semibold sm:inline">
+                          {formatJobType(job.type)} (#{job.id.substring(0, 8)})
+                        </span>
+                      </span>
+                    </div>
                     {variant === "queue" ? (
                       <button
-                        className="border-destructive text-destructive hover:bg-surface-hover shrink-0 rounded border px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        className="border-destructive text-destructive hover:bg-surface-hover hidden shrink-0 rounded border px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
                         type="button"
                         onClick={() => onCancel(job.id)}
                       >
