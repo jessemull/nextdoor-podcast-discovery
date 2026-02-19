@@ -217,7 +217,7 @@ export function PermalinkQueueSection({
         >
           Add a permalink to update or add a post.
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
           <input
             aria-label="Nextdoor permalink URL"
             className="border-border bg-background text-foreground min-w-0 w-full flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-border-focus focus:outline-none focus:ring-[1px] focus:ring-border-focus"
