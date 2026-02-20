@@ -8,9 +8,11 @@ import {
   Eye,
   EyeOff,
   Filter,
+  Inbox,
   MoreHorizontal,
   RefreshCw,
   RotateCcw,
+  SearchX,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -1044,15 +1046,21 @@ export function PostFeed({
               searchSlot.debouncedQuery === searchSlot.query &&
               searchSlot.searchTotal === 0 &&
               !searchSlot.searchError && (
-                <Card className="py-8 text-center">
-                  <p className="text-foreground mb-1 font-medium">
-                    No Posts Found
+                <div className="py-10 text-center">
+                  <span className="text-muted-foreground text-sm">
+                    <SearchX
+                      aria-hidden
+                      className="mx-auto mb-4 block h-12 w-12"
+                    />
+                  </span>
+                  <p className="text-foreground mb-3 font-medium">
+                    No posts found.
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    Try Different Search Terms or Lower the Similarity
-                    Threshold.
+                    Try different search terms or lower the similarity
+                    threshold.
                   </p>
-                </Card>
+                </div>
               )}
             {searchSlot.loading && searchSlot.query.trim() && (
               <div
@@ -1106,10 +1114,18 @@ export function PostFeed({
         )}
 
         {!initialLoading && posts.length === 0 && (
-          <div className="rounded-card border border-border bg-surface p-8 text-center">
-            <p className="text-muted">No Posts Found</p>
-            <p className="text-muted-foreground mt-2 text-sm">
-              Try Adjusting Your Filters or Run the Scraper to Collect Posts.
+          <div className="py-10 text-center">
+            <span className="text-muted-foreground text-sm">
+              <Inbox
+                aria-hidden
+                className="mx-auto mb-4 block h-12 w-12"
+              />
+            </span>
+            <p className="text-foreground mb-3 font-medium">
+              No posts found.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Try adjusting your filters or run the scraper to collect posts.
             </p>
           </div>
         )}
@@ -1170,8 +1186,8 @@ export function PostFeed({
             )}
 
             {!hasMore && posts.length > 0 && (
-              <div className="text-muted-foreground py-4 text-center text-sm">
-                No More Posts to Load
+              <div className="text-muted-foreground pt-10 pb-4 text-center text-sm">
+                No more posts to load.
               </div>
             )}
           </>
