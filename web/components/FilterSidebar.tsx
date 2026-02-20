@@ -453,15 +453,17 @@ export function FilterSidebar({
         </div>
       </div>
 
-      <div className="shrink-0 pr-4 pt-4">
-        <button
-          className="border-border bg-surface-hover text-foreground w-full rounded border px-3 py-2 text-sm transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
-          type="button"
-          onClick={onReset}
-        >
-          Clear All Filters
-        </button>
-      </div>
+      {!hideTitle && (
+        <div className="shrink-0 pr-4 pt-4">
+          <button
+            className="border-border bg-surface-hover text-foreground w-full rounded border px-3 py-2 text-sm transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
+            type="button"
+            onClick={onReset}
+          >
+            Clear All Filters
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
