@@ -111,14 +111,16 @@ export function FilterSidebar({
     <aside
       aria-label="Filter posts"
       className={cn(
-        "border-border bg-surface flex flex-col border-r",
-        hideTitle ? "min-h-0" : "h-full min-h-0 pb-4 pl-4"
+        "border-border bg-surface flex flex-col",
+        hideTitle
+          ? "shrink-0 overflow-visible border-r-0"
+          : "h-full min-h-0 border-r pb-4 pl-4"
       )}
     >
       <div
-        className={hideTitle ? "px-4" : "min-h-0 flex-1 overflow-y-auto"}
+        className={hideTitle ? "overflow-visible px-4" : "min-h-0 flex-1 overflow-y-auto"}
       >
-        <div className={hideTitle ? "" : "pr-4 pt-4"}>
+        <div className={hideTitle ? "overflow-visible" : "pr-4 pt-4"}>
           {!hideTitle && (
             <h2 className="text-foreground mb-4 text-xl font-semibold">
               Filters
