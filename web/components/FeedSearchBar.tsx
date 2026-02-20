@@ -231,10 +231,6 @@ export function FeedSearchBar({
         )}
       </div>
 
-      {loading && (
-        <p className="text-muted-foreground text-sm">Searching…</p>
-      )}
-
     </div>
   );
 }
