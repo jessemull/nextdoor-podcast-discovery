@@ -20,6 +20,7 @@ export interface FilterSidebarProps {
   activeConfigWeights: null | Record<string, number>;
   filterLoadError: null | string;
   filters: PostFeedFilters;
+  hideTitle?: boolean;
   neighborhoods: Neighborhood[];
   onReset: () => void;
   onSimilarityThresholdChange?: (value: number) => void;
@@ -68,6 +69,7 @@ export function FilterSidebar({
   activeConfigWeights,
   filterLoadError,
   filters,
+  hideTitle,
   neighborhoods,
   onReset,
   onSimilarityThresholdChange,
@@ -108,13 +110,20 @@ export function FilterSidebar({
   return (
     <aside
       aria-label="Filter posts"
-      className="border-border bg-surface flex h-full min-h-0 flex-col border-r pb-4 pl-4"
+      className={cn(
+        "border-border bg-surface flex flex-col border-r",
+        hideTitle ? "min-h-0" : "h-full min-h-0 pb-4 pl-4"
+      )}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="pr-4 pt-4">
-          <h2 className="text-foreground mb-4 text-xl font-semibold">
-            Filters
-          </h2>
+      <div
+        className={hideTitle ? "px-4" : "min-h-0 flex-1 overflow-y-auto"}
+      >
+        <div className={hideTitle ? "" : "pr-4 pt-4"}>
+          {!hideTitle && (
+            <h2 className="text-foreground mb-4 text-xl font-semibold">
+              Filters
+            </h2>
+          )}
         {filterLoadError && (
           <p className="mb-4 text-destructive text-sm" role="alert">
             {filterLoadError}
