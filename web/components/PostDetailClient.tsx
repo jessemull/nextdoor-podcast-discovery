@@ -127,14 +127,21 @@ export function PostDetailClient({
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
-        if (response.ok) {
-          await fetchPost();
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to save post");
         }
+        toast.success(saved ? "Saved." : "Unsaved.");
+        await fetchPost();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        toast.error(errorMessage);
       } finally {
         setMarkingSaved(false);
       }
     },
-    [postId, markingSaved, fetchPost]
+    [fetchPost, markingSaved, postId, toast]
   );
 
   const handleMarkUsed = useCallback(async () => {
@@ -153,13 +160,17 @@ export function PostDetailClient({
         throw new Error(data.error || "Failed to mark as used");
       }
 
+      toast.success("Marked as used.");
       await fetchPost();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to mark post as used";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setMarkingUsed(false);
     }
-  }, [postId, markingUsed, fetchPost]);
+  }, [fetchPost, markingUsed, postId, toast]);
 
   const handleMarkIgnored = useCallback(
     async (ignored: boolean) => {
@@ -171,14 +182,21 @@ export function PostDetailClient({
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
-        if (response.ok) {
-          await fetchPost();
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to update post");
         }
+        toast.success(ignored ? "Ignored." : "Unignored.");
+        await fetchPost();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        toast.error(errorMessage);
       } finally {
         setMarkingIgnored(false);
       }
     },
-    [postId, markingIgnored, fetchPost]
+    [fetchPost, markingIgnored, postId, toast]
   );
 
   const handleQueueRefresh = useCallback(async () => {
