@@ -147,6 +147,15 @@ export function PostFeed({
   const [selectAllChecked, setSelectAllChecked] = useState(false);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!openFilterDrawer) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [openFilterDrawer]);
+
   const { activeConfigId, weightConfigs } = useWeightConfigs();
   const activeConfigWeights =
     weightConfigs.find((c) => c.id === activeConfigId)?.weights ?? null;
@@ -389,7 +398,12 @@ export function PostFeed({
             onClick={() => setOpenFilterDrawer(false)}
           />
           <div className="border-border bg-surface fixed left-0 top-0 z-50 flex h-full w-full flex-col overflow-hidden border-r shadow-lg sm:w-72 sm:max-w-[85vw] md:hidden">
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto p-3 touch-pan-y [-webkit-overflow-scrolling:touch]"
+              role="region"
+              aria-label="Filter options"
+              style={{ minHeight: 0 }}
+            >
               <div className="flex min-h-[44px] items-center justify-between">
                 <div className="flex min-h-[44px] flex-1 items-center px-4 py-2">
                   <h2 className="text-foreground text-lg font-semibold">
