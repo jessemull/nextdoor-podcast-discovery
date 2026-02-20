@@ -19,7 +19,7 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+      <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="animate-pulse text-gray-400">Loading...</div>
       </div>
     );
@@ -30,7 +30,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

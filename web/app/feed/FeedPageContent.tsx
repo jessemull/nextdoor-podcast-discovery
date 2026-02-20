@@ -38,14 +38,6 @@ export function FeedPageContent() {
   const [useKeywordSearch, setUseKeywordSearch] = useState(false);
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
       setQuery(qFromUrl.trim());
     }
@@ -176,7 +168,7 @@ export function FeedPageContent() {
   }, [runSearch, updateUrl]);
 
   return (
-    <main className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden pt-0">
+    <main className="flex h-full flex-col overflow-hidden pt-0">
       <section
         aria-label="Feed"
         className="flex min-h-0 flex-1 flex-col min-w-0"
