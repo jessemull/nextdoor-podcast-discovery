@@ -398,44 +398,56 @@ export function PostFeed({
             onClick={() => setOpenFilterDrawer(false)}
           />
           <div className="border-border bg-surface fixed left-0 top-0 z-50 flex h-full w-full flex-col overflow-hidden border-r shadow-lg sm:w-72 sm:max-w-[85vw] md:hidden">
+            <div className="flex shrink-0 items-center justify-between p-3">
+              <div className="flex min-h-[44px] flex-1 items-center px-4 py-2">
+                <h2 className="text-foreground text-lg font-semibold">
+                  Filters
+                </h2>
+              </div>
+              <button
+                aria-label="Close filters"
+                className="flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={() => setOpenFilterDrawer(false)}
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             <div
-              className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto p-3 touch-pan-y [-webkit-overflow-scrolling:touch]"
+              className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 touch-pan-y [-webkit-overflow-scrolling:touch]"
               role="region"
               aria-label="Filter options"
               style={{ minHeight: 0 }}
             >
-              <div className="flex min-h-[44px] items-center justify-between">
-                <div className="flex min-h-[44px] flex-1 items-center px-4 py-2">
-                  <h2 className="text-foreground text-lg font-semibold">
-                    Filters
-                  </h2>
-                </div>
-                <button
-                  aria-label="Close filters"
-                  className="flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  type="button"
-                  onClick={() => setOpenFilterDrawer(false)}
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
               <FilterSidebar
-              activeConfigWeights={
-                activeConfigWeights as null | Record<string, number>
-              }
-              filterLoadError={filterLoadError}
-              filters={filters}
-              hideTitle
-              neighborhoods={neighborhoods}
-              picksDefaults={picksDefaults}
-              setFilters={setFilters}
-              similarityThreshold={searchSlot?.similarityThreshold}
-              onReset={() => {
-                handleResetFilters();
-                setOpenFilterDrawer(false);
-              }}
-              onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
-            />
+                activeConfigWeights={
+                  activeConfigWeights as null | Record<string, number>
+                }
+                filterLoadError={filterLoadError}
+                filters={filters}
+                hideTitle
+                neighborhoods={neighborhoods}
+                picksDefaults={picksDefaults}
+                setFilters={setFilters}
+                similarityThreshold={searchSlot?.similarityThreshold}
+                onReset={() => {
+                  handleResetFilters();
+                  setOpenFilterDrawer(false);
+                }}
+                onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
+              />
+            </div>
+            <div className="border-border shrink-0 border-t p-3">
+              <button
+                className="border-border bg-surface-hover text-foreground w-full rounded border px-3 py-2 text-sm transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={() => {
+                  handleResetFilters();
+                  setOpenFilterDrawer(false);
+                }}
+              >
+                Clear All Filters
+              </button>
             </div>
           </div>
         </>
