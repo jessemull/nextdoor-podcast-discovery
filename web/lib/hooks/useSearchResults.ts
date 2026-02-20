@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useToast } from "@/lib/ToastContext";
 import type { PostWithScores } from "@/lib/types";
 
 interface SearchResponse {
@@ -37,6 +38,7 @@ export function useSearchResults(
     useKeywordSearch,
   } = params;
 
+  const { toast } = useToast();
   const [error, setError] = useState<null | string>(null);
   const [loading, setLoading] = useState(false);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
@@ -113,13 +115,20 @@ export function useSearchResults(
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
-        if (response.ok) {
-          setResults((prev) =>
-            prev.map((post) =>
-              post.id === postId ? { ...post, saved } : post
-            )
-          );
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to save post");
         }
+        setResults((prev) =>
+          prev.map((post) =>
+            post.id === postId ? { ...post, saved } : post
+          )
+        );
+        toast.success(saved ? "Saved." : "Unsaved.");
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        toast.error(errorMessage);
       } finally {
         setMarkingSaved((prev) => {
           const next = new Set(prev);
@@ -128,7 +137,7 @@ export function useSearchResults(
         });
       }
     },
-    [markingSaved]
+    [markingSaved, toast]
   );
 
   const handleMarkUsed = useCallback(async (postId: string) => {
@@ -140,7 +149,8 @@ export function useSearchResults(
       });
 
       if (!response.ok) {
-        throw new Error("Failed to mark post as used");
+        const data = await response.json();
+        throw new Error(data.error || "Failed to mark post as used");
       }
 
       setResults((prev) =>
@@ -148,10 +158,14 @@ export function useSearchResults(
           post.id === postId ? { ...post, used_on_episode: true } : post
         )
       );
+      toast.success("Marked as used.");
     } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to mark post as used";
       console.error("Error marking post as used:", err);
+      toast.error(errorMessage);
     }
-  }, []);
+  }, [toast]);
 
   return {
     error,

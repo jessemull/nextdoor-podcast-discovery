@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { useToast } from "@/lib/ToastContext";
+
 export type BulkActionType =
   | "ignore"
   | "mark_used"
@@ -64,6 +66,7 @@ export function useBulkActions({
   offset,
   setError,
 }: UseBulkActionsParams): UseBulkActionsResult {
+  const { toast } = useToast();
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [markingIgnored, setMarkingIgnored] = useState<Set<string>>(new Set());
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
@@ -149,11 +152,13 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to save post");
         }
+        toast.success(saved ? "Saved." : "Unsaved.");
         await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
         setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setMarkingSaved((prev) => {
           const next = new Set(prev);
@@ -162,7 +167,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingSaved, setError]
+    [fetchPosts, markingSaved, setError, toast]
   );
 
   const handleMarkIgnored = useCallback(
@@ -179,11 +184,13 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to update post");
         }
+        toast.success(ignored ? "Ignored." : "Unignored.");
         await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
         setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setMarkingIgnored((prev) => {
           const next = new Set(prev);
@@ -192,7 +199,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingIgnored, setError]
+    [fetchPosts, markingIgnored, setError, toast]
   );
 
   const handleMarkUsed = useCallback(
@@ -209,12 +216,14 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to mark post as used");
         }
+        toast.success("Marked as used.");
         await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
         console.error("Failed to mark post as used:", err);
         setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setMarkingUsed((prev) => {
           const next = new Set(prev);
@@ -223,7 +232,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingUsed, setError]
+    [fetchPosts, markingUsed, setError, toast]
   );
 
   const handleBulkMarkUsed = useCallback(async () => {
