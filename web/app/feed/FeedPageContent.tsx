@@ -40,6 +40,7 @@ export function FeedPageContent() {
   useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
       setQuery(qFromUrl.trim());
+      setLastSearchedQuery(qFromUrl.trim());
     }
   }, [qFromUrl]);
 
@@ -119,6 +120,12 @@ export function FeedPageContent() {
     similarityThreshold,
     useKeywordSearch,
   });
+
+  useEffect(() => {
+    if (typeof qFromUrl === "string" && qFromUrl.trim()) {
+      void runSearch(qFromUrl.trim());
+    }
+  }, [qFromUrl, runSearch]);
 
   const updateUrl = useCallback(
     (updates: { q?: string; threshold?: number }) => {
