@@ -388,25 +388,30 @@ export function PostFeed({
             className="fixed inset-0 z-40 bg-black/50 md:hidden"
             onClick={() => setOpenFilterDrawer(false)}
           />
-          <div className="border-border bg-surface fixed left-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col overflow-hidden border-r shadow-lg md:hidden">
-            <div className="border-border flex shrink-0 items-center justify-between border-b p-4">
-              <h2 className="text-foreground text-lg font-semibold">Filters</h2>
-              <button
-                aria-label="Close filters"
-                className="flex h-10 min-h-[44px] min-w-10 items-center justify-center rounded text-muted hover:bg-surface-hover hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
-                type="button"
-                onClick={() => setOpenFilterDrawer(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <FilterSidebar
+          <div className="border-border bg-surface fixed left-0 top-0 z-50 flex h-full w-full flex-col overflow-hidden border-r shadow-lg sm:w-72 sm:max-w-[85vw] md:hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+              <div className="flex min-h-[44px] items-center justify-between">
+                <div className="flex min-h-[44px] flex-1 items-center px-4 py-2">
+                  <h2 className="text-foreground text-lg font-semibold">
+                    Filters
+                  </h2>
+                </div>
+                <button
+                  aria-label="Close filters"
+                  className="flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => setOpenFilterDrawer(false)}
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <FilterSidebar
               activeConfigWeights={
                 activeConfigWeights as null | Record<string, number>
               }
               filterLoadError={filterLoadError}
               filters={filters}
+              hideTitle
               neighborhoods={neighborhoods}
               picksDefaults={picksDefaults}
               setFilters={setFilters}
