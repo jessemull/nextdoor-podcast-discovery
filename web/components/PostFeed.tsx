@@ -488,12 +488,13 @@ export function PostFeed({
         </>
       )}
 
-      {/* Main content */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
-        <h1 className="text-foreground mb-4 text-2xl font-semibold text-left sm:text-3xl">
-          Nextdoor Discovery
-        </h1>
-        {searchSlot && (
+      {/* Main content: fixed header + scrollable cards (scrollbar at viewport edge) */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden py-6 sm:py-8">
+        <div className="flex shrink-0 flex-col gap-3 px-6 sm:px-8">
+          <h1 className="text-foreground mb-4 text-2xl font-semibold text-left sm:text-3xl">
+            Nextdoor Discovery
+          </h1>
+          {searchSlot && (
           <>
             {/* Compact: below md – two rows, search type in "..." next to input */}
             <div className="mb-2 flex w-full flex-col gap-2.5 lg:hidden">
@@ -866,6 +867,162 @@ export function PostFeed({
           </>
         )}
 
+        {!searchSlot && (
+          <>
+            <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
+              <button
+                aria-label="Filters"
+                className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={() => setOpenFilterDrawer(true)}
+              >
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <div className="relative" ref={sortMenuRef}>
+                <button
+                  aria-label="Sort"
+                  className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => setSortMenuOpen((open) => !open)}
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                </button>
+                {sortMenuOpen && (
+                  <div className="border-border bg-surface absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
+                    {SORT_OPTIONS.map((opt, i) => (
+                      <button
+                        className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
+                        key={opt.label}
+                        type="button"
+                        onClick={() => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            sort: opt.sort,
+                            sortOrder: opt.sortOrder,
+                          }));
+                          setSortMenuOpen(false);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                aria-label="Reset filters"
+                className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={handleResetFilters}
+              >
+                <RotateCcw className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:flex">
+              <button
+                aria-label="Filters"
+                className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={() => setOpenFilterDrawer(true)}
+              >
+                <Filter className="h-4 w-4" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              <CustomSelect
+                ariaLabel="Sort Posts"
+                className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                options={SORT_OPTIONS.map((o, i) => ({
+                  label: o.label,
+                  value: String(i),
+                }))}
+                value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+                onChange={(val) => {
+                  const opt = SORT_OPTIONS[Number(val)];
+                  if (opt) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      sort: opt.sort,
+                      sortOrder: opt.sortOrder,
+                    }));
+                  }
+                }}
+              />
+              <button
+                aria-label="Reset filters"
+                className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={handleResetFilters}
+              >
+                <RotateCcw className="h-5 w-5" />
+              </button>
+            </div>
+          </>
+        )}
+
+        {(!searchSlot || !searchSlot.query.trim()) && (
+          <>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground shrink-0 text-sm">
+                Showing {posts.length} of {total} Posts
+              </span>
+              {bulkMode && (
+                <label className="flex min-h-[44px] cursor-pointer items-center gap-2">
+                  <span className="text-muted-foreground text-sm">
+                    Select All
+                  </span>
+                  <input
+                    aria-label="Select All"
+                    checked={selectedIds.size === posts.length && posts.length > 0}
+                    className="rounded border-border bg-surface-hover"
+                    ref={selectAllCheckboxRef}
+                    type="checkbox"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(posts.map((p) => p.id)));
+                        setSelectAllChecked(true);
+                      } else {
+                        setSelectedIds(new Set());
+                        setSelectAllChecked(false);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {error && (
+              <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
+                <div className="flex items-center justify-between">
+                  <span>{error}</span>
+                  <button
+                    className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={handleRetry}
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        </div>
+
+        <div
+          className="min-h-0 flex-1 overflow-y-auto pt-4 pb-6 sm:pb-8"
+          role="region"
+          aria-label="Feed posts"
+        >
+        <div className="px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
           <div className="space-y-6">
             {searchSlot.loading && searchSlot.query.trim() ? null : searchSlot.searchError && (
@@ -940,160 +1097,6 @@ export function PostFeed({
           </div>
         ) : (
           <>
-            {!searchSlot && (
-              <>
-                <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
-                  <button
-                    aria-label="Filters"
-                    className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setOpenFilterDrawer(true)}
-                  >
-                    <Filter className="h-4 w-4" />
-                    {activeFilterCount > 0 && (
-                      <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                  <div className="relative" ref={sortMenuRef}>
-                    <button
-                      aria-label="Sort"
-                      className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                      type="button"
-                      onClick={() => setSortMenuOpen((open) => !open)}
-                    >
-                      <ArrowUpDown className="h-4 w-4" />
-                    </button>
-                    {sortMenuOpen && (
-                      <div className="border-border bg-surface absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
-                        {SORT_OPTIONS.map((opt, i) => (
-                          <button
-                            className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
-                            key={opt.label}
-                            type="button"
-                            onClick={() => {
-                              setFilters((prev) => ({
-                                ...prev,
-                                sort: opt.sort,
-                                sortOrder: opt.sortOrder,
-                              }));
-                              setSortMenuOpen(false);
-                            }}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={handleResetFilters}
-                  >
-                    <RotateCcw className="h-5 w-5" />
-                  </button>
-                </div>
-                <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:flex">
-                  <button
-                    aria-label="Filters"
-                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setOpenFilterDrawer(true)}
-                  >
-                    <Filter className="h-4 w-4" />
-                    <span>Filters</span>
-                    {activeFilterCount > 0 && (
-                      <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                  <CustomSelect
-                    ariaLabel="Sort Posts"
-                    className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
-                    options={SORT_OPTIONS.map((o, i) => ({
-                      label: o.label,
-                      value: String(i),
-                    }))}
-                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
-                    onChange={(val) => {
-                      const opt = SORT_OPTIONS[Number(val)];
-                      if (opt) {
-                        setFilters((prev) => ({
-                          ...prev,
-                          sort: opt.sort,
-                          sortOrder: opt.sortOrder,
-                        }));
-                      }
-                    }}
-                  />
-                  <button
-                    aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={handleResetFilters}
-                  >
-                    <RotateCcw className="h-5 w-5" />
-                  </button>
-                </div>
-              </>
-            )}
-
-        {filters.preview && (
-          <div
-            className="border-primary bg-primary/10 mb-4 rounded-card border px-4 py-2 text-sm"
-            role="status"
-          >
-            Previewing scores — run Recompute to save
-          </div>
-        )}
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <span className="text-muted-foreground shrink-0 text-sm">
-            Showing {posts.length} of {total} Posts
-          </span>
-          {bulkMode && (
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-2">
-              <span className="text-muted-foreground text-sm">
-                Select All
-              </span>
-              <input
-                aria-label="Select All"
-                checked={selectedIds.size === posts.length && posts.length > 0}
-                className="rounded border-border bg-surface-hover"
-                ref={selectAllCheckboxRef}
-                type="checkbox"
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedIds(new Set(posts.map((p) => p.id)));
-                    setSelectAllChecked(true);
-                  } else {
-                    setSelectedIds(new Set());
-                    setSelectAllChecked(false);
-                  }
-                }}
-              />
-            </label>
-          )}
-        </div>
-
-        {error && (
-          <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
-            <div className="flex items-center justify-between">
-              <span>{error}</span>
-              <button
-                className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                type="button"
-                onClick={handleRetry}
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        )}
-
         {initialLoading && (
           <div aria-busy="true" aria-label="Loading feed" className="space-y-4">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
@@ -1175,6 +1178,8 @@ export function PostFeed({
         )}
           </>
         )}
+        </div>
+        </div>
       </div>
 
       <ConfirmModal
