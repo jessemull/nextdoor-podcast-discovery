@@ -149,7 +149,7 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to save post");
         }
-        await fetchPosts(offset);
+        await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
@@ -162,7 +162,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingSaved, offset, setError]
+    [fetchPosts, markingSaved, setError]
   );
 
   const handleMarkIgnored = useCallback(
@@ -179,7 +179,7 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to update post");
         }
-        await fetchPosts(offset);
+        await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
@@ -192,7 +192,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingIgnored, offset, setError]
+    [fetchPosts, markingIgnored, setError]
   );
 
   const handleMarkUsed = useCallback(
@@ -209,7 +209,7 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to mark post as used");
         }
-        await fetchPosts(offset);
+        await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
@@ -223,7 +223,7 @@ export function useBulkActions({
         });
       }
     },
-    [fetchPosts, markingUsed, offset, setError]
+    [fetchPosts, markingUsed, setError]
   );
 
   const handleBulkMarkUsed = useCallback(async () => {
