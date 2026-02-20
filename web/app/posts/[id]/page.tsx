@@ -13,7 +13,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
   if (!UUID_REGEX.test(id)) {
     return (
-      <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
+      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-lg border border-red-800 bg-red-900/20 p-6">
             <p className="text-red-400">Invalid post ID format</p>
@@ -30,7 +30,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
   if (!initialPost) {
     return (
-      <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
+      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-lg border border-red-800 bg-red-900/20 p-6">
             <p className="text-red-400">Post not found</p>

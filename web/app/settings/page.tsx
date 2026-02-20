@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
+      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings
@@ -387,7 +387,7 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary>
-      <main className="min-h-screen px-6 py-6 sm:px-8 sm:py-8">
+      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-4xl">
           <h1 className="mb-4 text-3xl font-semibold text-foreground">
             Settings

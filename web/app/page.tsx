@@ -3,7 +3,7 @@ import { StatsPanel } from "@/components/StatsPanel";
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="h-full overflow-auto">
       {/* Hero: title + sub-header; padding controls all spacing */}
       <section
         aria-label="Welcome"

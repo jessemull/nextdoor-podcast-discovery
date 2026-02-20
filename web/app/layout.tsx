@@ -19,8 +19,12 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-background text-foreground antialiased">
         <Providers>
-          <Navbar />
-          {children}
+          <div className="flex h-screen flex-col overflow-hidden">
+            <Navbar />
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {children}
+            </div>
+          </div>
         </Providers>
       </body>
     </html>
