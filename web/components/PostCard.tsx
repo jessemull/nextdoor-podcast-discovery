@@ -283,6 +283,22 @@ export const PostCard = memo(function PostCard({
       </div>
     ) : null;
 
+  const statusBadges =
+    post.ignored || post.used_on_episode ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {post.ignored && (
+          <span className="border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 rounded text-amber-400 text-xs font-medium">
+            Ignored
+          </span>
+        )}
+        {post.used_on_episode && (
+          <span className="border border-violet-500/60 bg-violet-500/15 px-2 py-0.5 rounded text-violet-400 text-xs font-medium">
+            Used
+          </span>
+        )}
+      </div>
+    ) : null;
+
   const actionsBlock = (
     <div className="flex shrink-0 items-center gap-1">
       {showCheckbox && onSelect ? (
@@ -304,18 +320,9 @@ export const PostCard = memo(function PostCard({
               {post.similarity.toFixed(2)}
             </span>
           )}
-          {(post.ignored || post.used_on_episode) && (
-            <div className="flex flex-wrap justify-end gap-1">
-              {post.ignored && (
-                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                  Ignored
-                </span>
-              )}
-              {post.used_on_episode && (
-                <span className="rounded border border-border bg-surface-hover px-2 py-0.5 text-muted text-xs">
-                  Used
-                </span>
-              )}
+          {statusBadges != null && (
+            <div className="hidden flex-wrap justify-end gap-1 sm:flex">
+              {statusBadges}
             </div>
           )}
           {onMarkSaved && (
@@ -498,6 +505,11 @@ export const PostCard = memo(function PostCard({
         </div>
         {tagsBlock != null && (
           <div className="sm:hidden">{tagsBlock}</div>
+        )}
+        {statusBadges != null && (
+          <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
+            {statusBadges}
+          </div>
         )}
       </div>
 
