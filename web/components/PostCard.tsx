@@ -297,10 +297,11 @@ export const PostCard = memo(function PostCard({
         <>
           {post.similarity != null && (
             <span
-              className="text-muted text-xs"
+              className="border border-orange-500/60 bg-orange-500/15 px-1.5 py-0.5 rounded text-orange-400 text-xs font-medium"
               title="Semantic Similarity To Search Query"
             >
-              Sim: {post.similarity.toFixed(2)}
+              <span className="hidden sm:inline">SIM </span>
+              {post.similarity.toFixed(2)}
             </span>
           )}
           {(post.ignored || post.used_on_episode) && (
