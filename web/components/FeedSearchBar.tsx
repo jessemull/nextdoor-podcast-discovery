@@ -17,6 +17,7 @@ import { CustomSelect } from "./ui/CustomSelect";
 const SUGGESTIONS_DEBOUNCE_MS = 250;
 
 export interface FeedSearchBarProps {
+  compact?: boolean;
   embeddingBacklog: number;
   loadDefaultsError: null | string;
   loading: boolean;
@@ -28,6 +29,7 @@ export interface FeedSearchBarProps {
 }
 
 export function FeedSearchBar({
+  compact = false,
   embeddingBacklog,
   loadDefaultsError,
   loading,
@@ -129,7 +131,12 @@ export function FeedSearchBar({
     suggestionsOpen && (suggestionsLoading || suggestions.length > 0);
 
   return (
-    <div className="mb-6 w-full min-w-0 space-y-4">
+    <div
+      className={cn(
+        "w-full min-w-0 space-y-4",
+        !compact && "mb-6"
+      )}
+    >
       {loadDefaultsError && (
         <Card className="border-border-focus">
           <p className="text-muted text-sm">{loadDefaultsError}</p>
@@ -145,7 +152,10 @@ export function FeedSearchBar({
           }
           aria-autocomplete="list"
           aria-label="Search for posts"
-          className="min-h-0 min-w-0 flex-1 border-0 bg-transparent mr-2 px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none"
+          className={cn(
+            "min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none",
+            !compact && "mr-2"
+          )}
           placeholder="Search for posts..."
           type="text"
           value={query}
@@ -161,17 +171,21 @@ export function FeedSearchBar({
           }}
           onKeyDown={handleKeyDown}
         />
-        <div aria-hidden className="border-border border-l bg-surface-hover shrink-0" />
-        <CustomSelect
-          ariaLabel="Search type"
-          className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
-          options={[
-            { label: "AI Powered", value: "ai" },
-            { label: "Keyword", value: "keyword" },
-          ]}
-          value={useKeywordSearch ? "keyword" : "ai"}
-          onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
-        />
+        {!compact && (
+          <>
+            <div aria-hidden className="border-border border-l bg-surface-hover shrink-0" />
+            <CustomSelect
+              ariaLabel="Search type"
+              className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
+              options={[
+                { label: "AI Powered", value: "ai" },
+                { label: "Keyword", value: "keyword" },
+              ]}
+              value={useKeywordSearch ? "keyword" : "ai"}
+              onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
+            />
+          </>
+        )}
 
         {showDropdown && (
           <ul
