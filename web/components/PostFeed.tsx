@@ -496,7 +496,7 @@ export function PostFeed({
         {searchSlot && (
           <>
             {/* Compact: below md – two rows, search type in "..." next to input */}
-            <div className="mb-2 flex w-full flex-col gap-2.5 md:hidden">
+            <div className="mb-2 flex w-full flex-col gap-2.5 lg:hidden">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0 flex-1 shrink-0">
                   <FeedSearchBar
@@ -717,7 +717,7 @@ export function PostFeed({
             </div>
 
             {/* Desktop: from md – single row */}
-            <div className="mb-2 hidden w-full flex-wrap items-stretch gap-3 md:flex">
+            <div className="mb-2 hidden w-full flex-wrap items-stretch gap-3 lg:flex">
               <div className="flex h-10 min-w-0 w-full flex-1 basis-full sm:mr-0 sm:basis-0">
                 <FeedSearchBar
                   embeddingBacklog={searchSlot.embeddingBacklog}
@@ -942,7 +942,7 @@ export function PostFeed({
           <>
             {!searchSlot && (
               <>
-                <div className="flex min-w-0 flex-wrap items-center gap-2 md:hidden">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
                   <button
                     aria-label="Filters"
                     className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
@@ -996,7 +996,7 @@ export function PostFeed({
                     <RotateCcw className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+                <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:flex">
                   <button
                     aria-label="Filters"
                     className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
