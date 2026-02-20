@@ -1,11 +1,14 @@
 "use client";
 
 import {
+  ArrowUpDown,
   Bookmark,
   Check,
+  CheckSquare,
   Eye,
   EyeOff,
   Filter,
+  MoreHorizontal,
   RefreshCw,
   RotateCcw,
   X,
@@ -145,7 +148,39 @@ export function PostFeed({
   const [countLoading, setCountLoading] = useState(false);
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
   const [selectAllChecked, setSelectAllChecked] = useState(false);
+  const [searchTypeMenuOpen, setSearchTypeMenuOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
+  const searchTypeMenuRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!searchTypeMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchTypeMenuRef.current &&
+        !searchTypeMenuRef.current.contains(e.target as Node)
+      ) {
+        setSearchTypeMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [searchTypeMenuOpen]);
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        sortMenuRef.current &&
+        !sortMenuRef.current.contains(e.target as Node)
+      ) {
+        setSortMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [sortMenuOpen]);
 
   useEffect(() => {
     if (!openFilterDrawer) return;
@@ -459,151 +494,376 @@ export function PostFeed({
           Nextdoor Discovery
         </h1>
         {searchSlot && (
-          <div className="mb-2 flex w-full flex-wrap items-stretch gap-3">
-            <div className="flex h-10 min-w-0 w-full flex-1 basis-full sm:mr-0 sm:basis-0">
-              <FeedSearchBar
-                embeddingBacklog={searchSlot.embeddingBacklog}
-                loadDefaultsError={searchSlot.loadDefaultsError}
-                loading={searchSlot.loading}
-                query={searchSlot.query}
-                useKeywordSearch={searchSlot.useKeywordSearch}
-                onQueryChange={searchSlot.onQueryChange}
-                onSearch={searchSlot.onSearch}
-                onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
-              />
-            </div>
-            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
-              <button
-                className="border-border bg-surface hover:bg-surface-hover flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                type="button"
-                onClick={() => setOpenFilterDrawer(true)}
-              >
-                <Filter className="h-4 w-4" />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-              <CustomSelect
-                ariaLabel="Sort Posts"
-                className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
-                options={SORT_OPTIONS.map((o, i) => ({
-                  label: o.label,
-                  value: String(i),
-                }))}
-                value={String(SORT_OPTIONS.indexOf(currentSortOption))}
-                onChange={(val) => {
-                  const opt = SORT_OPTIONS[Number(val)];
-                  if (opt) {
-                    setFilters((prev) => ({
-                      ...prev,
-                      sort: opt.sort,
-                      sortOrder: opt.sortOrder,
-                    }));
-                  }
-                }}
-              />
-              {bulkMode ? (
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <CustomSelect
-                    ariaLabel="Bulk action"
-                    className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
-                    disabled={!selectAllChecked && selectedIds.size === 0}
-                    options={BULK_ACTION_OPTIONS}
-                    placeholder="Actions"
-                    value=""
-                    onChange={async (val) => {
-                      if (!val) return;
-                      const action = val as BulkActionType;
-                      if (!selectAllChecked && selectedIds.size === 0) return;
-                      if (selectAllChecked) {
-                        setConfirmModal({ action });
-                        setCountLoading(true);
-                        try {
-                          const response = await fetch(
-                            "/api/posts/bulk/count",
-                            {
-                              body: JSON.stringify({
-                                query: getCurrentQuery(),
-                              }),
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              method: "POST",
-                            }
-                          );
-                          if (!response.ok) {
-                            const data = await response.json();
-                            setError(
-                              (data.error as string) ?? "Failed to get count"
-                            );
-                            setConfirmModal(null);
-                            return;
-                          }
-                          const {
-                            data: { count },
-                          } = await response.json();
-                          if (count === 0) {
-                            setError(
-                              "No posts match the current filters."
-                            );
-                            setConfirmModal(null);
-                            return;
-                          }
-                          setConfirmModal((prev) =>
-                            prev && prev.count === undefined
-                              ? { action: prev.action, count }
-                              : prev
-                          );
-                        } finally {
-                          setCountLoading(false);
-                        }
-                      } else {
-                        setConfirmModal({
-                          action,
-                          count: selectedIds.size,
-                        });
-                      }
-                    }}
+          <>
+            {/* Compact: below md – two rows, search type in "..." next to input */}
+            <div className="mb-2 flex w-full flex-col gap-2.5 md:hidden">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1 shrink-0">
+                  <FeedSearchBar
+                    compact
+                    embeddingBacklog={searchSlot.embeddingBacklog}
+                    loadDefaultsError={searchSlot.loadDefaultsError}
+                    loading={searchSlot.loading}
+                    query={searchSlot.query}
+                    useKeywordSearch={searchSlot.useKeywordSearch}
+                    onQueryChange={searchSlot.onQueryChange}
+                    onSearch={searchSlot.onSearch}
+                    onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
                   />
+                </div>
+                <div className="relative shrink-0" ref={searchTypeMenuRef}>
                   <button
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
+                    aria-expanded={searchTypeMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Search type"
+                    className="border-border bg-surface-hover text-foreground flex h-10 min-h-[44px] min-w-10 items-center justify-center rounded border transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setSearchTypeMenuOpen((o) => !o)}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                  {searchTypeMenuOpen && (
+                    <div
+                      className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[8rem] rounded-card border py-1 shadow-lg"
+                      role="menu"
+                    >
+                      <button
+                        className={cn(
+                          "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                          !searchSlot.useKeywordSearch && "bg-surface-hover font-medium"
+                        )}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          searchSlot.onUseKeywordSearchChange(false);
+                          setSearchTypeMenuOpen(false);
+                        }}
+                      >
+                        AI Powered
+                      </button>
+                      <button
+                        className={cn(
+                          "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                          searchSlot.useKeywordSearch && "bg-surface-hover font-medium"
+                        )}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          searchSlot.onUseKeywordSearchChange(true);
+                          setSearchTypeMenuOpen(false);
+                        }}
+                      >
+                        Keyword
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  aria-label="Filters"
+                  className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => setOpenFilterDrawer(true)}
+                >
+                  <Filter className="h-4 w-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <div className="relative" ref={sortMenuRef}>
+                  <button
+                    aria-expanded={sortMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Sort"
+                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setSortMenuOpen((o) => !o)}
+                  >
+                    <ArrowUpDown className="h-4 w-4" />
+                  </button>
+                  {sortMenuOpen && (
+                    <div
+                      className="border-border bg-surface absolute left-0 top-full z-10 mt-1 min-w-[12rem] rounded-card border py-1 shadow-lg"
+                      role="menu"
+                    >
+                      {SORT_OPTIONS.map((o, i) => (
+                        <button
+                          key={o.label}
+                          className={cn(
+                            "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                            currentSortOption.sort === o.sort &&
+                              currentSortOption.sortOrder === o.sortOrder &&
+                              "bg-surface-hover font-medium"
+                          )}
+                          role="menuitem"
+                          type="button"
+                          onClick={() => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              sort: o.sort,
+                              sortOrder: o.sortOrder,
+                            }));
+                            setSortMenuOpen(false);
+                          }}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {bulkMode ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <CustomSelect
+                      ariaLabel="Bulk action"
+                      className="h-10 min-h-[44px] min-w-0 shrink sm:min-w-[11rem]"
+                      disabled={!selectAllChecked && selectedIds.size === 0}
+                      options={BULK_ACTION_OPTIONS}
+                      placeholder="Actions"
+                      value=""
+                      onChange={async (val) => {
+                        if (!val) return;
+                        const action = val as BulkActionType;
+                        if (!selectAllChecked && selectedIds.size === 0) return;
+                        if (selectAllChecked) {
+                          setConfirmModal({ action });
+                          setCountLoading(true);
+                          try {
+                            const response = await fetch(
+                              "/api/posts/bulk/count",
+                              {
+                                body: JSON.stringify({
+                                  query: getCurrentQuery(),
+                                }),
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                method: "POST",
+                              }
+                            );
+                            if (!response.ok) {
+                              const data = await response.json();
+                              setError(
+                                (data.error as string) ?? "Failed to get count"
+                              );
+                              setConfirmModal(null);
+                              return;
+                            }
+                            const {
+                              data: { count },
+                            } = await response.json();
+                            if (count === 0) {
+                              setError(
+                                "No posts match the current filters."
+                              );
+                              setConfirmModal(null);
+                              return;
+                            }
+                            setConfirmModal((prev) =>
+                              prev && prev.count === undefined
+                                ? { action: prev.action, count }
+                                : prev
+                            );
+                          } finally {
+                            setCountLoading(false);
+                          }
+                        } else {
+                          setConfirmModal({
+                            action,
+                            count: selectedIds.size,
+                          });
+                        }
+                      }}
+                    />
+                    <button
+                      className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                      type="button"
+                      onClick={() => {
+                        setBulkMode(false);
+                        setSelectAllChecked(false);
+                        setSelectedIds(new Set());
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    aria-label="Bulk Actions"
+                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setBulkMode(true)}
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                  </button>
+                )}
+                {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                  <button
+                    aria-label="Reset filters"
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                     type="button"
                     onClick={() => {
-                      setBulkMode(false);
-                      setSelectAllChecked(false);
-                      setSelectedIds(new Set());
+                      handleResetFilters();
+                      searchSlot.onResetAll?.();
                     }}
                   >
-                    Cancel
+                    <RotateCcw className="h-5 w-5" />
                   </button>
-                </div>
-              ) : (
-                <button
-                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-[7.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
-                  type="button"
-                  onClick={() => setBulkMode(true)}
-                >
-                  Bulk Actions
-                </button>
-              )}
-              {(searchSlot.query.trim() || activeFilterCount > 0) && (
-                <button
-                  aria-label="Reset filters"
-                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  type="button"
-                  onClick={() => {
-                    handleResetFilters();
-                    searchSlot.onResetAll?.();
-                  }}
-                >
-                  <RotateCcw className="h-5 w-5" />
-                </button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+
+            {/* Desktop: from md – single row */}
+            <div className="mb-2 hidden w-full flex-wrap items-stretch gap-3 md:flex">
+              <div className="flex h-10 min-w-0 w-full flex-1 basis-full sm:mr-0 sm:basis-0">
+                <FeedSearchBar
+                  embeddingBacklog={searchSlot.embeddingBacklog}
+                  loadDefaultsError={searchSlot.loadDefaultsError}
+                  loading={searchSlot.loading}
+                  query={searchSlot.query}
+                  useKeywordSearch={searchSlot.useKeywordSearch}
+                  onQueryChange={searchSlot.onQueryChange}
+                  onSearch={searchSlot.onSearch}
+                  onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
+                />
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
+                <button
+                  aria-label="Filters"
+                  className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => setOpenFilterDrawer(true)}
+                >
+                  <Filter className="h-4 w-4" />
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <CustomSelect
+                  ariaLabel="Sort Posts"
+                  className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                  options={SORT_OPTIONS.map((o, i) => ({
+                    label: o.label,
+                    value: String(i),
+                  }))}
+                  value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+                  onChange={(val) => {
+                    const opt = SORT_OPTIONS[Number(val)];
+                    if (opt) {
+                      setFilters((prev) => ({
+                        ...prev,
+                        sort: opt.sort,
+                        sortOrder: opt.sortOrder,
+                      }));
+                    }
+                  }}
+                />
+                {bulkMode ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <CustomSelect
+                      ariaLabel="Bulk action"
+                      className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                      disabled={!selectAllChecked && selectedIds.size === 0}
+                      options={BULK_ACTION_OPTIONS}
+                      placeholder="Actions"
+                      value=""
+                      onChange={async (val) => {
+                        if (!val) return;
+                        const action = val as BulkActionType;
+                        if (!selectAllChecked && selectedIds.size === 0) return;
+                        if (selectAllChecked) {
+                          setConfirmModal({ action });
+                          setCountLoading(true);
+                          try {
+                            const response = await fetch(
+                              "/api/posts/bulk/count",
+                              {
+                                body: JSON.stringify({
+                                  query: getCurrentQuery(),
+                                }),
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                method: "POST",
+                              }
+                            );
+                            if (!response.ok) {
+                              const data = await response.json();
+                              setError(
+                                (data.error as string) ?? "Failed to get count"
+                              );
+                              setConfirmModal(null);
+                              return;
+                            }
+                            const {
+                              data: { count },
+                            } = await response.json();
+                            if (count === 0) {
+                              setError(
+                                "No posts match the current filters."
+                              );
+                              setConfirmModal(null);
+                              return;
+                            }
+                            setConfirmModal((prev) =>
+                              prev && prev.count === undefined
+                                ? { action: prev.action, count }
+                                : prev
+                            );
+                          } finally {
+                            setCountLoading(false);
+                          }
+                        } else {
+                          setConfirmModal({
+                            action,
+                            count: selectedIds.size,
+                          });
+                        }
+                      }}
+                    />
+                    <button
+                      className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
+                      type="button"
+                      onClick={() => {
+                        setBulkMode(false);
+                        setSelectAllChecked(false);
+                        setSelectedIds(new Set());
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-[7.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setBulkMode(true)}
+                  >
+                    Bulk Actions
+                  </button>
+                )}
+                {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                  <button
+                    aria-label="Reset filters"
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => {
+                      handleResetFilters();
+                      searchSlot.onResetAll?.();
+                    }}
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
         {searchSlot && searchSlot.query.trim() ? (
@@ -681,48 +941,105 @@ export function PostFeed({
         ) : (
           <>
             {!searchSlot && (
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <button
-                  className="border-border bg-surface hover:bg-surface-hover flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                  type="button"
-                  onClick={() => setOpenFilterDrawer(true)}
-                >
-                  <Filter className="h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-                <CustomSelect
-                  ariaLabel="Sort Posts"
-                  className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
-                  options={SORT_OPTIONS.map((o, i) => ({
-                    label: o.label,
-                    value: String(i),
-                  }))}
-                  value={String(SORT_OPTIONS.indexOf(currentSortOption))}
-                  onChange={(val) => {
-                    const opt = SORT_OPTIONS[Number(val)];
-                    if (opt) {
-                      setFilters((prev) => ({
-                        ...prev,
-                        sort: opt.sort,
-                        sortOrder: opt.sortOrder,
-                      }));
-                    }
-                  }}
-                />
-                <button
-                  aria-label="Reset filters"
-                  className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  type="button"
-                  onClick={handleResetFilters}
-                >
-                  <RotateCcw className="h-5 w-5" />
-                </button>
-              </div>
+              <>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 md:hidden">
+                  <button
+                    aria-label="Filters"
+                    className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setOpenFilterDrawer(true)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    {activeFilterCount > 0 && (
+                      <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                  <div className="relative" ref={sortMenuRef}>
+                    <button
+                      aria-label="Sort"
+                      className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                      type="button"
+                      onClick={() => setSortMenuOpen((open) => !open)}
+                    >
+                      <ArrowUpDown className="h-4 w-4" />
+                    </button>
+                    {sortMenuOpen && (
+                      <div className="border-border bg-surface absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
+                        {SORT_OPTIONS.map((opt, i) => (
+                          <button
+                            className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
+                            key={opt.label}
+                            type="button"
+                            onClick={() => {
+                              setFilters((prev) => ({
+                                ...prev,
+                                sort: opt.sort,
+                                sortOrder: opt.sortOrder,
+                              }));
+                              setSortMenuOpen(false);
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    aria-label="Reset filters"
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={handleResetFilters}
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+                  <button
+                    aria-label="Filters"
+                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setOpenFilterDrawer(true)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    <span>Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="bg-border text-foreground rounded-full px-1.5 py-0.5 text-xs">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                  <CustomSelect
+                    ariaLabel="Sort Posts"
+                    className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                    options={SORT_OPTIONS.map((o, i) => ({
+                      label: o.label,
+                      value: String(i),
+                    }))}
+                    value={String(SORT_OPTIONS.indexOf(currentSortOption))}
+                    onChange={(val) => {
+                      const opt = SORT_OPTIONS[Number(val)];
+                      if (opt) {
+                        setFilters((prev) => ({
+                          ...prev,
+                          sort: opt.sort,
+                          sortOrder: opt.sortOrder,
+                        }));
+                      }
+                    }}
+                  />
+                  <button
+                    aria-label="Reset filters"
+                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={handleResetFilters}
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                  </button>
+                </div>
+              </>
             )}
 
         {filters.preview && (
