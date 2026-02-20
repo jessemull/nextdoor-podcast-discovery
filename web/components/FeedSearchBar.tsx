@@ -55,19 +55,24 @@ export function FeedSearchBar({
       return;
     }
     const q = debouncedQuery.trim().toLowerCase();
+    const controller = new AbortController();
+    const { signal } = controller;
     setSuggestionsLoading(true);
-    fetch(
-      `/api/search/suggestions?q=${encodeURIComponent(q)}&limit=10`
-    )
+    fetch(`/api/search/suggestions?q=${encodeURIComponent(q)}&limit=10`, {
+      signal,
+    })
       .then((res) => (res.ok ? res.json() : { data: [] }))
       .then((data) => {
+        if (signal.aborted) return;
         setSuggestions(data.data ?? []);
         setSuggestionsLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        if (signal.aborted) return;
         setSuggestions([]);
         setSuggestionsLoading(false);
       });
+    return () => controller.abort();
   }, [debouncedQuery]);
 
   const handleKeyDown = useCallback(
