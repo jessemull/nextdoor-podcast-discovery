@@ -22,7 +22,7 @@ export interface FeedSearchBarProps {
   loadDefaultsError: null | string;
   loading: boolean;
   onQueryChange: (value: string) => void;
-  onSearch: () => void;
+  onSearch: (queryOverride?: string) => void;
   onUseKeywordSearchChange: (value: boolean) => void;
   query: string;
   useKeywordSearch: boolean;
@@ -75,8 +75,8 @@ export function FeedSearchBar({
       if (e.key === "Enter") {
         if (suggestionsOpen && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
           e.preventDefault();
-          onQueryChange(suggestions[highlightedIndex]);
-          onSearch();
+          const selected = suggestions[highlightedIndex];
+          onSearch(selected);
           setSuggestionsOpen(false);
           setHighlightedIndex(-1);
         } else {
@@ -166,7 +166,9 @@ export function FeedSearchBar({
           }}
           onFocus={() => {
             setSuggestionsOpen(true);
-            setSuggestions([...SEARCH_SUGGESTIONS]);
+            if (!query.trim()) {
+              setSuggestions([...SEARCH_SUGGESTIONS]);
+            }
             setHighlightedIndex(-1);
           }}
           onKeyDown={handleKeyDown}
@@ -210,9 +212,9 @@ export function FeedSearchBar({
                 role="option"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  onQueryChange(s);
-                  onSearch();
+                  onSearch(s);
                   setSuggestionsOpen(false);
+                  setHighlightedIndex(-1);
                 }}
                 onMouseEnter={() => setHighlightedIndex(i)}
               >

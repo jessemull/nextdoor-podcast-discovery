@@ -54,7 +54,7 @@ export interface PostFeedSearchSlotProps {
   onMarkUsed: (postId: string) => void;
   onQueryChange: (value: string) => void;
   onResetAll?: () => void;
-  onSearch: () => void;
+  onSearch: (queryOverride?: string) => void;
   onSimilarityThresholdChange: (value: number) => void;
   onUseKeywordSearchChange: (value: boolean) => void;
   onViewDetails: (postId: string) => void;

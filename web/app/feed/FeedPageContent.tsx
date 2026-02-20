@@ -153,12 +153,21 @@ export function FeedPageContent() {
     [updateUrl]
   );
 
-  const handleSearch = useCallback(() => {
-    const q = query.trim();
-    setLastSearchedQuery(q);
-    void runSearch(q);
-    updateUrl({ q });
-  }, [query, runSearch, updateUrl]);
+  const handleSearch = useCallback(
+    (queryOverride?: string) => {
+      const q =
+        queryOverride !== undefined ? queryOverride.trim() : query.trim();
+      if (queryOverride !== undefined) {
+        setQuery(q);
+        setLastSearchedQuery(q);
+      } else {
+        setLastSearchedQuery(q);
+      }
+      void runSearch(q);
+      updateUrl({ q });
+    },
+    [query, runSearch, updateUrl]
+  );
 
   const handleResetAll = useCallback(() => {
     setQuery("");
