@@ -152,7 +152,6 @@ export function useBulkActions({
           const data = await response.json();
           throw new Error(data.error || "Failed to save post");
         }
-        toast.success(saved ? "Saved." : "Unsaved.");
         await fetchPosts(0);
       } catch (err) {
         const errorMessage =

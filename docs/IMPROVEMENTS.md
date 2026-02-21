@@ -1,4 +1,4 @@
-- [ ] Bookmark should not show toast. It should just update optimisitcally then if it fails catch the error, show the error toast and revert but never the success toast just swap the color immediately.
+- [x] Bookmark should not show toast. It should just update optimisitcally then if it fails catch the error, show the error toast and revert but never the success toast just swap the color immediately.
 
 - [ ] Navigating between pages user is just logged out for some reason seemingly randomly, must be some gap in the auth. It definitely seems to occur navigating between pages.
 
