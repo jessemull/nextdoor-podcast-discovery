@@ -12,7 +12,9 @@
 
 - [x] Should be able to multi select neighborhoods in the filter menu.
 
-- [ ] Done button for mobile filter menu should appear right below the 'Clear All Filters' button and stick just like that button. Should only appear for the mobile menu where it takes up the entire screen.
+- [x] Done button for mobile filter menu should appear right below the 'Clear All Filters' button and stick just like that button. Should only appear for the mobile menu where it takes up the entire screen.
+
+- [ ] Categories in filters should be multi-select as well.
 
 - [ ] Header isn't sticky mobile. I'm not sure if this is correct behavior or not on mobile. It seems like most of the time the scroll container below the header works but then sometimes the header is scrolled out of view, we need to explore how layout usually works for an app like this.
 

@@ -499,7 +499,7 @@ export function PostFeed({
                 onSimilarityThresholdChange={searchSlot?.onSimilarityThresholdChange}
               />
             </div>
-            <div className="border-border shrink-0 border-t p-3">
+            <div className="border-border flex shrink-0 flex-col gap-2 border-t p-3">
               <button
                 className="border-border bg-surface-hover text-foreground w-full rounded border px-3 py-2 text-sm transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
                 type="button"
@@ -509,6 +509,14 @@ export function PostFeed({
                 }}
               >
                 Clear All Filters
+              </button>
+              <button
+                aria-label="Done"
+                className="border-border bg-surface-hover text-foreground w-full rounded border px-3 py-2 text-sm font-medium transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
+                type="button"
+                onClick={() => setOpenFilterDrawer(false)}
+              >
+                Done
               </button>
             </div>
           </div>
