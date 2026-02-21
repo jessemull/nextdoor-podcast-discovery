@@ -140,44 +140,15 @@ export function Navbar() {
           ) : null}
         </div>
 
-        {/* Mobile: hamburger + user avatar (or loading) */}
+        {/* Mobile: user avatar (signed-in indicator only) + hamburger; sign out is in hamburger menu */}
         <div className="flex items-center gap-2 md:hidden">
           {user && !isLoading && (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                aria-expanded={userMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Open user menu"
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium transition-colors",
-                  "hover:bg-surface-hover/80 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border-focus"
-                )}
-                type="button"
-                onClick={() => setUserMenuOpen((o) => !o)}
-              >
-                <span aria-hidden>{initial}</span>
-              </button>
-
-              {userMenuOpen && (
-                <div
-                  className="border-border bg-surface absolute right-0 top-full z-50 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
-                  role="menu"
-                >
-                  <Link
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                    href="/auth/logout"
-                    role="menuitem"
-                    onClick={() => {
-                      closeUserMenu();
-                      closeMobileMenu();
-                    }}
-                  >
-                    <LogOut aria-hidden className="h-4 w-4" />
-                    Sign out
-                  </Link>
-                </div>
-              )}
-            </div>
+            <span
+              aria-label="Signed in"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-muted text-sm font-medium"
+            >
+              <span aria-hidden>{initial}</span>
+            </span>
           )}
           {isLoading && (
             <span
