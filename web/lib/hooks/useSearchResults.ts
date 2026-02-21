@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useToast } from "@/lib/ToastContext";
+
 import type { PostWithScores } from "@/lib/types";
 
 interface SearchResponse {

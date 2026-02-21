@@ -109,7 +109,7 @@ export function FeedSearchBar({
         );
       }
     },
-    [highlightedIndex, onQueryChange, onSearch, suggestions, suggestionsOpen]
+    [highlightedIndex, onSearch, suggestions, suggestionsOpen]
   );
 
   useEffect(() => {
