@@ -14,6 +14,13 @@ const JOBS_LIMIT = 50;
 function StatsPageSkeleton() {
   return (
     <>
+      {/* Score Distribution (first) */}
+      <Card className="mb-8 p-6">
+        <div className="text-foreground mb-2 h-8 w-40 animate-pulse rounded bg-surface-hover" />
+        <div className="text-foreground mb-6 h-4 max-w-sm animate-pulse rounded bg-surface-hover" />
+        <div className="h-48 animate-pulse rounded bg-surface-hover" />
+      </Card>
+      {/* Post Stats */}
       <Card className="mb-8 p-6">
         <div className="text-foreground mb-2 h-8 w-48 animate-pulse rounded bg-surface-hover" />
         <div className="text-foreground mb-6 h-4 max-w-md animate-pulse rounded bg-surface-hover" />
@@ -32,6 +39,7 @@ function StatsPageSkeleton() {
           ))}
         </div>
       </Card>
+      {/* Top Categories */}
       <Card className="mb-8 p-6">
         <div className="text-foreground mb-2 h-8 w-56 animate-pulse rounded bg-surface-hover" />
         <div className="text-foreground mb-6 h-4 max-w-md animate-pulse rounded bg-surface-hover" />
@@ -50,11 +58,7 @@ function StatsPageSkeleton() {
           ))}
         </div>
       </Card>
-      <Card className="mb-8 p-6">
-        <div className="text-foreground mb-2 h-8 w-40 animate-pulse rounded bg-surface-hover" />
-        <div className="text-foreground mb-6 h-4 max-w-sm animate-pulse rounded bg-surface-hover" />
-        <div className="h-48 animate-pulse rounded bg-surface-hover" />
-      </Card>
+      {/* Job Stats */}
       <Card className="mb-8 p-6">
         <div className="text-foreground mb-2 h-8 w-32 animate-pulse rounded bg-surface-hover" />
         <div className="text-foreground mb-6 h-4 max-w-md animate-pulse rounded bg-surface-hover" />
@@ -164,6 +168,24 @@ export default function StatsPage() {
           <>
             <Card className="mb-8 p-6">
               <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+                Score Distribution
+              </h2>
+              <p
+                className="text-foreground mb-6 text-sm"
+                style={{ opacity: 0.85 }}
+              >
+                Min, max, mean, p50, p90 per dimension and final score for
+                tuning.
+              </p>
+              <ScoreDistributionSection
+                distribution={scoreDistribution}
+                error={null}
+                loading={false}
+              />
+            </Card>
+
+            <Card className="mb-8 p-6">
+              <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
                 Post Stats
               </h2>
               <p
@@ -193,24 +215,6 @@ export default function StatsPage() {
                 hideStatsHeading
                 stats={stats}
                 variant="categories-only"
-              />
-            </Card>
-
-            <Card className="mb-8 p-6">
-              <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-                Score Distribution
-              </h2>
-              <p
-                className="text-foreground mb-6 text-sm"
-                style={{ opacity: 0.85 }}
-              >
-                Min, max, mean, p50, p90 per dimension and final score for
-                tuning.
-              </p>
-              <ScoreDistributionSection
-                distribution={scoreDistribution}
-                error={null}
-                loading={false}
               />
             </Card>
 

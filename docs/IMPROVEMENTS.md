@@ -20,7 +20,7 @@
 
 - [x] Podcast picks defaults fails to save I think when you change ALL the fields in concert. I think maybe we removed one of those fields and never update the form in the settings.
 
-- [ ] For the stats page put the score distibution at the top and the other states below it.
+- [x] For the stats page put the score distibution at the top and the other states below it.
 
 - [ ] Processed link queue card has bad status badge. It doesn't match the other patterns and it doesn't fit on the card we need to debug this together.
 
