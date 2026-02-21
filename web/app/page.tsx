@@ -17,23 +17,23 @@ export default function Home() {
         </h1>
         <p
           className="text-muted max-w-lg text-base animate-fade-in-up-slow opacity-0 sm:text-lg md:text-xl"
-          style={{ animationDelay: "1.4s" } as React.CSSProperties}
+          style={{ animationDelay: "0.5s" } as React.CSSProperties}
         >
           Discover and curate interesting Nextdoor posts for your podcast.
         </p>
       </section>
 
-      {/* Content: sports fact and stats; same fade duration and gap as above */}
+      {/* Content: sports fact and stats; staggered after hero then subheader */}
       <div className="mx-auto max-w-5xl space-y-16 px-6 pb-14 pt-10 sm:px-8 sm:pb-20 sm:pt-12">
         <div
           className="animate-fade-in-up-slow opacity-0"
-          style={{ animationDelay: "2.8s" } as React.CSSProperties}
+          style={{ animationDelay: "1.2s" } as React.CSSProperties}
         >
           <SportsFact />
         </div>
         <div
           className="animate-fade-in-up-slow opacity-0"
-          style={{ animationDelay: "2.8s" } as React.CSSProperties}
+          style={{ animationDelay: "1.2s" } as React.CSSProperties}
         >
           <StatsPanel />
         </div>
