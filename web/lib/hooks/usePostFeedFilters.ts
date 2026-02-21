@@ -21,7 +21,7 @@ export interface PostFeedFilters {
   minPodcastWorthy: string;
   minReactionCount: string;
   minScore: string;
-  neighborhoodId: string;
+  neighborhoodIds: string[];
   preview: boolean;
   previewWeights: RankingWeights;
   savedOnly: boolean;
@@ -58,7 +58,7 @@ export const DEFAULT_FILTERS: PostFeedFilters = {
   minPodcastWorthy: "",
   minReactionCount: "",
   minScore: "",
-  neighborhoodId: "",
+  neighborhoodIds: [],
   preview: false,
   previewWeights: { ...DEFAULT_PREVIEW_WEIGHTS },
   savedOnly: false,

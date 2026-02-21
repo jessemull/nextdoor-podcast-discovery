@@ -25,9 +25,9 @@ function buildPostsQueryParams(
   searchParams.set("order", filters.sortOrder);
 
   if (filters.category) searchParams.set("category", filters.category);
-  if (filters.neighborhoodId) {
-    searchParams.set("neighborhood_id", filters.neighborhoodId);
-  }
+  filters.neighborhoodIds.forEach((id) => {
+    searchParams.append("neighborhood_ids", id);
+  });
   if (filters.ignoredOnly) searchParams.set("ignored_only", "true");
   if (filters.savedOnly) searchParams.set("saved_only", "true");
 
@@ -173,7 +173,7 @@ export function usePostFeedData(
       debouncedMinScore,
       filters.category,
       filters.ignoredOnly,
-      filters.neighborhoodId,
+      filters.neighborhoodIds,
       filters.preview,
       filters.previewWeights,
       filters.savedOnly,

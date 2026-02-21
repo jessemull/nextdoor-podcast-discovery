@@ -257,11 +257,14 @@ export const postsQuerySchema = z.object({
   min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   min_reaction_count: z.coerce.number().int().min(0).optional(),
   min_score: z.coerce.number().min(0).optional(),
-  neighborhood_id: z
-    .string()
+  neighborhood_ids: z
+    .array(z.string())
     .optional()
-    .transform((v) => (v && v.trim() ? v : undefined))
-    .refine((v) => !v || UUID_REGEX.test(v), "Invalid neighborhood ID"),
+    .transform((v) => (v?.filter((id) => id?.trim()).length ? v.filter((id) => id.trim()) : undefined))
+    .refine(
+      (v) => !v || v.every((id) => UUID_REGEX.test(id)),
+      "Invalid neighborhood ID in neighborhood_ids"
+    ),
   offset: z.coerce
     .number()
     .int()
@@ -337,10 +340,13 @@ export const postsBulkQuerySchema = z.object({
   min_podcast_worthy: z.number().min(0).max(10).optional(),
   min_reaction_count: z.number().int().min(0).optional(),
   min_score: z.number().min(0).optional(),
-  neighborhood_id: z
-    .string()
+  neighborhood_ids: z
+    .array(z.string())
     .optional()
-    .refine((v) => !v || v.trim() === "" || UUID_REGEX.test(v), "Invalid neighborhood ID"),
+    .refine(
+      (v) => !v?.length || v.every((id) => id.trim() === "" || UUID_REGEX.test(id)),
+      "Invalid neighborhood ID in neighborhood_ids"
+    ),
   order: z.enum(["asc", "desc"]).optional(),
   saved_only: z.boolean().optional(),
   sort: z.enum(["date", "podcast_score", "score"]).optional(),

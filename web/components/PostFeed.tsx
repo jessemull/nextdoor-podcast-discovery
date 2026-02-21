@@ -262,7 +262,8 @@ export function PostFeed({
           : undefined,
       min_score:
         !isNaN(minScoreNum) && minScoreNum >= 0 ? minScoreNum : undefined,
-      neighborhood_id: filters.neighborhoodId || undefined,
+      neighborhood_ids:
+        filters.neighborhoodIds?.length ? filters.neighborhoodIds : undefined,
       order: filters.sortOrder,
       saved_only: filters.savedOnly,
       sort: filters.sort,
@@ -277,7 +278,7 @@ export function PostFeed({
     debouncedMinScore,
     filters.category,
     filters.ignoredOnly,
-    filters.neighborhoodId,
+    filters.neighborhoodIds,
     filters.savedOnly,
     filters.sort,
     filters.sortOrder,
@@ -399,7 +400,7 @@ export function PostFeed({
     filters.maxScore,
     filters.maxPodcastWorthy,
     filters.maxReactionCount,
-    filters.neighborhoodId,
+    filters.neighborhoodIds.length > 0,
     filters.preview,
     filters.savedOnly,
     filters.unusedOnly,

@@ -19,7 +19,7 @@ export interface BulkQueryInput {
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;
-  neighborhood_id?: string;
+  neighborhood_ids?: string[];
   order?: "asc" | "desc";
   saved_only?: boolean;
   sort?: "date" | "podcast_score" | "score";
@@ -57,7 +57,7 @@ export async function getPostIdsByQuery(
         p_min_podcast_worthy: query.min_podcast_worthy ?? null,
         p_min_reaction_count: query.min_reaction_count ?? null,
         p_min_score: validMinScore,
-        p_neighborhood_id: query.neighborhood_id ?? null,
+        p_neighborhood_ids: query.neighborhood_ids?.length ? query.neighborhood_ids : null,
         p_offset: 0,
         p_order_asc: orderAsc,
         p_saved_only: query.saved_only ?? false,
@@ -105,7 +105,7 @@ export async function getPostIdsByQuery(
       p_min_podcast_worthy: query.min_podcast_worthy ?? null,
       p_min_reaction_count: query.min_reaction_count ?? null,
       p_min_score: validMinScore,
-      p_neighborhood_id: query.neighborhood_id ?? null,
+      p_neighborhood_ids: query.neighborhood_ids?.length ? query.neighborhood_ids : null,
       p_offset: 0,
       p_order_asc: orderAsc,
       p_order_by: orderBy,

@@ -421,13 +421,13 @@ export function FilterSidebar({
         <div className="flex flex-col gap-2">
           <label className={checkboxLabelClass}>
             <input
-              checked={filters.neighborhoodId === ""}
+              checked={filters.neighborhoodIds.length === 0}
               className="rounded border-border bg-surface-hover focus:ring-border-focus"
               type="checkbox"
               onChange={(e) =>
                 setFilters((prev) => ({
                   ...prev,
-                  neighborhoodId: e.target.checked ? "" : prev.neighborhoodId,
+                  neighborhoodIds: e.target.checked ? [] : prev.neighborhoodIds,
                 }))
               }
             />
@@ -436,13 +436,15 @@ export function FilterSidebar({
           {neighborhoods.map((n) => (
             <label key={n.id} className={cn(checkboxLabelClass, "truncate")}>
               <input
-                checked={filters.neighborhoodId === n.id}
+                checked={filters.neighborhoodIds.includes(n.id)}
                 className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    neighborhoodId: e.target.checked ? n.id : "",
+                    neighborhoodIds: e.target.checked
+                      ? [...prev.neighborhoodIds, n.id]
+                      : prev.neighborhoodIds.filter((id) => id !== n.id),
                   }))
                 }
               />
