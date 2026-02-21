@@ -34,6 +34,6 @@
 
 - [ ] Queued badge in mobile needs to go below on feed card, again nothing fits here and we have to debug and fix all the cards to work better.
 
-- [ ] We have stats for categories, users should be able to click on a category card and redirect to feed with the filter set. We should make sure button/stat has hover state and cursor hover pointer.
+- [x] We have stats for categories, users should be able to click on a category card and redirect to feed with the filter set. We should make sure button/stat has hover state and cursor hover pointer.
 
 - [ ] The header for the feed card has too much shit at the top for mobile and tablet, we have to redesign it to look better probably moving some of the badge etc below somehow.

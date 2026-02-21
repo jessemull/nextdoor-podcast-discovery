@@ -147,7 +147,7 @@ export function FilterSidebar({
         <h2 className={sectionHeadingClass}>Category</h2>
         <input
           aria-label="Search categories"
-          className={searchInputClass}
+          className={cn(searchInputClass, "filter-search-input mb-2")}
           placeholder="Search categories..."
           type="search"
           value={categorySearch}
@@ -454,7 +454,7 @@ export function FilterSidebar({
         <div className="flex flex-col gap-2">
           <input
             aria-label="Search neighborhoods"
-            className={cn(searchInputClass, "mb-1")}
+            className={cn(searchInputClass, "filter-search-input mb-1")}
             placeholder="Search neighborhoods"
             type="search"
             value={neighborhoodSearch}

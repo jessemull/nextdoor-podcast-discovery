@@ -94,3 +94,26 @@ body {
   background: var(--muted-foreground);
   border-radius: 9999px;
 }
+
+/* Filter sidebar search inputs: white clear (x) icon and pointer cursor */
+.filter-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")
+    no-repeat center;
+  background-size: 1rem;
+  cursor: pointer;
+  height: 1rem;
+  width: 1rem;
+}
+.filter-search-input::-moz-search-cancel-button {
+  cursor: pointer;
+  /* Firefox uses system icon; make it visible and pointer */
+  -moz-appearance: none;
+  appearance: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")
+    no-repeat center;
+  background-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
