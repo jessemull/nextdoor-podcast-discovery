@@ -2,7 +2,7 @@
 
 - [ ] Navigating between pages user is just logged out for some reason seemingly randomly, must be some gap in the auth. It definitely seems to occur navigating between pages.
 
-- [ ] Menus for the active weight configuration and the card in the weight configurations list on the settings page use the same state for the menu in the ... so if you click on the menu for one, the other opens too.
+- [x] Menus for the active weight configuration and the card in the weight configurations list on the settings page use the same state for the menu in the ... so if you click on the menu for one, the other opens too.
 
 - [ ] Select all misaligned mobile and tablet views, it doesn't go above the other checkboxes exactly it is to the right.
 
