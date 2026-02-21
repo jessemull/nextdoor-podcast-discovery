@@ -98,7 +98,7 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <ul
-          className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 min-w-full max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
+          className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-60 min-w-[12rem] w-max overflow-auto rounded-card border py-1 shadow-lg"
           role="listbox"
         >
           {listOptions.map((opt) => (
@@ -106,7 +106,7 @@ export function CustomSelect({
               key={opt.value}
               aria-selected={opt.value === value}
               className={cn(
-                "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
+                "flex cursor-pointer items-center gap-2 whitespace-nowrap px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
                 opt.value === value && "bg-surface-hover"
               )}
               role="option"

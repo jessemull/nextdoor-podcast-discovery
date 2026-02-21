@@ -6,7 +6,7 @@
 
 - [x] Select all misaligned mobile and tablet views, it doesn't go above the other checkboxes exactly it is to the right.
 
-- [ ] Bulk actions menu too skinny mobile. It is too narrow and hard to read the options and the options are wrapped on two lines.
+- [x] Bulk actions menu too skinny mobile. It is too narrow and hard to read the options and the options are wrapped on two lines.
 
 - [x] Range score filters dont work. None of the ranges in the filter menu work at all. Need to fix literally all of them.
 
