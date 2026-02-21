@@ -6,12 +6,12 @@ import type { RankingWeights } from "@/lib/types";
 
 /** Default ranking weights for feed preview mode (matches Settings default). */
 export const DEFAULT_PREVIEW_WEIGHTS: RankingWeights = {
-  absurdity: 2.0,
+  absurdity: 2.5,
   discussion_spark: 1.0,
   drama: 1.5,
   emotional_intensity: 1.2,
   news_value: 1.0,
-  podcast_worthy: 2.0,
+  podcast_worthy: 2.5,
   readability: 1.2,
 };
 

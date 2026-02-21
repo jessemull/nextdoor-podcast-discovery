@@ -46,14 +46,14 @@ interface JobsResponse {
   total: number;
 }
 
-// Default weights (includes podcast_worthy for direct podcast suitability signal)
+// Default weights (must match DB/bootstrap; favor absurdity and podcast_worthy)
 const DEFAULT_WEIGHTS: RankingWeights = {
-  absurdity: 2.0,
+  absurdity: 2.5,
   discussion_spark: 1.0,
   drama: 1.5,
   emotional_intensity: 1.2,
   news_value: 1.0,
-  podcast_worthy: 2.0,
+  podcast_worthy: 2.5,
   readability: 1.2,
 };
 
