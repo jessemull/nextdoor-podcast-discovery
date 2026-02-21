@@ -53,7 +53,7 @@ export interface PostFeedSearchSlotProps {
   loading: boolean;
   markingSaved: Set<string>;
   onMarkSaved: (postId: string, saved: boolean) => void;
-  onMarkUsed: (postId: string) => void;
+  onMarkUsedChange: (postId: string, used: boolean) => void;
   onQueryChange: (value: string) => void;
   onResetAll?: () => void;
   onSearch: (queryOverride?: string) => void;
@@ -71,6 +71,7 @@ export interface PostFeedSearchSlotProps {
 const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   ignore: "Ignore",
   mark_used: "Mark As Used",
+  mark_unused: "Mark As Unused",
   reprocess: "Refresh Posts",
   save: "Save",
   unignore: "Unignore",
@@ -79,6 +80,7 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
 const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
   ignore: "Ignored",
   mark_used: "Marked as used",
+  mark_unused: "Marked as unused",
   reprocess: "Queued for refresh",
   save: "Saved",
   unignore: "Unignored",
@@ -87,6 +89,7 @@ const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
 const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   ignore: "Ignore Posts",
   mark_used: "Mark Posts As Used",
+  mark_unused: "Mark Posts As Unused",
   reprocess: "Refresh Posts",
   save: "Save Posts",
   unignore: "Unignore Posts",
@@ -98,6 +101,11 @@ const BULK_ACTION_OPTIONS = [
     icon: <Check aria-hidden className="h-4 w-4" />,
     label: "Mark As Used",
     value: "mark_used",
+  },
+  {
+    icon: <RotateCcw aria-hidden className="h-4 w-4" />,
+    label: "Mark As Unused",
+    value: "mark_unused",
   },
   {
     icon: <RefreshCw aria-hidden className="h-4 w-4" />,
@@ -289,7 +297,7 @@ export function PostFeed({
     handleBulkAction,
     handleMarkIgnored,
     handleMarkSaved,
-    handleMarkUsed,
+    handleMarkUsedChange,
     markingIgnored,
     markingSaved,
     markingUsed,
@@ -1072,7 +1080,9 @@ export function PostFeed({
                       onMarkSaved={(id, saved) =>
                         searchSlot.onMarkSaved(id, saved)
                       }
-                      onMarkUsed={() => searchSlot.onMarkUsed(post.id)}
+                      onMarkUsedChange={(id, used) =>
+                        searchSlot.onMarkUsedChange(id, used)
+                      }
                       onQueueRefresh={handleQueueRefresh}
                       onViewDetails={() => searchSlot.onViewDetails(post.id)}
                     />
@@ -1182,7 +1192,7 @@ export function PostFeed({
                     onCancelRefresh={handleCancelRefresh}
                     onMarkIgnored={handleMarkIgnored}
                     onMarkSaved={handleMarkSaved}
-                    onMarkUsed={handleMarkUsed}
+                    onMarkUsedChange={handleMarkUsedChange}
                     onQueueRefresh={handleQueueRefresh}
                     onSelect={toggleSelect}
                     onViewDetails={() => router.push(`/posts/${post.id}`)}

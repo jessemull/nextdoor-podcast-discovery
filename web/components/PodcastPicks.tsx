@@ -128,19 +128,30 @@ export function PodcastPicks() {
     [fetchPicks, markingSaved]
   );
 
-  const handleMarkUsed = useCallback(
-    async (postId: string) => {
+  const handleMarkUsedChange = useCallback(
+    async (postId: string, used: boolean) => {
       if (markingUsed.has(postId)) return;
       setMarkingUsed((prev) => new Set(prev).add(postId));
       try {
         const response = await fetch(`/api/posts/${postId}/used`, {
-          body: JSON.stringify({ used: true }),
+          body: JSON.stringify({ used }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
         if (response.ok) {
           await fetchPicks();
+          toast.success(used ? "Marked as used." : "Marked as unused.");
+        } else {
+          const data = await response.json();
+          throw new Error(
+            data.error ||
+              (used ? "Failed to mark as used" : "Failed to mark as unused")
+          );
         }
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to update post"
+        );
       } finally {
         setMarkingUsed((prev) => {
           const next = new Set(prev);
@@ -149,7 +160,7 @@ export function PodcastPicks() {
         });
       }
     },
-    [fetchPicks, markingUsed]
+    [fetchPicks, markingUsed, toast]
   );
 
   const handleQueueRefresh = useCallback(
@@ -226,7 +237,7 @@ export function PodcastPicks() {
               queueStatus={getQueueStatusForPost(post)}
               onCancelRefresh={handleCancelRefresh}
               onMarkSaved={handleMarkSaved}
-              onMarkUsed={handleMarkUsed}
+              onMarkUsedChange={handleMarkUsedChange}
               onQueueRefresh={handleQueueRefresh}
               onViewDetails={() => router.push(`/posts/${post.id}`)}
             />

@@ -21,7 +21,7 @@ export interface UseSearchResultsParams {
 export interface UseSearchResultsResult {
   error: null | string;
   handleMarkSaved: (postId: string, saved: boolean) => Promise<void>;
-  handleMarkUsed: (postId: string) => Promise<void>;
+  handleMarkUsedChange: (postId: string, used: boolean) => Promise<void>;
   loading: boolean;
   markingSaved: Set<string>;
   results: PostWithScores[];
@@ -146,37 +146,43 @@ export function useSearchResults(
     [markingSaved, results, toast]
   );
 
-  const handleMarkUsed = useCallback(async (postId: string) => {
-    try {
-      const response = await fetch(`/api/posts/${postId}/used`, {
-        body: JSON.stringify({ used: true }),
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      });
+  const handleMarkUsedChange = useCallback(
+    async (postId: string, used: boolean) => {
+      try {
+        const response = await fetch(`/api/posts/${postId}/used`, {
+          body: JSON.stringify({ used }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to mark post as used");
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(
+            data.error ||
+              (used ? "Failed to mark post as used" : "Failed to mark post as unused")
+          );
+        }
+
+        setResults((prev) =>
+          prev.map((post) =>
+            post.id === postId ? { ...post, used_on_episode: used } : post
+          )
+        );
+        toast.success(used ? "Marked as used." : "Marked as unused.");
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        console.error("Error marking post used change:", err);
+        toast.error(errorMessage);
       }
-
-      setResults((prev) =>
-        prev.map((post) =>
-          post.id === postId ? { ...post, used_on_episode: true } : post
-        )
-      );
-      toast.success("Marked as used.");
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to mark post as used";
-      console.error("Error marking post as used:", err);
-      toast.error(errorMessage);
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   return {
     error,
     handleMarkSaved,
-    handleMarkUsed,
+    handleMarkUsedChange,
     loading,
     markingSaved,
     results,

@@ -43,11 +43,24 @@ vi.mock("next/navigation", () => ({
 
 // Mock PostCard to simplify tests
 vi.mock("@/components/PostCard", () => ({
-  PostCard: ({ post, onMarkUsed }: { post: PostWithScores; onMarkUsed?: (id: string) => void }) => (
+  PostCard: ({
+    onMarkUsedChange,
+    post,
+  }: {
+    onMarkUsedChange?: (id: string, used: boolean) => void;
+    post: PostWithScores;
+  }) => (
     <div data-testid={`post-${post.id}`}>
       {post.text}
-      {onMarkUsed && (
-        <button onClick={() => onMarkUsed(post.id)}>Mark as Used</button>
+      {onMarkUsedChange && (
+        <>
+          <button onClick={() => onMarkUsedChange(post.id, true)}>
+            Mark as Used
+          </button>
+          <button onClick={() => onMarkUsedChange(post.id, false)}>
+            Mark as Unused
+          </button>
+        </>
       )}
     </div>
   ),

@@ -24,7 +24,7 @@
 
 - [ ] Processed link queue card has bad status badge. It doesn't match the other patterns and it doesn't fit on the card we need to debug this together.
 
-- [ ] Cancelling job for permalink or for recalcuation or anywhere should not have button loading state. We do optimistic updates where the modal just closes and then toast appears. We still have modals where we wait for the API call. We need to audit all the confirmation modals and places with action buttons to make sure none are showing a loading state and making the user wait.
+- [x] Cancelling job for permalink or for recalcuation or anywhere should not have button loading state. We do optimistic updates where the modal just closes and then toast appears. We still have modals where we wait for the API call. We need to audit all the confirmation modals and places with action buttons to make sure none are showing a loading state and making the user wait.
 
 - [ ] Status badge on completed jobs should have right colors and it should be in the right place, need to debug this again together for the entire card.
 

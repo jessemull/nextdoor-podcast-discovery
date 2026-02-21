@@ -53,7 +53,7 @@ interface PostCardProps {
   onCancelRefresh?: (jobId: string) => void;
   onMarkIgnored?: (postId: string, ignored: boolean) => void;
   onMarkSaved?: (postId: string, saved: boolean) => void;
-  onMarkUsed?: (postId: string) => void;
+  onMarkUsedChange?: (postId: string, used: boolean) => void;
   onQueueRefresh?: (postId: string) => void;
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
@@ -75,7 +75,7 @@ export const PostCard = memo(function PostCard({
   onCancelRefresh,
   onMarkIgnored,
   onMarkSaved,
-  onMarkUsed,
+  onMarkUsedChange,
   onQueueRefresh,
   onSelect,
   onViewDetails,
@@ -411,7 +411,7 @@ export const PostCard = memo(function PostCard({
                         : "Ignore"}
                   </button>
                 )}
-                {!post.used_on_episode && onMarkUsed && (
+                {onMarkUsedChange && (
                   <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                     disabled={isMarkingUsed}
@@ -419,11 +419,15 @@ export const PostCard = memo(function PostCard({
                     type="button"
                     onClick={() => {
                       closeMenu();
-                      onMarkUsed(post.id);
+                      onMarkUsedChange(post.id, !post.used_on_episode);
                     }}
                   >
                     <Check aria-hidden className="h-4 w-4" />
-                    {isMarkingUsed ? "Marking..." : "Mark as used"}
+                    {isMarkingUsed
+                      ? "..."
+                      : post.used_on_episode
+                        ? "Mark as unused"
+                        : "Mark as used"}
                   </button>
                 )}
                 {post.url &&

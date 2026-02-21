@@ -127,6 +127,18 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+    } else if (action === "mark_unused") {
+      const { error } = await supabase
+        .from("posts")
+        .update({ used_on_episode: false })
+        .in("id", postIds);
+      if (error) {
+        logError("[posts/bulk] mark_unused", error);
+        return NextResponse.json(
+          { details: error.message, error: "Database error" },
+          { status: 500 }
+        );
+      }
     } else if (action === "save") {
       const { error } = await supabase
         .from("posts")

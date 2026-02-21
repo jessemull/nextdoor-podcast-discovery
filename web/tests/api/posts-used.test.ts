@@ -129,6 +129,32 @@ describe("PATCH /api/posts/[id]/used", () => {
     expect(mockUpdate).toHaveBeenCalledWith({ used_on_episode: true });
   });
 
+  it("should successfully mark post as unused", async () => {
+    vi.mocked(auth0.getSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+      expires: "2099-01-01",
+    });
+
+    const mockPost = {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      used_on_episode: false,
+    };
+
+    mockSingle.mockResolvedValue({ data: mockPost, error: null });
+
+    const request = new NextRequest("http://localhost:3000/api/posts/123e4567-e89b-12d3-a456-426614174000/used", {
+      body: JSON.stringify({ used: false }),
+      method: "PATCH",
+    });
+
+    const response = await PATCH(request, createParams("123e4567-e89b-12d3-a456-426614174000"));
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data).toEqual(mockPost);
+    expect(mockUpdate).toHaveBeenCalledWith({ used_on_episode: false });
+  });
+
   it("should return 404 when post not found", async () => {
     vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
