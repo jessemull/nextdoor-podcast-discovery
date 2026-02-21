@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   DEFAULT_PREVIEW_WEIGHTS,
   TOPIC_CATEGORIES,
@@ -35,6 +37,8 @@ const sectionHeadingClass =
   "text-foreground mb-2 mt-4 text-sm font-semibold first:mt-0";
 const checkboxLabelClass =
   "flex cursor-pointer items-center gap-2 py-1 text-muted-foreground text-sm";
+const searchInputClass =
+  "border-border bg-surface-hover placeholder:text-muted-foreground text-foreground w-full rounded border px-2 py-1.5 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus";
 
 function NumInput({
   id,
@@ -77,6 +81,15 @@ export function FilterSidebar({
   setFilters,
   similarityThreshold,
 }: FilterSidebarProps) {
+  const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
+  const neighborhoodSearchLower = neighborhoodSearch.trim().toLowerCase();
+  const filteredNeighborhoods =
+    neighborhoodSearchLower === ""
+      ? neighborhoods
+      : neighborhoods.filter((n) =>
+          n.name.toLowerCase().includes(neighborhoodSearchLower)
+        );
+
   const picksOnlyChecked =
     picksDefaults != null &&
     filters.minScore === String(picksDefaults.picks_min) &&
@@ -419,6 +432,14 @@ export function FilterSidebar({
 
         <h2 className={sectionHeadingClass}>Neighborhood</h2>
         <div className="flex flex-col gap-2">
+          <input
+            aria-label="Search neighborhoods"
+            className={cn(searchInputClass, "mb-1")}
+            placeholder="Search neighborhoods"
+            type="search"
+            value={neighborhoodSearch}
+            onChange={(e) => setNeighborhoodSearch(e.target.value)}
+          />
           <label className={checkboxLabelClass}>
             <input
               checked={filters.neighborhoodIds.length === 0}
@@ -433,7 +454,7 @@ export function FilterSidebar({
             />
             All
           </label>
-          {neighborhoods.map((n) => (
+          {filteredNeighborhoods.map((n) => (
             <label key={n.id} className={cn(checkboxLabelClass, "truncate")}>
               <input
                 checked={filters.neighborhoodIds.includes(n.id)}

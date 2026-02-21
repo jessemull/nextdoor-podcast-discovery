@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { TOPIC_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,9 @@ export interface FeedFiltersProps {
  * Filter UI for the post feed: quick chips (Saved, Unused, Drama, Humor)
  * and collapsible refine section (sort, neighborhood, category, min score).
  */
+const neighborhoodSearchInputClass =
+  "border-border bg-surface-hover placeholder:text-muted-foreground text-foreground min-w-[12rem] w-full rounded border px-2 py-1.5 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus";
+
 export function FeedFilters({
   filterLoadError,
   filters,
@@ -29,6 +34,14 @@ export function FeedFilters({
   setShowRefineFilters,
   showRefineFilters,
 }: FeedFiltersProps) {
+  const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
+  const neighborhoodSearchLower = neighborhoodSearch.trim().toLowerCase();
+  const filteredNeighborhoods =
+    neighborhoodSearchLower === ""
+      ? neighborhoods
+      : neighborhoods.filter((n) =>
+          n.name.toLowerCase().includes(neighborhoodSearchLower)
+        );
   const chipBase =
     "rounded border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus";
   const chipInactive =
@@ -247,48 +260,62 @@ export function FeedFilters({
                 <option value="date">Most Recent</option>
               </select>
             </div>
-            {/* Neighborhood (multi-select) */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {/* Neighborhood (multi-select with search) */}
+            <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-sm">
                 Neighborhood:
               </span>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  checked={filters.neighborhoodIds.length === 0}
-                  className="rounded border-border bg-surface-hover focus:ring-border-focus"
-                  type="checkbox"
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      neighborhoodIds: e.target.checked ? [] : filters.neighborhoodIds,
-                    })
-                  }
-                />
-                <span className="text-muted-foreground text-sm">All</span>
-              </label>
-              {neighborhoods.map((n) => (
-                <label
-                  key={n.id}
-                  className="flex cursor-pointer items-center gap-2"
-                >
+              <input
+                aria-label="Search neighborhoods"
+                className={neighborhoodSearchInputClass}
+                placeholder="Search neighborhoods"
+                type="search"
+                value={neighborhoodSearch}
+                onChange={(e) => setNeighborhoodSearch(e.target.value)}
+              />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
-                    checked={filters.neighborhoodIds.includes(n.id)}
+                    checked={filters.neighborhoodIds.length === 0}
                     className="rounded border-border bg-surface-hover focus:ring-border-focus"
                     type="checkbox"
                     onChange={(e) =>
                       setFilters({
                         ...filters,
                         neighborhoodIds: e.target.checked
-                          ? [...filters.neighborhoodIds, n.id]
-                          : filters.neighborhoodIds.filter((id) => id !== n.id),
+                          ? []
+                          : filters.neighborhoodIds,
                       })
                     }
                   />
-                  <span className="text-muted-foreground text-sm">
-                    {n.name}
-                  </span>
+                  <span className="text-muted-foreground text-sm">All</span>
                 </label>
-              ))}
+                {filteredNeighborhoods.map((n) => (
+                  <label
+                    key={n.id}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <input
+                      checked={filters.neighborhoodIds.includes(n.id)}
+                      className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                      type="checkbox"
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          neighborhoodIds: e.target.checked
+                            ? [...filters.neighborhoodIds, n.id]
+                            : filters.neighborhoodIds.filter(
+                                (id) => id !== n.id
+                              ),
+                        })
+                      }
+                    />
+                    <span className="text-muted-foreground text-sm">
+                      {n.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
             {/* Category */}
             <div className="flex items-center gap-2">
