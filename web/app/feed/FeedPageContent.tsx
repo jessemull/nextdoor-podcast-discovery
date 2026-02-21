@@ -7,9 +7,7 @@ import { PostFeed } from "@/components/PostFeed";
 import { useSearchResults } from "@/lib/hooks/useSearchResults";
 
 interface PicksDefaults {
-  picks_limit: number;
   picks_min: number;
-  picks_min_podcast?: number;
 }
 
 interface SettingsResponse {
@@ -74,13 +72,10 @@ export function FeedPageContent() {
           }
           if (
             data.data.picks_defaults &&
-            typeof data.data.picks_defaults.picks_min === "number" &&
-            typeof data.data.picks_defaults.picks_limit === "number"
+            typeof data.data.picks_defaults.picks_min === "number"
           ) {
             setPicksDefaults({
-              picks_limit: data.data.picks_defaults.picks_limit,
               picks_min: data.data.picks_defaults.picks_min,
-              picks_min_podcast: data.data.picks_defaults.picks_min_podcast,
             });
           }
         } else {

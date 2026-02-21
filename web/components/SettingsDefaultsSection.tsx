@@ -14,16 +14,12 @@ interface NoveltyConfig {
 interface SettingsDefaultsSectionProps {
   noveltyConfig: NoveltyConfig;
   onSaveNovelty: () => Promise<void>;
-  onSavePicks: () => Promise<void>;
+  onSavePicks: (committed?: { picks_min: number }) => Promise<void>;
   onSaveSearch: () => Promise<void>;
-  picksDefaults: { picks_limit: number; picks_min: number; picks_min_podcast?: number };
+  picksDefaults: { picks_min: number };
   searchDefaults: { similarity_threshold: number };
   setNoveltyConfig: (config: NoveltyConfig) => void;
-  setPicksDefaults: (defaults: {
-    picks_limit: number;
-    picks_min: number;
-    picks_min_podcast?: number;
-  }) => void;
+  setPicksDefaults: (defaults: { picks_min: number }) => void;
   setSearchDefaults: (defaults: { similarity_threshold: number }) => void;
 }
 

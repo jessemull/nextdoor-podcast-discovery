@@ -188,6 +188,40 @@ describe("PUT /api/settings", () => {
     expect(data.error).toBe("Unauthorized");
   });
 
+  it("should update picks defaults successfully", async () => {
+    vi.mocked(auth0.getSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+      expires: "2099-01-01",
+    });
+
+    const mockUpsert = vi.fn().mockResolvedValue({
+      data: { key: "picks_defaults", value: { picks_min: 8 } },
+      error: null,
+    });
+
+    mockFrom.mockReturnValue({
+      upsert: mockUpsert,
+    });
+
+    const request = new NextRequest("http://localhost:3000/api/settings", {
+      body: JSON.stringify({ picks_defaults: { picks_min: 8 } }),
+      method: "PUT",
+    });
+
+    const response = await PUT(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data.success).toBe(true);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      {
+        key: "picks_defaults",
+        value: { picks_min: 8 },
+      },
+      { onConflict: "key" }
+    );
+  });
+
   it("should update search defaults successfully", async () => {
     vi.mocked(auth0.getSession).mockResolvedValue({
       user: { email: "test@example.com" },
@@ -217,6 +251,24 @@ describe("PUT /api/settings", () => {
       { key: "search_defaults", value: { similarity_threshold: 0.3 } },
       { onConflict: "key" }
     );
+  });
+
+  it("should return 400 for picks_defaults with missing required fields", async () => {
+    vi.mocked(auth0.getSession).mockResolvedValue({
+      user: { email: "test@example.com" },
+      expires: "2099-01-01",
+    });
+
+    const request = new NextRequest("http://localhost:3000/api/settings", {
+      body: JSON.stringify({ picks_defaults: {} }),
+      method: "PUT",
+    });
+
+    const response = await PUT(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBeDefined();
   });
 
   it("should return 400 for invalid similarity_threshold", async () => {

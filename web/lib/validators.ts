@@ -95,9 +95,7 @@ export const settingsPutBodySchema = z
     novelty_config: noveltyConfigSchema.optional(),
     picks_defaults: z
       .object({
-        picks_limit: z.number().int().min(1).max(20).optional(),
-        picks_min: z.number().min(0).max(10).optional(),
-        picks_min_podcast: z.number().min(0).max(10).optional(),
+        picks_min: z.coerce.number().min(0).max(10),
       })
       .optional(),
     ranking_weights: rankingWeightsSchema.optional(),

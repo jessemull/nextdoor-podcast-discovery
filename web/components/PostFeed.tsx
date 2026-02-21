@@ -129,9 +129,7 @@ const SORT_OPTIONS = [
  * When searchSlot is provided, the search bar is the first element in the main column; search results or feed follow.
  */
 export interface PicksDefaultsForFeed {
-  picks_limit: number;
   picks_min: number;
-  picks_min_podcast?: number;
 }
 
 export function PostFeed({
