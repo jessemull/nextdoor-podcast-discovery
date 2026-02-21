@@ -41,6 +41,9 @@ const WEIGHT_DIMENSION_LABELS: Record<keyof RankingWeights, string> = {
 const WEIGHT_BAR_GRADIENT =
   "linear-gradient(90deg, rgb(71 85 105), rgb(34 211 238))";
 
+/** Menu key for the active config card so it doesn't share state with the list card for the same config. */
+const ACTIVE_CARD_MENU_KEY = "active";
+
 interface WeightConfigsListProps {
   activeConfigId: null | string;
   configs: WeightConfig[];
@@ -447,13 +450,15 @@ export function WeightConfigsList({
             config={activeConfig}
             deletingConfigId={deletingConfigId}
             isActivating={isActivating}
-            menuOpen={menuOpenConfigId === activeConfig.id}
+            menuOpen={menuOpenConfigId === ACTIVE_CARD_MENU_KEY}
             menuRef={menuRef}
             status="active"
             onActivate={onActivate}
             onDelete={onDelete}
-            onMenuToggle={(id) =>
-              setMenuOpenConfigId((current) => (current === id ? null : id))
+            onMenuToggle={() =>
+              setMenuOpenConfigId((current) =>
+                current === ACTIVE_CARD_MENU_KEY ? null : ACTIVE_CARD_MENU_KEY
+              )
             }
             onOpenRename={openRenameModal}
           />
