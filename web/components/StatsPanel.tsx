@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Tag,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
@@ -209,20 +210,30 @@ function CategoriesSection({
               </div>
             ))
           : categories.map((cat: TopicFrequency) => (
-              <StatCell
+              <Link
+                aria-label={`View feed filtered by ${formatCategoryLabel(cat.category)}`}
+                className="flex min-h-[4.5rem] w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-white/20 bg-surface-hover/50 p-3 transition-colors hover:border-border hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                href={`/feed?categories=${encodeURIComponent(cat.category)}`}
                 key={cat.category}
-                icon={
-                  CATEGORY_ICONS[cat.category] ?? (
+              >
+                <div className="flex shrink-0 items-center justify-center text-muted">
+                  {CATEGORY_ICONS[cat.category] ?? (
                     <Tag
                       aria-hidden
                       className="h-9 w-9"
                       strokeWidth={1.5}
                     />
-                  )
-                }
-                label={formatCategoryLabel(cat.category)}
-                value={String(cat.count_30d)}
-              />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="text-foreground truncate text-xl font-bold leading-tight">
+                    {String(cat.count_30d)}
+                  </div>
+                  <div className="text-muted-foreground truncate text-sm">
+                    {formatCategoryLabel(cat.category)}
+                  </div>
+                </div>
+              </Link>
             ))}
       </div>
     </section>

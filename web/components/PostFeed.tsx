@@ -141,13 +141,16 @@ export interface PicksDefaultsForFeed {
 }
 
 export function PostFeed({
+  initialCategoryIds,
   picksDefaults = null,
   searchSlot = null,
 }: {
+  initialCategoryIds?: string[];
   picksDefaults?: null | PicksDefaultsForFeed;
   searchSlot?: null | PostFeedSearchSlotProps;
 } = {}) {
   const router = useRouter();
+  const appliedInitialCategoriesRef = useRef(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     action: BulkActionType;
@@ -214,6 +217,17 @@ export function PostFeed({
     neighborhoods,
     setFilters,
   } = usePostFeedFilters(DEBOUNCE_DELAY_MS);
+
+  useEffect(() => {
+    if (
+      appliedInitialCategoriesRef.current ||
+      !initialCategoryIds?.length
+    ) {
+      return;
+    }
+    appliedInitialCategoriesRef.current = true;
+    setFilters((prev) => ({ ...prev, categoryIds: initialCategoryIds }));
+  }, [initialCategoryIds, setFilters]);
 
   const {
     error,
