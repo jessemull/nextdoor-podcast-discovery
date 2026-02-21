@@ -1196,6 +1196,7 @@ export function PostFeed({
                 >
                   <PostCard
                     activeJobId={getActiveJobForPost(post)?.id ?? null}
+                    demoAllBadges={index === 0}
                     isMarkingIgnored={markingIgnored.has(post.id)}
                     isMarkingSaved={markingSaved.has(post.id)}
                     isMarkingUsed={markingUsed.has(post.id)}

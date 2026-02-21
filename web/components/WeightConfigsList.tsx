@@ -209,7 +209,7 @@ function ConfigCard({
             {config.name?.trim() || `Config ${config.id.slice(0, 8)}`}
           </span>
           {status === "active" && (
-            <span className="shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600">
+            <span className="shrink-0 rounded border border-violet-500/60 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-600">
               Active
             </span>
           )}

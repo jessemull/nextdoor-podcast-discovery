@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   RefreshCw,
   Search,
+  ThumbsUp,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -42,9 +43,18 @@ const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
 
 export type QueueStatus = "pending" | "running" | null;
 
+const DEMO_CATEGORIES = [
+  "crime",
+  "drama",
+  "humor",
+  "lost_and_found",
+  "suspicious",
+];
+
 interface PostCardProps {
   activeJobId?: null | string;
   defaultExpanded?: boolean;
+  demoAllBadges?: boolean;
   isCancellingRefresh?: boolean;
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
@@ -67,6 +77,7 @@ interface PostCardProps {
 export const PostCard = memo(function PostCard({
   activeJobId = null,
   defaultExpanded = false,
+  demoAllBadges = false,
   isCancellingRefresh = false,
   isMarkingIgnored = false,
   isMarkingSaved = false,
@@ -204,75 +215,19 @@ export const PostCard = memo(function PostCard({
             ? "border-emerald-600"
             : "border-emerald-500";
 
-  const breadcrumbs = (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-      {post.author_name && (
-        <>
-          <span className="text-foreground text-sm">{post.author_name}</span>
-          <span className="text-muted-foreground text-sm">•</span>
-        </>
-      )}
-      <span className="text-foreground text-sm font-medium tracking-wide">
-        {neighborhoodName}
-      </span>
-      <span className="text-muted-foreground text-sm">•</span>
-      <span className="text-foreground text-sm">
-        {formatRelativeTime(post.created_at)}
-      </span>
-      {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
-        <>
-          <span className="text-muted-foreground text-sm">•</span>
-          <span
-            className="text-foreground text-sm font-medium"
-            title="Reactions On Nextdoor"
-          >
-            {post.reaction_count} Reaction
-            {post.reaction_count !== 1 ? "s" : ""}
-          </span>
-        </>
-      )}
-      {Array.isArray(post.comments) && post.comments.length > 0 && (
-        <>
-          <span className="text-muted-foreground text-sm">•</span>
-          <Link
-            className="text-foreground hover:underline text-sm font-medium"
-            href={`/posts/${post.id}#comments`}
-            title="View Comments"
-          >
-            <MessageSquare
-              aria-hidden
-              className="inline h-3.5 w-3.5 align-middle"
-            />
-            <span className="ml-1">
-              {post.comments.length} Comment
-              {post.comments.length !== 1 ? "s" : ""}
-            </span>
-          </Link>
-        </>
-      )}
-      {queueStatus === "pending" && (
-        <>
-          <span className="text-muted-foreground text-sm">•</span>
-          <span className="shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
-            Queued
-          </span>
-        </>
-      )}
-      {queueStatus === "running" && (
-        <>
-          <span className="text-muted-foreground text-sm">•</span>
-          <span className="shrink-0 rounded border border-blue-500/70 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600">
-            Processing
-          </span>
-        </>
-      )}
-    </div>
-  );
+  const baseCategories = (scores?.categories ?? []).slice(0, 5);
+  const categoriesToShow =
+    demoAllBadges && baseCategories.length < 5
+      ? [
+          ...baseCategories,
+          ...DEMO_CATEGORIES.filter((c) => !baseCategories.includes(c)),
+        ].slice(0, 5)
+      : baseCategories;
 
   const tagsBlock =
-    scores?.categories && scores.categories.length > 0 ? (
-      <div className="flex flex-wrap items-center gap-1.5">
-        {scores.categories.slice(0, 5).map((category: string, index: number) => (
+    categoriesToShow.length > 0 ? (
+      <div className="flex w-full flex-wrap items-center gap-1.5">
+        {categoriesToShow.map((category: string, index: number) => (
           <span
             key={`${category}-${index}`}
             className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
@@ -284,16 +239,35 @@ export const PostCard = memo(function PostCard({
     ) : null;
 
   const statusBadges =
-    post.ignored || post.used_on_episode ? (
+    demoAllBadges ||
+    post.ignored ||
+    post.used_on_episode ||
+    queueStatus === "pending" ||
+    queueStatus === "running" ? (
       <div className="flex flex-wrap items-center gap-1.5">
-        {post.ignored && (
-          <span className="border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 rounded text-amber-400 text-xs font-medium">
+        {(demoAllBadges || post.ignored) && (
+          <span className="rounded border border-slate-500/60 bg-slate-500/15 px-2 py-0.5 text-slate-400 text-xs font-medium">
             Ignored
           </span>
         )}
-        {post.used_on_episode && (
-          <span className="border border-violet-500/60 bg-violet-500/15 px-2 py-0.5 rounded text-violet-400 text-xs font-medium">
+        {(demoAllBadges || post.used_on_episode) && (
+          <span className="rounded border border-violet-500/60 bg-violet-500/15 px-2 py-0.5 text-violet-400 text-xs font-medium">
             Used
+          </span>
+        )}
+        {(demoAllBadges || queueStatus === "pending") && (
+          <span className="rounded border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-amber-400 text-xs font-medium">
+            Queued
+          </span>
+        )}
+        {(demoAllBadges || queueStatus === "running") && (
+          <span className="rounded border border-blue-500/60 bg-blue-500/15 px-2 py-0.5 text-blue-400 text-xs font-medium">
+            Processing
+          </span>
+        )}
+        {(demoAllBadges || post.saved) && (
+          <span className="rounded border border-teal-500/60 bg-teal-500/15 px-2 py-0.5 text-teal-400 text-xs font-medium">
+            Saved
           </span>
         )}
       </div>
@@ -311,20 +285,6 @@ export const PostCard = memo(function PostCard({
         />
       ) : (
         <>
-          {post.similarity != null && (
-            <span
-              className="border border-orange-500/60 bg-orange-500/15 px-1.5 py-0.5 rounded text-orange-400 text-xs font-medium"
-              title="Semantic Similarity To Search Query"
-            >
-              <span className="hidden sm:inline">SIM </span>
-              {post.similarity.toFixed(2)}
-            </span>
-          )}
-          {statusBadges != null && (
-            <div className="hidden flex-wrap justify-end gap-1 sm:flex">
-              {statusBadges}
-            </div>
-          )}
           {onMarkSaved && (
             <button
               aria-label={post.saved ? "Unsave" : "Save"}
@@ -345,7 +305,7 @@ export const PostCard = memo(function PostCard({
           {onViewDetails && (
             <button
               aria-label="View Details"
-              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+              className="hidden cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus md:block"
               title="View Details"
               type="button"
               onClick={() => onViewDetails(post.id)}
@@ -356,7 +316,7 @@ export const PostCard = memo(function PostCard({
           {post.url && (
             <a
               aria-label="View On Nextdoor"
-              className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
+              className="hidden cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus md:inline-block"
               href={post.url}
               rel="noopener noreferrer"
               target="_blank"
@@ -484,11 +444,12 @@ export const PostCard = memo(function PostCard({
 
   return (
     <Card className="px-4 py-5 transition-colors hover:border-border-focus">
-      {/* Mobile: compact row (score + breadcrumbs + actions) then tags row; desktop: original layout */}
-      <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-        <div className="flex min-w-0 items-start gap-2 sm:contents">
+      {/* Top: score + author + neighborhood + actions; then category badges full width */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex min-w-0 items-stretch gap-2 sm:gap-3">
+          {/* Score badge: spans both rows vertically (column stretches, circle centered) */}
           {scores?.final_score != null && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center sm:w-16 sm:items-start sm:justify-start">
+            <div className="flex shrink-0 items-center">
               <span
                 className={cn(
                   "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold sm:h-14 sm:w-14 sm:text-base",
@@ -500,20 +461,58 @@ export const PostCard = memo(function PostCard({
               </span>
             </div>
           )}
-          <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:gap-3">
-            {breadcrumbs}
-            <div className="hidden sm:block">{tagsBlock}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            {/* Row 1: name and date (left) + action icons (upper right) */}
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-x-2">
+                {post.author_name && (
+                  <>
+                    <span className="text-foreground text-sm">{post.author_name}</span>
+                    <span className="text-muted-foreground text-sm">•</span>
+                  </>
+                )}
+                <span className="text-foreground text-sm font-medium tracking-wide">
+                  {formatRelativeTime(post.created_at)}
+                </span>
+              </div>
+              {actionsBlock}
+            </div>
+            {/* Row 2: counts only */}
+            <div className="flex min-w-0 items-center gap-x-2">
+              {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
+                <span
+                  className="text-foreground inline-flex items-center gap-1 text-sm"
+                  title="Reactions on Nextdoor"
+                >
+                  <ThumbsUp
+                    aria-hidden
+                    className="h-3.5 w-3.5 shrink-0"
+                  />
+                  {post.reaction_count}
+                </span>
+              )}
+              {typeof post.reaction_count === "number" &&
+                post.reaction_count > 0 &&
+                Array.isArray(post.comments) &&
+                post.comments.length > 0 && (
+                  <span className="text-muted-foreground text-sm">•</span>
+                )}
+              {Array.isArray(post.comments) && post.comments.length > 0 && (
+                <Link
+                  className="text-foreground inline-flex items-center gap-1 text-sm hover:underline"
+                  href={`/posts/${post.id}#comments`}
+                  title="View comments"
+                >
+                  <MessageSquare
+                    aria-hidden
+                    className="h-3.5 w-3.5 shrink-0"
+                  />
+                  {post.comments.length}
+                </Link>
+              )}
+            </div>
           </div>
-          {actionsBlock}
         </div>
-        {tagsBlock != null && (
-          <div className="sm:hidden">{tagsBlock}</div>
-        )}
-        {statusBadges != null && (
-          <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
-            {statusBadges}
-          </div>
-        )}
       </div>
 
       {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
@@ -660,6 +659,55 @@ export const PostCard = memo(function PostCard({
           </div>
         );
       })()}
+
+      {/* Details: neighborhood + similarity in two columns; status spans full width */}
+      <div className="mb-6">
+        <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+          Details
+        </h3>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+              Neighborhood
+            </span>
+            <span
+              className="text-foreground min-w-0 break-words text-xs"
+              style={{ opacity: 0.85 }}
+            >
+              {neighborhoodName}
+            </span>
+          </div>
+          {(post.similarity != null || demoAllBadges) && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                Similarity
+              </span>
+              <span
+                className="rounded border border-orange-500/60 bg-orange-500/15 w-fit px-1.5 py-0.5 text-orange-400 text-xs font-medium"
+                title="Semantic Similarity To Search Query"
+              >
+                {(post.similarity ?? 0.85).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {tagsBlock != null && (
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                Categories
+              </span>
+              {tagsBlock}
+            </div>
+          )}
+          {statusBadges != null && (
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                Status
+              </span>
+              <div className="flex min-w-0 flex-wrap gap-1.5">{statusBadges}</div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Content */}
       {scores?.summary && (
