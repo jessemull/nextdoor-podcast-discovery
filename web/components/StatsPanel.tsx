@@ -211,10 +211,10 @@ function CategoriesSection({
             ))
           : categories.map((cat: TopicFrequency) => (
               <Link
+                key={cat.category}
                 aria-label={`View feed filtered by ${formatCategoryLabel(cat.category)}`}
                 className="flex min-h-[4.5rem] w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-white/20 bg-surface-hover/50 p-3 transition-colors hover:border-border hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
                 href={`/feed?categories=${encodeURIComponent(cat.category)}`}
-                key={cat.category}
               >
                 <div className="flex shrink-0 items-center justify-center text-muted">
                   {CATEGORY_ICONS[cat.category] ?? (

@@ -70,8 +70,8 @@ export interface PostFeedSearchSlotProps {
 
 const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   ignore: "Ignore",
-  mark_used: "Mark As Used",
   mark_unused: "Mark As Unused",
+  mark_used: "Mark As Used",
   reprocess: "Refresh Posts",
   save: "Save",
   unignore: "Unignore",
@@ -79,8 +79,8 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
 
 const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
   ignore: "Ignored",
-  mark_used: "Marked as used",
   mark_unused: "Marked as unused",
+  mark_used: "Marked as used",
   reprocess: "Queued for refresh",
   save: "Saved",
   unignore: "Unignored",
@@ -88,8 +88,8 @@ const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
 
 const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   ignore: "Ignore Posts",
-  mark_used: "Mark Posts As Used",
   mark_unused: "Mark Posts As Unused",
+  mark_used: "Mark Posts As Used",
   reprocess: "Refresh Posts",
   save: "Save Posts",
   unignore: "Unignore Posts",

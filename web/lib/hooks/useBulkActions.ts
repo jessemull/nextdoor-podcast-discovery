@@ -6,8 +6,8 @@ import { useToast } from "@/lib/ToastContext";
 
 export type BulkActionType =
   | "ignore"
-  | "mark_used"
   | "mark_unused"
+  | "mark_used"
   | "reprocess"
   | "save"
   | "unignore";
