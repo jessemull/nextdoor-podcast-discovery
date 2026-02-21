@@ -29,8 +29,6 @@ export default function JobsPage() {
   const [error, setError] = useState<null | string>(null);
   const [finishedFilter, setFinishedFilter] =
     useState<FinishedStatusFilter>("");
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isRetrying, setIsRetrying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
@@ -136,52 +134,54 @@ export default function JobsPage() {
     setCancelConfirmJobId(jobId);
   }, []);
 
-  const handleConfirmCancel = useCallback(async () => {
+  const handleConfirmCancel = useCallback(() => {
     if (cancelConfirmJobId == null) return;
-    const job = jobs.find((j) => j.id === cancelConfirmJobId) ?? permalinkJobs.find((j) => j.id === cancelConfirmJobId);
+    const jobId = cancelConfirmJobId;
+    const job =
+      jobs.find((j) => j.id === jobId) ??
+      permalinkJobs.find((j) => j.id === jobId);
     const isPermalink = job?.type === "fetch_permalink";
-    setIsCancelling(true);
-    try {
-      const res = await fetch(
-        `/api/admin/jobs/${cancelConfirmJobId}/cancel`,
-        { method: "PUT" }
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error ?? "Failed to cancel job"
-        );
-      }
-      await fetchJobs();
-      toast.success(isPermalink ? "Removed from queue." : "Job cancelled.");
-    } catch {
-      toast.error("Failed to cancel job.");
-    } finally {
-      setCancelConfirmJobId(null);
-      setIsCancelling(false);
-    }
-  }, [cancelConfirmJobId, fetchJobs, jobs, permalinkJobs, toast]);
-
-  const handleRetry = useCallback(
-    async (jobId: string) => {
-      setIsRetrying(true);
+    setCancelConfirmJobId(null);
+    (async () => {
       try {
-        const res = await fetch(`/api/admin/jobs/${jobId}/retry`, {
-          method: "POST",
+        const res = await fetch(`/api/admin/jobs/${jobId}/cancel`, {
+          method: "PUT",
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(
-            (data as { error?: string }).error ?? "Failed to retry job"
+            (data as { error?: string }).error ?? "Failed to cancel job"
           );
         }
         await fetchJobs();
-        toast.success("Job queued for retry.");
+        toast.success(isPermalink ? "Removed from queue." : "Job cancelled.");
       } catch {
-        toast.error("Failed to retry job.");
-      } finally {
-        setIsRetrying(false);
+        toast.error("Failed to cancel job.");
+        await fetchJobs();
       }
+    })();
+  }, [cancelConfirmJobId, fetchJobs, jobs, permalinkJobs, toast]);
+
+  const handleRetry = useCallback(
+    (jobId: string) => {
+      (async () => {
+        try {
+          const res = await fetch(`/api/admin/jobs/${jobId}/retry`, {
+            method: "POST",
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(
+              (data as { error?: string }).error ?? "Failed to retry job"
+            );
+          }
+          await fetchJobs();
+          toast.success("Job queued for retry.");
+        } catch {
+          toast.error("Failed to retry job.");
+          await fetchJobs();
+        }
+      })();
     },
     [fetchJobs, toast]
   );
@@ -391,13 +391,12 @@ export default function JobsPage() {
           title="Finished Jobs"
           variant="finished"
           onCancel={handleRequestCancel}
-          onRetry={isRetrying ? undefined : handleRetry}
+          onRetry={handleRetry}
         />
 
         <ConfirmModal
           cancelLabel="Cancel"
           confirmLabel="Submit"
-          confirmLoading={isCancelling}
           message="Are you sure you want to cancel this job? It will not finish processing."
           open={cancelConfirmJobId != null}
           title="Cancel job?"
