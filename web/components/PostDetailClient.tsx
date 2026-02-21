@@ -141,33 +141,39 @@ export function PostDetailClient({
     [markingSaved, post, postId, toast]
   );
 
-  const handleMarkUsed = useCallback(async () => {
-    if (!postId || markingUsed) return;
+  const handleMarkUsedChange = useCallback(
+    async (used: boolean) => {
+      if (!postId || markingUsed) return;
 
-    setMarkingUsed(true);
-    try {
-      const response = await fetch(`/api/posts/${postId}/used`, {
-        body: JSON.stringify({ used: true }),
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      });
+      setMarkingUsed(true);
+      try {
+        const response = await fetch(`/api/posts/${postId}/used`, {
+          body: JSON.stringify({ used }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to mark as used");
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(
+            data.error ||
+              (used ? "Failed to mark as used" : "Failed to mark as unused")
+          );
+        }
+
+        toast.success(used ? "Marked as used." : "Marked as unused.");
+        await fetchPost();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update post";
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setMarkingUsed(false);
       }
-
-      toast.success("Marked as used.");
-      await fetchPost();
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to mark post as used";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setMarkingUsed(false);
-    }
-  }, [fetchPost, markingUsed, postId, toast]);
+    },
+    [fetchPost, markingUsed, postId, toast]
+  );
 
   const handleMarkIgnored = useCallback(
     async (ignored: boolean) => {
@@ -300,7 +306,7 @@ export function PostDetailClient({
             onCancelRefresh={handleCancelRefresh}
             onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
-            onMarkUsed={handleMarkUsed}
+            onMarkUsedChange={(_postId, used) => handleMarkUsedChange(used)}
             onQueueRefresh={handleQueueRefresh}
           />
         </div>

@@ -103,7 +103,7 @@ export function FeedPageContent() {
   const {
     error: searchError,
     handleMarkSaved,
-    handleMarkUsed,
+    handleMarkUsedChange,
     loading: searchLoading,
     markingSaved,
     results,
@@ -193,7 +193,7 @@ export function FeedPageContent() {
                 loading: searchLoading,
                 markingSaved,
                 onMarkSaved: handleMarkSaved,
-                onMarkUsed: handleMarkUsed,
+                onMarkUsedChange: handleMarkUsedChange,
                 onQueryChange: handleQueryChange,
                 onResetAll: handleResetAll,
                 onSearch: handleSearch,

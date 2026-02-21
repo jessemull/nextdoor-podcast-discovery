@@ -7,6 +7,7 @@ import { useToast } from "@/lib/ToastContext";
 export type BulkActionType =
   | "ignore"
   | "mark_used"
+  | "mark_unused"
   | "reprocess"
   | "save"
   | "unignore";
@@ -54,7 +55,7 @@ export interface UseBulkActionsResult {
   handleBulkUnignore: () => Promise<void>;
   handleMarkIgnored: (postId: string, ignored: boolean) => Promise<void>;
   handleMarkSaved: (postId: string, saved: boolean) => Promise<void>;
-  handleMarkUsed: (postId: string) => Promise<void>;
+  handleMarkUsedChange: (postId: string, used: boolean) => Promise<void>;
   markingIgnored: Set<string>;
   markingSaved: Set<string>;
   markingUsed: Set<string>;
@@ -108,7 +109,7 @@ export function useBulkActions({
 
         const data = await response.json();
         setSelectedIds(new Set());
-        await fetchPosts(offset);
+        await fetchPosts(0);
         onSuccess?.(data);
       } catch (err) {
         const errorMessage =
@@ -126,7 +127,6 @@ export function useBulkActions({
       bulkActionLoading,
       fetchPosts,
       getCurrentQuery,
-      offset,
       selectedIds,
       setError,
     ]
@@ -204,26 +204,29 @@ export function useBulkActions({
     [fetchPosts, markingIgnored, setError, toast]
   );
 
-  const handleMarkUsed = useCallback(
-    async (postId: string) => {
+  const handleMarkUsedChange = useCallback(
+    async (postId: string, used: boolean) => {
       if (markingUsed.has(postId)) return;
       setMarkingUsed((prev) => new Set(prev).add(postId));
       try {
         const response = await fetch(`/api/posts/${postId}/used`, {
-          body: JSON.stringify({ used: true }),
+          body: JSON.stringify({ used }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
         });
         if (!response.ok) {
           const data = await response.json();
-          throw new Error(data.error || "Failed to mark post as used");
+          throw new Error(
+            data.error ||
+              (used ? "Failed to mark post as used" : "Failed to mark post as unused")
+          );
         }
-        toast.success("Marked as used.");
+        toast.success(used ? "Marked as used." : "Marked as unused.");
         await fetchPosts(0);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
-        console.error("Failed to mark post as used:", err);
+        console.error("Mark used change failed:", err);
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
@@ -344,7 +347,7 @@ export function useBulkActions({
     handleBulkUnignore,
     handleMarkIgnored,
     handleMarkSaved,
-    handleMarkUsed,
+    handleMarkUsedChange,
     markingIgnored,
     markingSaved,
     markingUsed,

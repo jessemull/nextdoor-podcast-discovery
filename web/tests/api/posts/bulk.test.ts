@@ -197,4 +197,34 @@ describe("POST /api/posts/bulk", () => {
       });
     });
   });
+
+  describe("action: mark_unused", () => {
+    it("should update posts with used_on_episode false", async () => {
+      vi.mocked(auth0.getSession).mockResolvedValue({
+        user: { email: "user@example.com" },
+        expires: "2099-01-01",
+      });
+
+      const mockIn = vi.fn().mockResolvedValue({ error: null });
+      const mockUpdate = vi.fn().mockReturnValue({ in: mockIn });
+
+      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      const request = new NextRequest("http://localhost:3000/api/posts/bulk", {
+        body: JSON.stringify({
+          action: "mark_unused",
+          post_ids: [POST_ID_1, POST_ID_2],
+        }),
+        method: "POST",
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data).toEqual({ updated: 2 });
+      expect(mockUpdate).toHaveBeenCalledWith({ used_on_episode: false });
+      expect(mockIn).toHaveBeenCalledWith("id", [POST_ID_1, POST_ID_2]);
+    });
+  });
 });
