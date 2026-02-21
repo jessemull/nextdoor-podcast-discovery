@@ -81,7 +81,17 @@ export function FilterSidebar({
   setFilters,
   similarityThreshold,
 }: FilterSidebarProps) {
+  const [categorySearch, setCategorySearch] = useState("");
   const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
+  const categorySearchLower = categorySearch.trim().toLowerCase();
+  const filteredCategories =
+    categorySearchLower === ""
+      ? TOPIC_CATEGORIES
+      : TOPIC_CATEGORIES.filter(
+          (cat) =>
+            formatCategoryLabel(cat).toLowerCase().includes(categorySearchLower) ||
+            cat.toLowerCase().includes(categorySearchLower)
+        );
   const neighborhoodSearchLower = neighborhoodSearch.trim().toLowerCase();
   const filteredNeighborhoods =
     neighborhoodSearchLower === ""
@@ -146,17 +156,38 @@ export function FilterSidebar({
         )}
 
         <h2 className={sectionHeadingClass}>Category</h2>
+        <input
+          aria-label="Search categories"
+          className={searchInputClass}
+          placeholder="Search categories..."
+          type="search"
+          value={categorySearch}
+          onChange={(e) => setCategorySearch(e.target.value)}
+        />
         <div className="flex flex-col gap-2">
-          {TOPIC_CATEGORIES.map((cat) => (
+          <label className={checkboxLabelClass}>
+            <input
+              checked={filters.categoryIds.length === 0}
+              className="rounded border-border bg-surface-hover focus:ring-border-focus"
+              type="checkbox"
+              onChange={() =>
+                setFilters((prev) => ({ ...prev, categoryIds: [] }))
+              }
+            />
+            All
+          </label>
+          {filteredCategories.map((cat) => (
             <label key={cat} className={checkboxLabelClass}>
               <input
-                checked={filters.category === cat}
+                checked={filters.categoryIds.includes(cat)}
                 className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    category: e.target.checked ? cat : "",
+                    categoryIds: e.target.checked
+                      ? [...prev.categoryIds, cat]
+                      : prev.categoryIds.filter((c) => c !== cat),
                   }))
                 }
               />

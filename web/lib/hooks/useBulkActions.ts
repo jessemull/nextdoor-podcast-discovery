@@ -12,7 +12,7 @@ export type BulkActionType =
   | "unignore";
 
 export interface BulkQuery {
-  category?: string;
+  categories?: string[];
   ignored_only?: boolean;
   max_podcast_worthy?: number;
   max_reaction_count?: number;

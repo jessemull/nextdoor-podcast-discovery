@@ -5,6 +5,8 @@
 
 import { z } from "zod";
 
+import { TOPIC_CATEGORIES } from "@/lib/constants";
+
 /** UUID v4 format (shared for route param validation). */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -237,9 +239,20 @@ export const weightConfigPatchBodySchema = z
 
 export type WeightConfigPatchBody = z.infer<typeof weightConfigPatchBodySchema>;
 
+const topicCategorySchema = z.enum(
+  TOPIC_CATEGORIES as unknown as [string, ...string[]]
+);
+
 /** GET /api/posts query params. Validates at API boundary for safe parsing. */
 export const postsQuerySchema = z.object({
-  category: z.string().optional(),
+  categories: z
+    .array(z.string())
+    .optional()
+    .transform((v) => (v?.filter((c) => c?.trim()).length ? v.filter((c) => c.trim()) : undefined))
+    .refine(
+      (v) => !v || v.every((c) => topicCategorySchema.safeParse(c).success),
+      "Invalid category in categories"
+    ),
   ignored_only: z
     .string()
     .optional()
@@ -332,7 +345,15 @@ export type PostsQuery = z.infer<typeof postsQuerySchema>;
 
 /** POST /api/posts/bulk body: query object (for apply_to_query). Same filters as GET /api/posts. */
 export const postsBulkQuerySchema = z.object({
-  category: z.string().optional(),
+  categories: z
+    .array(z.string())
+    .optional()
+    .refine(
+      (v) =>
+        !v?.length ||
+        v.every((c) => topicCategorySchema.safeParse(c).success),
+      "Invalid category in categories"
+    ),
   ignored_only: z.boolean().optional(),
   max_podcast_worthy: z.number().min(0).max(10).optional(),
   max_reaction_count: z.number().int().min(0).optional(),

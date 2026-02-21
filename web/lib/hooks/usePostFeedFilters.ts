@@ -13,7 +13,7 @@ type SortOption = "date" | "podcast_score" | "score";
 export type SortOrder = "asc" | "desc";
 
 export interface PostFeedFilters {
-  category: string;
+  categoryIds: string[];
   ignoredOnly: boolean;
   maxPodcastWorthy: string;
   maxReactionCount: string;
@@ -50,7 +50,7 @@ export interface UsePostFeedFiltersResult {
 }
 
 export const DEFAULT_FILTERS: PostFeedFilters = {
-  category: "",
+  categoryIds: [],
   ignoredOnly: false,
   maxPodcastWorthy: "",
   maxReactionCount: "",

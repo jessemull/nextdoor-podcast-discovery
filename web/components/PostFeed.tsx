@@ -238,7 +238,8 @@ export function PostFeed({
     const minReactionCount = parseInt(debouncedMinReactionCount, 10);
     const minScoreNum = parseFloat(debouncedMinScore);
     return {
-      category: filters.category || undefined,
+      categories:
+        filters.categoryIds?.length ? filters.categoryIds : undefined,
       ignored_only: filters.ignoredOnly,
       max_podcast_worthy:
         !isNaN(maxPodcastWorthy) &&
@@ -276,7 +277,7 @@ export function PostFeed({
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
-    filters.category,
+    filters.categoryIds,
     filters.ignoredOnly,
     filters.neighborhoodIds,
     filters.savedOnly,
@@ -392,7 +393,7 @@ export function PostFeed({
   }, [selectedIds.size, posts.length]);
 
   const activeFilterCount = [
-    filters.category,
+    filters.categoryIds.length > 0,
     filters.ignoredOnly,
     filters.minPodcastWorthy,
     filters.minReactionCount,

@@ -11,7 +11,7 @@ interface PostScoreRow {
 }
 
 export interface BulkQueryInput {
-  category?: string;
+  categories?: string[];
   ignored_only?: boolean;
   max_podcast_worthy?: number;
   max_reaction_count?: number;
@@ -48,7 +48,7 @@ export async function getPostIdsByQuery(
     const { data: scoresData, error: scoresError } = await supabase.rpc(
       "get_posts_by_date",
       {
-        p_category: query.category || null,
+        p_categories: query.categories?.length ? query.categories : null,
         p_ignored_only: query.ignored_only ?? false,
         p_limit: BULK_QUERY_LIMIT,
         p_max_podcast_worthy: query.max_podcast_worthy ?? null,
@@ -96,7 +96,7 @@ export async function getPostIdsByQuery(
   const { data: scoresData, error: scoresError } = await supabase.rpc(
     "get_posts_with_scores",
     {
-      p_category: query.category || null,
+      p_categories: query.categories?.length ? query.categories : null,
       p_ignored_only: query.ignored_only ?? false,
       p_limit: BULK_QUERY_LIMIT,
       p_max_podcast_worthy: query.max_podcast_worthy ?? null,
