@@ -12,8 +12,8 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt=""
-          className="h-full w-full object-cover opacity-40 grayscale"
-          src="/hero-banner.jpg"
+          className="h-full w-full object-cover opacity-40"
+          src="/hero-banner.webp"
         />
         <div className="absolute inset-0 bg-black/50" />
       </div>
