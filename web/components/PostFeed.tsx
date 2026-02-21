@@ -308,62 +308,58 @@ export function PostFeed({
     getQueueStatusForPost,
     refetch: refetchPermalinkJobs,
   } = usePermalinkJobs();
-  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
-  const [queuingRefreshPostId, setQueuingRefreshPostId] = useState<null | string>(null);
-
   const handleCancelRefresh = useCallback(
-    async (jobId: string) => {
-      if (cancellingJobId != null) return;
-      setCancellingJobId(jobId);
-      try {
-        const response = await fetch(`/api/admin/jobs/${jobId}`, {
-          method: "DELETE",
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || data.details || "Failed to remove");
+    (jobId: string) => {
+      (async () => {
+        try {
+          const response = await fetch(`/api/admin/jobs/${jobId}`, {
+            method: "DELETE",
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || data.details || "Failed to remove");
+          }
+          await refetchPermalinkJobs();
+          toast.success("Removed from queue.");
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to remove from queue"
+          );
+          await refetchPermalinkJobs();
         }
-        await refetchPermalinkJobs();
-        toast.success("Removed from queue.");
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to remove from queue"
-        );
-      } finally {
-        setCancellingJobId(null);
-      }
+      })();
     },
-    [cancellingJobId, refetchPermalinkJobs, toast]
+    [refetchPermalinkJobs, toast]
   );
 
   const handleQueueRefresh = useCallback(
-    async (postId: string) => {
+    (postId: string) => {
       const post =
         posts.find((p) => p.id === postId) ??
         searchSlot?.results?.find((p) => p.id === postId);
-      if (!post?.url || queuingRefreshPostId != null) return;
-      setQueuingRefreshPostId(postId);
-      try {
-        const response = await fetch("/api/admin/permalink-queue", {
-          body: JSON.stringify({ post_id: postId, url: post.url }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || data.details || "Failed to queue refresh");
+      if (!post?.url) return;
+      (async () => {
+        try {
+          const response = await fetch("/api/admin/permalink-queue", {
+            body: JSON.stringify({ post_id: postId, url: post.url }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || data.details || "Failed to queue refresh");
+          }
+          toast.success("Added to queue successfully.");
+          refetchPermalinkJobs();
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to queue refresh"
+          );
+          refetchPermalinkJobs();
         }
-        toast.success("Added to queue successfully.");
-        refetchPermalinkJobs();
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to queue refresh"
-        );
-      } finally {
-        setQueuingRefreshPostId(null);
-      }
+      })();
     },
-    [posts, queuingRefreshPostId, refetchPermalinkJobs, searchSlot?.results, toast]
+    [posts, refetchPermalinkJobs, searchSlot?.results, toast]
   );
 
   const {
@@ -1069,12 +1065,7 @@ export function PostFeed({
                     <PostCard
                       key={post.id}
                       activeJobId={activeJob?.id ?? null}
-                      isCancellingRefresh={
-                        activeJob != null &&
-                        cancellingJobId === activeJob.id
-                      }
                       isMarkingSaved={searchSlot.markingSaved.has(post.id)}
-                      isQueuingRefresh={queuingRefreshPostId === post.id}
                       post={post}
                       queueStatus={getQueueStatusForPost(post)}
                       onCancelRefresh={handleCancelRefresh}
@@ -1181,13 +1172,9 @@ export function PostFeed({
                 >
                   <PostCard
                     activeJobId={getActiveJobForPost(post)?.id ?? null}
-                    isCancellingRefresh={
-                      cancellingJobId === getActiveJobForPost(post)?.id
-                    }
                     isMarkingIgnored={markingIgnored.has(post.id)}
                     isMarkingSaved={markingSaved.has(post.id)}
                     isMarkingUsed={markingUsed.has(post.id)}
-                    isQueuingRefresh={queuingRefreshPostId === post.id}
                     post={post}
                     queueStatus={getQueueStatusForPost(post)}
                     selected={selectedIds.has(post.id)}

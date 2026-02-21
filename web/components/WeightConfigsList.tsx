@@ -11,6 +11,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useToast } from "@/lib/ToastContext";
 import { cn } from "@/lib/utils";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
@@ -335,12 +336,12 @@ export function WeightConfigsList({
   onDelete,
   onRenameSuccess,
 }: WeightConfigsListProps) {
+  const { toast } = useToast();
   const [editingConfigId, setEditingConfigId] = useState<null | string>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editName, setEditName] = useState("");
   const [menuOpenConfigId, setMenuOpenConfigId] = useState<null | string>(null);
   const [renameError, setRenameError] = useState<null | string>(null);
-  const [savingConfigId, setSavingConfigId] = useState<null | string>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const openRenameModal = useCallback((config: WeightConfig) => {
@@ -358,20 +359,20 @@ export function WeightConfigsList({
     setRenameError(null);
   }, []);
 
-  const saveRename = useCallback(
-    async (configId: string) => {
-      if (!editName.trim()) {
-        setRenameError("Enter a name");
-        return;
-      }
-      setSavingConfigId(configId);
-      setRenameError(null);
+  const handleConfirmRename = useCallback(() => {
+    if (editingConfigId == null) return;
+    if (!editName.trim()) {
+      setRenameError("Enter a name");
+      return;
+    }
+    const configId = editingConfigId;
+    const name = editName.trim();
+    const description = editDescription.trim();
+    closeRenameModal();
+    (async () => {
       try {
-        const body: { description?: string; name?: string } = {
-          name: editName.trim(),
-        };
-        if (editDescription.trim() !== "")
-          body.description = editDescription.trim();
+        const body: { description?: string; name?: string } = { name };
+        if (description !== "") body.description = description;
         const response = await fetch(`/api/admin/weight-configs/${configId}`, {
           body: JSON.stringify(body),
           headers: { "Content-Type": "application/json" },
@@ -381,23 +382,22 @@ export function WeightConfigsList({
           const data = await response.json();
           throw new Error(data.error ?? data.details ?? "Failed to update");
         }
-        closeRenameModal();
         onRenameSuccess?.();
       } catch (err) {
-        setRenameError(
+        toast.error(
           err instanceof Error ? err.message : "Failed to update config"
         );
-      } finally {
-        setSavingConfigId(null);
+        onRenameSuccess?.();
       }
-    },
-    [
-      editDescription,
-      editName,
-      closeRenameModal,
-      onRenameSuccess,
-    ]
-  );
+    })();
+  }, [
+    editDescription,
+    editName,
+    editingConfigId,
+    closeRenameModal,
+    onRenameSuccess,
+    toast,
+  ]);
 
   useEffect(() => {
     if (menuOpenConfigId == null) return;
@@ -510,11 +510,10 @@ export function WeightConfigsList({
         cancelLabel="Cancel"
         confirmDisabled={!editName.trim()}
         confirmLabel="Save"
-        confirmLoading={savingConfigId != null}
         open={editingConfigId != null}
         title="Edit config name"
         onCancel={closeRenameModal}
-        onConfirm={() => editingConfigId && saveRename(editingConfigId)}
+        onConfirm={handleConfirmRename}
       >
         <div className="space-y-3">
           <label className="block">

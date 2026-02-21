@@ -29,7 +29,6 @@ export function PostDetailClient({
     refetch: refetchPermalinkJobs,
   } = usePermalinkJobs();
   const [commentsExpanded, setCommentsExpanded] = useState(false);
-  const [cancellingJobId, setCancellingJobId] = useState<null | string>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<null | string>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
@@ -38,31 +37,28 @@ export function PostDetailClient({
   const [post, setPost] = useState<null | PostWithScores>(initialPost);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<PostWithScores[]>([]);
-  const [queuingRefresh, setQueuingRefresh] = useState(false);
-
   const handleCancelRefresh = useCallback(
-    async (jobId: string) => {
-      if (cancellingJobId != null) return;
-      setCancellingJobId(jobId);
-      try {
-        const response = await fetch(`/api/admin/jobs/${jobId}`, {
-          method: "DELETE",
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || data.details || "Failed to remove");
+    (jobId: string) => {
+      (async () => {
+        try {
+          const response = await fetch(`/api/admin/jobs/${jobId}`, {
+            method: "DELETE",
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || data.details || "Failed to remove");
+          }
+          await refetchPermalinkJobs();
+          toast.success("Removed from queue.");
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to remove from queue"
+          );
+          await refetchPermalinkJobs();
         }
-        await refetchPermalinkJobs();
-        toast.success("Removed from queue.");
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to remove from queue"
-        );
-      } finally {
-        setCancellingJobId(null);
-      }
+      })();
     },
-    [cancellingJobId, refetchPermalinkJobs, toast]
+    [refetchPermalinkJobs, toast]
   );
 
   const fetchPost = useCallback(async () => {
@@ -200,29 +196,29 @@ export function PostDetailClient({
     [fetchPost, markingIgnored, postId, toast]
   );
 
-  const handleQueueRefresh = useCallback(async () => {
-    if (!post?.url || !postId || queuingRefresh) return;
-    setQueuingRefresh(true);
-    try {
-      const response = await fetch("/api/admin/permalink-queue", {
-        body: JSON.stringify({ post_id: postId, url: post.url }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || data.details || "Failed to queue refresh");
+  const handleQueueRefresh = useCallback(() => {
+    if (!post?.url || !postId) return;
+    (async () => {
+      try {
+        const response = await fetch("/api/admin/permalink-queue", {
+          body: JSON.stringify({ post_id: postId, url: post.url }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.details || "Failed to queue refresh");
+        }
+        toast.success("Added to queue successfully.");
+        refetchPermalinkJobs();
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to queue refresh"
+        );
+        refetchPermalinkJobs();
       }
-      toast.success("Added to queue successfully.");
-      refetchPermalinkJobs();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to queue refresh"
-      );
-    } finally {
-      setQueuingRefresh(false);
-    }
-  }, [post?.url, postId, queuingRefresh, refetchPermalinkJobs, toast]);
+    })();
+  }, [post?.url, postId, refetchPermalinkJobs, toast]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#comments") {
@@ -295,13 +291,9 @@ export function PostDetailClient({
           <PostCard
             activeJobId={getActiveJobForPost(post)?.id ?? null}
             defaultExpanded
-            isCancellingRefresh={
-              cancellingJobId === getActiveJobForPost(post)?.id
-            }
             isMarkingIgnored={markingIgnored}
             isMarkingSaved={markingSaved}
             isMarkingUsed={markingUsed}
-            isQueuingRefresh={queuingRefresh}
             post={post}
             queueStatus={getQueueStatusForPost(post)}
             showScoreBreakdown
