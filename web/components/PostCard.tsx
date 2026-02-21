@@ -329,7 +329,6 @@ export const PostCard = memo(function PostCard({
             <button
               aria-label={post.saved ? "Unsave" : "Save"}
               className="cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus"
-              disabled={isMarkingSaved}
               title={post.saved ? "Unsave" : "Save"}
               type="button"
               onClick={() => onMarkSaved(post.id, !post.saved)}

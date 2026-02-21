@@ -109,6 +109,10 @@ export function useSearchResults(
   const handleMarkSaved = useCallback(
     async (postId: string, saved: boolean) => {
       if (markingSaved.has(postId)) return;
+      const previous = results.find((p) => p.id === postId);
+      setResults((prev) =>
+        prev.map((post) => (post.id === postId ? { ...post, saved } : post))
+      );
       setMarkingSaved((prev) => new Set(prev).add(postId));
       try {
         const response = await fetch(`/api/posts/${postId}/saved`, {
@@ -120,13 +124,14 @@ export function useSearchResults(
           const data = await response.json();
           throw new Error(data.error || "Failed to save post");
         }
-        setResults((prev) =>
-          prev.map((post) =>
-            post.id === postId ? { ...post, saved } : post
-          )
-        );
-        toast.success(saved ? "Saved." : "Unsaved.");
       } catch (err) {
+        if (previous != null) {
+          setResults((prev) =>
+            prev.map((post) =>
+              post.id === postId ? { ...post, saved: previous.saved } : post
+            )
+          );
+        }
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
         toast.error(errorMessage);
@@ -138,7 +143,7 @@ export function useSearchResults(
         });
       }
     },
-    [markingSaved, toast]
+    [markingSaved, results, toast]
   );
 
   const handleMarkUsed = useCallback(async (postId: string) => {

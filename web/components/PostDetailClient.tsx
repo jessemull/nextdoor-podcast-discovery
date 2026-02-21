@@ -119,7 +119,9 @@ export function PostDetailClient({
 
   const handleMarkSaved = useCallback(
     async (saved: boolean) => {
-      if (!postId || markingSaved) return;
+      if (!postId || markingSaved || !post) return;
+      const previousSaved = post.saved;
+      setPost((prev) => (prev ? { ...prev, saved } : prev));
       setMarkingSaved(true);
       try {
         const response = await fetch(`/api/posts/${postId}/saved`, {
@@ -131,9 +133,8 @@ export function PostDetailClient({
           const data = await response.json();
           throw new Error(data.error || "Failed to save post");
         }
-        toast.success(saved ? "Saved." : "Unsaved.");
-        await fetchPost();
       } catch (err) {
+        setPost((prev) => (prev ? { ...prev, saved: previousSaved } : prev));
         const errorMessage =
           err instanceof Error ? err.message : "Failed to update post";
         toast.error(errorMessage);
@@ -141,7 +142,7 @@ export function PostDetailClient({
         setMarkingSaved(false);
       }
     },
-    [fetchPost, markingSaved, postId, toast]
+    [markingSaved, post, postId, toast]
   );
 
   const handleMarkUsed = useCallback(async () => {
