@@ -996,58 +996,13 @@ export function PostFeed({
           </>
         )}
 
-        {(!searchSlot || !searchSlot.query.trim()) && (
-          <>
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
-              <span className="text-muted-foreground shrink-0 text-sm">
-                Showing {posts.length} of {total} Posts
-              </span>
-              {bulkMode && (
-                <label className="flex min-h-[44px] cursor-pointer items-center gap-2">
-                  <span className="text-muted-foreground text-sm">
-                    Select All
-                  </span>
-                  <input
-                    aria-label="Select All"
-                    checked={selectedIds.size === posts.length && posts.length > 0}
-                    className="rounded border-border bg-surface-hover"
-                    ref={selectAllCheckboxRef}
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(new Set(posts.map((p) => p.id)));
-                        setSelectAllChecked(true);
-                      } else {
-                        setSelectedIds(new Set());
-                        setSelectAllChecked(false);
-                      }
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-            {error && (
-              <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
-                <div className="flex items-center justify-between">
-                  <span>{error}</span>
-                  <button
-                    className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={handleRetry}
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
         </div>
 
         <div
           aria-label="Feed posts"
           className="min-h-0 flex-1 overflow-y-auto pt-4 pb-6 sm:pb-8"
           role="region"
+          style={{ scrollbarGutter: "stable" }}
         >
         <div className="px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
@@ -1130,6 +1085,53 @@ export function PostFeed({
           </div>
         ) : (
           <>
+        {(!searchSlot || !searchSlot.query.trim()) && (
+          <>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
+              <span className="text-muted-foreground shrink-0 text-sm">
+                Showing {posts.length} of {total} Posts
+              </span>
+              {bulkMode && (
+                <label className="flex min-h-[44px] cursor-pointer items-center gap-2 mr-4">
+                  <span className="text-muted-foreground text-sm">
+                    Select All
+                  </span>
+                  <input
+                    aria-label="Select All"
+                    checked={selectedIds.size === posts.length && posts.length > 0}
+                    className="rounded border-border bg-surface-hover"
+                    ref={selectAllCheckboxRef}
+                    type="checkbox"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(posts.map((p) => p.id)));
+                        setSelectAllChecked(true);
+                      } else {
+                        setSelectedIds(new Set());
+                        setSelectAllChecked(false);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {error && (
+              <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
+                <div className="flex items-center justify-between">
+                  <span>{error}</span>
+                  <button
+                    className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={handleRetry}
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {initialLoading && (
           <div aria-busy="true" aria-label="Loading feed" className="space-y-4">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
