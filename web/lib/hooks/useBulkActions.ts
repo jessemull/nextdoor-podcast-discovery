@@ -14,6 +14,9 @@ export type BulkActionType =
 export interface BulkQuery {
   category?: string;
   ignored_only?: boolean;
+  max_podcast_worthy?: number;
+  max_reaction_count?: number;
+  max_score?: number;
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;

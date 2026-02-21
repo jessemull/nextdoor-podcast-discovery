@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
     category: searchParams.get("category") ?? undefined,
     ignored_only: searchParams.get("ignored_only") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
+    max_podcast_worthy: searchParams.get("max_podcast_worthy") ?? undefined,
+    max_reaction_count: searchParams.get("max_reaction_count") ?? undefined,
+    max_score: searchParams.get("max_score") ?? undefined,
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
@@ -62,6 +65,9 @@ export async function GET(request: NextRequest) {
     category,
     ignored_only: ignoredOnly,
     limit,
+    max_podcast_worthy: maxPodcastWorthyParam,
+    max_reaction_count: maxReactionCountParam,
+    max_score: maxScoreParam,
     min_podcast_worthy: minPodcastWorthyParam,
     min_reaction_count: minReactionCountParam,
     min_score: minScoreParam,
@@ -76,12 +82,18 @@ export async function GET(request: NextRequest) {
     weights: weightsParam,
   } = parsed.data;
   const orderAsc = order === "asc";
-  const minScore =
-    minScoreParam != null ? String(minScoreParam) : null;
+  const maxPodcastWorthy =
+    maxPodcastWorthyParam != null ? maxPodcastWorthyParam : null;
+  const maxReactionCount =
+    maxReactionCountParam != null ? maxReactionCountParam : null;
+  const maxScore =
+    maxScoreParam != null ? String(maxScoreParam) : null;
   const minPodcastWorthy =
     minPodcastWorthyParam != null ? minPodcastWorthyParam : null;
   const minReactionCount =
     minReactionCountParam != null ? minReactionCountParam : null;
+  const minScore =
+    minScoreParam != null ? String(minScoreParam) : null;
 
   const supabase = getSupabaseAdmin();
 
@@ -98,6 +110,9 @@ export async function GET(request: NextRequest) {
         category: category ?? null,
         ignoredOnly,
         limit,
+        maxPodcastWorthy,
+        maxReactionCount,
+        maxScore,
         minPodcastWorthy,
         minReactionCount,
         minScore,
@@ -119,6 +134,9 @@ export async function GET(request: NextRequest) {
         category: category ?? null,
         ignoredOnly,
         limit,
+        maxPodcastWorthy,
+        maxReactionCount,
+        maxScore,
         minPodcastWorthy,
         minReactionCount,
         minScore,
@@ -151,6 +169,9 @@ interface QueryParams {
   category: null | string;
   ignoredOnly: boolean;
   limit: number;
+  maxPodcastWorthy: null | number;
+  maxReactionCount: null | number;
+  maxScore: null | string;
   minPodcastWorthy: null | number;
   minReactionCount: null | number;
   minScore: null | string;
@@ -205,6 +226,9 @@ async function getPostsByScore(
     category,
     ignoredOnly,
     limit,
+    maxPodcastWorthy,
+    maxReactionCount,
+    maxScore,
     minPodcastWorthy,
     minReactionCount,
     minScore,
@@ -280,13 +304,19 @@ async function getPostsByScore(
     }
   }
 
-  // Parse minScore
+  const parsedMaxScore = maxScore ? parseFloat(maxScore) : null;
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
-  const validMinScore = parsedMinScore && !isNaN(parsedMinScore) ? parsedMinScore : null;
+  const validMaxScore =
+    parsedMaxScore != null && !isNaN(parsedMaxScore) ? parsedMaxScore : null;
+  const validMinScore =
+    parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
   const baseRpcParams = {
     p_category: category || null,
     p_ignored_only: ignoredOnly,
+    p_max_podcast_worthy: maxPodcastWorthy,
+    p_max_reaction_count: maxReactionCount,
+    p_max_score: validMaxScore,
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
@@ -434,6 +464,9 @@ async function getPostsByDate(
     category,
     ignoredOnly,
     limit,
+    maxPodcastWorthy,
+    maxReactionCount,
+    maxScore,
     minPodcastWorthy,
     minReactionCount,
     minScore,
@@ -444,12 +477,19 @@ async function getPostsByDate(
     unusedOnly,
   } = params;
 
+  const parsedMaxScore = maxScore ? parseFloat(maxScore) : null;
   const parsedMinScore = minScore ? parseFloat(minScore) : null;
-  const validMinScore = parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
+  const validMaxScore =
+    parsedMaxScore != null && !isNaN(parsedMaxScore) ? parsedMaxScore : null;
+  const validMinScore =
+    parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
   const rpcParams = {
     p_category: category || null,
     p_ignored_only: ignoredOnly,
+    p_max_podcast_worthy: maxPodcastWorthy,
+    p_max_reaction_count: maxReactionCount,
+    p_max_score: validMaxScore,
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,

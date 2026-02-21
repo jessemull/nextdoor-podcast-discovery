@@ -12,6 +12,9 @@ const STALE_TIME_MS = 45_000;
 
 function buildPostsQueryParams(
   filters: PostFeedFilters,
+  debouncedMaxPodcastWorthy: string,
+  debouncedMaxReactionCount: string,
+  debouncedMaxScore: string,
   debouncedMinPodcastWorthy: string,
   debouncedMinReactionCount: string,
   debouncedMinScore: string
@@ -34,6 +37,12 @@ function buildPostsQueryParams(
       searchParams.set("min_score", String(minScoreNum));
     }
   }
+  if (debouncedMaxScore) {
+    const maxScoreNum = parseFloat(debouncedMaxScore);
+    if (!isNaN(maxScoreNum) && maxScoreNum >= 0) {
+      searchParams.set("max_score", String(maxScoreNum));
+    }
+  }
 
   if (debouncedMinPodcastWorthy) {
     const minPw = parseFloat(debouncedMinPodcastWorthy);
@@ -41,11 +50,23 @@ function buildPostsQueryParams(
       searchParams.set("min_podcast_worthy", String(minPw));
     }
   }
+  if (debouncedMaxPodcastWorthy) {
+    const maxPw = parseFloat(debouncedMaxPodcastWorthy);
+    if (!isNaN(maxPw) && maxPw >= 0 && maxPw <= 10) {
+      searchParams.set("max_podcast_worthy", String(maxPw));
+    }
+  }
 
   if (debouncedMinReactionCount) {
     const minReaction = parseInt(debouncedMinReactionCount, 10);
     if (!isNaN(minReaction) && minReaction >= 0) {
       searchParams.set("min_reaction_count", String(minReaction));
+    }
+  }
+  if (debouncedMaxReactionCount) {
+    const maxReaction = parseInt(debouncedMaxReactionCount, 10);
+    if (!isNaN(maxReaction) && maxReaction >= 0) {
+      searchParams.set("max_reaction_count", String(maxReaction));
     }
   }
 
@@ -65,6 +86,9 @@ function buildPostsQueryParams(
 }
 
 export interface UsePostFeedDataParams {
+  debouncedMaxPodcastWorthy: string;
+  debouncedMaxReactionCount: string;
+  debouncedMaxScore: string;
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
@@ -88,6 +112,9 @@ export function usePostFeedData(
   params: UsePostFeedDataParams
 ): UsePostFeedDataResult {
   const {
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -96,6 +123,9 @@ export function usePostFeedData(
 
   const queryParams = buildPostsQueryParams(
     filters,
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore
@@ -135,6 +165,9 @@ export function usePostFeedData(
     },
     queryKey: [
       "posts",
+      debouncedMaxPodcastWorthy,
+      debouncedMaxReactionCount,
+      debouncedMaxScore,
       debouncedMinPodcastWorthy,
       debouncedMinReactionCount,
       debouncedMinScore,

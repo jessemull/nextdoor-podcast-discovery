@@ -197,6 +197,9 @@ export function PostFeed({
   const activeConfigWeights =
     weightConfigs.find((c) => c.id === activeConfigId)?.weights ?? null;
   const {
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -218,6 +221,9 @@ export function PostFeed({
     setError,
     total,
   } = usePostFeedData({
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -225,12 +231,27 @@ export function PostFeed({
   });
 
   const getCurrentQuery = useCallback((): BulkQuery => {
-    const minScoreNum = parseFloat(debouncedMinScore);
+    const maxPodcastWorthy = parseFloat(debouncedMaxPodcastWorthy);
+    const maxReactionCount = parseInt(debouncedMaxReactionCount, 10);
+    const maxScoreNum = parseFloat(debouncedMaxScore);
     const minPodcastWorthy = parseFloat(debouncedMinPodcastWorthy);
     const minReactionCount = parseInt(debouncedMinReactionCount, 10);
+    const minScoreNum = parseFloat(debouncedMinScore);
     return {
       category: filters.category || undefined,
       ignored_only: filters.ignoredOnly,
+      max_podcast_worthy:
+        !isNaN(maxPodcastWorthy) &&
+        maxPodcastWorthy >= 0 &&
+        maxPodcastWorthy <= 10
+          ? maxPodcastWorthy
+          : undefined,
+      max_reaction_count:
+        !isNaN(maxReactionCount) && maxReactionCount >= 0
+          ? maxReactionCount
+          : undefined,
+      max_score:
+        !isNaN(maxScoreNum) && maxScoreNum >= 0 ? maxScoreNum : undefined,
       min_podcast_worthy:
         !isNaN(minPodcastWorthy) && minPodcastWorthy >= 0 && minPodcastWorthy <= 10
           ? minPodcastWorthy
@@ -248,6 +269,9 @@ export function PostFeed({
       unused_only: filters.unusedOnly,
     };
   }, [
+    debouncedMaxPodcastWorthy,
+    debouncedMaxReactionCount,
+    debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
