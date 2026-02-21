@@ -451,9 +451,9 @@ export function PostFeed({
               </button>
             </div>
             <div
+              aria-label="Filter options"
               className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 touch-pan-y [-webkit-overflow-scrolling:touch]"
               role="region"
-              aria-label="Filter options"
               style={{ minHeight: 0 }}
             >
               <FilterSidebar
@@ -898,8 +898,8 @@ export function PostFeed({
                   <div className="border-border bg-surface absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
                     {SORT_OPTIONS.map((opt, i) => (
                       <button
-                        className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
                         key={opt.label}
+                        className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
                         type="button"
                         onClick={() => {
                           setFilters((prev) => ({
@@ -1020,9 +1020,9 @@ export function PostFeed({
         </div>
 
         <div
+          aria-label="Feed posts"
           className="min-h-0 flex-1 overflow-y-auto pt-4 pb-6 sm:pb-8"
           role="region"
-          aria-label="Feed posts"
         >
         <div className="px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
