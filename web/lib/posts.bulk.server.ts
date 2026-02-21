@@ -13,6 +13,9 @@ interface PostScoreRow {
 export interface BulkQueryInput {
   category?: string;
   ignored_only?: boolean;
+  max_podcast_worthy?: number;
+  max_reaction_count?: number;
+  max_score?: number;
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;
@@ -36,6 +39,8 @@ export async function getPostIdsByQuery(
 > {
   const orderAsc = query.order === "asc";
   const sort = query.sort ?? "score";
+  const validMaxScore =
+    query.max_score != null && !isNaN(query.max_score) ? query.max_score : null;
   const validMinScore =
     query.min_score != null && !isNaN(query.min_score) ? query.min_score : null;
 
@@ -46,6 +51,9 @@ export async function getPostIdsByQuery(
         p_category: query.category || null,
         p_ignored_only: query.ignored_only ?? false,
         p_limit: BULK_QUERY_LIMIT,
+        p_max_podcast_worthy: query.max_podcast_worthy ?? null,
+        p_max_reaction_count: query.max_reaction_count ?? null,
+        p_max_score: validMaxScore,
         p_min_podcast_worthy: query.min_podcast_worthy ?? null,
         p_min_reaction_count: query.min_reaction_count ?? null,
         p_min_score: validMinScore,
@@ -91,6 +99,9 @@ export async function getPostIdsByQuery(
       p_category: query.category || null,
       p_ignored_only: query.ignored_only ?? false,
       p_limit: BULK_QUERY_LIMIT,
+      p_max_podcast_worthy: query.max_podcast_worthy ?? null,
+      p_max_reaction_count: query.max_reaction_count ?? null,
+      p_max_score: validMaxScore,
       p_min_podcast_worthy: query.min_podcast_worthy ?? null,
       p_min_reaction_count: query.min_reaction_count ?? null,
       p_min_score: validMinScore,

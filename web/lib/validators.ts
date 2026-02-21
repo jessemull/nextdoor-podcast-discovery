@@ -251,6 +251,9 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(20)
     .transform((n) => Math.min(100, Math.max(1, n))),
+  max_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
+  max_reaction_count: z.coerce.number().int().min(0).optional(),
+  max_score: z.coerce.number().min(0).optional(),
   min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   min_reaction_count: z.coerce.number().int().min(0).optional(),
   min_score: z.coerce.number().min(0).optional(),
@@ -328,6 +331,9 @@ export type PostsQuery = z.infer<typeof postsQuerySchema>;
 export const postsBulkQuerySchema = z.object({
   category: z.string().optional(),
   ignored_only: z.boolean().optional(),
+  max_podcast_worthy: z.number().min(0).max(10).optional(),
+  max_reaction_count: z.number().int().min(0).optional(),
+  max_score: z.number().min(0).optional(),
   min_podcast_worthy: z.number().min(0).max(10).optional(),
   min_reaction_count: z.number().int().min(0).optional(),
   min_score: z.number().min(0).optional(),

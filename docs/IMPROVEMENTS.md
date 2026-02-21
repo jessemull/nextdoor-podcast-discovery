@@ -8,11 +8,11 @@
 
 - [ ] Bulk actions menu too skinny mobile. It is too narrow and hard to read the options and the options are wrapped on two lines.
 
-- [ ] Range score filters dont work. None of the ranges in the filter menu work at all. Need to fix literally all of them.
+- [x] Range score filters dont work. None of the ranges in the filter menu work at all. Need to fix literally all of them.
 
 - [ ] Should be able to multi select neighborhoods in the filter menu.
 
-- [ ] Done button for mobile filter menu should appear right above the 'Clear All Filters' button and stick just like that button. Should only appear for the mobile menu where it takes up the entire screen.
+- [ ] Done button for mobile filter menu should appear right below the 'Clear All Filters' button and stick just like that button. Should only appear for the mobile menu where it takes up the entire screen.
 
 - [ ] Header isn't sticky mobile. I'm not sure if this is correct behavior or not on mobile. It seems like most of the time the scroll container below the header works but then sometimes the header is scrolled out of view, we need to explore how layout usually works for an app like this.
 
