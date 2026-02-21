@@ -17,7 +17,7 @@ import type { PostsResponse, PostWithScores } from "@/lib/types";
  * Query params:
  * - limit: number (default 20, max 100)
  * - offset: number (default 0)
- * - category: string (filter by category)
+ * - categories: string[] (filter by categories; any match)
  * - min_score: number (minimum final_score)
  * - unused_only: boolean (only show posts not used in episodes)
  * - sort: "score" | "date" (default "score")
@@ -34,9 +34,15 @@ export async function GET(request: NextRequest) {
 
   // Validate query params at API boundary (Zod)
 
+  const categoriesParam = searchParams.getAll("categories").filter(Boolean);
   const neighborhoodIdsParam = searchParams.getAll("neighborhood_ids").filter(Boolean);
   const raw = {
-    category: searchParams.get("category") ?? undefined,
+    categories:
+      categoriesParam.length > 0
+        ? categoriesParam
+        : searchParams.get("category")
+          ? [searchParams.get("category") as string]
+          : undefined,
     ignored_only: searchParams.get("ignored_only") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
     max_podcast_worthy: searchParams.get("max_podcast_worthy") ?? undefined,
@@ -68,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 
   const {
-    category,
+    categories,
     ignored_only: ignoredOnly,
     limit,
     max_podcast_worthy: maxPodcastWorthyParam,
@@ -113,7 +119,7 @@ export async function GET(request: NextRequest) {
       // For date-based sorting, query posts first then join scores
 
       return await getPostsByDate(supabase, {
-        category: category ?? null,
+        categories: categories?.length ? categories : null,
         ignoredOnly,
         limit,
         maxPodcastWorthy,
@@ -137,7 +143,7 @@ export async function GET(request: NextRequest) {
         sort === "podcast_score" ? "podcast_worthy" : "score";
 
       return await getPostsByScore(supabase, {
-        category: category ?? null,
+        categories: categories?.length ? categories : null,
         ignoredOnly,
         limit,
         maxPodcastWorthy,
@@ -172,7 +178,7 @@ export async function GET(request: NextRequest) {
 }
 
 interface QueryParams {
-  category: null | string;
+  categories: null | string[];
   ignoredOnly: boolean;
   limit: number;
   maxPodcastWorthy: null | number;
@@ -221,7 +227,7 @@ interface PostScoreRow {
  *    - If no configs exist: returns 503 (user must create one)
  *
  * @param supabase - Supabase admin client
- * @param params - Query parameters (category, limit, minScore, offset, unusedOnly)
+ * @param params - Query parameters (categories, limit, minScore, offset, unusedOnly)
  * @returns NextResponse with posts data or error
  */
 async function getPostsByScore(
@@ -229,7 +235,7 @@ async function getPostsByScore(
   params: QueryParams
 ) {
   const {
-    category,
+    categories,
     ignoredOnly,
     limit,
     maxPodcastWorthy,
@@ -318,7 +324,7 @@ async function getPostsByScore(
     parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
   const baseRpcParams = {
-    p_category: category || null,
+    p_categories: categories,
     p_ignored_only: ignoredOnly,
     p_max_podcast_worthy: maxPodcastWorthy,
     p_max_reaction_count: maxReactionCount,
@@ -460,14 +466,14 @@ async function getPostsByScore(
 
 /**
  * Get posts sorted by date (newest first).
- * Uses get_posts_by_date RPC so category and min_score are filtered in the DB.
+ * Uses get_posts_by_date RPC so categories and min_score are filtered in the DB.
  */
 async function getPostsByDate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   params: QueryParams
 ) {
   const {
-    category,
+    categories,
     ignoredOnly,
     limit,
     maxPodcastWorthy,
@@ -491,7 +497,7 @@ async function getPostsByDate(
     parsedMinScore != null && !isNaN(parsedMinScore) ? parsedMinScore : null;
 
   const rpcParams = {
-    p_category: category || null,
+    p_categories: categories,
     p_ignored_only: ignoredOnly,
     p_max_podcast_worthy: maxPodcastWorthy,
     p_max_reaction_count: maxReactionCount,

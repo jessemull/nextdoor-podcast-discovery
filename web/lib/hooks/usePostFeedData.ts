@@ -24,7 +24,9 @@ function buildPostsQueryParams(
   searchParams.set("sort", filters.sort);
   searchParams.set("order", filters.sortOrder);
 
-  if (filters.category) searchParams.set("category", filters.category);
+  filters.categoryIds.forEach((id) => {
+    searchParams.append("categories", id);
+  });
   filters.neighborhoodIds.forEach((id) => {
     searchParams.append("neighborhood_ids", id);
   });
@@ -171,7 +173,7 @@ export function usePostFeedData(
       debouncedMinPodcastWorthy,
       debouncedMinReactionCount,
       debouncedMinScore,
-      filters.category,
+      filters.categoryIds,
       filters.ignoredOnly,
       filters.neighborhoodIds,
       filters.preview,

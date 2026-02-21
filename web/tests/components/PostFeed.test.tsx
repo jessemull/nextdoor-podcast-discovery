@@ -259,7 +259,7 @@ describe("PostFeed", () => {
     await waitFor(
       () => {
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining("category=humor")
+          expect.stringContaining("categories=humor")
         );
       },
       { timeout: 1000 }
@@ -453,7 +453,7 @@ describe("PostFeed", () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("category=humor")
+        expect.stringContaining("categories=humor")
       );
     });
 
@@ -464,7 +464,7 @@ describe("PostFeed", () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.not.stringContaining("category=humor")
+        expect.not.stringContaining("categories=humor")
       );
     });
     expect(humorCheckbox).not.toBeChecked();

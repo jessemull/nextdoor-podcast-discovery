@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { TOPIC_CATEGORIES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatCategoryLabel } from "@/lib/utils";
 
 import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
@@ -34,7 +34,17 @@ export function FeedFilters({
   setShowRefineFilters,
   showRefineFilters,
 }: FeedFiltersProps) {
+  const [categorySearch, setCategorySearch] = useState("");
   const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
+  const categorySearchLower = categorySearch.trim().toLowerCase();
+  const filteredCategories =
+    categorySearchLower === ""
+      ? TOPIC_CATEGORIES
+      : TOPIC_CATEGORIES.filter(
+          (cat) =>
+            formatCategoryLabel(cat).toLowerCase().includes(categorySearchLower) ||
+            cat.toLowerCase().includes(categorySearchLower)
+        );
   const neighborhoodSearchLower = neighborhoodSearch.trim().toLowerCase();
   const filteredNeighborhoods =
     neighborhoodSearchLower === ""
@@ -137,13 +147,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "drama" ? chipActive : chipInactive
+            filters.categoryIds.includes("drama") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "drama" ? "" : "drama",
+              categoryIds: prev.categoryIds.includes("drama")
+                ? prev.categoryIds.filter((c) => c !== "drama")
+                : [...prev.categoryIds, "drama"],
             }))
           }
         >
@@ -152,13 +164,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "humor" ? chipActive : chipInactive
+            filters.categoryIds.includes("humor") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "humor" ? "" : "humor",
+              categoryIds: prev.categoryIds.includes("humor")
+                ? prev.categoryIds.filter((c) => c !== "humor")
+                : [...prev.categoryIds, "humor"],
             }))
           }
         >
@@ -167,13 +181,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "wildlife" ? chipActive : chipInactive
+            filters.categoryIds.includes("wildlife") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "wildlife" ? "" : "wildlife",
+              categoryIds: prev.categoryIds.includes("wildlife")
+                ? prev.categoryIds.filter((c) => c !== "wildlife")
+                : [...prev.categoryIds, "wildlife"],
             }))
           }
         >
@@ -182,13 +198,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "crime" ? chipActive : chipInactive
+            filters.categoryIds.includes("crime") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "crime" ? "" : "crime",
+              categoryIds: prev.categoryIds.includes("crime")
+                ? prev.categoryIds.filter((c) => c !== "crime")
+                : [...prev.categoryIds, "crime"],
             }))
           }
         >
@@ -197,13 +215,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "lost_pet" ? chipActive : chipInactive
+            filters.categoryIds.includes("lost_pet") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "lost_pet" ? "" : "lost_pet",
+              categoryIds: prev.categoryIds.includes("lost_pet")
+                ? prev.categoryIds.filter((c) => c !== "lost_pet")
+                : [...prev.categoryIds, "lost_pet"],
             }))
           }
         >
@@ -212,13 +232,15 @@ export function FeedFilters({
         <button
           className={cn(
             chipBase,
-            filters.category === "local_news" ? chipActive : chipInactive
+            filters.categoryIds.includes("local_news") ? chipActive : chipInactive
           )}
           type="button"
           onClick={() =>
             setFilters((prev) => ({
               ...prev,
-              category: prev.category === "local_news" ? "" : "local_news",
+              categoryIds: prev.categoryIds.includes("local_news")
+                ? prev.categoryIds.filter((c) => c !== "local_news")
+                : [...prev.categoryIds, "local_news"],
             }))
           }
         >
@@ -318,28 +340,55 @@ export function FeedFilters({
               </div>
             </div>
             {/* Category */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <label
                 className="text-muted-foreground text-sm"
-                htmlFor="category"
+                htmlFor="category-search"
               >
                 Category:
               </label>
-              <select
-                className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-                id="category"
-                value={filters.category}
-                onChange={(e) =>
-                  setFilters({ ...filters, category: e.target.value })
-                }
-              >
-                <option value="">All</option>
-                {TOPIC_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
+              <input
+                className={neighborhoodSearchInputClass}
+                id="category-search"
+                placeholder="Search categories..."
+                type="search"
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
+                  <input
+                    checked={filters.categoryIds.length === 0}
+                    className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                    type="checkbox"
+                    onChange={() =>
+                      setFilters((prev) => ({ ...prev, categoryIds: [] }))
+                    }
+                  />
+                  All
+                </label>
+                {filteredCategories.map((cat) => (
+                  <label
+                    key={cat}
+                    className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm"
+                  >
+                    <input
+                      checked={filters.categoryIds.includes(cat)}
+                      className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                      type="checkbox"
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          categoryIds: e.target.checked
+                            ? [...prev.categoryIds, cat]
+                            : prev.categoryIds.filter((c) => c !== cat),
+                        }))
+                      }
+                    />
+                    {formatCategoryLabel(cat)}
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
             {/* Min Score */}
             <div className="flex items-center gap-2">
