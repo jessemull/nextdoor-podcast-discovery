@@ -70,7 +70,7 @@ Vercel connects to your GitHub repo and deploys on every push. Preview deploymen
 4. **Environment variables** — In Project Settings → Environment Variables, add every variable from `web/.env.example`:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
-   - `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `APP_BASE_URL`
+   - `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `AUTH0_SESSION_STORE_ID_TOKEN` (set to `false` in production — see [Random logouts on Vercel](#random-logouts-on-vercel)), `APP_BASE_URL`
    - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
    - Optional: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
    - Set **`APP_BASE_URL`** to your production URL (e.g. `https://your-project.vercel.app`) for Production; use the preview URL for Preview if needed.
@@ -132,6 +132,17 @@ The app lives in **`web/`**. Vercel must use `web` as the root for this project:
 - **Preview deployments:** Optionally set Preview-specific vars (e.g. Auth0 callback URLs that include the preview URL).
 
 See `web/.env.example` and the README for the full list of variables.
+
+---
+
+## Random logouts on Vercel
+
+If users are logged out unexpectedly when navigating on the deployed Vercel site, check the following:
+
+- **Session cookie size** — In Vercel (Project → Settings → Environment Variables), set `AUTH0_SESSION_STORE_ID_TOKEN=false`. This keeps the session in a single cookie and avoids chunked cookies that can cause “no session” on the next request.
+- **`APP_BASE_URL`** — Must match the deployed URL exactly (e.g. `https://your-app.vercel.app`), including `https`.
+- **`AUTH0_SECRET`** — Must be set and the same for all serverless invocations; if it changes or is missing, session decryption fails and the user appears logged out.
+- **Auth0 Dashboard** — In your Auth0 Application settings, ensure **Allowed Callback URLs** includes `https://<your-vercel-domain>/api/auth/callback` and **Allowed Logout URLs** includes `https://<your-vercel-domain>` (and any other post-logout destinations).
 
 ---
 
