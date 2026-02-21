@@ -457,10 +457,10 @@ describe("PostFeed", () => {
       );
     });
 
-    const resetButton = screen.getByRole("button", {
+    const resetButtons = screen.getAllByRole("button", {
       name: /reset filters/i,
     });
-    await user.click(resetButton);
+    await user.click(resetButtons[0]);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

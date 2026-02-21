@@ -10,7 +10,7 @@
 
 - [x] Range score filters dont work. None of the ranges in the filter menu work at all. Need to fix literally all of them.
 
-- [ ] Should be able to multi select neighborhoods in the filter menu.
+- [x] Should be able to multi select neighborhoods in the filter menu.
 
 - [ ] Done button for mobile filter menu should appear right below the 'Clear All Filters' button and stick just like that button. Should only appear for the mobile menu where it takes up the entire screen.
 

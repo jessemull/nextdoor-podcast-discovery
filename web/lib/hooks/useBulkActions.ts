@@ -20,7 +20,7 @@ export interface BulkQuery {
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;
-  neighborhood_id?: string;
+  neighborhood_ids?: string[];
   order?: "asc" | "desc";
   saved_only?: boolean;
   sort?: "date" | "podcast_score" | "score";

@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
 
   // Validate query params at API boundary (Zod)
 
+  const neighborhoodIdsParam = searchParams.getAll("neighborhood_ids").filter(Boolean);
   const raw = {
     category: searchParams.get("category") ?? undefined,
     ignored_only: searchParams.get("ignored_only") ?? undefined,
@@ -44,7 +45,12 @@ export async function GET(request: NextRequest) {
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
-    neighborhood_id: searchParams.get("neighborhood_id") ?? undefined,
+    neighborhood_ids:
+      neighborhoodIdsParam.length > 0
+        ? neighborhoodIdsParam
+        : searchParams.get("neighborhood_id")
+          ? [searchParams.get("neighborhood_id") as string]
+          : undefined,
     offset: searchParams.get("offset") ?? undefined,
     order: searchParams.get("order") ?? undefined,
     preview: searchParams.get("preview") ?? undefined,
@@ -71,7 +77,7 @@ export async function GET(request: NextRequest) {
     min_podcast_worthy: minPodcastWorthyParam,
     min_reaction_count: minReactionCountParam,
     min_score: minScoreParam,
-    neighborhood_id: neighborhoodId,
+    neighborhood_ids: neighborhoodIds,
     offset,
     order,
     preview,
@@ -116,7 +122,7 @@ export async function GET(request: NextRequest) {
         minPodcastWorthy,
         minReactionCount,
         minScore,
-        neighborhoodId: neighborhoodId ?? null,
+        neighborhoodIds: neighborhoodIds?.length ? neighborhoodIds : null,
         offset,
         orderAsc,
         preview: preview ?? false,
@@ -140,7 +146,7 @@ export async function GET(request: NextRequest) {
         minPodcastWorthy,
         minReactionCount,
         minScore,
-        neighborhoodId: neighborhoodId ?? null,
+        neighborhoodIds: neighborhoodIds?.length ? neighborhoodIds : null,
         offset,
         orderAsc,
         orderBy,
@@ -175,7 +181,7 @@ interface QueryParams {
   minPodcastWorthy: null | number;
   minReactionCount: null | number;
   minScore: null | string;
-  neighborhoodId: null | string;
+  neighborhoodIds: null | string[];
   offset: number;
   orderAsc: boolean;
   orderBy?: "podcast_worthy" | "score";
@@ -232,7 +238,7 @@ async function getPostsByScore(
     minPodcastWorthy,
     minReactionCount,
     minScore,
-    neighborhoodId,
+    neighborhoodIds,
     offset,
     orderAsc,
     orderBy = "score",
@@ -320,7 +326,7 @@ async function getPostsByScore(
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
-    p_neighborhood_id: neighborhoodId,
+    p_neighborhood_ids: neighborhoodIds,
     p_saved_only: savedOnly,
     p_unused_only: unusedOnly,
   };
@@ -470,7 +476,7 @@ async function getPostsByDate(
     minPodcastWorthy,
     minReactionCount,
     minScore,
-    neighborhoodId,
+    neighborhoodIds,
     offset,
     orderAsc,
     savedOnly,
@@ -493,7 +499,7 @@ async function getPostsByDate(
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
-    p_neighborhood_id: neighborhoodId,
+    p_neighborhood_ids: neighborhoodIds,
     p_saved_only: savedOnly,
     p_unused_only: unusedOnly,
   };

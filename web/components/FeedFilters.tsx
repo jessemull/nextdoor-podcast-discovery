@@ -247,29 +247,48 @@ export function FeedFilters({
                 <option value="date">Most Recent</option>
               </select>
             </div>
-            {/* Neighborhood */}
-            <div className="flex items-center gap-2">
-              <label
-                className="text-muted-foreground text-sm"
-                htmlFor="neighborhood"
-              >
+            {/* Neighborhood (multi-select) */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="text-muted-foreground text-sm">
                 Neighborhood:
+              </span>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  checked={filters.neighborhoodIds.length === 0}
+                  className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                  type="checkbox"
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      neighborhoodIds: e.target.checked ? [] : filters.neighborhoodIds,
+                    })
+                  }
+                />
+                <span className="text-muted-foreground text-sm">All</span>
               </label>
-              <select
-                className="rounded border border-border bg-surface-hover px-2 py-1 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1"
-                id="neighborhood"
-                value={filters.neighborhoodId}
-                onChange={(e) =>
-                  setFilters({ ...filters, neighborhoodId: e.target.value })
-                }
-              >
-                <option value="">All</option>
-                {neighborhoods.map((n) => (
-                  <option key={n.id} value={n.id}>
+              {neighborhoods.map((n) => (
+                <label
+                  key={n.id}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <input
+                    checked={filters.neighborhoodIds.includes(n.id)}
+                    className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                    type="checkbox"
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        neighborhoodIds: e.target.checked
+                          ? [...filters.neighborhoodIds, n.id]
+                          : filters.neighborhoodIds.filter((id) => id !== n.id),
+                      })
+                    }
+                  />
+                  <span className="text-muted-foreground text-sm">
                     {n.name}
-                  </option>
-                ))}
-              </select>
+                  </span>
+                </label>
+              ))}
             </div>
             {/* Category */}
             <div className="flex items-center gap-2">
