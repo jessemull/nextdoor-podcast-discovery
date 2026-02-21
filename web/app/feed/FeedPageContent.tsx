@@ -24,6 +24,7 @@ export function FeedPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const categoryIdsFromUrl = searchParams.getAll("categories");
   const qFromUrl = searchParams.get("q") ?? "";
   const thresholdFromUrl = searchParams.get("threshold");
 
@@ -185,6 +186,9 @@ export function FeedPageContent() {
         className="flex min-h-0 flex-1 flex-col min-w-0"
       >
         <PostFeed
+          initialCategoryIds={
+            categoryIdsFromUrl.length > 0 ? categoryIdsFromUrl : undefined
+          }
           picksDefaults={picksDefaults}
           searchSlot={{
                 debouncedQuery: lastSearchedQuery,

@@ -28,7 +28,7 @@
 
 - [ ] Status badge on completed jobs should have right colors and it should be in the right place, need to debug this again together for the entire card.
 
-- [ ] Need mark as unused. We can never unmark as used. THings marked as used need a way to be unmarked both bulk and singleton in the feed need to make sure we update the details page card as well.
+- [x] Need mark as unused. We can never unmark as used. THings marked as used need a way to be unmarked both bulk and singleton in the feed need to make sure we update the details page card as well.
 
 - [ ] Photo banner of ballpark. Need a banner in black and white probably behind the hero text to make it look cool.
 
