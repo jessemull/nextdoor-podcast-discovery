@@ -30,7 +30,7 @@
 
 - [x] Need mark as unused. We can never unmark as used. THings marked as used need a way to be unmarked both bulk and singleton in the feed need to make sure we update the details page card as well.
 
-- [ ] Photo banner of ballpark. Need a banner in black and white probably behind the hero text to make it look cool.
+- [x] Photo banner of ballpark. Need a banner in black and white probably behind the hero text to make it look cool.
 
 - [ ] Queued badge in mobile needs to go below on feed card, again nothing fits here and we have to debug and fix all the cards to work better.
 
