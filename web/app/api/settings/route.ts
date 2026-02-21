@@ -82,11 +82,7 @@ export async function GET() {
       picksDefaultsResult.data?.value &&
       typeof picksDefaultsResult.data.value === "object"
         ? (picksDefaultsResult.data.value as Record<string, unknown>)
-        : {
-            picks_limit: 5,
-            picks_min: 7,
-            picks_min_podcast: undefined,
-          };
+        : { picks_min: 7 };
 
     return NextResponse.json({
       data: {

@@ -13,9 +13,7 @@ import type { PostFeedFilters } from "@/lib/hooks/usePostFeedFilters";
 import type { Neighborhood } from "@/lib/hooks/usePostFeedFilters";
 
 export interface PicksDefaultsSidebar {
-  picks_limit: number;
   picks_min: number;
-  picks_min_podcast?: number;
 }
 
 export interface FilterSidebarProps {
@@ -102,28 +100,19 @@ export function FilterSidebar({
 
   const picksOnlyChecked =
     picksDefaults != null &&
-    filters.minScore === String(picksDefaults.picks_min) &&
-    (picksDefaults.picks_min_podcast == null
-      ? filters.minPodcastWorthy === ""
-      : filters.minPodcastWorthy === String(picksDefaults.picks_min_podcast));
+    filters.minScore === String(picksDefaults.picks_min);
 
   const handlePicksOnlyChange = (checked: boolean) => {
     if (checked && picksDefaults) {
       setFilters((prev) => ({
         ...prev,
-        minPodcastWorthy:
-          picksDefaults.picks_min_podcast != null
-            ? String(picksDefaults.picks_min_podcast)
-            : "",
         minScore: String(picksDefaults.picks_min),
-        sort:
-          picksDefaults.picks_min_podcast != null ? "podcast_score" : "score",
+        sort: "score",
         sortOrder: "desc",
       }));
     } else {
       setFilters((prev) => ({
         ...prev,
-        minPodcastWorthy: "",
         minScore: "",
         sort: "score",
         sortOrder: "desc",

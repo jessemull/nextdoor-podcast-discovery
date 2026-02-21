@@ -22,11 +22,7 @@ interface NoveltyConfig {
 interface SettingsResponse {
   data: {
     novelty_config?: NoveltyConfig;
-    picks_defaults?: {
-      picks_limit: number;
-      picks_min: number;
-      picks_min_podcast?: number;
-    };
+    picks_defaults?: { picks_min: number };
     ranking_weights: RankingWeights;
     search_defaults: {
       similarity_threshold: number;
@@ -86,14 +82,8 @@ export default function SettingsPage() {
   const [searchDefaults, setSearchDefaults] = useState({
     similarity_threshold: 0.2,
   });
-  const [picksDefaults, setPicksDefaults] = useState<{
-    picks_limit: number;
-    picks_min: number;
-    picks_min_podcast?: number;
-  }>({
-    picks_limit: 5,
+  const [picksDefaults, setPicksDefaults] = useState<{ picks_min: number }>({
     picks_min: 7,
-    picks_min_podcast: undefined,
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
@@ -130,9 +120,8 @@ export default function SettingsPage() {
           if (settingsData.data.picks_defaults) {
             const pd = settingsData.data.picks_defaults;
             setPicksDefaults({
-              picks_limit: pd.picks_limit,
-              picks_min: pd.picks_min,
-              picks_min_podcast: pd.picks_min_podcast ?? undefined,
+              picks_min:
+                typeof pd.picks_min === "number" ? pd.picks_min : 7,
             });
           }
         }
@@ -308,32 +297,45 @@ export default function SettingsPage() {
     }
   }, [noveltyConfig, toast]);
 
-  const handleSavePicksDefaults = useCallback(async () => {
-    setError(null);
-    setSuccessMessage(null);
+  const handleSavePicksDefaults = useCallback(
+    async (committed?: { picks_min: number }) => {
+      setError(null);
+      setSuccessMessage(null);
 
-    try {
-      const response = await fetch("/api/settings", {
-        body: JSON.stringify({
-          picks_defaults: picksDefaults,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "PUT",
-      });
+      const source = committed ?? picksDefaults;
+      const picksMin = Number(source.picks_min);
+      const payload = {
+        picks_min: Number.isNaN(picksMin)
+          ? 7
+          : Math.min(10, Math.max(0, picksMin)),
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.details || "Failed to save picks defaults");
+      try {
+        const response = await fetch("/api/settings", {
+          body: JSON.stringify({
+            picks_defaults: payload,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "PUT",
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || errorData.details || "Failed to save picks defaults"
+          );
+        }
+
+        toast.success("Settings saved.");
+      } catch (err) {
+        console.error("Error saving picks defaults:", err);
+        toast.error("Failed to save settings.");
       }
-
-      toast.success("Settings saved.");
-    } catch (err) {
-      console.error("Error saving picks defaults:", err);
-      toast.error("Failed to save settings.");
-    }
-  }, [picksDefaults, toast]);
+    },
+    [picksDefaults, toast]
+  );
 
   const handleSaveSearchDefaults = useCallback(async () => {
     setError(null);

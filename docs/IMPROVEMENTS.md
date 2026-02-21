@@ -18,7 +18,7 @@
 
 - [ ] Header isn't sticky mobile. I'm not sure if this is correct behavior or not on mobile. It seems like most of the time the scroll container below the header works but then sometimes the header is scrolled out of view, we need to explore how layout usually works for an app like this.
 
-- [ ] Podcast picks defaults fails to save I think when you change ALL the fields in concert. I think maybe we removed one of those fields and never update the form in the settings.
+- [x] Podcast picks defaults fails to save I think when you change ALL the fields in concert. I think maybe we removed one of those fields and never update the form in the settings.
 
 - [ ] For the stats page put the score distibution at the top and the other states below it.
 
