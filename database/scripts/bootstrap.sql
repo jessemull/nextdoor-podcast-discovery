@@ -281,11 +281,13 @@ DELETE FROM settings WHERE key = 'ranking_weights';
 
 INSERT INTO settings (key, value) VALUES 
     ('ranking_weights', '{
-        "absurdity": 2.0,
+        "absurdity": 2.5,
+        "discussion_spark": 1.0,
         "drama": 1.5,
         "emotional_intensity": 1.2,
-        "discussion_spark": 1.0,
-        "news_value": 1.0
+        "news_value": 1.0,
+        "podcast_worthy": 2.5,
+        "readability": 1.2
     }');
 
 -- Also add novelty configuration
@@ -533,7 +535,7 @@ BEGIN
     -- Create default config
     INSERT INTO weight_configs (weights, name, is_active, description)
     VALUES (
-        COALESCE(current_weights, '{"absurdity": 2.0, "drama": 1.5, "discussion_spark": 1.0, "emotional_intensity": 1.2, "news_value": 1.0}'::JSONB),
+        COALESCE(current_weights, '{"absurdity": 2.5, "discussion_spark": 1.0, "drama": 1.5, "emotional_intensity": 1.2, "news_value": 1.0, "podcast_worthy": 2.5, "readability": 1.2}'::JSONB),
         'Default (Migrated)',
         true,
         'Initial weight config migrated from settings table'

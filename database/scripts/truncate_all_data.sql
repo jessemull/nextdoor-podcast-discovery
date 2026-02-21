@@ -37,7 +37,7 @@ ON CONFLICT (id) DO NOTHING;
 WITH default_config AS (
   INSERT INTO weight_configs (weights, name, is_active, description)
   VALUES (
-    '{"absurdity": 2.0, "discussion_spark": 1.0, "drama": 1.5, "emotional_intensity": 1.2, "news_value": 1.0, "podcast_worthy": 2.0, "readability": 1.2}'::jsonb,
+    '{"absurdity": 2.5, "discussion_spark": 1.0, "drama": 1.5, "emotional_intensity": 1.2, "news_value": 1.0, "podcast_worthy": 2.5, "readability": 1.2}'::jsonb,
     'Default',
     true,
     'Default weights after full wipe'
@@ -52,6 +52,6 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 INSERT INTO settings (key, value)
 VALUES (
   'ranking_weights',
-  '{"absurdity": 2.0, "discussion_spark": 1.0, "drama": 1.5, "emotional_intensity": 1.2, "news_value": 1.0, "podcast_worthy": 2.0, "readability": 1.2}'::jsonb
+  '{"absurdity": 2.5, "discussion_spark": 1.0, "drama": 1.5, "emotional_intensity": 1.2, "news_value": 1.0, "podcast_worthy": 2.5, "readability": 1.2}'::jsonb
 )
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

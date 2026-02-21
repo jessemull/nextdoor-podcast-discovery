@@ -874,15 +874,15 @@ class LLMScorer:
         except Exception as e:
             log_supabase_error("Failed to load ranking_weights from settings", e)
 
-        # Default weights
+        # Default weights (must match DB/bootstrap and web DEFAULT_PREVIEW_WEIGHTS)
 
         self._weights = {
-            "absurdity": 2.0,
+            "absurdity": 2.5,
             "discussion_spark": 1.0,
             "drama": 1.5,
             "emotional_intensity": 1.2,
             "news_value": 1.0,
-            "podcast_worthy": 2.0,
+            "podcast_worthy": 2.5,
             "readability": 1.2,
         }
 
