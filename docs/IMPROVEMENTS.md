@@ -4,7 +4,7 @@
 
 - [x] Menus for the active weight configuration and the card in the weight configurations list on the settings page use the same state for the menu in the ... so if you click on the menu for one, the other opens too.
 
-- [ ] Select all misaligned mobile and tablet views, it doesn't go above the other checkboxes exactly it is to the right.
+- [x] Select all misaligned mobile and tablet views, it doesn't go above the other checkboxes exactly it is to the right.
 
 - [ ] Bulk actions menu too skinny mobile. It is too narrow and hard to read the options and the options are wrapped on two lines.
 
