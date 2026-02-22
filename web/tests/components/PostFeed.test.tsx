@@ -438,6 +438,9 @@ describe("PostFeed", () => {
     const markUsedButtons = screen.getAllByText("Mark as Used");
     await user.click(markUsedButtons[0]);
 
+    const confirmButton = screen.getByRole("button", { name: /^confirm$/i });
+    await user.click(confirmButton);
+
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/posts/post-1/used"),
