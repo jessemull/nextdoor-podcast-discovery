@@ -366,7 +366,9 @@ class PostExtractor:
                 scroll_attempts + 2,
             )
             self._scroll_down()
-            logger.info("Scroll down done (next will be scroll %d)", scroll_attempts + 2)
+            logger.info(
+                "Scroll down done (next will be scroll %d)", scroll_attempts + 2
+            )
             scroll_attempts += 1
 
         logger.info("Batch extraction complete: %d posts yielded", total_yielded)
