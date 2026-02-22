@@ -1,6 +1,6 @@
 - [x] Bookmark should not show toast. It should just update optimisitcally then if it fails catch the error, show the error toast and revert but never the success toast just swap the color immediately.
 
-- [ ] Navigating between pages user is just logged out for some reason seemingly randomly, must be some gap in the auth. It definitely seems to occur navigating between pages.
+- [x] Navigating between pages user is just logged out for some reason seemingly randomly, must be some gap in the auth. It definitely seems to occur navigating between pages.
 
 - [x] Menus for the active weight configuration and the card in the weight configurations list on the settings page use the same state for the menu in the ... so if you click on the menu for one, the other opens too.
 
@@ -36,4 +36,4 @@
 
 - [x] We have stats for categories, users should be able to click on a category card and redirect to feed with the filter set. We should make sure button/stat has hover state and cursor hover pointer.
 
-- [ ] The header for the feed card has too much shit at the top for mobile and tablet, we have to redesign it to look better probably moving some of the badge etc below somehow.
+- [x] The header for the feed card has too much shit at the top for mobile and tablet, we have to redesign it to look better probably moving some of the badge etc below somehow.
