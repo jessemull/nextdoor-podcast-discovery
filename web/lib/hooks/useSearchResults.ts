@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
 import { useToast } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
@@ -60,10 +61,10 @@ export function useSearchResults(
 
       try {
         const response = useKeywordSearch
-          ? await fetch(
+          ? await authFetch(
               `/api/search?q=${encodeURIComponent(searchQuery.trim())}&limit=20`
             )
-          : await fetch("/api/search", {
+          : await authFetch("/api/search", {
               body: JSON.stringify({
                 limit: 20,
                 min_score:
@@ -115,7 +116,7 @@ export function useSearchResults(
       );
       setMarkingSaved((prev) => new Set(prev).add(postId));
       try {
-        const response = await fetch(`/api/posts/${postId}/saved`, {
+        const response = await authFetch(`/api/posts/${postId}/saved`, {
           body: JSON.stringify({ saved }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
@@ -149,7 +150,7 @@ export function useSearchResults(
   const handleMarkUsedChange = useCallback(
     async (postId: string, used: boolean) => {
       try {
-        const response = await fetch(`/api/posts/${postId}/used`, {
+        const response = await authFetch(`/api/posts/${postId}/used`, {
           body: JSON.stringify({ used }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",

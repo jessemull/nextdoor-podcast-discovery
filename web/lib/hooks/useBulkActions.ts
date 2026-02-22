@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
 import { useToast } from "@/lib/ToastContext";
 
 export type BulkActionType =
@@ -96,7 +97,7 @@ export function useBulkActions({
             }
           : { action, post_ids: Array.from(selectedIds) };
 
-        const response = await fetch("/api/posts/bulk", {
+        const response = await authFetch("/api/posts/bulk", {
           body: JSON.stringify(body),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -146,7 +147,7 @@ export function useBulkActions({
       if (markingSaved.has(postId)) return;
       setMarkingSaved((prev) => new Set(prev).add(postId));
       try {
-        const response = await fetch(`/api/posts/${postId}/saved`, {
+        const response = await authFetch(`/api/posts/${postId}/saved`, {
           body: JSON.stringify({ saved }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
@@ -177,7 +178,7 @@ export function useBulkActions({
       if (markingIgnored.has(postId)) return;
       setMarkingIgnored((prev) => new Set(prev).add(postId));
       try {
-        const response = await fetch(`/api/posts/${postId}/ignored`, {
+        const response = await authFetch(`/api/posts/${postId}/ignored`, {
           body: JSON.stringify({ ignored }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
@@ -209,7 +210,7 @@ export function useBulkActions({
       if (markingUsed.has(postId)) return;
       setMarkingUsed((prev) => new Set(prev).add(postId));
       try {
-        const response = await fetch(`/api/posts/${postId}/used`, {
+        const response = await authFetch(`/api/posts/${postId}/used`, {
           body: JSON.stringify({ used }),
           headers: { "Content-Type": "application/json" },
           method: "PATCH",
@@ -246,7 +247,7 @@ export function useBulkActions({
     try {
       await Promise.all(
         Array.from(selectedIds).map((id) =>
-          fetch(`/api/posts/${id}/used`, {
+          authFetch(`/api/posts/${id}/used`, {
             body: JSON.stringify({ used: true }),
             headers: { "Content-Type": "application/json" },
             method: "PATCH",
@@ -275,7 +276,7 @@ export function useBulkActions({
     try {
       await Promise.all(
         Array.from(selectedIds).map((id) =>
-          fetch(`/api/posts/${id}/saved`, {
+          authFetch(`/api/posts/${id}/saved`, {
             body: JSON.stringify({ saved: true }),
             headers: { "Content-Type": "application/json" },
             method: "PATCH",
@@ -298,7 +299,7 @@ export function useBulkActions({
     try {
       await Promise.all(
         Array.from(selectedIds).map((id) =>
-          fetch(`/api/posts/${id}/ignored`, {
+          authFetch(`/api/posts/${id}/ignored`, {
             body: JSON.stringify({ ignored: true }),
             headers: { "Content-Type": "application/json" },
             method: "PATCH",
@@ -321,7 +322,7 @@ export function useBulkActions({
     try {
       await Promise.all(
         Array.from(selectedIds).map((id) =>
-          fetch(`/api/posts/${id}/ignored`, {
+          authFetch(`/api/posts/${id}/ignored`, {
             body: JSON.stringify({ ignored: false }),
             headers: { "Content-Type": "application/json" },
             method: "PATCH",

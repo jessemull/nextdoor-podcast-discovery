@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+
+import { authFetch } from "@/lib/authFetch.client";
 import { useState } from "react";
 
 import { DEFAULT_PREVIEW_WEIGHTS } from "@/lib/constants";
@@ -78,7 +80,7 @@ export function usePostFeedFilters(
 
   const { data: neighborhoodsData, isError: neighborhoodsError } = useQuery({
     queryFn: async () => {
-      const res = await fetch("/api/neighborhoods");
+      const res = await authFetch("/api/neighborhoods");
       const json = await res.json().catch(() => ({}));
       if (!res.ok) return { data: [] as Neighborhood[] };
       return json as { data: Neighborhood[] };

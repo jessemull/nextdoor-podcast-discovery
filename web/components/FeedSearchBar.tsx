@@ -25,6 +25,7 @@ export interface FeedSearchBarProps {
   onSearch: (queryOverride?: string) => void;
   onUseKeywordSearchChange: (value: boolean) => void;
   query: string;
+  toolbar?: boolean;
   useKeywordSearch: boolean;
 }
 
@@ -37,6 +38,7 @@ export function FeedSearchBar({
   onSearch,
   onUseKeywordSearchChange,
   query,
+  toolbar = false,
   useKeywordSearch,
 }: FeedSearchBarProps) {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -135,77 +137,72 @@ export function FeedSearchBar({
   const showDropdown =
     suggestionsOpen && (suggestionsLoading || suggestions.length > 0);
 
-  return (
+  const inputBox = (
     <div
       className={cn(
-        "w-full min-w-0 space-y-4",
-        !compact && "mb-6"
+        "relative flex w-full min-w-0 rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus",
+        toolbar && "h-[40px]",
+        !toolbar && "h-full min-h-10"
       )}
+      ref={containerRef}
     >
-      {loadDefaultsError && (
-        <Card className="border-border-focus">
-          <p className="text-muted text-sm">{loadDefaultsError}</p>
-        </Card>
+      <input
+        aria-activedescendant={
+          showDropdown && highlightedIndex >= 0
+            ? `search-suggestion-${highlightedIndex}`
+            : undefined
+        }
+        aria-autocomplete="list"
+        aria-label="Search for posts"
+        className={cn(
+          "min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none",
+          !compact && "mr-2"
+        )}
+        placeholder="Search for posts..."
+        type="text"
+        value={query}
+        onChange={(e) => {
+          onQueryChange(e.target.value);
+          setSuggestionsOpen(true);
+          setHighlightedIndex(-1);
+        }}
+        onFocus={() => {
+          setSuggestionsOpen(true);
+          if (!query.trim()) {
+            setSuggestions([...SEARCH_SUGGESTIONS]);
+          }
+          setHighlightedIndex(-1);
+        }}
+        onKeyDown={handleKeyDown}
+      />
+      {!compact && (
+        <>
+          <div aria-hidden className="border-border border-l bg-surface-hover shrink-0" />
+          <CustomSelect
+            ariaLabel="Search type"
+            className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
+            options={[
+              { label: "AI Powered", value: "ai" },
+              { label: "Keyword", value: "keyword" },
+            ]}
+            value={useKeywordSearch ? "keyword" : "ai"}
+            onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
+          />
+        </>
       )}
 
-      <div className="relative flex h-full min-h-10 w-full min-w-0 rounded-card border-[1px] border-border bg-surface focus-within:border-border-focus focus-within:ring-1 focus-within:ring-border-focus" ref={containerRef}>
-        <input
-          aria-activedescendant={
-            showDropdown && highlightedIndex >= 0
-              ? `search-suggestion-${highlightedIndex}`
-              : undefined
-          }
-          aria-autocomplete="list"
-          aria-label="Search for posts"
-          className={cn(
-            "min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm leading-10 text-foreground placeholder-muted-foreground focus:outline-none",
-            !compact && "mr-2"
-          )}
-          placeholder="Search for posts..."
-          type="text"
-          value={query}
-          onChange={(e) => {
-            onQueryChange(e.target.value);
-            setSuggestionsOpen(true);
-            setHighlightedIndex(-1);
-          }}
-          onFocus={() => {
-            setSuggestionsOpen(true);
-            if (!query.trim()) {
-              setSuggestions([...SEARCH_SUGGESTIONS]);
-            }
-            setHighlightedIndex(-1);
-          }}
-          onKeyDown={handleKeyDown}
-        />
-        {!compact && (
-          <>
-            <div aria-hidden className="border-border border-l bg-surface-hover shrink-0" />
-            <CustomSelect
-              ariaLabel="Search type"
-              className="h-full min-h-0 min-w-[7rem] shrink-0 rounded-l-none rounded-r-card border-0 border-l focus:ring-0"
-              options={[
-                { label: "AI Powered", value: "ai" },
-                { label: "Keyword", value: "keyword" },
-              ]}
-              value={useKeywordSearch ? "keyword" : "ai"}
-              onChange={(val) => onUseKeywordSearchChange(val === "keyword")}
-            />
-          </>
-        )}
-
-        {showDropdown && (
-          <ul
-            className="border-border bg-surface absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
-            ref={listRef}
-            role="listbox"
-          >
-            {suggestionsLoading ? (
-              <li className="px-4 py-3 text-muted-foreground text-sm">
-                Loading suggestions…
-              </li>
-            ) : (
-              suggestions.map((s, i) => (
+      {showDropdown && (
+        <ul
+          className="border-border bg-surface absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-card border py-1 shadow-lg"
+          ref={listRef}
+          role="listbox"
+        >
+          {suggestionsLoading ? (
+            <li className="px-4 py-3 text-muted-foreground text-sm">
+              Loading suggestions…
+            </li>
+          ) : (
+            suggestions.map((s, i) => (
               <li
                 key={s}
                 aria-selected={i === highlightedIndex}
@@ -226,11 +223,28 @@ export function FeedSearchBar({
                 {s}
               </li>
             ))
-            )}
-          </ul>
-        )}
-      </div>
+          )}
+        </ul>
+      )}
+    </div>
+  );
 
+  if (toolbar) {
+    return (
+      <div className="h-[40px] min-w-0 flex-1">
+        {inputBox}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("w-full min-w-0 space-y-4", !compact && "mb-6")}>
+      {loadDefaultsError && (
+        <Card className="border-border-focus">
+          <p className="text-muted text-sm">{loadDefaultsError}</p>
+        </Card>
+      )}
+      {inputBox}
     </div>
   );
 }
