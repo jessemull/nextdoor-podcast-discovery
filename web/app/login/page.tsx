@@ -2,11 +2,11 @@
 
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 
-export default function LoginPage() {
+function LoginContent() {
   const { isLoading, user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,5 +67,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+          <div className="animate-pulse text-gray-400">Loading...</div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-import { authFetch } from "@/lib/authFetch.client";
 import { useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
 import { DEFAULT_PREVIEW_WEIGHTS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
 
