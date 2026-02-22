@@ -40,15 +40,24 @@ class TestMain:
         with mock.patch.dict(os.environ, mock_env, clear=True):
             with mock.patch("src.main.SessionManager") as _mock_session:
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
-                    # Mock the scraper context manager
-                    mock_scraper_instance = mock.MagicMock()
-                    mock_scraper_instance.extract_post_batches.return_value = iter([])
-                    mock_scraper.return_value.__enter__.return_value = (
-                        mock_scraper_instance
-                    )
-                    mock_scraper.return_value.__exit__.return_value = None
+                    with mock.patch("src.main._run_scoring"):
+                        with mock.patch("src.main.Embedder") as mock_embedder_cls:
+                            mock_embedder_cls.return_value.generate_and_store_embeddings.return_value = {
+                                "errors": 0,
+                                "processed": 0,
+                                "stored": 0,
+                            }
+                            # Mock the scraper context manager
+                            mock_scraper_instance = mock.MagicMock()
+                            mock_scraper_instance.extract_post_batches.return_value = (
+                                iter([])
+                            )
+                            mock_scraper.return_value.__enter__.return_value = (
+                                mock_scraper_instance
+                            )
+                            mock_scraper.return_value.__exit__.return_value = None
 
-                    result = main(dry_run=False)
+                            result = main(dry_run=False)
 
         assert result == 0
 
@@ -110,23 +119,30 @@ class TestMain:
             with mock.patch("src.main.SessionManager") as mock_session:
                 mock_session.return_value.supabase = mock.MagicMock()
                 with mock.patch("src.main.NextdoorScraper") as mock_scraper:
-                    mock_scraper_instance = mock.MagicMock()
-                    mock_scraper_instance.extract_post_batches.return_value = iter(
-                        [fake_batch1, fake_batch2]
-                    )
-                    mock_scraper.return_value.__enter__.return_value = (
-                        mock_scraper_instance
-                    )
-                    mock_scraper.return_value.__exit__.return_value = None
-                    with mock.patch("src.main.PostStorage") as mock_storage_cls:
-                        mock_storage = mock.MagicMock()
-                        mock_storage.store_posts.side_effect = [
-                            {"errors": 0, "inserted": 3, "skipped": 0},
-                            {"errors": 0, "inserted": 2, "skipped": 0},
-                        ]
-                        mock_storage_cls.return_value = mock_storage
+                    with mock.patch("src.main._run_scoring"):
+                        with mock.patch("src.main.Embedder") as mock_embedder_cls:
+                            mock_embedder_cls.return_value.generate_and_store_embeddings.return_value = {
+                                "errors": 0,
+                                "processed": 0,
+                                "stored": 0,
+                            }
+                            mock_scraper_instance = mock.MagicMock()
+                            mock_scraper_instance.extract_post_batches.return_value = (
+                                iter([fake_batch1, fake_batch2])
+                            )
+                            mock_scraper.return_value.__enter__.return_value = (
+                                mock_scraper_instance
+                            )
+                            mock_scraper.return_value.__exit__.return_value = None
+                            with mock.patch("src.main.PostStorage") as mock_storage_cls:
+                                mock_storage = mock.MagicMock()
+                                mock_storage.store_posts.side_effect = [
+                                    {"errors": 0, "inserted": 3, "skipped": 0},
+                                    {"errors": 0, "inserted": 2, "skipped": 0},
+                                ]
+                                mock_storage_cls.return_value = mock_storage
 
-                        result = main(dry_run=False, max_posts=5)
+                                result = main(dry_run=False, max_posts=5)
 
         assert result == 0
         assert mock_storage.store_posts.call_count == 2
