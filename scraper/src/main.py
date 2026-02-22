@@ -10,9 +10,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+import httpx
 from anthropic import Anthropic
 from dotenv import load_dotenv
-import httpx
 from openai import OpenAI
 from supabase import Client
 
@@ -541,9 +541,7 @@ def main(
                         e,
                         type(e).__name__,
                     )
-                _record_scraper_run(
-                    session_manager.supabase, feed_type, "completed"
-                )
+                _record_scraper_run(session_manager.supabase, feed_type, "completed")
 
         return 0
 

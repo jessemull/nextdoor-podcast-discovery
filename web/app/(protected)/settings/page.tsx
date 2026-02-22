@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
 
@@ -426,7 +426,9 @@ export default function SettingsPage() {
           setActiveConfigId={setActiveConfigId}
           setRankingWeights={setRankingWeights}
           onActivate={handleActivateConfig}
-          onDelete={setDeleteConfirmConfigId}
+          onDelete={async (configId) => {
+            setDeleteConfirmConfigId(configId);
+          }}
           onRenameSuccess={refetchWeightConfigs}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}

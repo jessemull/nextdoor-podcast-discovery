@@ -14,6 +14,18 @@ import { searchBodySchema, searchQuerySchema } from "@/lib/validators";
 import type { PostWithScores } from "@/lib/types";
 
 /**
+ * Post details row from posts table (selected columns).
+ */
+interface PostDetailsRow {
+  author_name: null | string;
+  comments: unknown;
+  id: string;
+  ignored: boolean;
+  reaction_count: number;
+  saved: boolean;
+}
+
+/**
  * Type for search result from RPC function.
  */
 interface SearchResult {
@@ -283,23 +295,32 @@ export async function POST(request: NextRequest) {
         neighborhood,
       ])
     );
-    const postDetailsMap = new Map(
-      (postDetailsRows || []).map((row: { id: string }) => [row.id, row])
+    const postDetailsMap = new Map<string, PostDetailsRow>(
+      (postDetailsRows || []).map((row: PostDetailsRow) => [row.id, row])
     );
+
+    const emptyDetails: PostDetailsRow = {
+      author_name: null,
+      comments: [],
+      id: "",
+      ignored: false,
+      reaction_count: 0,
+      saved: false,
+    };
 
     // Combine results with scores, neighborhoods, and post details
     // Include similarity score for display in UI
 
     const posts = searchResultsList.map((result: SearchResult) => {
-      const details = postDetailsMap.get(result.id) || {};
+      const details = postDetailsMap.get(result.id) ?? emptyDetails;
       return {
         author_name: details.author_name ?? null,
         comments: details.comments ?? [],
         created_at: result.created_at,
         hash: result.hash,
         id: result.id,
-        image_urls: result.image_urls || [],
         ignored: details.ignored ?? false,
+        image_urls: result.image_urls || [],
         llm_scores: scoresMap.get(result.id) || null,
         neighborhood:
           neighborhoodsMap.get(result.neighborhood_id) || {

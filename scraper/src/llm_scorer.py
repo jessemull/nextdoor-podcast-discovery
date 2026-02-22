@@ -434,6 +434,7 @@ class LLMScorer:
         dimension: str,
     ) -> list[tuple[str, float]]:
         """Score one dimension for a batch of posts. Raises on parse failure after retries."""
+
         def _truncate_with_signal(text: str) -> str:
             t = text[:MAX_POST_LENGTH]
             if len(text) > MAX_POST_LENGTH:
