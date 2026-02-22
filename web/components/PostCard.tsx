@@ -527,7 +527,6 @@ export const PostCard = memo(function PostCard({
         {/* Full-width row: categories first, then statuses (no headers) */}
         {(categoriesToShow.length > 0 ||
           post.ignored ||
-          post.saved ||
           post.used_on_episode ||
           queueStatus === "pending" ||
           queueStatus === "running") && (
@@ -558,11 +557,6 @@ export const PostCard = memo(function PostCard({
             {queueStatus === "running" && (
               <span className="rounded border border-blue-500/60 bg-blue-500/15 px-2 py-0.5 text-blue-400 text-xs font-medium">
                 Processing
-              </span>
-            )}
-            {post.saved && (
-              <span className="rounded border border-teal-500/60 bg-teal-500/15 px-2 py-0.5 text-teal-400 text-xs font-medium">
-                Saved
               </span>
             )}
           </div>
