@@ -19,7 +19,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-background text-foreground antialiased">
         <Providers>
-          <div className="flex h-screen flex-col overflow-hidden">
+          <div className="flex h-screen min-h-[100dvh] h-[100dvh] flex-col overflow-hidden">
             <Navbar />
             <div className="min-h-0 flex-1 overflow-hidden">
               {children}
