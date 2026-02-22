@@ -157,6 +157,14 @@ export function PostFeed({
     count?: number;
   } | null>(null);
   const [countLoading, setCountLoading] = useState(false);
+  const [pendingPostAction, setPendingPostAction] = useState<{
+    action: "cancelRefresh";
+    jobId: string;
+  } | {
+    action: "ignore" | "queueRefresh" | "used";
+    postId: string;
+    value?: boolean;
+  } | null>(null);
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
   const [selectAllChecked, setSelectAllChecked] = useState(false);
   const [searchTypeMenuOpen, setSearchTypeMenuOpen] = useState(false);
@@ -383,6 +391,19 @@ export function PostFeed({
     },
     [posts, refetchPermalinkJobs, searchSlot?.results, toast]
   );
+
+  const requestMarkIgnored = useCallback((postId: string, value: boolean) => {
+    setPendingPostAction({ action: "ignore", postId, value });
+  }, []);
+  const requestMarkUsedChange = useCallback((postId: string, value: boolean) => {
+    setPendingPostAction({ action: "used", postId, value });
+  }, []);
+  const requestCancelRefresh = useCallback((jobId: string) => {
+    setPendingPostAction({ action: "cancelRefresh", jobId });
+  }, []);
+  const requestQueueRefresh = useCallback((postId: string) => {
+    setPendingPostAction({ action: "queueRefresh", postId });
+  }, []);
 
   const {
     focusedIndex,
@@ -1090,14 +1111,14 @@ export function PostFeed({
                       isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                       post={post}
                       queueStatus={getQueueStatusForPost(post)}
-                      onCancelRefresh={handleCancelRefresh}
+                      onCancelRefresh={requestCancelRefresh}
                       onMarkSaved={(id, saved) =>
                         searchSlot.onMarkSaved(id, saved)
                       }
                       onMarkUsedChange={(id, used) =>
                         searchSlot.onMarkUsedChange(id, used)
                       }
-                      onQueueRefresh={handleQueueRefresh}
+                      onQueueRefresh={requestQueueRefresh}
                       onViewDetails={() => searchSlot.onViewDetails(post.id)}
                     />
                   );
@@ -1203,11 +1224,11 @@ export function PostFeed({
                     queueStatus={getQueueStatusForPost(post)}
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
-                    onCancelRefresh={handleCancelRefresh}
-                    onMarkIgnored={handleMarkIgnored}
+                    onCancelRefresh={requestCancelRefresh}
+                    onMarkIgnored={requestMarkIgnored}
                     onMarkSaved={handleMarkSaved}
-                    onMarkUsedChange={handleMarkUsedChange}
-                    onQueueRefresh={handleQueueRefresh}
+                    onMarkUsedChange={requestMarkUsedChange}
+                    onQueueRefresh={requestQueueRefresh}
                     onSelect={toggleSelect}
                     onViewDetails={() => router.push(`/posts/${post.id}`)}
                   />
@@ -1285,6 +1306,56 @@ export function PostFeed({
               }
             },
           });
+        }}
+      />
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Confirm"
+        message={
+          pendingPostAction?.action === "ignore"
+            ? pendingPostAction.value
+              ? "Ignore this post? It will be hidden from the feed."
+              : "Show this post in the feed again?"
+            : pendingPostAction?.action === "used"
+              ? pendingPostAction.value
+                ? "Mark this post as used on an episode?"
+                : "Mark this post as unused?"
+              : pendingPostAction?.action === "cancelRefresh"
+                ? "Remove this post from the refresh queue?"
+                : pendingPostAction?.action === "queueRefresh"
+                  ? "Queue this post for refresh?"
+                  : undefined
+        }
+        open={pendingPostAction != null}
+        title={
+          pendingPostAction?.action === "ignore"
+            ? pendingPostAction.value
+              ? "Ignore post?"
+              : "Unignore post?"
+            : pendingPostAction?.action === "used"
+              ? pendingPostAction.value
+                ? "Mark as used?"
+                : "Mark as unused?"
+              : pendingPostAction?.action === "cancelRefresh"
+                ? "Cancel refresh?"
+                : pendingPostAction?.action === "queueRefresh"
+                  ? "Queue refresh?"
+                  : ""
+        }
+        onCancel={() => setPendingPostAction(null)}
+        onConfirm={() => {
+          if (pendingPostAction == null) return;
+          if (pendingPostAction.action === "ignore") {
+            handleMarkIgnored(pendingPostAction.postId, pendingPostAction.value ?? false);
+          } else if (pendingPostAction.action === "used") {
+            handleMarkUsedChange(pendingPostAction.postId, pendingPostAction.value ?? false);
+          } else if (pendingPostAction.action === "cancelRefresh") {
+            handleCancelRefresh(pendingPostAction.jobId);
+          } else if (pendingPostAction.action === "queueRefresh") {
+            handleQueueRefresh(pendingPostAction.postId);
+          }
+          setPendingPostAction(null);
         }}
       />
     </div>

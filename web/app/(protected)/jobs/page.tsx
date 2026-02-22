@@ -27,6 +27,9 @@ export default function JobsPage() {
   const { toast } = useToast();
   const [cancelConfirmJobId, setCancelConfirmJobId] = useState<null | string>(null);
   const [error, setError] = useState<null | string>(null);
+  const [retryConfirmJobId, setRetryConfirmJobId] = useState<null | string>(null);
+  const [scraperRetryConfirmRun, setScraperRetryConfirmRun] =
+    useState<null | ScraperRun>(null);
   const [finishedFilter, setFinishedFilter] =
     useState<FinishedStatusFilter>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -185,6 +188,14 @@ export default function JobsPage() {
     },
     [fetchJobs, toast]
   );
+
+  const handleRequestRetry = useCallback((jobId: string) => {
+    setRetryConfirmJobId(jobId);
+  }, []);
+
+  const handleRequestScraperRetry = useCallback((run: ScraperRun) => {
+    setScraperRetryConfirmRun(run);
+  }, []);
 
   const handleScraperRetry = useCallback(
     async (run: ScraperRun) => {
@@ -359,7 +370,7 @@ export default function JobsPage() {
         <ScraperRunsSection
           queuedRetryRunIds={queuedRetryRunIds}
           runs={scraperRuns}
-          onRetry={handleScraperRetry}
+          onRetry={handleRequestScraperRetry}
         />
 
         <section className="mb-8">
@@ -391,17 +402,47 @@ export default function JobsPage() {
           title="Finished Jobs"
           variant="finished"
           onCancel={handleRequestCancel}
-          onRetry={handleRetry}
+          onRetry={handleRequestRetry}
         />
 
         <ConfirmModal
           cancelLabel="Cancel"
           confirmLabel="Submit"
-          message="Are you sure you want to cancel this job? It will not finish processing."
+          message="Are you sure you want to cancel this job?"
           open={cancelConfirmJobId != null}
-          title="Cancel job?"
+          title="Cancel Job"
           onCancel={() => setCancelConfirmJobId(null)}
           onConfirm={handleConfirmCancel}
+        />
+
+        <ConfirmModal
+          cancelLabel="Cancel"
+          confirmLabel="Retry"
+          message="This will re-queue the job to run again. Continue?"
+          open={retryConfirmJobId != null}
+          title="Retry Job"
+          onCancel={() => setRetryConfirmJobId(null)}
+          onConfirm={() => {
+            if (retryConfirmJobId != null) {
+              handleRetry(retryConfirmJobId);
+              setRetryConfirmJobId(null);
+            }
+          }}
+        />
+
+        <ConfirmModal
+          cancelLabel="Cancel"
+          confirmLabel="Retry"
+          message="Re-run this scrape? The worker will process it shortly."
+          open={scraperRetryConfirmRun != null}
+          title="Retry scrape?"
+          onCancel={() => setScraperRetryConfirmRun(null)}
+          onConfirm={() => {
+            if (scraperRetryConfirmRun != null) {
+              void handleScraperRetry(scraperRetryConfirmRun);
+              setScraperRetryConfirmRun(null);
+            }
+          }}
         />
       </div>
     </main>

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { useToast } from "@/lib/ToastContext";
 
@@ -31,6 +32,13 @@ export function PostDetailClient({
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<null | string>(null);
+  const [pendingPostAction, setPendingPostAction] = useState<{
+    action: "cancelRefresh";
+    jobId: string;
+  } | {
+    action: "ignore" | "queueRefresh" | "used";
+    value?: boolean;
+  } | null>(null);
   const [markingIgnored, setMarkingIgnored] = useState(false);
   const [markingSaved, setMarkingSaved] = useState(false);
   const [markingUsed, setMarkingUsed] = useState(false);
@@ -226,6 +234,19 @@ export function PostDetailClient({
     })();
   }, [post?.url, postId, refetchPermalinkJobs, toast]);
 
+  const requestMarkIgnored = useCallback((_postId: string, value: boolean) => {
+    setPendingPostAction({ action: "ignore", value });
+  }, []);
+  const requestMarkUsedChange = useCallback((_postId: string, value: boolean) => {
+    setPendingPostAction({ action: "used", value });
+  }, []);
+  const requestCancelRefresh = useCallback((jobId: string) => {
+    setPendingPostAction({ action: "cancelRefresh", jobId });
+  }, []);
+  const requestQueueRefresh = useCallback(() => {
+    setPendingPostAction({ action: "queueRefresh" });
+  }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#comments") {
       setCommentsExpanded(true);
@@ -303,11 +324,11 @@ export function PostDetailClient({
             post={post}
             queueStatus={getQueueStatusForPost(post)}
             showScoreBreakdown
-            onCancelRefresh={handleCancelRefresh}
-            onMarkIgnored={(_postId, ignored) => handleMarkIgnored(ignored)}
+            onCancelRefresh={requestCancelRefresh}
+            onMarkIgnored={requestMarkIgnored}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}
-            onMarkUsedChange={(_postId, used) => handleMarkUsedChange(used)}
-            onQueueRefresh={handleQueueRefresh}
+            onMarkUsedChange={requestMarkUsedChange}
+            onQueueRefresh={requestQueueRefresh}
           />
         </div>
 
@@ -403,6 +424,56 @@ export function PostDetailClient({
           to go back
         </p>
       </div>
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Confirm"
+        message={
+          pendingPostAction?.action === "ignore"
+            ? pendingPostAction.value
+              ? "Ignore this post? It will be hidden from the feed."
+              : "Show this post in the feed again?"
+            : pendingPostAction?.action === "used"
+              ? pendingPostAction.value
+                ? "Mark this post as used on an episode?"
+                : "Mark this post as unused?"
+              : pendingPostAction?.action === "cancelRefresh"
+                ? "Remove this post from the refresh queue?"
+                : pendingPostAction?.action === "queueRefresh"
+                  ? "Queue this post for refresh?"
+                  : undefined
+        }
+        open={pendingPostAction != null}
+        title={
+          pendingPostAction?.action === "ignore"
+            ? pendingPostAction.value
+              ? "Ignore post?"
+              : "Unignore post?"
+            : pendingPostAction?.action === "used"
+              ? pendingPostAction.value
+                ? "Mark as used?"
+                : "Mark as unused?"
+              : pendingPostAction?.action === "cancelRefresh"
+                ? "Cancel refresh?"
+                : pendingPostAction?.action === "queueRefresh"
+                  ? "Queue refresh?"
+                  : ""
+        }
+        onCancel={() => setPendingPostAction(null)}
+        onConfirm={() => {
+          if (pendingPostAction == null || !postId) return;
+          if (pendingPostAction.action === "ignore") {
+            handleMarkIgnored(pendingPostAction.value ?? false);
+          } else if (pendingPostAction.action === "used") {
+            handleMarkUsedChange(pendingPostAction.value ?? false);
+          } else if (pendingPostAction.action === "cancelRefresh") {
+            handleCancelRefresh(pendingPostAction.jobId);
+          } else if (pendingPostAction.action === "queueRefresh") {
+            handleQueueRefresh();
+          }
+          setPendingPostAction(null);
+        }}
+      />
     </main>
   );
 }
