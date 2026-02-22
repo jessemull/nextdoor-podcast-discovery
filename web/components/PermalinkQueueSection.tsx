@@ -52,7 +52,7 @@ function formatStatus(status: string): string {
     case "running":
       return "Running";
     case "completed":
-      return "Done";
+      return "Completed";
     case "error":
       return "Failed";
     case "cancelled":
@@ -456,7 +456,7 @@ export function PermalinkQueueSection({
           </p>
         </div>
         {processedJobs.length > 0 ? (
-          <div className="flex max-h-[24rem] flex-wrap gap-3 overflow-y-auto">
+          <div className="flex max-h-[24rem] flex-col gap-3 overflow-y-auto">
               {processedJobs.map((job) => {
                 const params = job.params as { post_id?: string; url?: string };
                 const url = params?.url ?? "unknown";
@@ -464,7 +464,7 @@ export function PermalinkQueueSection({
                 return (
                   <div
                     key={job.id}
-                    className="min-w-0 flex-1 rounded border border-border bg-surface-hover/50 p-4 sm:min-w-[20rem]"
+                    className="min-w-0 rounded border border-border bg-surface-hover/50 p-4"
                     ref={menuOpen ? menuRef : null}
                   >
                     <div className="mb-0.5 flex items-center justify-between sm:hidden">
