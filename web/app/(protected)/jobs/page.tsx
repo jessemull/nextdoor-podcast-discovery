@@ -418,7 +418,7 @@ export default function JobsPage() {
         <ConfirmModal
           cancelLabel="Cancel"
           confirmLabel="Retry"
-          message="This will re-queue the job to run again. Continue?"
+          message="Are you sure you want to re-queue the job again?"
           open={retryConfirmJobId != null}
           title="Retry Job"
           onCancel={() => setRetryConfirmJobId(null)}
