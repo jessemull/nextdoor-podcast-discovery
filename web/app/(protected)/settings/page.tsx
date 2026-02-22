@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
@@ -90,6 +90,7 @@ export default function SettingsPage() {
   const [isActivating, setIsActivating] = useState(false);
   const [deleteConfirmConfigId, setDeleteConfirmConfigId] = useState<null | string>(null);
   const [deletingConfigId, setDeletingConfigId] = useState<null | string>(null);
+  const activeConfigPollCooldownRef = useRef<number | null>(null);
   // Use polling hook for jobs and weight configs
   const {
     activeConfigId,
@@ -99,7 +100,7 @@ export default function SettingsPage() {
     setJobs,
     setWeightConfigs,
     weightConfigs,
-  } = useSettingsPolling();
+  } = useSettingsPolling({ activeConfigPollCooldownRef });
 
   // Load settings and configs on mount (combined to avoid race conditions)
   useEffect(() => {
@@ -212,9 +213,13 @@ export default function SettingsPage() {
         throw new Error(errorData.error || errorData.details || "Failed to activate config");
       }
 
-      setSuccessMessage("Weight config activated successfully. Rankings updated instantly.");
-      
-      // Refresh configs to update active status
+      const data = await response.json();
+      setSuccessMessage(
+        data.data?.message ??
+          "Recompute queued. This config will become active when the job completes."
+      );
+
+      // Refetch configs (active stays current until job completes; polling will show new active)
       const configsResponse = await fetch("/api/admin/weight-configs");
       if (configsResponse.ok) {
         const configsData: WeightConfigsResponse = await configsResponse.json();

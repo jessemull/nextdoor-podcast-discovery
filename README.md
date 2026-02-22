@@ -234,13 +234,13 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 - **Config file:** `scraper/.env` (copy from `.env.example`)
 - **Required:** `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SESSION_ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
-- **Optional:** `HEALTHCHECK_URL`, `HEALTHCHECK_EMBED_URL`, `UNSCORED_BATCH_LIMIT`
+- **Optional:** `APP_URL`, `HEALTHCHECK_EMBED_URL`, `HEALTHCHECK_URL`, `INTERNAL_API_SECRET` (worker: cache invalidation after activate cutover), `UNSCORED_BATCH_LIMIT`
 
 ### Web
 
 - **Config file:** `web/.env.local` (copy from `.env.example`)
 - **Required:** Supabase URL/keys (public + service), Auth0 domain/client/secret, `APP_BASE_URL`
-- **Optional:** `ANTHROPIC_API_KEY` (sports fact on home page), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
+- **Optional:** `ANTHROPIC_API_KEY` (sports fact on home page), `INTERNAL_API_SECRET` (for worker-triggered cache invalidation after activate cutover), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
 
 ## Setup & quick start
 
@@ -305,9 +305,11 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 ## Worker (background jobs)
 
-Processes `recompute_final_scores` jobs created when a user clicks “Save & Recompute Scores” in Settings. Each job has a `weight_config_id`; the worker recomputes final scores (weights + novelty) for all posts with LLM scores and writes `post_scores`. The user can then “Activate” that config so the feed uses the new rankings.
+Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Recompute” (new config) or “Activate” (switch to a config). Each job has a `weight_config_id`; the worker recomputes final scores (weights + novelty) for all posts and writes `post_scores`. **Activate** uses compute-then-cutover: the config becomes active only after the job completes. Jobs created from Activate include `activate_on_completion: true`; when the job finishes, the worker sets that config as active and optionally pings the app to invalidate the active-config cache.
 
 **Run:** `python -m src.worker --job-type recompute_final_scores` (continuous) or `--once`. Same env as scraper (Supabase only). Jobs support cancel and retry; the worker processes one job at a time.
+
+**Optional (worker):** `APP_URL` (e.g. `https://yourapp.vercel.app`) and `INTERNAL_API_SECRET` — when set, the worker POSTs to `APP_URL/api/admin/invalidate-active-config` after an activate cutover so the app sees the new active config immediately; otherwise the cache refreshes within its TTL.
 
 ## Testing & linting
 

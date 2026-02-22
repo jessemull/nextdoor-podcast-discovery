@@ -12,9 +12,12 @@ __all__ = ["main"]
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -300,6 +303,51 @@ def _cleanup_staging(supabase: Client, job_id: str) -> None:
         logger.warning("Failed to cleanup staging for job %s: %s", job_id, e)
 
 
+def _cutover_active_config(supabase: Client, weight_config_id: str) -> None:
+    """Set the given weight config as active (settings + is_active flags).
+
+    Called by the worker after a recompute job completes when
+    activate_on_completion was true.
+    """
+    supabase.table("settings").upsert(
+        {"key": "active_weight_config_id", "value": weight_config_id},
+        on_conflict="key",
+    ).execute()
+    supabase.table("weight_configs").update({"is_active": False}).neq(
+        "id", weight_config_id
+    ).execute()
+    supabase.table("weight_configs").update({"is_active": True}).eq(
+        "id", weight_config_id
+    ).execute()
+    logger.info("Cut over active config to %s", weight_config_id)
+
+
+def _maybe_invalidate_app_cache() -> None:
+    """POST to app's cache-invalidate endpoint if APP_URL and INTERNAL_API_SECRET are set."""
+    base_url = os.environ.get("APP_URL", "").rstrip("/")
+    secret = os.environ.get("INTERNAL_API_SECRET")
+    if not base_url or not secret:
+        logger.debug(
+            "Skipping app cache invalidation (APP_URL or INTERNAL_API_SECRET not set)"
+        )
+        return
+    url = f"{base_url}/api/admin/invalidate-active-config"
+    req = urllib.request.Request(
+        url,
+        data=None,
+        headers={"x-internal-secret": secret},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if 200 <= resp.getcode() < 300:
+                logger.info("Invalidated app active-config cache")
+            else:
+                logger.warning("Cache invalidation returned %s", resp.getcode())
+    except urllib.error.URLError as e:
+        logger.warning("Cache invalidation request failed: %s", e)
+
+
 def _handle_transient_error(supabase: Client, job_id: str, error_msg: str) -> None:
     """Handle a transient error by retrying the job if retries are available.
 
@@ -500,6 +548,11 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         ).eq("id", job_id).execute()
 
         logger.info("Job %s completed successfully", job_id)
+
+        # Compute-then-cutover: become active only after scores are applied
+        if params.get("activate_on_completion"):
+            _cutover_active_config(supabase, weight_config_id)
+            _maybe_invalidate_app_cache()
 
     except ValueError as e:
         # Permanent failure: invalid config or params (don't retry)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { MutableRefObject } from "react";
 
 import { authFetch } from "@/lib/authFetch.client";
 
@@ -16,10 +17,18 @@ interface WeightConfigsResponse {
   data: WeightConfig[];
 }
 
+// Ignore poll updates to activeConfigId for this long after a local activate (avoids stale poll overwriting)
+const ACTIVE_CONFIG_POLL_COOLDOWN_MS = 10000;
+
 // Polling configuration constants
-const POLL_INTERVAL_MS = 5000; // Initial polling interval (5 seconds)
 const MAX_POLL_INTERVAL_MS = 60000; // Maximum polling interval (60 seconds)
 const POLL_BACKOFF_MULTIPLIER = 1.5; // Exponential backoff multiplier
+const POLL_INTERVAL_MS = 5000; // Initial polling interval (5 seconds)
+
+export interface UseSettingsPollingOptions {
+  /** When set to a timestamp, poll will not update activeConfigId until cooldown expires. Set after activate to avoid stale poll overwriting. */
+  activeConfigPollCooldownRef?: MutableRefObject<number | null>;
+}
 
 /**
  * Custom hook for polling job status and weight configs.
@@ -30,7 +39,8 @@ const POLL_BACKOFF_MULTIPLIER = 1.5; // Exponential backoff multiplier
  * - Pauses when tab is hidden (Page Visibility API)
  * - Resets errors when tab becomes visible
  */
-export function useSettingsPolling() {
+export function useSettingsPolling(options?: UseSettingsPollingOptions) {
+  const activeConfigPollCooldownRef = options?.activeConfigPollCooldownRef;
   const [jobs, setJobs] = useState<Job[]>([]);
   const [permalinkJobs, setPermalinkJobs] = useState<Job[]>([]);
   const [weightConfigs, setWeightConfigs] = useState<WeightConfig[]>([]);
@@ -78,7 +88,15 @@ export function useSettingsPolling() {
           if (configsResponse.ok) {
             const configsData: WeightConfigsResponse = await configsResponse.json();
             setWeightConfigs(configsData.data || []);
-            setActiveConfigId(configsData.active_config_id);
+
+            // Skip overwriting activeConfigId during cooldown after activate (avoids stale in-flight poll)
+            const cooldownAt = activeConfigPollCooldownRef?.current ?? null;
+            const inCooldown =
+              cooldownAt != null &&
+              Date.now() - cooldownAt < ACTIVE_CONFIG_POLL_COOLDOWN_MS;
+            if (!inCooldown) {
+              setActiveConfigId(configsData.active_config_id);
+            }
           }
         } else {
           // Increment error count and apply backoff when any fetch fails
