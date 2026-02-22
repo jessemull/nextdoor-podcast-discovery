@@ -249,6 +249,7 @@ export function PostFeed({
     setError,
     total,
   } = usePostFeedData({
+    activeConfigWeights,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
