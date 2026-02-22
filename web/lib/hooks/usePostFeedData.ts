@@ -8,14 +8,11 @@ import { POSTS_PER_PAGE } from "@/lib/utils";
 import { VALID_WEIGHT_DIMENSIONS } from "@/lib/validators";
 
 import type { PostFeedFilters } from "./usePostFeedFilters";
-import type { PostsResponse, PostWithScores } from "@/lib/types";
+import type { PostsResponse, PostWithScores, RankingWeights } from "@/lib/types";
 
 const STALE_TIME_MS = 45_000;
 
-function weightsEqual(
-  a: Record<string, number>,
-  b: null | Record<string, number>
-): boolean {
+function weightsEqual(a: RankingWeights, b: null | RankingWeights): boolean {
   if (!b) return false;
   return VALID_WEIGHT_DIMENSIONS.every((dim) => {
     const va = a[dim] ?? 0;
@@ -25,7 +22,7 @@ function weightsEqual(
 }
 
 function buildPostsQueryParams(
-  activeConfigWeights: null | Record<string, number>,
+  activeConfigWeights: null | RankingWeights,
   filters: PostFeedFilters,
   debouncedMaxPodcastWorthy: string,
   debouncedMaxReactionCount: string,
@@ -106,7 +103,7 @@ function buildPostsQueryParams(
 }
 
 export interface UsePostFeedDataParams {
-  activeConfigWeights: null | Record<string, number>;
+  activeConfigWeights: null | RankingWeights;
   debouncedMaxPodcastWorthy: string;
   debouncedMaxReactionCount: string;
   debouncedMaxScore: string;
