@@ -396,53 +396,53 @@ export const PostCard = memo(function PostCard({
             </div>
           )}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            {/* Row 1: name and date (left) + action icons (upper right) */}
+            {/* Row 1: author and date (left) + action icons (upper right) */}
             <div className="flex min-w-0 items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-x-2">
-                {post.author_name && (
-                  <>
-                    <span className="text-foreground text-sm">{post.author_name}</span>
-                    <span className="text-muted-foreground text-sm">•</span>
-                  </>
-                )}
+                <span className="text-foreground text-sm">
+                  {post.author_name?.trim() || "Unknown"}
+                </span>
+                <span className="text-muted-foreground text-sm">•</span>
                 <span className="text-foreground text-sm font-medium tracking-wide">
                   {formatRelativeTime(post.created_at)}
                 </span>
               </div>
               {actionsBlock}
             </div>
-            {/* Row 2: counts only */}
-            <div className="flex min-w-0 items-center gap-x-2">
-              {typeof post.reaction_count === "number" && post.reaction_count > 0 && (
-                <span
-                  className="text-foreground inline-flex items-center gap-1 text-sm"
-                  title="Reactions on Nextdoor"
-                >
-                  <ThumbsUp
-                    aria-hidden
-                    className="h-3.5 w-3.5 shrink-0"
-                  />
-                  {post.reaction_count}
-                </span>
-              )}
-              {typeof post.reaction_count === "number" &&
-                post.reaction_count > 0 &&
-                Array.isArray(post.comments) &&
-                post.comments.length > 0 && (
+            {/* Row 2: reaction count, comment count (always show with 0 if none), then optional similarity */}
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span
+                className="text-foreground inline-flex items-center gap-1 text-sm"
+                title="Reactions on Nextdoor"
+              >
+                <ThumbsUp
+                  aria-hidden
+                  className="h-3.5 w-3.5 shrink-0"
+                />
+                {typeof post.reaction_count === "number" ? post.reaction_count : 0}
+              </span>
+              <span className="text-muted-foreground text-sm">•</span>
+              <Link
+                className="text-foreground inline-flex items-center gap-1 text-sm hover:underline"
+                href={`/posts/${post.id}#comments`}
+                title="View comments"
+              >
+                <MessageSquare
+                  aria-hidden
+                  className="h-3.5 w-3.5 shrink-0"
+                />
+                {Array.isArray(post.comments) ? post.comments.length : 0}
+              </Link>
+              {post.similarity != null && (
+                <>
                   <span className="text-muted-foreground text-sm">•</span>
-                )}
-              {Array.isArray(post.comments) && post.comments.length > 0 && (
-                <Link
-                  className="text-foreground inline-flex items-center gap-1 text-sm hover:underline"
-                  href={`/posts/${post.id}#comments`}
-                  title="View comments"
-                >
-                  <MessageSquare
-                    aria-hidden
-                    className="h-3.5 w-3.5 shrink-0"
-                  />
-                  {post.comments.length}
-                </Link>
+                  <span
+                    className="rounded border border-orange-500/60 bg-orange-500/15 px-1.5 py-0.5 text-orange-400 text-xs font-medium"
+                    title="Semantic similarity to search query"
+                  >
+                    {post.similarity.toFixed(2)}
+                  </span>
+                </>
               )}
             </div>
           </div>
@@ -492,39 +492,24 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
-      {/* Details: only when we have details to show (e.g. neighborhood, similarity) */}
-      {(neighborhoodName || post.similarity != null) && (
+      {/* Details: neighborhood and any other details (similarity is in header row 2) */}
+      {neighborhoodName && (
         <div className="mb-6">
           <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
             Details
           </h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            {neighborhoodName && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                  Neighborhood
-                </span>
-                <span
-                  className="text-foreground min-w-0 break-words text-xs"
-                  style={{ opacity: 0.85 }}
-                >
-                  {neighborhoodName}
-                </span>
-              </div>
-            )}
-            {post.similarity != null && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                  Similarity
-                </span>
-                <span
-                  className="rounded border border-orange-500/60 bg-orange-500/15 w-fit px-1.5 py-0.5 text-orange-400 text-xs font-medium"
-                  title="Semantic similarity to search query"
-                >
-                  {post.similarity.toFixed(2)}
-                </span>
-              </div>
-            )}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                Neighborhood
+              </span>
+              <span
+                className="text-foreground min-w-0 break-words text-xs"
+                style={{ opacity: 0.85 }}
+              >
+                {neighborhoodName}
+              </span>
+            </div>
           </div>
         </div>
       )}
