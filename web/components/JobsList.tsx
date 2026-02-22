@@ -258,7 +258,7 @@ export function JobsList({
                       (job.status === "error" ||
                         job.status === "cancelled") && (
                         <button
-                          className="shrink-0 rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          className="hidden shrink-0 rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
                           type="button"
                           onClick={() => onRetry(job.id)}
                         >

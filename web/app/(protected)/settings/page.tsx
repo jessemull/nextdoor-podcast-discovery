@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
@@ -87,6 +88,7 @@ export default function SettingsPage() {
   });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
+  const [deleteConfirmConfigId, setDeleteConfirmConfigId] = useState<null | string>(null);
   const [deletingConfigId, setDeletingConfigId] = useState<null | string>(null);
   // Use polling hook for jobs and weight configs
   const {
@@ -228,10 +230,6 @@ export default function SettingsPage() {
   }, [setActiveConfigId, setWeightConfigs]);
 
   const handleDeleteConfig = useCallback(async (configId: string) => {
-    if (!confirm("Are you sure you want to delete this weight configuration? This will also delete all associated scores and cannot be undone.")) {
-      return;
-    }
-
     setDeletingConfigId(configId);
     setError(null);
     setSuccessMessage(null);
@@ -403,6 +401,21 @@ export default function SettingsPage() {
 
         <SettingsAlerts error={error} successMessage={successMessage} />
 
+        <ConfirmModal
+          cancelLabel="Cancel"
+          confirmLabel="Delete"
+          message="This will also delete all associated scores and cannot be undone."
+          open={deleteConfirmConfigId != null}
+          title="Delete weight configuration?"
+          onCancel={() => setDeleteConfirmConfigId(null)}
+          onConfirm={() => {
+            if (deleteConfirmConfigId != null) {
+              void handleDeleteConfig(deleteConfirmConfigId);
+              setDeleteConfirmConfigId(null);
+            }
+          }}
+        />
+
         <SettingsWeightSection
           activeConfigId={activeConfigId}
           configs={weightConfigs}
@@ -413,7 +426,7 @@ export default function SettingsPage() {
           setActiveConfigId={setActiveConfigId}
           setRankingWeights={setRankingWeights}
           onActivate={handleActivateConfig}
-          onDelete={handleDeleteConfig}
+          onDelete={setDeleteConfirmConfigId}
           onRenameSuccess={refetchWeightConfigs}
           onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
           onSave={handleSaveWeights}

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { useToast } from "@/lib/ToastContext";
 
@@ -59,6 +60,14 @@ export function PodcastPicks() {
   const [loading, setLoading] = useState(true);
   const [markingSaved, setMarkingSaved] = useState<Set<string>>(new Set());
   const [markingUsed, setMarkingUsed] = useState<Set<string>>(new Set());
+  const [pendingPostAction, setPendingPostAction] = useState<{
+    action: "cancelRefresh";
+    jobId: string;
+  } | {
+    action: "queueRefresh" | "used";
+    postId: string;
+    value?: boolean;
+  } | null>(null);
   const [picks, setPicks] = useState<PostWithScores[]>([]);
 
   const handleCancelRefresh = useCallback(
@@ -191,6 +200,16 @@ export function PodcastPicks() {
     [picks, refetchPermalinkJobs, toast]
   );
 
+  const requestMarkUsedChange = useCallback((postId: string, value: boolean) => {
+    setPendingPostAction({ action: "used", postId, value });
+  }, []);
+  const requestCancelRefresh = useCallback((jobId: string) => {
+    setPendingPostAction({ action: "cancelRefresh", jobId });
+  }, []);
+  const requestQueueRefresh = useCallback((postId: string) => {
+    setPendingPostAction({ action: "queueRefresh", postId });
+  }, []);
+
   if (loading) {
     return (
       <section className="mb-8">
@@ -235,15 +254,58 @@ export function PodcastPicks() {
               isMarkingUsed={markingUsed.has(post.id)}
               post={post}
               queueStatus={getQueueStatusForPost(post)}
-              onCancelRefresh={handleCancelRefresh}
+              onCancelRefresh={requestCancelRefresh}
               onMarkSaved={handleMarkSaved}
-              onMarkUsedChange={handleMarkUsedChange}
-              onQueueRefresh={handleQueueRefresh}
+              onMarkUsedChange={requestMarkUsedChange}
+              onQueueRefresh={requestQueueRefresh}
               onViewDetails={() => router.push(`/posts/${post.id}`)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        cancelLabel="Cancel"
+        confirmLabel="Confirm"
+        message={
+          pendingPostAction?.action === "used"
+            ? pendingPostAction.value
+              ? "Mark this post as used on an episode?"
+              : "Mark this post as unused?"
+            : pendingPostAction?.action === "cancelRefresh"
+              ? "Remove this post from the refresh queue?"
+              : pendingPostAction?.action === "queueRefresh"
+                ? "Queue this post for refresh?"
+                : undefined
+        }
+        open={pendingPostAction != null}
+        title={
+          pendingPostAction?.action === "used"
+            ? pendingPostAction.value
+              ? "Mark as used?"
+              : "Mark as unused?"
+            : pendingPostAction?.action === "cancelRefresh"
+              ? "Cancel refresh?"
+              : pendingPostAction?.action === "queueRefresh"
+                ? "Queue refresh?"
+                : ""
+        }
+        onCancel={() => setPendingPostAction(null)}
+        onConfirm={() => {
+          if (pendingPostAction == null) return;
+          if (pendingPostAction.action === "used") {
+            handleMarkUsedChange(
+              pendingPostAction.postId,
+              pendingPostAction.value ?? false
+            );
+          } else if (pendingPostAction.action === "cancelRefresh") {
+            handleCancelRefresh(pendingPostAction.jobId);
+          } else if (pendingPostAction.action === "queueRefresh") {
+            handleQueueRefresh(pendingPostAction.postId);
+          }
+          setPendingPostAction(null);
+        }}
+      />
     </section>
   );
 }
