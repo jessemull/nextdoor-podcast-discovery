@@ -237,20 +237,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Fetch LLM scores and neighborhoods in parallel
+    // Fetch LLM scores, neighborhoods, and post details (author_name, reaction_count, comments, etc.) in parallel
 
     const postIds = searchResultsList.map((post: SearchResult) => post.id);
     const neighborhoodIds = searchResultsList.map(
       (post: SearchResult) => post.neighborhood_id
     );
 
-    const [scoresResult, neighborhoodsResult] = await Promise.all([
+    const [scoresResult, neighborhoodsResult, postDetailsResult] = await Promise.all([
       supabase.from("llm_scores").select("*").in("post_id", postIds),
       supabase.from("neighborhoods").select("*").in("id", neighborhoodIds),
+      supabase
+        .from("posts")
+        .select("id, author_name, comments, ignored, reaction_count, saved")
+        .in("id", postIds),
     ]);
 
     const { data: scores, error: scoresError } = scoresResult;
     const { data: neighborhoods, error: neighborhoodsError } = neighborhoodsResult;
+    const { data: postDetailsRows, error: postDetailsError } = postDetailsResult;
 
     if (scoresError) {
       logError("[search] LLM scores", scoresError);
@@ -262,7 +267,12 @@ export async function POST(request: NextRequest) {
       // Continue without neighborhoods - posts will have "Unknown" neighborhood
     }
 
-    // Build a map for quick lookups
+    if (postDetailsError) {
+      logError("[search] post details", postDetailsError);
+      // Continue - cards will show Unknown / 0 for missing fields
+    }
+
+    // Build maps for quick lookups
 
     const scoresMap = new Map(
       (scores || []).map((score: { post_id: string }) => [score.post_id, score])
@@ -273,15 +283,23 @@ export async function POST(request: NextRequest) {
         neighborhood,
       ])
     );
+    const postDetailsMap = new Map(
+      (postDetailsRows || []).map((row: { id: string }) => [row.id, row])
+    );
 
-    // Combine results with scores and neighborhoods
+    // Combine results with scores, neighborhoods, and post details
     // Include similarity score for display in UI
 
-    const posts = searchResultsList.map((result: SearchResult) => ({
+    const posts = searchResultsList.map((result: SearchResult) => {
+      const details = postDetailsMap.get(result.id) || {};
+      return {
+        author_name: details.author_name ?? null,
+        comments: details.comments ?? [],
         created_at: result.created_at,
         hash: result.hash,
         id: result.id,
         image_urls: result.image_urls || [],
+        ignored: details.ignored ?? false,
         llm_scores: scoresMap.get(result.id) || null,
         neighborhood:
           neighborhoodsMap.get(result.neighborhood_id) || {
@@ -292,13 +310,15 @@ export async function POST(request: NextRequest) {
           },
         neighborhood_id: result.neighborhood_id,
         post_id_ext: result.post_id_ext,
+        reaction_count: details.reaction_count ?? 0,
+        saved: details.saved ?? false,
         similarity: result.similarity,
         text: result.text,
         url: result.url,
         used_on_episode: result.used_on_episode,
         user_id_hash: result.user_id_hash,
-      })
-    );
+      };
+    });
 
     const filteredPosts =
       minScore != null && minScore > 0
