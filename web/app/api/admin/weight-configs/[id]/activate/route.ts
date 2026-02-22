@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { invalidateActiveConfigCache } from "@/lib/active-config-cache.server";
 import { auth0 } from "@/lib/auth0";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -9,11 +8,13 @@ import { UUID_REGEX } from "@/lib/validators";
 /**
  * PUT /api/admin/weight-configs/:id/activate
  *
- * Atomically switches the active weight configuration.
+ * Enqueues a recompute job with activate_on_completion. The config becomes
+ * active only after the job completes (compute-then-cutover). This ensures:
+ * (1) No immediate swap — active does not change until scores are ready.
+ * (2) No partial state — worker writes to staging, then applies in one transaction.
+ * (3) Clean cutover — apply_post_scores_from_staging, then worker sets active.
+ * (4) Visibility — job status (pending/running/completed/error) is shown on Settings and Jobs.
  * Requires authentication.
- *
- * This is an instant operation - no recompute needed.
- * The new config's scores must already be computed (via background job).
  */
 export async function PUT(
   _request: NextRequest,
@@ -60,43 +61,43 @@ export async function PUT(
       );
     }
 
-    // Atomically switch active config
-    const { error: updateError } = await supabase
-      .from("settings")
-      .upsert(
-        { key: "active_weight_config_id", value: configId },
-        { onConflict: "key" }
-      );
+    // Enqueue recompute; worker will cut over (set active) only after job completes
+    const { data: jobRow, error: jobError } = await supabase
+      .from("background_jobs")
+      .insert({
+        created_by: session.user?.email ?? "unknown",
+        max_retries: 3,
+        params: {
+          activate_on_completion: true,
+          weight_config_id: configId,
+        },
+        retry_count: 0,
+        status: "pending",
+        type: "recompute_final_scores",
+      })
+      .select()
+      .single();
 
-    if (updateError) {
-      logError("[admin/weight-configs/activate] Error updating settings", updateError);
+    if (jobError || !jobRow) {
+      logError(
+        "[admin/weight-configs/activate] Failed to enqueue recompute job",
+        jobError ?? new Error("No job row")
+      );
       return NextResponse.json(
         {
-          details: updateError.message,
+          details: jobError?.message ?? "Failed to enqueue job",
           error: "Database error",
         },
         { status: 500 }
       );
     }
 
-    // Update is_active flags (optional, for convenience)
-    // Set all to false, then set this one to true
-    await supabase
-      .from("weight_configs")
-      .update({ is_active: false })
-      .neq("id", configId);
-
-    await supabase
-      .from("weight_configs")
-      .update({ is_active: true })
-      .eq("id", configId);
-
-    await invalidateActiveConfigCache();
-
     return NextResponse.json({
       data: {
-        active_config_id: configId,
         config_name: config.name,
+        job_id: jobRow.id,
+        message:
+          "Recompute queued. This config will become active when the job completes.",
         success: true,
       },
     });
