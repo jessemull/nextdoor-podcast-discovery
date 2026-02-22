@@ -113,9 +113,7 @@ export function PermalinkQueueSection({
   const [inputUrl, setInputUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [menuOpenJobId, setMenuOpenJobId] = useState<null | string>(null);
-  const [mockQueueMenuOpen, setMockQueueMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const mockMenuRef = useRef<HTMLDivElement>(null);
 
   const queueJobs = useMemo(
     () =>
@@ -140,20 +138,17 @@ export function PermalinkQueueSection({
   );
 
   useEffect(() => {
+    if (menuOpenJobId == null) return;
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuOpenJobId != null && menuRef.current && !menuRef.current.contains(target)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node)
+      ) {
         setMenuOpenJobId(null);
-      }
-      if (mockQueueMenuOpen && mockMenuRef.current && !mockMenuRef.current.contains(target)) {
-        setMockQueueMenuOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMenuOpenJobId(null);
-        setMockQueueMenuOpen(false);
-      }
+      if (e.key === "Escape") setMenuOpenJobId(null);
     };
     document.addEventListener("click", handleClick);
     document.addEventListener("keydown", handleKeyDown);
@@ -161,7 +156,7 @@ export function PermalinkQueueSection({
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [menuOpenJobId, mockQueueMenuOpen]);
+  }, [menuOpenJobId]);
 
   const handleAdd = useCallback(async () => {
     const url = inputUrl.trim();
@@ -443,147 +438,10 @@ export function PermalinkQueueSection({
             })}
           </div>
         ) : (
-          <>
-            <div
-              className="rounded border border-border bg-surface-hover/50 p-4"
-              ref={mockQueueMenuOpen ? mockMenuRef : null}
-            >
-              <div className="mb-0.5 flex items-center justify-between sm:hidden">
-                <span className="text-foreground text-base font-semibold">
-                  Post
-                </span>
-                <div className="relative z-10 shrink-0">
-                  <button
-                    aria-expanded={mockQueueMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="More actions"
-                    className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setMockQueueMenuOpen((v) => !v)}
-                  >
-                    <MoreHorizontal
-                      aria-hidden
-                      className="h-4 w-4 text-foreground"
-                    />
-                  </button>
-                  {mockQueueMenuOpen && (
-                    <div
-                      className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
-                      role="menu"
-                    >
-                      <a
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                        href="https://nextdoor.com/p/example"
-                        rel="noopener noreferrer"
-                        role="menuitem"
-                        target="_blank"
-                        onClick={() => setMockQueueMenuOpen(false)}
-                      >
-                        <ExternalLink aria-hidden className="h-4 w-4" />
-                        View Post
-                      </a>
-                      <span
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground"
-                        role="menuitem"
-                      >
-                        <Trash2 aria-hidden className="h-4 w-4" />
-                        Delete
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
-                    URL
-                  </h4>
-                  <span className="text-foreground block break-all sm:truncate">
-                    <span
-                      className="text-xs sm:hidden"
-                      style={{ opacity: 0.85 }}
-                    >
-                      https://nextdoor.com/p/example
-                    </span>
-                    <span className="hidden text-sm font-semibold sm:inline">
-                      https://nextdoor.com/p/example
-                    </span>
-                  </span>
-                </div>
-                <div className="hidden shrink-0 sm:flex">
-                  <div className="relative">
-                    <button
-                      aria-expanded={mockQueueMenuOpen}
-                      aria-haspopup="menu"
-                      aria-label="More actions"
-                      className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                      type="button"
-                      onClick={() => setMockQueueMenuOpen((v) => !v)}
-                    >
-                      <MoreHorizontal
-                        aria-hidden
-                        className="h-4 w-4 text-foreground"
-                      />
-                    </button>
-                    {mockQueueMenuOpen && (
-                      <div
-                        className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
-                        role="menu"
-                      >
-                        <a
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                          href="https://nextdoor.com/p/example"
-                          rel="noopener noreferrer"
-                          role="menuitem"
-                          target="_blank"
-                          onClick={() => setMockQueueMenuOpen(false)}
-                        >
-                          <ExternalLink aria-hidden className="h-4 w-4" />
-                          View Post
-                        </a>
-                        <span
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground"
-                          role="menuitem"
-                        >
-                          <Trash2 aria-hidden className="h-4 w-4" />
-                          Delete
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <div>
-                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                    Status
-                  </h4>
-                  <span
-                    className={`inline-block shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass("pending")}`}
-                  >
-                    {formatStatus("pending")}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                    Submitted
-                  </h4>
-                  <p
-                    className="text-foreground text-xs"
-                    style={{ opacity: 0.85 }}
-                  >
-                    {formatRelativeTime(
-                      new Date(Date.now() - 120000).toISOString()
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <p className="text-muted-foreground mt-3 text-sm">
-              No jobs in queue. Add a URL above or use Refresh Post on a post
-              card to add one.
-            </p>
-          </>
+          <p className="text-muted-foreground text-sm">
+            No jobs in queue. Add a URL above or use Refresh Post on a post
+            card to add one.
+          </p>
         )}
         <div className="mb-4 mt-8">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
@@ -751,33 +609,9 @@ export function PermalinkQueueSection({
               })}
             </div>
         ) : (
-          <div className="rounded border border-border bg-surface-hover/50 p-4">
-            <div className="mb-3 flex flex-col gap-2">
-              <h4 className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                URL
-              </h4>
-              <p className="text-muted-foreground text-sm">—</p>
-            </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <div>
-                <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                  Status
-                </h4>
-                <span className="border-border bg-surface-hover text-muted-foreground inline-block rounded border px-2 py-0.5 text-xs font-medium">
-                  —
-                </span>
-              </div>
-              <div>
-                <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                  Submitted
-                </h4>
-                <p className="text-muted-foreground text-xs">—</p>
-              </div>
-            </div>
-            <p className="text-muted-foreground mt-3 text-sm">
-              No processed jobs yet.
-            </p>
-          </div>
+          <p className="text-muted-foreground text-sm">
+            No processed jobs yet.
+          </p>
         )}
       </Card>
     </>
