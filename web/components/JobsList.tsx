@@ -76,13 +76,15 @@ const DEFAULT_DESCRIPTION =
 function getStatusBadgeClass(status: string): string {
   return status === "completed"
     ? "shrink-0 rounded border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600"
-    : status === "running" || status === "pending"
-      ? "shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600"
-      : status === "error"
-        ? "shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600"
-        : status === "cancelled"
-          ? "shrink-0 rounded border border-orange-500/60 bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-400"
-          : "shrink-0 rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground";
+    : status === "pending"
+      ? "shrink-0 rounded border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400"
+      : status === "running"
+        ? "shrink-0 rounded border border-blue-500/60 bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-400"
+        : status === "error"
+          ? "shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600"
+          : status === "cancelled"
+            ? "shrink-0 rounded border border-orange-500/60 bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-400"
+            : "shrink-0 rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground";
 }
 
 export function JobsList({
@@ -237,28 +239,15 @@ export function JobsList({
                     </div>
                   )}
                   <div className="mb-3 flex min-w-0 flex-row items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
-                        Title
-                      </h4>
-                      <span
-                        className="text-foreground block break-all sm:truncate"
-                        title={`${formatJobType(job.type)} (#${job.id.substring(0, 8)})`}
-                      >
-                        <span
-                          className="text-xs sm:hidden"
-                          style={{ opacity: 0.85 }}
-                        >
-                          {formatJobType(job.type)} (#{job.id.substring(0, 8)})
-                        </span>
-                        <span className="hidden text-base font-semibold sm:inline">
-                          {formatJobType(job.type)} (#{job.id.substring(0, 8)})
-                        </span>
-                      </span>
-                    </div>
+                    <span
+                      className="text-foreground min-w-0 flex-1 break-all text-base font-semibold sm:truncate"
+                      title={`${formatJobType(job.type)} (#${job.id.substring(0, 8)})`}
+                    >
+                      {formatJobType(job.type)} (#{job.id.substring(0, 8)})
+                    </span>
                     {variant === "queue" ? (
                       <button
-                        className="border-destructive text-destructive hover:bg-surface-hover hidden shrink-0 rounded border px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
+                        className="hidden shrink-0 rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
                         type="button"
                         onClick={() => onCancel(job.id)}
                       >
