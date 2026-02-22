@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import { ExternalLink, MoreHorizontal, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
   useCallback,
@@ -64,14 +64,16 @@ function formatStatus(status: string): string {
 
 function statusClass(status: string): string {
   switch (status) {
-    case "pending":
-      return "border-amber-500/70 bg-amber-500/10 text-amber-600";
-    case "running":
-      return "border-blue-500/70 bg-blue-500/10 text-blue-600";
+    case "cancelled":
+      return "border-orange-500/60 bg-orange-500/15 text-orange-400";
     case "completed":
       return "border-emerald-500/60 bg-emerald-500/10 text-emerald-600";
     case "error":
       return "border-red-500/70 bg-red-500/10 text-red-600";
+    case "pending":
+      return "border-amber-500/70 bg-amber-500/10 text-amber-600";
+    case "running":
+      return "border-blue-500/70 bg-blue-500/10 text-blue-600";
     default:
       return "border-border bg-surface-hover text-muted-foreground";
   }
@@ -111,7 +113,9 @@ export function PermalinkQueueSection({
   const [inputUrl, setInputUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [menuOpenJobId, setMenuOpenJobId] = useState<null | string>(null);
+  const [mockQueueMenuOpen, setMockQueueMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mockMenuRef = useRef<HTMLDivElement>(null);
 
   const queueJobs = useMemo(
     () =>
@@ -136,17 +140,20 @@ export function PermalinkQueueSection({
   );
 
   useEffect(() => {
-    if (menuOpenJobId == null) return;
     const handleClick = (e: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      if (menuOpenJobId != null && menuRef.current && !menuRef.current.contains(target)) {
         setMenuOpenJobId(null);
+      }
+      if (mockQueueMenuOpen && mockMenuRef.current && !mockMenuRef.current.contains(target)) {
+        setMockQueueMenuOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpenJobId(null);
+      if (e.key === "Escape") {
+        setMenuOpenJobId(null);
+        setMockQueueMenuOpen(false);
+      }
     };
     document.addEventListener("click", handleClick);
     document.addEventListener("keydown", handleKeyDown);
@@ -154,7 +161,7 @@ export function PermalinkQueueSection({
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [menuOpenJobId]);
+  }, [menuOpenJobId, mockQueueMenuOpen]);
 
   const handleAdd = useCallback(async () => {
     const url = inputUrl.trim();
@@ -246,7 +253,7 @@ export function PermalinkQueueSection({
             className="text-foreground text-sm"
             style={{ opacity: 0.85 }}
           >
-            Permalink fetch jobs run one at a time. Remove from queue to cancel
+            Permalink fetch jobs run one at a time. Delete to cancel
             before they run.
           </p>
         </div>
@@ -258,8 +265,7 @@ export function PermalinkQueueSection({
               const postId = params?.post_id;
               const canCancel =
                 (job.status === "pending" || job.status === "running") &&
-                !job.id.startsWith("opt-") &&
-                onCancel;
+                !!onCancel;
               const menuOpen = menuOpenJobId === job.id;
               return (
                 <div
@@ -303,7 +309,7 @@ export function PermalinkQueueSection({
                               target="_blank"
                               onClick={() => setMenuOpenJobId(null)}
                             >
-                              <Eye aria-hidden className="h-4 w-4" />
+                              <ExternalLink aria-hidden className="h-4 w-4" />
                               View Post
                             </a>
                           )}
@@ -344,52 +350,8 @@ export function PermalinkQueueSection({
                           {truncateUrl(url, 56)}
                         </span>
                       </span>
-                      {(job.status === "running" ||
-                        job.status === "completed" ||
-                        job.status === "error") && (
-                        <span
-                          className={`mt-1 block sm:hidden ${statusClass(job.status)} shrink-0 rounded border px-2 py-0.5 text-xs font-medium`}
-                        >
-                          {formatStatus(job.status)}
-                        </span>
-                      )}
                     </div>
-                    <div className="hidden shrink-0 items-center gap-1 sm:flex">
-                      {(job.status === "running" ||
-                        job.status === "completed" ||
-                        job.status === "error") && (
-                        <span
-                          className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
-                        >
-                          {formatStatus(job.status)}
-                        </span>
-                      )}
-                      {url && url.startsWith("http") && (
-                        <a
-                          aria-label="View Post on Nextdoor"
-                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                          href={url}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                          title="View Post on Nextdoor"
-                        >
-                          <Eye aria-hidden className="h-4 w-4 text-foreground" />
-                        </a>
-                      )}
-                      {canCancel && (
-                        <button
-                          aria-label="Delete"
-                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                          title="Delete"
-                          type="button"
-                          onClick={() => onCancel?.(job.id)}
-                        >
-                          <Trash2
-                            aria-hidden
-                            className="h-4 w-4 text-destructive"
-                          />
-                        </button>
-                      )}
+                    <div className="hidden shrink-0 sm:flex">
                       <div className="relative">
                         <button
                           aria-expanded={menuOpen}
@@ -422,7 +384,7 @@ export function PermalinkQueueSection({
                                 target="_blank"
                                 onClick={() => setMenuOpenJobId(null)}
                               >
-                                <Eye aria-hidden className="h-4 w-4" />
+                                <ExternalLink aria-hidden className="h-4 w-4" />
                                 View Post
                               </a>
                             )}
@@ -445,16 +407,28 @@ export function PermalinkQueueSection({
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                      Submitted
-                    </h4>
-                    <p
-                      className="text-foreground text-xs"
-                      style={{ opacity: 0.85 }}
-                    >
-                      {formatRelativeTime(job.created_at)}
-                    </p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                        Status
+                      </h4>
+                      <span
+                        className={`inline-block shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
+                      >
+                        {formatStatus(job.status)}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                        Submitted
+                      </h4>
+                      <p
+                        className="text-foreground text-xs"
+                        style={{ opacity: 0.85 }}
+                      >
+                        {formatRelativeTime(job.created_at)}
+                      </p>
+                    </div>
                   </div>
                   {job.status === "error" && job.error_message && (
                     <p
@@ -469,26 +443,162 @@ export function PermalinkQueueSection({
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            No permalink jobs in queue. Add a URL above or use Refresh Post on a
-            post card.
-          </p>
-        )}
-        {processedJobs.length > 0 && (
           <>
-            <div className="mb-4 mt-8">
-              <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-                Processed
-              </h2>
-              <p
-                className="text-foreground text-sm"
-                style={{ opacity: 0.85 }}
-              >
-                Recent permalink jobs (completed, failed, or cancelled). Latest{" "}
-                {PROCESSED_JOBS_LIMIT} shown.
-              </p>
+            <div
+              className="rounded border border-border bg-surface-hover/50 p-4"
+              ref={mockQueueMenuOpen ? mockMenuRef : null}
+            >
+              <div className="mb-0.5 flex items-center justify-between sm:hidden">
+                <span className="text-foreground text-base font-semibold">
+                  Post
+                </span>
+                <div className="relative z-10 shrink-0">
+                  <button
+                    aria-expanded={mockQueueMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="More actions"
+                    className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => setMockQueueMenuOpen((v) => !v)}
+                  >
+                    <MoreHorizontal
+                      aria-hidden
+                      className="h-4 w-4 text-foreground"
+                    />
+                  </button>
+                  {mockQueueMenuOpen && (
+                    <div
+                      className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                      role="menu"
+                    >
+                      <a
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                        href="https://nextdoor.com/p/example"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        target="_blank"
+                        onClick={() => setMockQueueMenuOpen(false)}
+                      >
+                        <ExternalLink aria-hidden className="h-4 w-4" />
+                        View Post
+                      </a>
+                      <span
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground"
+                        role="menuitem"
+                      >
+                        <Trash2 aria-hidden className="h-4 w-4" />
+                        Delete
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide sm:hidden">
+                    URL
+                  </h4>
+                  <span className="text-foreground block break-all sm:truncate">
+                    <span
+                      className="text-xs sm:hidden"
+                      style={{ opacity: 0.85 }}
+                    >
+                      https://nextdoor.com/p/example
+                    </span>
+                    <span className="hidden text-sm font-semibold sm:inline">
+                      https://nextdoor.com/p/example
+                    </span>
+                  </span>
+                </div>
+                <div className="hidden shrink-0 sm:flex">
+                  <div className="relative">
+                    <button
+                      aria-expanded={mockQueueMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label="More actions"
+                      className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                      type="button"
+                      onClick={() => setMockQueueMenuOpen((v) => !v)}
+                    >
+                      <MoreHorizontal
+                        aria-hidden
+                        className="h-4 w-4 text-foreground"
+                      />
+                    </button>
+                    {mockQueueMenuOpen && (
+                      <div
+                        className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                        role="menu"
+                      >
+                        <a
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                          href="https://nextdoor.com/p/example"
+                          rel="noopener noreferrer"
+                          role="menuitem"
+                          target="_blank"
+                          onClick={() => setMockQueueMenuOpen(false)}
+                        >
+                          <ExternalLink aria-hidden className="h-4 w-4" />
+                          View Post
+                        </a>
+                        <span
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground"
+                          role="menuitem"
+                        >
+                          <Trash2 aria-hidden className="h-4 w-4" />
+                          Delete
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                    Status
+                  </h4>
+                  <span
+                    className={`inline-block shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass("pending")}`}
+                  >
+                    {formatStatus("pending")}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                    Submitted
+                  </h4>
+                  <p
+                    className="text-foreground text-xs"
+                    style={{ opacity: 0.85 }}
+                  >
+                    {formatRelativeTime(
+                      new Date(Date.now() - 120000).toISOString()
+                    )}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="max-h-[24rem] space-y-3 overflow-y-auto">
+            <p className="text-muted-foreground mt-3 text-sm">
+              No jobs in queue. Add a URL above or use Refresh Post on a post
+              card to add one.
+            </p>
+          </>
+        )}
+        <div className="mb-4 mt-8">
+          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+            Processed
+          </h2>
+          <p
+            className="text-foreground text-sm"
+            style={{ opacity: 0.85 }}
+          >
+            Recent permalink jobs (completed, failed, or cancelled). Latest{" "}
+            {PROCESSED_JOBS_LIMIT} shown.
+          </p>
+        </div>
+        {processedJobs.length > 0 ? (
+          <div className="flex max-h-[24rem] flex-wrap gap-3 overflow-y-auto">
               {processedJobs.map((job) => {
                 const params = job.params as { post_id?: string; url?: string };
                 const url = params?.url ?? "unknown";
@@ -496,7 +606,7 @@ export function PermalinkQueueSection({
                 return (
                   <div
                     key={job.id}
-                    className="rounded border border-border bg-surface-hover/50 p-4"
+                    className="min-w-0 flex-1 rounded border border-border bg-surface-hover/50 p-4 sm:min-w-[20rem]"
                     ref={menuOpen ? menuRef : null}
                   >
                     <div className="mb-0.5 flex items-center justify-between sm:hidden">
@@ -535,7 +645,7 @@ export function PermalinkQueueSection({
                                 target="_blank"
                                 onClick={() => setMenuOpenJobId(null)}
                               >
-                                <Eye aria-hidden className="h-4 w-4" />
+                                <ExternalLink aria-hidden className="h-4 w-4" />
                                 View Post
                               </a>
                             )}
@@ -562,33 +672,8 @@ export function PermalinkQueueSection({
                             {truncateUrl(url, 56)}
                           </span>
                         </span>
-                        <span
-                          className={`mt-1 block sm:hidden ${statusClass(job.status)} shrink-0 rounded border px-2 py-0.5 text-xs font-medium`}
-                        >
-                          {formatStatus(job.status)}
-                        </span>
                       </div>
                       <div className="hidden shrink-0 items-center gap-1 sm:flex">
-                        <span
-                          className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
-                        >
-                          {formatStatus(job.status)}
-                        </span>
-                        {url && url.startsWith("http") && (
-                          <a
-                            aria-label="View Post on Nextdoor"
-                            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                            href={url}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            title="View Post on Nextdoor"
-                          >
-                            <Eye
-                              aria-hidden
-                              className="h-4 w-4 text-foreground"
-                            />
-                          </a>
-                        )}
                         <div className="relative">
                           <button
                             aria-expanded={menuOpen}
@@ -621,7 +706,7 @@ export function PermalinkQueueSection({
                                   target="_blank"
                                   onClick={() => setMenuOpenJobId(null)}
                                 >
-                                  <Eye aria-hidden className="h-4 w-4" />
+                                  <ExternalLink aria-hidden className="h-4 w-4" />
                                   View Post
                                 </a>
                               )}
@@ -630,16 +715,28 @@ export function PermalinkQueueSection({
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
-                        Submitted
-                      </h4>
-                      <p
-                        className="text-foreground text-xs"
-                        style={{ opacity: 0.85 }}
-                      >
-                        {formatRelativeTime(job.created_at)}
-                      </p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      <div>
+                        <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                          Status
+                        </h4>
+                        <span
+                          className={`inline-block shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${statusClass(job.status)}`}
+                        >
+                          {formatStatus(job.status)}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                          Submitted
+                        </h4>
+                        <p
+                          className="text-foreground text-xs"
+                          style={{ opacity: 0.85 }}
+                        >
+                          {formatRelativeTime(job.created_at)}
+                        </p>
+                      </div>
                     </div>
                     {job.status === "error" && job.error_message && (
                       <p
@@ -653,7 +750,34 @@ export function PermalinkQueueSection({
                 );
               })}
             </div>
-          </>
+        ) : (
+          <div className="rounded border border-border bg-surface-hover/50 p-4">
+            <div className="mb-3 flex flex-col gap-2">
+              <h4 className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                URL
+              </h4>
+              <p className="text-muted-foreground text-sm">—</p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                  Status
+                </h4>
+                <span className="border-border bg-surface-hover text-muted-foreground inline-block rounded border px-2 py-0.5 text-xs font-medium">
+                  —
+                </span>
+              </div>
+              <div>
+                <h4 className="text-foreground mb-1.5 text-xs font-semibold uppercase tracking-wide">
+                  Submitted
+                </h4>
+                <p className="text-muted-foreground text-xs">—</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground mt-3 text-sm">
+              No processed jobs yet.
+            </p>
+          </div>
         )}
       </Card>
     </>
