@@ -37,3 +37,5 @@
 - [x] We have stats for categories, users should be able to click on a category card and redirect to feed with the filter set. We should make sure button/stat has hover state and cursor hover pointer.
 
 - [x] The header for the feed card has too much shit at the top for mobile and tablet, we have to redesign it to look better probably moving some of the badge etc below somehow.
+
+- [x] Consistent error messaging and error states.
