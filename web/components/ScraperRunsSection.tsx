@@ -1,8 +1,5 @@
 "use client";
 
-import { MoreHorizontal, RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-
 import { Card } from "@/components/ui/Card";
 
 import type { ScraperRun } from "@/lib/types";
@@ -44,12 +41,43 @@ function feedLabel(feedType: string): string {
   return feedType;
 }
 
+function formatStatusLabel(status: string, isQueued: boolean): string {
+  if (isQueued) return "Queued";
+  switch (status) {
+    case "completed":
+      return "Completed";
+    case "error":
+      return "Failed";
+    case "pending":
+      return "Pending";
+    case "running":
+      return "Running";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
+}
+
 function statusBadgeClass(status: string, isQueued: boolean): string {
+  const base =
+    "shrink-0 rounded border px-2 py-0.5 text-xs font-medium";
   if (isQueued)
-    return "shrink-0 rounded border border-sky-500/50 bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-600";
-  return status === "completed"
-    ? "shrink-0 rounded border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600"
-    : "shrink-0 rounded border border-red-500/70 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600";
+    return `${base} border-sky-500/50 bg-sky-500/10 text-sky-600`;
+  switch (status) {
+    case "completed":
+      return `${base} border-emerald-500/60 bg-emerald-500/10 text-emerald-600`;
+    case "error":
+      return `${base} border-red-500/70 bg-red-500/10 text-red-600`;
+    case "pending":
+      return `${base} border-amber-500/60 bg-amber-500/15 text-amber-400`;
+    case "running":
+      return `${base} border-blue-500/60 bg-blue-500/15 text-blue-400`;
+    case "cancelled":
+      return `${base} border-orange-500/60 bg-orange-500/15 text-orange-400`;
+    default:
+      return `${base} border-border bg-surface-hover text-muted-foreground`;
+  }
 }
 
 interface ScraperRunsSectionProps {
@@ -67,23 +95,7 @@ export function ScraperRunsSection({
   runs,
   title = "Scraper Runs",
 }: ScraperRunsSectionProps) {
-  const [menuOpenRunId, setMenuOpenRunId] = useState<null | string>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const queuedRetrySet = new Set(queuedRetryRunIds);
-
-  useEffect(() => {
-    if (menuOpenRunId == null) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
-        setMenuOpenRunId(null);
-      }
-    };
-    document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
-  }, [menuOpenRunId]);
 
   return (
     <Card className="mb-8 p-6">
@@ -102,11 +114,7 @@ export function ScraperRunsSection({
         <div className="max-h-96 space-y-3 overflow-y-auto">
           {runs.map((run) => {
             const isQueued = queuedRetrySet.has(run.id);
-            const statusLabel = isQueued
-              ? "Queued"
-              : run.status === "completed"
-                ? "Completed"
-                : "Failed";
+            const statusLabel = formatStatusLabel(run.status, isQueued);
             const badgeClass = statusBadgeClass(run.status, isQueued);
             const showRetry =
               run.status === "error" && onRetry && !isQueued;
@@ -114,74 +122,26 @@ export function ScraperRunsSection({
               <div
                 key={run.id}
                 className="rounded border border-border bg-surface-hover/50 p-4"
-                ref={menuOpenRunId === run.id ? menuRef : null}
               >
                 <div className="mb-3 flex flex-row items-start justify-between gap-2">
                   <span className="text-foreground text-base font-semibold">
                     Scraper Run
                   </span>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {showRetry && (
-                      <div className="relative z-10 sm:hidden">
-                        <button
-                          aria-expanded={menuOpenRunId === run.id}
-                          aria-haspopup="menu"
-                          aria-label="More actions"
-                          className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                          type="button"
-                          onClick={() =>
-                            setMenuOpenRunId((id) =>
-                              id === run.id ? null : run.id
-                            )
-                          }
-                        >
-                          <MoreHorizontal
-                            aria-hidden
-                            className="h-4 w-4 text-foreground"
-                          />
-                        </button>
-                        {menuOpenRunId === run.id && (
-                          <div
-                            className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
-                            role="menu"
-                          >
-                            <button
-                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                              role="menuitem"
-                              type="button"
-                              onClick={() => {
-                                setMenuOpenRunId(null);
-                                void onRetry?.(run);
-                              }}
-                            >
-                              <RotateCcw aria-hidden className="h-4 w-4" />
-                              Retry
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <span className={`${badgeClass} hidden sm:inline`}>
-                      {statusLabel}
-                    </span>
-                    {showRetry && (
-                      <button
-                        className="hidden shrink-0 rounded border border-amber-500/70 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
-                        type="button"
-                        onClick={() => onRetry?.(run)}
-                      >
-                        Retry
-                      </button>
-                    )}
-                  </div>
+                  {showRetry && (
+                    <button
+                      className="hidden shrink-0 rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus sm:inline-block"
+                      type="button"
+                      onClick={() => onRetry?.(run)}
+                    >
+                      Retry
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                   <DetailRow label="Run ID" value={run.id} />
-                  <div className="sm:hidden">
-                    <DetailRow label="Status">
-                      <span className={badgeClass}>{statusLabel}</span>
-                    </DetailRow>
-                  </div>
+                  <DetailRow label="Status">
+                    <span className={badgeClass}>{statusLabel}</span>
+                  </DetailRow>
                   <DetailRow
                     label="Run at"
                     value={new Date(run.run_at).toLocaleString()}
