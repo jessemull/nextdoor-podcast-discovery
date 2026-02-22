@@ -456,9 +456,7 @@ class PostStorage:
 
         return None
 
-    def _resolve_neighborhoods_batch(
-        self, names: list[str]
-    ) -> dict[str, str]:
+    def _resolve_neighborhoods_batch(self, names: list[str]) -> dict[str, str]:
         """Resolve neighborhood names to IDs in one batch.
 
         Batch-selects existing neighborhoods by slug, inserts missing ones,

@@ -555,7 +555,8 @@ def _fetch_permalink_job_was_cancelled(supabase: Client, job_id: str) -> bool:
     )
     if not result.data or len(result.data) == 0:
         return False
-    return (result.data[0].get("status") or "") == "cancelled"
+    row = cast(dict[str, Any], result.data[0])
+    return (row.get("status") or "") == "cancelled"
 
 
 def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
@@ -616,7 +617,9 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
             timeout=300,
         )
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
-            logger.info("Permalink job %s was cancelled during run, not updating", job_id)
+            logger.info(
+                "Permalink job %s was cancelled during run, not updating", job_id
+            )
             return True
         if result.returncode == 0:
             supabase.table("background_jobs").update(
@@ -643,7 +646,9 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
         return False
     except subprocess.TimeoutExpired:
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
-            logger.info("Permalink job %s was cancelled (timed out), not updating", job_id)
+            logger.info(
+                "Permalink job %s was cancelled (timed out), not updating", job_id
+            )
             return True
         supabase.table("background_jobs").update(
             {
@@ -734,9 +739,7 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                     "status": "error",
                 }
             ).eq("id", job_id).execute()
-            logger.error(
-                "run_scraper job %s failed: %s", job_id, error_msg[:200]
-            )
+            logger.error("run_scraper job %s failed: %s", job_id, error_msg[:200])
     except subprocess.TimeoutExpired:
         supabase.table("background_jobs").update(
             {
@@ -778,7 +781,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
         logger.error("backfill_dimension job %s: params must be a dict", job_id)
         return
 
-    dimension = params.get("dimension") if isinstance(params.get("dimension"), str) else None
+    dimension = (
+        params.get("dimension") if isinstance(params.get("dimension"), str) else None
+    )
     if not dimension or dimension not in SCORING_DIMENSIONS:
         error_msg = (
             f"Invalid or missing dimension. Must be one of: {list(SCORING_DIMENSIONS)}"
@@ -793,7 +798,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
         logger.error("backfill_dimension job %s: %s", job_id, error_msg)
         return
 
-    logger.info("Processing backfill_dimension job %s for dimension %s", job_id, dimension)
+    logger.info(
+        "Processing backfill_dimension job %s for dimension %s", job_id, dimension
+    )
 
     supabase.table("background_jobs").update(
         {
@@ -825,7 +832,10 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 if job_data and job_data.get("status") == "cancelled":
                     logger.info("Job %s was cancelled", job_id)
                     supabase.table("background_jobs").update(
-                        {"completed_at": datetime.now(UTC).isoformat(), "progress": processed}
+                        {
+                            "completed_at": datetime.now(UTC).isoformat(),
+                            "progress": processed,
+                        }
                     ).eq("id", job_id).execute()
                     return
 
@@ -837,7 +847,7 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 },
             ).execute()
 
-            rows = result.data or []
+            rows: list[dict[str, Any]] = cast(list[Any], result.data or [])
             if not rows:
                 break
 
@@ -850,8 +860,7 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 break
 
             p_updates = [
-                {"post_id": post_id, "value": value}
-                for post_id, value in updates
+                {"post_id": post_id, "value": value} for post_id, value in updates
             ]
             supabase.rpc(
                 "merge_dimension_into_llm_scores",
@@ -859,9 +868,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
             ).execute()
 
             processed += len(updates)
-            supabase.table("background_jobs").update(
-                {"progress": processed}
-            ).eq("id", job_id).execute()
+            supabase.table("background_jobs").update({"progress": processed}).eq(
+                "id", job_id
+            ).execute()
             batch_index += 1
 
         supabase.table("background_jobs").update(
@@ -871,7 +880,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 "status": "completed",
             }
         ).eq("id", job_id).execute()
-        logger.info("backfill_dimension job %s completed: %d posts updated", job_id, processed)
+        logger.info(
+            "backfill_dimension job %s completed: %d posts updated", job_id, processed
+        )
 
     except Exception as e:
         error_msg = str(e)
@@ -1000,9 +1011,9 @@ def main() -> int:
 
         if args.once:
             # Process one job and exit
-            job_types = [
-                t.strip() for t in args.job_type.split(",") if t.strip()
-            ] or ["recompute_final_scores"]
+            job_types = [t.strip() for t in args.job_type.split(",") if t.strip()] or [
+                "recompute_final_scores"
+            ]
             query = (
                 supabase.table("background_jobs")
                 .select("*")

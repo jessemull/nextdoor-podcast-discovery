@@ -101,7 +101,7 @@ class Embedder:
             if dry_run:
                 logger.info("DRY RUN: Would store embedding for post %s", post_id)
                 return True
-            to_store = [
+            to_store: list[dict[str, Any]] = [
                 {
                     "embedding": embeddings[0],
                     "model": EMBEDDING_MODEL,
@@ -109,7 +109,7 @@ class Embedder:
                 }
             ]
             self.supabase.table("post_embeddings").upsert(
-                to_store, on_conflict="post_id"
+                cast(Any, to_store), on_conflict="post_id"
             ).execute()
             logger.info("Stored embedding for post %s", post_id)
             return True
@@ -134,13 +134,10 @@ class Embedder:
 
         while True:
             chunk_num += 1
-            result = (
-                self.supabase.rpc(
-                    "get_posts_without_embeddings",
-                    {"lim": EMBEDDING_CHUNK_SIZE},
-                )
-                .execute()
-            )
+            result = self.supabase.rpc(
+                "get_posts_without_embeddings",
+                {"lim": EMBEDDING_CHUNK_SIZE},
+            ).execute()
             chunk = cast(list[dict[str, Any]], result.data or [])
             if not chunk:
                 if chunk_num == 1:

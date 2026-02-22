@@ -276,11 +276,11 @@ export const PostCard = memo(function PostCard({
                 label: "Find similar",
                 node: (
                   <Link
+                    key="find-similar"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
                     href={`/feed?q=${encodeURIComponent(
                       (post.text || scores?.summary || "").slice(0, 80)
                     )}`}
-                    key="find-similar"
                     role="menuitem"
                     onClick={closeMenu}
                   >
@@ -294,8 +294,8 @@ export const PostCard = memo(function PostCard({
                   label: "View Details",
                   node: (
                     <button
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                       key="view-details"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
                       role="menuitem"
                       type="button"
                       onClick={() => {
@@ -314,9 +314,9 @@ export const PostCard = memo(function PostCard({
                   label: "View on Nextdoor",
                   node: (
                     <a
+                      key="view-nextdoor"
                       className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
                       href={post.url}
-                      key="view-nextdoor"
                       rel="noopener noreferrer"
                       role="menuitem"
                       target="_blank"
@@ -338,9 +338,9 @@ export const PostCard = memo(function PostCard({
                   label: ignoreLabel,
                   node: (
                     <button
+                      key="ignore"
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                       disabled={isMarkingIgnored}
-                      key="ignore"
                       role="menuitem"
                       type="button"
                       onClick={() => {
@@ -364,9 +364,9 @@ export const PostCard = memo(function PostCard({
                   label: usedLabel,
                   node: (
                     <button
+                      key="mark-used"
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                       disabled={isMarkingUsed}
-                      key="mark-used"
                       role="menuitem"
                       type="button"
                       onClick={() => {
@@ -387,9 +387,9 @@ export const PostCard = memo(function PostCard({
                     label: cancelLabel,
                     node: (
                       <button
+                        key="cancel-refresh"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                         disabled={isCancellingRefresh}
-                        key="cancel-refresh"
                         role="menuitem"
                         type="button"
                         onClick={() => {
@@ -414,9 +414,9 @@ export const PostCard = memo(function PostCard({
                     label: refreshLabel,
                     node: (
                       <button
+                        key="refresh-post"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                         disabled={isQueuingRefresh}
-                        key="refresh-post"
                         role="menuitem"
                         type="button"
                         onClick={() => {
