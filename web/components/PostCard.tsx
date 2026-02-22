@@ -43,18 +43,9 @@ const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
 
 export type QueueStatus = "pending" | "running" | null;
 
-const DEMO_CATEGORIES = [
-  "crime",
-  "drama",
-  "humor",
-  "lost_and_found",
-  "suspicious",
-];
-
 interface PostCardProps {
   activeJobId?: null | string;
   defaultExpanded?: boolean;
-  demoAllBadges?: boolean;
   isCancellingRefresh?: boolean;
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
@@ -77,7 +68,6 @@ interface PostCardProps {
 export const PostCard = memo(function PostCard({
   activeJobId = null,
   defaultExpanded = false,
-  demoAllBadges = false,
   isCancellingRefresh = false,
   isMarkingIgnored = false,
   isMarkingSaved = false,
@@ -215,63 +205,7 @@ export const PostCard = memo(function PostCard({
             ? "border-emerald-600"
             : "border-emerald-500";
 
-  const baseCategories = (scores?.categories ?? []).slice(0, 5);
-  const categoriesToShow =
-    demoAllBadges && baseCategories.length < 5
-      ? [
-          ...baseCategories,
-          ...DEMO_CATEGORIES.filter((c) => !baseCategories.includes(c)),
-        ].slice(0, 5)
-      : baseCategories;
-
-  const tagsBlock =
-    categoriesToShow.length > 0 ? (
-      <div className="flex w-full flex-wrap items-center gap-1.5">
-        {categoriesToShow.map((category: string, index: number) => (
-          <span
-            key={`${category}-${index}`}
-            className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
-          >
-            {formatCategoryLabel(category)}
-          </span>
-        ))}
-      </div>
-    ) : null;
-
-  const statusBadges =
-    demoAllBadges ||
-    post.ignored ||
-    post.used_on_episode ||
-    queueStatus === "pending" ||
-    queueStatus === "running" ? (
-      <div className="flex flex-wrap items-center gap-1.5">
-        {(demoAllBadges || post.ignored) && (
-          <span className="rounded border border-slate-500/60 bg-slate-500/15 px-2 py-0.5 text-slate-400 text-xs font-medium">
-            Ignored
-          </span>
-        )}
-        {(demoAllBadges || post.used_on_episode) && (
-          <span className="rounded border border-violet-500/60 bg-violet-500/15 px-2 py-0.5 text-violet-400 text-xs font-medium">
-            Used
-          </span>
-        )}
-        {(demoAllBadges || queueStatus === "pending") && (
-          <span className="rounded border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-amber-400 text-xs font-medium">
-            Queued
-          </span>
-        )}
-        {(demoAllBadges || queueStatus === "running") && (
-          <span className="rounded border border-blue-500/60 bg-blue-500/15 px-2 py-0.5 text-blue-400 text-xs font-medium">
-            Processing
-          </span>
-        )}
-        {(demoAllBadges || post.saved) && (
-          <span className="rounded border border-teal-500/60 bg-teal-500/15 px-2 py-0.5 text-teal-400 text-xs font-medium">
-            Saved
-          </span>
-        )}
-      </div>
-    ) : null;
+  const categoriesToShow = (scores?.categories ?? []).slice(0, 5);
 
   const actionsBlock = (
     <div className="flex shrink-0 items-center gap-1">
@@ -513,7 +447,87 @@ export const PostCard = memo(function PostCard({
             </div>
           </div>
         </div>
+        {/* Full-width row: categories first, then statuses (no headers) */}
+        {(categoriesToShow.length > 0 ||
+          post.ignored ||
+          post.saved ||
+          post.used_on_episode ||
+          queueStatus === "pending" ||
+          queueStatus === "running") && (
+          <div className="mt-3 flex w-full flex-wrap items-center gap-1.5">
+            {categoriesToShow.map((category: string, index: number) => (
+              <span
+                key={`${category}-${index}`}
+                className="rounded-md border border-white/25 bg-surface-hover/80 px-2 py-0.5 text-foreground/90 text-xs font-medium"
+              >
+                {formatCategoryLabel(category)}
+              </span>
+            ))}
+            {post.ignored && (
+              <span className="rounded border border-slate-500/60 bg-slate-500/15 px-2 py-0.5 text-slate-400 text-xs font-medium">
+                Ignored
+              </span>
+            )}
+            {post.used_on_episode && (
+              <span className="rounded border border-violet-500/60 bg-violet-500/15 px-2 py-0.5 text-violet-400 text-xs font-medium">
+                Used
+              </span>
+            )}
+            {queueStatus === "pending" && (
+              <span className="rounded border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-amber-400 text-xs font-medium">
+                Queued
+              </span>
+            )}
+            {queueStatus === "running" && (
+              <span className="rounded border border-blue-500/60 bg-blue-500/15 px-2 py-0.5 text-blue-400 text-xs font-medium">
+                Processing
+              </span>
+            )}
+            {post.saved && (
+              <span className="rounded border border-teal-500/60 bg-teal-500/15 px-2 py-0.5 text-teal-400 text-xs font-medium">
+                Saved
+              </span>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Details: only when we have details to show (e.g. neighborhood, similarity) */}
+      {(neighborhoodName || post.similarity != null) && (
+        <div className="mb-6">
+          <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+            Details
+          </h3>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {neighborhoodName && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Neighborhood
+                </span>
+                <span
+                  className="text-foreground min-w-0 break-words text-xs"
+                  style={{ opacity: 0.85 }}
+                >
+                  {neighborhoodName}
+                </span>
+              </div>
+            )}
+            {post.similarity != null && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Similarity
+                </span>
+                <span
+                  className="rounded border border-orange-500/60 bg-orange-500/15 w-fit px-1.5 py-0.5 text-orange-400 text-xs font-medium"
+                  title="Semantic similarity to search query"
+                >
+                  {post.similarity.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
       {imageUrls.length > 0 && (
@@ -659,55 +673,6 @@ export const PostCard = memo(function PostCard({
           </div>
         );
       })()}
-
-      {/* Details: neighborhood + similarity in two columns; status spans full width */}
-      <div className="mb-6">
-        <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
-          Details
-        </h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-              Neighborhood
-            </span>
-            <span
-              className="text-foreground min-w-0 break-words text-xs"
-              style={{ opacity: 0.85 }}
-            >
-              {neighborhoodName}
-            </span>
-          </div>
-          {(post.similarity != null || demoAllBadges) && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                Similarity
-              </span>
-              <span
-                className="rounded border border-orange-500/60 bg-orange-500/15 w-fit px-1.5 py-0.5 text-orange-400 text-xs font-medium"
-                title="Semantic Similarity To Search Query"
-              >
-                {(post.similarity ?? 0.85).toFixed(2)}
-              </span>
-            </div>
-          )}
-          {tagsBlock != null && (
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                Categories
-              </span>
-              {tagsBlock}
-            </div>
-          )}
-          {statusBadges != null && (
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                Status
-              </span>
-              <div className="flex min-w-0 flex-wrap gap-1.5">{statusBadges}</div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Content */}
       {scores?.summary && (
