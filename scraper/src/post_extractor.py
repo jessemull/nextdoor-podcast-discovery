@@ -209,10 +209,7 @@ class PostExtractor:
                 logger.info("First scroll found %d raw posts", len(raw_posts))
 
             # Recent feed: stop before adding if repeat_threshold consecutive already-seen at start
-            if (
-                self.feed_type == "recent"
-                and self.repeat_threshold > 0
-            ):
+            if self.feed_type == "recent" and self.repeat_threshold > 0:
                 consecutive_seen = self._count_consecutive_already_seen(raw_posts)
                 if consecutive_seen >= self.repeat_threshold:
                     logger.info(
@@ -589,14 +586,15 @@ class PostExtractor:
 
         # Wait for DOM to grow (new posts) on recent feed, up to 4s
         if self.feed_type == "recent":
-            prev_height = self.page.evaluate(
-                "() => document.documentElement.scrollHeight"
-            ) or 0
+            prev_height = (
+                self.page.evaluate("() => document.documentElement.scrollHeight") or 0
+            )
             for _ in range(4):
                 self.page.wait_for_timeout(1000)
-                new_height = self.page.evaluate(
-                    "() => document.documentElement.scrollHeight"
-                ) or 0
+                new_height = (
+                    self.page.evaluate("() => document.documentElement.scrollHeight")
+                    or 0
+                )
                 if new_height > prev_height:
                     logger.debug(
                         "Scroll: doc height grew %s -> %s after wait",
