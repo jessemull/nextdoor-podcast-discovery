@@ -451,11 +451,8 @@ export function PostFeed({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && !loadingMore) {
-          const nextOffset = offset + POSTS_PER_PAGE;
-          if (nextOffset < total) {
-            void fetchPosts(nextOffset, true);
-          }
+        if (entries[0]?.isIntersecting && !loadingMore && offset < total) {
+          void fetchPosts(undefined, true);
         }
       },
       { rootMargin: "200px" }

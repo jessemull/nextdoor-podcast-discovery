@@ -289,6 +289,8 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 **Worker:** `python -m src.worker` polls `background_jobs` and processes `recompute_final_scores` jobs (writes `post_scores` for a weight config).
 
+**Long runs and debugging:** For large runs use `make scrape-trending-300` (or `python -m src.main --feed-type trending --max-posts 300`). The Make target runs under **caffeinate** (`-dis`: display and system stay awake) so the Mac does not sleep or show the screensaver and freeze the browser. The pipeline may stop before `max_posts` if the feed runs out of new content: after **5 consecutive scrolls** with 0 new posts it logs "No new posts after 5 scrolls, stopping" (e.g. 200 posts instead of 300). The pipeline logs PID and start time, and a **heartbeat every 60s** so you can tell if it’s still running or stuck. If heartbeats continue but no new “Scroll N” or “Scrolling down” logs, the main thread is stuck in a Playwright call (often due to display/sleep having fired before caffeinate). Granular logs (“Extracting from page (scroll N…)”, “Scrolling down (about to run scroll N)”, “Scroll down done”) show where it stalled. To capture logs: `PYTHONUNBUFFERED=1 make scrape-trending-300 2>&1 | tee scrape.log`. Every exit logs `Exiting with code 0` or `Exiting with code 1`.
+
 Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at least once.
 
 ## Web UI (Next.js)

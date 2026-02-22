@@ -25,6 +25,7 @@ help:
 	@echo "  dev-scraper      Run scraper in dry-run mode"
 	@echo "  dev-web          Start Next.js dev server"
 	@echo "  scrape-sample    Scrape 25 posts from trending with scoring and embeddings (full pipeline)"
+	@echo "  scrape-trending-300  Scrape, score, and embed 300 trending posts (long run; use PYTHONUNBUFFERED=1 and tee for logs)"
 	@echo "  inspect-scraper  Run scraper in inspect mode (browser pauses for DOM inspection)"
 	@echo ""
 	@echo "Quality:"
@@ -130,6 +131,12 @@ dev-scraper:
 
 scrape-sample:
 	cd scraper && python -m src.main --feed-type trending --max-posts 25
+
+# Long run: 300 trending posts (scrape + score + embed). caffeinate keeps Mac/display
+# awake so browser does not freeze when screensaver or sleep would kick in.
+# Capture logs: PYTHONUNBUFFERED=1 make scrape-trending-300 2>&1 | tee scrape.log
+scrape-trending-300:
+	cd scraper && caffeinate -dis python -m src.main --feed-type trending --max-posts 300
 
 inspect-scraper:
 	cd scraper && python -m src.main --inspect

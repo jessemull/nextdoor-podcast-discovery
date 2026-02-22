@@ -307,6 +307,11 @@ class PostExtractor:
         )
 
         while total_yielded < safety_cap and scroll_attempts < max_scrolls:
+            logger.info(
+                "Extracting from page (scroll %d, yielded so far: %d)",
+                scroll_attempts + 1,
+                total_yielded,
+            )
             raw_posts = self.page.evaluate(extraction_script)
 
             if scroll_attempts == 0:
@@ -356,7 +361,12 @@ class PostExtractor:
                 logger.info("Safety cap reached (%d posts), stopping", safety_cap)
                 return
 
+            logger.info(
+                "Scrolling down (about to run scroll %d)",
+                scroll_attempts + 2,
+            )
             self._scroll_down()
+            logger.info("Scroll down done (next will be scroll %d)", scroll_attempts + 2)
             scroll_attempts += 1
 
         logger.info("Batch extraction complete: %d posts yielded", total_yielded)
@@ -571,6 +581,7 @@ class PostExtractor:
         """
         min_delay, max_delay = SCRAPER_CONFIG["scroll_delay_ms"]
 
+        logger.debug("_scroll_down: evaluate scroll")
         if self.feed_type == "recent":
             # Scroll to bottom so infinite-scroll triggers; otherwise no new posts load
             self.page.evaluate(
@@ -579,6 +590,7 @@ class PostExtractor:
         else:
             self.page.evaluate("window.scrollBy(0, window.innerHeight)")
 
+        logger.debug("_scroll_down: wait_for_load_state networkidle")
         try:
             self.page.wait_for_load_state("networkidle", timeout=3000)
         except PlaywrightTimeoutError:
@@ -605,6 +617,7 @@ class PostExtractor:
                 prev_height = new_height
 
         delay = random.randint(min_delay, max_delay)
+        logger.debug("_scroll_down: wait_for_timeout %d ms", delay)
         self.page.wait_for_timeout(delay)
 
     def extract_permalink(self, container_index: int) -> str | None:
