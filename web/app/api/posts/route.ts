@@ -337,26 +337,30 @@ async function getPostsByScore(
     p_unused_only: unusedOnly,
   };
 
-  const rpcParams = preview
+  // Use stored scores (same as non-preview) when preview is on but no custom weights,
+  // so the feed stays identical. Use runtime scores only when user has changed sliders.
+  const useRuntimeScores = preview && hasInlineWeights;
+  // get_posts_with_scores has no p_weights param; only runtime RPCs do.
+  const rpcParams = useRuntimeScores
     ? {
         ...baseRpcParams,
         p_weight_config_id: hasInlineWeights ? null : targetConfigId,
-        p_weights: hasInlineWeights ? weightsParam : null,
+        p_weights: weightsParam ?? null,
       }
     : {
         ...baseRpcParams,
         p_weight_config_id: targetConfigId,
       };
 
-  const rpcName = preview
+  const rpcName = useRuntimeScores
     ? "get_posts_with_runtime_scores"
     : "get_posts_with_scores";
-  const countRpcName = preview
+  const countRpcName = useRuntimeScores
     ? "get_posts_with_runtime_scores_count"
     : "get_posts_with_scores_count";
 
   const scoresRpcParams =
-    rpcName === "get_posts_with_runtime_scores"
+    useRuntimeScores
       ? {
           ...rpcParams,
           p_limit: limit,

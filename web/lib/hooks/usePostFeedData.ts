@@ -5,13 +5,27 @@ import { useCallback, useState } from "react";
 
 import { authFetch } from "@/lib/authFetch.client";
 import { POSTS_PER_PAGE } from "@/lib/utils";
+import { VALID_WEIGHT_DIMENSIONS } from "@/lib/validators";
 
 import type { PostFeedFilters } from "./usePostFeedFilters";
 import type { PostsResponse, PostWithScores } from "@/lib/types";
 
 const STALE_TIME_MS = 45_000;
 
+function weightsEqual(
+  a: Record<string, number>,
+  b: null | Record<string, number>
+): boolean {
+  if (!b) return false;
+  return VALID_WEIGHT_DIMENSIONS.every((dim) => {
+    const va = a[dim] ?? 0;
+    const vb = b[dim] ?? 0;
+    return Math.abs(va - vb) < 1e-6;
+  });
+}
+
 function buildPostsQueryParams(
+  activeConfigWeights: null | Record<string, number>,
   filters: PostFeedFilters,
   debouncedMaxPodcastWorthy: string,
   debouncedMaxReactionCount: string,
@@ -77,10 +91,13 @@ function buildPostsQueryParams(
 
   if (filters.preview) {
     searchParams.set("preview", "true");
-    if (
+    // Only send custom weights when user has changed sliders from active config,
+    // so "preview with default (active) weights" uses stored scores and same order.
+    const hasCustomWeights =
       filters.previewWeights &&
-      Object.keys(filters.previewWeights).length > 0
-    ) {
+      Object.keys(filters.previewWeights).length > 0 &&
+      !weightsEqual(filters.previewWeights, activeConfigWeights);
+    if (hasCustomWeights) {
       searchParams.set("weights", JSON.stringify(filters.previewWeights));
     }
   }
@@ -89,6 +106,7 @@ function buildPostsQueryParams(
 }
 
 export interface UsePostFeedDataParams {
+  activeConfigWeights: null | Record<string, number>;
   debouncedMaxPodcastWorthy: string;
   debouncedMaxReactionCount: string;
   debouncedMaxScore: string;
@@ -115,6 +133,7 @@ export function usePostFeedData(
   params: UsePostFeedDataParams
 ): UsePostFeedDataResult {
   const {
+    activeConfigWeights,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
@@ -125,6 +144,7 @@ export function usePostFeedData(
   } = params;
 
   const queryParams = buildPostsQueryParams(
+    activeConfigWeights,
     filters,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
@@ -168,6 +188,7 @@ export function usePostFeedData(
     },
     queryKey: [
       "posts",
+      activeConfigWeights,
       debouncedMaxPodcastWorthy,
       debouncedMaxReactionCount,
       debouncedMaxScore,
