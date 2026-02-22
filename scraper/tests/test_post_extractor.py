@@ -226,8 +226,9 @@ class TestPostExtractor:
 
         assert hash1 != hash2
 
-    def test_scroll_down_scrolls_page(self, extractor: PostExtractor) -> None:
+    def test_scroll_down_scrolls_page(self, mock_page: mock.MagicMock) -> None:
         """Should scroll down and wait for network."""
+        extractor = PostExtractor(mock_page, feed_type="trending", max_posts=10)
         extractor.page.evaluate.return_value = None
         extractor.page.wait_for_load_state.return_value = None
         extractor.page.wait_for_timeout.return_value = None
@@ -238,9 +239,10 @@ class TestPostExtractor:
         extractor.page.wait_for_timeout.assert_called_once()
 
     def test_scroll_down_handles_network_timeout(
-        self, extractor: PostExtractor
+        self, mock_page: mock.MagicMock
     ) -> None:
         """Should continue even if network doesn't settle."""
+        extractor = PostExtractor(mock_page, feed_type="trending", max_posts=10)
         extractor.page.evaluate.return_value = None
         extractor.page.wait_for_load_state.side_effect = PlaywrightTimeoutError(
             "Timeout"
