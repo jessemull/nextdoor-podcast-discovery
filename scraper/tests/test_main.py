@@ -69,7 +69,7 @@ class TestMain:
 
                 with mock.patch(
                     "src.main.logger.info",
-                    side_effect=[None, ScraperError("Test error")],
+                    side_effect=[None, ScraperError("Test error"), None],
                 ):
                     result = main(dry_run=True)
 
@@ -85,7 +85,7 @@ class TestMain:
 
                 with mock.patch(
                     "src.main.logger.info",
-                    side_effect=[None, RuntimeError("Unexpected")],
+                    side_effect=[None, RuntimeError("Unexpected"), None],
                 ):
                     result = main(dry_run=True)
 

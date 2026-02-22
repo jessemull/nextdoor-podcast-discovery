@@ -6,6 +6,8 @@ import argparse
 import logging
 import os
 import sys
+import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -68,6 +70,19 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+HEARTBEAT_INTERVAL_SEC = 60
+
+
+def _heartbeat_loop(start_monotonic: float) -> None:
+    """Log every HEARTBEAT_INTERVAL_SEC so you can tell if the process is alive or stuck."""
+    while True:
+        time.sleep(HEARTBEAT_INTERVAL_SEC)
+        elapsed = time.monotonic() - start_monotonic
+        logger.info(
+            "Heartbeat: pipeline still running (elapsed %.0fs)",
+            elapsed,
+        )
 
 
 def _run_scoring(
@@ -311,6 +326,7 @@ def main(
             logger.info("Robots check: %s", message)
         else:
             logger.error("Robots check failed: %s", message)
+            logger.info("Exiting with code 1")
             return 1
 
     # Validate feed type
@@ -319,6 +335,7 @@ def main(
         logger.error(
             "Invalid feed type: %s (must be 'recent' or 'trending')", feed_type
         )
+        logger.info("Exiting with code 1")
         return 1
 
     # Use default if not specified
@@ -330,8 +347,11 @@ def main(
         logger.error(
             "--score-only requires at least one of score or embed (don't use both --no-score and --no-embed with --score-only)"
         )
+        logger.info("Exiting with code 1")
         return 1
 
+    run_start = time.monotonic()
+    run_start_iso = datetime.now(UTC).isoformat()
     logger.info(
         "Starting scraper pipeline (feed=%s, max_posts=%d, dry_run=%s, "
         "visible=%s, score=%s, embed=%s, score_only=%s)",
@@ -345,6 +365,19 @@ def main(
     )
 
     try:
+        logger.info(
+            "Run PID=%s started at %s — if this hangs, check heartbeats below; "
+            "run with PYTHONUNBUFFERED=1 and 2>&1 | tee scrape.log to capture logs",
+            os.getpid(),
+            run_start_iso,
+        )
+        heartbeat = threading.Thread(
+            target=_heartbeat_loop,
+            args=(run_start,),
+            daemon=True,
+        )
+        heartbeat.start()
+
         # Validate environment variables
         validate_env()
 
@@ -374,6 +407,7 @@ def main(
                     embed_stats["errors"],
                 )
             logger.info("Score-only pipeline complete")
+            logger.info("Exiting with code 0")
             return 0
 
         # Start browser (visible flag overrides config)
@@ -426,6 +460,7 @@ def main(
                     "then inspect the DOM for menu selectors. Press Enter here when done to close the browser."
                 )
                 input()
+                logger.info("Exiting with code 0")
                 return 0
 
             # Step 4 & 5: Extract and store until we have max_posts new rows in DB
@@ -487,15 +522,19 @@ def main(
                 storage_stats = {"inserted": stored, "skipped": 0, "errors": 0}
 
             # Step 6: Run LLM scoring if enabled
-
+            # After a scrape, score at least all newly stored posts so the feed shows them
             if score and not dry_run:
+                scoring_limit = unscored_batch_limit
+                if storage_stats is not None:
+                    newly_stored = storage_stats.get("inserted", 0)
+                    scoring_limit = max(scoring_limit, newly_stored)
                 logger.info(
                     "Running LLM scoring on unscored posts (limit=%d)",
-                    unscored_batch_limit,
+                    scoring_limit,
                 )
                 _run_scoring(
                     session_manager.supabase,
-                    unscored_batch_limit=unscored_batch_limit,
+                    unscored_batch_limit=scoring_limit,
                 )
 
             if embed and not dry_run:
@@ -543,10 +582,12 @@ def main(
                     )
                 _record_scraper_run(session_manager.supabase, feed_type, "completed")
 
+        logger.info("Exiting with code 0")
         return 0
 
     except ConfigurationError as e:
         logger.error("Configuration error: %s", e)
+        logger.info("Exiting with code 1")
         return 1
     except CaptchaRequiredError as e:
         logger.error("CAPTCHA required: %s", e)
@@ -555,6 +596,7 @@ def main(
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
         except NameError:
             pass
+        logger.info("Exiting with code 1")
         return 1
     except LoginFailedError as e:
         logger.error("Login failed: %s", e)
@@ -562,6 +604,7 @@ def main(
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
         except NameError:
             pass
+        logger.info("Exiting with code 1")
         return 1
     except ScraperError as e:
         logger.error("Scraper error: %s", e)
@@ -569,12 +612,14 @@ def main(
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
         except NameError:
             pass
+        logger.info("Exiting with code 1")
         return 1
     except httpx.ConnectError as e:
         logger.exception("Cannot reach Supabase (%s): %s", type(e).__name__, e)
         logger.error(
             "Check scraper/.env: SUPABASE_URL and SUPABASE_SERVICE_KEY must point to a valid project."
         )
+        logger.info("Exiting with code 1")
         return 1
     except Exception as e:
         # Last-resort catch so pipeline exits cleanly with code 1 (PR_REVIEW: intentional;
@@ -584,6 +629,7 @@ def main(
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))
         except NameError:
             pass
+        logger.info("Exiting with code 1")
         return 1
 
 
