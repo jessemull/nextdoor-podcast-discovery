@@ -1,8 +1,7 @@
 "use client";
 
 import { useUser } from "@auth0/nextjs-auth0/client";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
@@ -10,6 +9,8 @@ import { cn } from "@/lib/utils";
 export default function LoginPage() {
   const { isLoading, user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -41,7 +42,13 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Link
+        {reason === "session_expired" && (
+          <p className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-2 text-sm mb-4">
+            You were signed out. Please sign in again.
+          </p>
+        )}
+
+        <a
           aria-label="Sign in with Auth0"
           className={cn(
             "block w-full text-center",
@@ -53,7 +60,7 @@ export default function LoginPage() {
           href="/auth/login"
         >
           Sign in with Auth0
-        </Link>
+        </a>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Access is restricted to authorized users only.

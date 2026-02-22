@@ -3,6 +3,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 
 import type { PostFeedFilters } from "./usePostFeedFilters";
@@ -156,7 +157,7 @@ export function usePostFeedData(
       const params = new URLSearchParams(queryParams);
       params.set("offset", String(pageParam));
 
-      const response = await fetch(`/api/posts?${params.toString()}`);
+      const response = await authFetch(`/api/posts?${params.toString()}`);
 
       if (!response.ok) {
         const body = await response.json();

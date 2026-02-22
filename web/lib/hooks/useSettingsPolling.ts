@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
+
 import type { Job, WeightConfig } from "@/lib/types";
 
 interface JobsResponse {
@@ -48,9 +50,9 @@ export function useSettingsPolling() {
       try {
         const [recomputeJobsResponse, permalinkJobsResponse, configsResponse] =
           await Promise.all([
-            fetch("/api/admin/jobs?type=recompute_final_scores&limit=20"),
-            fetch("/api/admin/jobs?type=fetch_permalink&limit=20"),
-            fetch("/api/admin/weight-configs"),
+            authFetch("/api/admin/jobs?type=recompute_final_scores&limit=20"),
+            authFetch("/api/admin/jobs?type=fetch_permalink&limit=20"),
+            authFetch("/api/admin/weight-configs"),
           ]);
 
         if (
@@ -140,7 +142,7 @@ export function useSettingsPolling() {
 
   const refetchWeightConfigs = useCallback(async () => {
     try {
-      const configsResponse = await fetch("/api/admin/weight-configs");
+      const configsResponse = await authFetch("/api/admin/weight-configs");
       if (configsResponse.ok) {
         const configsData: WeightConfigsResponse =
           await configsResponse.json();

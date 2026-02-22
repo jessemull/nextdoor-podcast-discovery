@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
+
 import type { Job } from "@/lib/types";
 
 const PERMALINK_JOBS_LIMIT = 50;
@@ -20,7 +22,7 @@ interface PostForQueueStatus {
 export type QueueStatus = "pending" | "running" | null;
 
 function fetchPermalinkJobs(): Promise<Job[]> {
-  return fetch(
+  return authFetch(
     `/api/admin/jobs?type=fetch_permalink&limit=${PERMALINK_JOBS_LIMIT}`,
     { cache: "no-store" }
   )

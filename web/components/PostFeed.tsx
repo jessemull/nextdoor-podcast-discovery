@@ -790,24 +790,23 @@ export function PostFeed({
               </div>
             </div>
 
-            {/* Desktop: from md – single row */}
-            <div className="mb-2 hidden w-full flex-wrap items-stretch gap-3 lg:flex">
-              <div className="flex h-10 min-w-0 w-full flex-1 basis-full sm:mr-0 sm:basis-0">
-                <FeedSearchBar
-                  embeddingBacklog={searchSlot.embeddingBacklog}
-                  loadDefaultsError={searchSlot.loadDefaultsError}
-                  loading={searchSlot.loading}
-                  query={searchSlot.query}
-                  useKeywordSearch={searchSlot.useKeywordSearch}
-                  onQueryChange={searchSlot.onQueryChange}
-                  onSearch={searchSlot.onSearch}
-                  onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
-                />
-              </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
+            {/* Desktop: from lg – single row, all controls exactly 40px tall */}
+            <div className="mb-2 hidden h-[40px] w-full items-center gap-3 lg:flex">
+              <FeedSearchBar
+                embeddingBacklog={searchSlot.embeddingBacklog}
+                loadDefaultsError={searchSlot.loadDefaultsError}
+                loading={searchSlot.loading}
+                query={searchSlot.query}
+                toolbar
+                useKeywordSearch={searchSlot.useKeywordSearch}
+                onQueryChange={searchSlot.onQueryChange}
+                onSearch={searchSlot.onSearch}
+                onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
+              />
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   aria-label="Filters"
-                  className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                  className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-[40px] items-center gap-2 rounded border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
                   type="button"
                   onClick={() => setOpenFilterDrawer(true)}
                 >
@@ -821,7 +820,7 @@ export function PostFeed({
                 </button>
                 <CustomSelect
                   ariaLabel="Sort Posts"
-                  className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                  className="h-[40px] min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
                   options={SORT_OPTIONS.map((o, i) => ({
                     label: o.label,
                     value: String(i),
@@ -842,7 +841,7 @@ export function PostFeed({
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <CustomSelect
                       ariaLabel="Bulk action"
-                      className="h-10 min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
+                      className="h-[40px] min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
                       disabled={!selectAllChecked && selectedIds.size === 0}
                       options={BULK_ACTION_OPTIONS}
                       placeholder="Actions"
@@ -902,7 +901,7 @@ export function PostFeed({
                       }}
                     />
                     <button
-                      className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
+                      className="text-foreground hover:opacity-80 flex h-[40px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus sm:w-28"
                       type="button"
                       onClick={() => {
                         setBulkMode(false);
@@ -915,7 +914,7 @@ export function PostFeed({
                   </div>
                 ) : (
                   <button
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-[7.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    className="text-foreground hover:opacity-80 flex h-[40px] min-w-[7.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-card border border-border bg-transparent px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                     type="button"
                     onClick={() => setBulkMode(true)}
                   >
@@ -925,7 +924,7 @@ export function PostFeed({
                 {(searchSlot.query.trim() || activeFilterCount > 0) && (
                   <button
                     aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    className="text-foreground hover:opacity-80 flex h-[40px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
                     type="button"
                     onClick={() => {
                       handleResetFilters();
@@ -1238,7 +1237,7 @@ export function PostFeed({
 
             {hasMore && (
               <div
-                className="flex justify-center py-4"
+                className="flex justify-center pb-4 pt-10"
                 data-testid="infinite-scroll-sentinel"
                 ref={sentinelRef}
               >

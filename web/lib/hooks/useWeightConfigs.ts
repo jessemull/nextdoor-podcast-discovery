@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { authFetch } from "@/lib/authFetch.client";
+
 import type { WeightConfig } from "@/lib/types";
 
 interface WeightConfigsResponse {
@@ -21,7 +23,7 @@ export function useWeightConfigs(): {
   const [weightConfigs, setWeightConfigs] = useState<WeightConfig[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/weight-configs")
+    authFetch("/api/admin/weight-configs")
       .then((res) => (res.ok ? res.json() : { active_config_id: null, data: [] }))
       .then((data: WeightConfigsResponse) => {
         setActiveConfigId(data.active_config_id ?? null);
