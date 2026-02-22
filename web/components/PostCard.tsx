@@ -249,12 +249,12 @@ export const PostCard = memo(function PostCard({
           )}
           {post.url && (
             <a
-              aria-label="View On Nextdoor"
+              aria-label="View on Nextdoor"
               className="hidden cursor-pointer rounded p-1 focus:outline-none focus:ring-2 focus:ring-border-focus md:inline-block"
               href={post.url}
               rel="noopener noreferrer"
               target="_blank"
-              title="View On Nextdoor"
+              title="View on Nextdoor"
             >
               <ExternalLink aria-hidden className="h-4 w-4 text-foreground" />
             </a>
@@ -270,86 +270,153 @@ export const PostCard = memo(function PostCard({
             >
               <MoreHorizontal aria-hidden className="h-4 w-4 text-foreground" />
             </button>
-            {menuOpen && (
-              <div
-                className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
-                role="menu"
-              >
-                <Link
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                  href={`/feed?q=${encodeURIComponent(
-                    (post.text || scores?.summary || "").slice(0, 80)
-                  )}`}
-                  role="menuitem"
-                  onClick={closeMenu}
-                >
-                  <Search aria-hidden className="h-4 w-4" />
-                  Find similar
-                </Link>
-                {onMarkIgnored && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isMarkingIgnored}
+            {menuOpen && (() => {
+              const menuItems: { label: string; node: React.ReactNode }[] = [];
+              menuItems.push({
+                label: "Find similar",
+                node: (
+                  <Link
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                    href={`/feed?q=${encodeURIComponent(
+                      (post.text || scores?.summary || "").slice(0, 80)
+                    )}`}
+                    key="find-similar"
                     role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onMarkIgnored(post.id, !post.ignored);
-                    }}
+                    onClick={closeMenu}
                   >
-                    <EyeOff aria-hidden className="h-4 w-4" />
-                    {isMarkingIgnored
-                      ? "..."
-                      : post.ignored
-                        ? "Unignore"
-                        : "Ignore"}
-                  </button>
-                )}
-                {onMarkUsedChange && (
-                  <button
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                    disabled={isMarkingUsed}
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      closeMenu();
-                      onMarkUsedChange(post.id, !post.used_on_episode);
-                    }}
-                  >
-                    <Check aria-hidden className="h-4 w-4" />
-                    {isMarkingUsed
-                      ? "..."
-                      : post.used_on_episode
-                        ? "Mark as unused"
-                        : "Mark as used"}
-                  </button>
-                )}
-                {post.url &&
-                  (queueStatus && activeJobId && onCancelRefresh ? (
+                    <Search aria-hidden className="h-4 w-4" />
+                    Find similar
+                  </Link>
+                ),
+              });
+              if (onViewDetails) {
+                menuItems.push({
+                  label: "View Details",
+                  node: (
                     <button
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
-                      disabled={isCancellingRefresh}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                      key="view-details"
                       role="menuitem"
                       type="button"
                       onClick={() => {
                         closeMenu();
-                        onCancelRefresh(activeJobId);
+                        onViewDetails(post.id);
                       }}
                     >
-                      <X
-                        aria-hidden
-                        className={cn(
-                          "h-4 w-4",
-                          isCancellingRefresh && "animate-pulse"
-                        )}
-                      />
-                      {isCancellingRefresh ? "Cancelling…" : "Cancel Refresh"}
+                      <List aria-hidden className="h-4 w-4" />
+                      View Details
                     </button>
-                  ) : (
-                    onQueueRefresh && (
+                  ),
+                });
+              }
+              if (post.url) {
+                menuItems.push({
+                  label: "View on Nextdoor",
+                  node: (
+                    <a
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
+                      href={post.url}
+                      key="view-nextdoor"
+                      rel="noopener noreferrer"
+                      role="menuitem"
+                      target="_blank"
+                      onClick={closeMenu}
+                    >
+                      <ExternalLink aria-hidden className="h-4 w-4" />
+                      View on Nextdoor
+                    </a>
+                  ),
+                });
+              }
+              if (onMarkIgnored) {
+                const ignoreLabel = isMarkingIgnored
+                  ? "..."
+                  : post.ignored
+                    ? "Unignore"
+                    : "Ignore";
+                menuItems.push({
+                  label: ignoreLabel,
+                  node: (
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                      disabled={isMarkingIgnored}
+                      key="ignore"
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        onMarkIgnored(post.id, !post.ignored);
+                      }}
+                    >
+                      <EyeOff aria-hidden className="h-4 w-4" />
+                      {ignoreLabel}
+                    </button>
+                  ),
+                });
+              }
+              if (onMarkUsedChange) {
+                const usedLabel = isMarkingUsed
+                  ? "..."
+                  : post.used_on_episode
+                    ? "Mark as unused"
+                    : "Mark as used";
+                menuItems.push({
+                  label: usedLabel,
+                  node: (
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                      disabled={isMarkingUsed}
+                      key="mark-used"
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        onMarkUsedChange(post.id, !post.used_on_episode);
+                      }}
+                    >
+                      <Check aria-hidden className="h-4 w-4" />
+                      {usedLabel}
+                    </button>
+                  ),
+                });
+              }
+              if (post.url) {
+                if (queueStatus && activeJobId && onCancelRefresh) {
+                  const cancelLabel = isCancellingRefresh ? "Cancelling…" : "Cancel Refresh";
+                  menuItems.push({
+                    label: cancelLabel,
+                    node: (
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
+                        disabled={isCancellingRefresh}
+                        key="cancel-refresh"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          closeMenu();
+                          onCancelRefresh(activeJobId);
+                        }}
+                      >
+                        <X
+                          aria-hidden
+                          className={cn(
+                            "h-4 w-4",
+                            isCancellingRefresh && "animate-pulse"
+                          )}
+                        />
+                        {cancelLabel}
+                      </button>
+                    ),
+                  });
+                } else if (onQueueRefresh) {
+                  const refreshLabel = isQueuingRefresh ? "Queuing…" : "Refresh Post";
+                  menuItems.push({
+                    label: refreshLabel,
+                    node: (
                       <button
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:opacity-50"
                         disabled={isQueuingRefresh}
+                        key="refresh-post"
                         role="menuitem"
                         type="button"
                         onClick={() => {
@@ -364,12 +431,22 @@ export const PostCard = memo(function PostCard({
                             isQueuingRefresh && "animate-pulse"
                           )}
                         />
-                        {isQueuingRefresh ? "Queuing…" : "Refresh Post"}
+                        {refreshLabel}
                       </button>
-                    )
-                  ))}
-              </div>
-            )}
+                    ),
+                  });
+                }
+              }
+              menuItems.sort((a, b) => a.label.localeCompare(b.label, "en", { sensitivity: "base" }));
+              return (
+                <div
+                  className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[11rem] rounded-card border py-1 shadow-lg"
+                  role="menu"
+                >
+                  {menuItems.map((item) => item.node)}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
