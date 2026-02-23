@@ -74,6 +74,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 | Saved posts | Mark saved; filter feed by saved |
 | Episode tracking | Mark “used on episode” with date; filter by episode date; avoid reuse |
 | Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults |
+| Admin access | Admin routes are protected by Auth0 only; any logged-in user can access them. A separate admin role may be added later if needed. |
 | Admin / jobs | List jobs, stats, cancel job, activate weight config |
 | Pittsburgh sports fact | Shown to all logged-in users on home page; Claude Haiku; error message if API fails |
 | Stats panel | Post counts, embedding backlog, etc. |

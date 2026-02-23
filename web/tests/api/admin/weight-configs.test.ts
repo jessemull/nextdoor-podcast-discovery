@@ -157,7 +157,9 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: CONFIG_1_UUID } });
+    const response = await DELETE(request, {
+      params: Promise.resolve({ id: CONFIG_1_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -190,7 +192,9 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: CONFIG_1_UUID } });
+    const response = await DELETE(request, {
+      params: Promise.resolve({ id: CONFIG_1_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -271,7 +275,9 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_2_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: CONFIG_2_UUID } });
+    const response = await DELETE(request, {
+      params: Promise.resolve({ id: CONFIG_2_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -351,7 +357,9 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_2_UUID}`, {
       method: "DELETE",
     });
-    const response = await DELETE(request, { params: { id: CONFIG_2_UUID } });
+    const response = await DELETE(request, {
+      params: Promise.resolve({ id: CONFIG_2_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -522,7 +530,9 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}/activate`, {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: CONFIG_1_UUID } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: CONFIG_1_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -577,7 +587,9 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}/activate`, {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: CONFIG_1_UUID } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: CONFIG_1_UUID }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(200);

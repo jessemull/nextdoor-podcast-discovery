@@ -154,7 +154,9 @@ describe("Job Lifecycle Integration", () => {
         method: "PUT",
       }
     );
-    const response = await PUT(request, { params: { id: mockJobId } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: mockJobId }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(200);

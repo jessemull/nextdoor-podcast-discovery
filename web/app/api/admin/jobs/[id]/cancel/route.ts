@@ -5,6 +5,10 @@ import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
+interface CancelRouteParams {
+  params: Promise<{ id: string }>;
+}
+
 /**
  * PUT /api/admin/jobs/:id/cancel
  *
@@ -16,7 +20,7 @@ import { UUID_REGEX } from "@/lib/validators";
  */
 export async function PUT(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: CancelRouteParams
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -24,7 +28,7 @@ export async function PUT(
   }
 
   try {
-    const jobId = params.id;
+    const { id: jobId } = await params;
 
     if (!jobId) {
       return NextResponse.json(

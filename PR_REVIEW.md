@@ -52,7 +52,7 @@ All of the following must pass before merge. Run from repo root.
 ## General
 - [ ] Python 3.11+ features used correctly
 - [ ] Type hints present and pass mypy
-- [ ] Formatted with black
+- [ ] Formatted with ruff
 - [ ] Linted with ruff
 - [ ] No unused imports or dead code
 

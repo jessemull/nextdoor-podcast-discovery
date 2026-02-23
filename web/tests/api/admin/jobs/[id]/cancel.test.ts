@@ -42,7 +42,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
     const request = new NextRequest("http://localhost:3000/api/admin/jobs/job-1/cancel", {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: "job-1" } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: "job-1" }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -57,7 +59,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
     const request = new NextRequest("http://localhost:3000/api/admin/jobs//cancel", {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: "" } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: "" }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -72,7 +76,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
     const request = new NextRequest("http://localhost:3000/api/admin/jobs/invalid-id/cancel", {
       method: "PUT",
     });
-    const response = await PUT(request, { params: { id: "invalid-id" } });
+    const response = await PUT(request, {
+      params: Promise.resolve({ id: "invalid-id" }),
+    });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -108,7 +114,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
       }
     );
     const response = await PUT(request, {
-      params: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      params: Promise.resolve({
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      }),
     });
     const data = await response.json();
 
@@ -148,7 +156,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
       }
     );
     const response = await PUT(request, {
-      params: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      params: Promise.resolve({
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      }),
     });
     const data = await response.json();
 
@@ -195,7 +205,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
       }
     );
     const response = await PUT(request, {
-      params: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      params: Promise.resolve({
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      }),
     });
     const data = await response.json();
 
@@ -249,7 +261,9 @@ describe("PUT /api/admin/jobs/:id/cancel", () => {
       }
     );
     const response = await PUT(request, {
-      params: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      params: Promise.resolve({
+        id: "123e4567-e89b-12d3-a456-426614174000",
+      }),
     });
     const data = await response.json();
 
