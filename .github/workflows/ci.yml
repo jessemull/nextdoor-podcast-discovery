@@ -8,6 +8,7 @@ on:
     branches: [main]
 
 jobs:
+  # Required pre-merge: lint (includes format check), test, security, build.
   lint-test-security-build:
     runs-on: ubuntu-latest
 

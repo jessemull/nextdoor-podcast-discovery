@@ -133,7 +133,9 @@ describe("Edge Cases", () => {
           method: "DELETE",
         }
       );
-      const response = await DELETE(request, { params: { id: configId } });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: configId }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -174,7 +176,9 @@ describe("Edge Cases", () => {
           method: "DELETE",
         }
       );
-      const response = await DELETE(request, { params: { id: activeConfigId } });
+      const response = await DELETE(request, {
+        params: Promise.resolve({ id: activeConfigId }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(400);

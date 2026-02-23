@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -111,7 +111,7 @@ export async function DELETE(
   }
 
   try {
-    const configId = params.id;
+    const { id: configId } = await params;
 
     if (!configId) {
       return NextResponse.json(

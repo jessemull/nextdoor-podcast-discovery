@@ -5,6 +5,10 @@ import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
+interface ActivateRouteParams {
+  params: Promise<{ id: string }>;
+}
+
 /**
  * PUT /api/admin/weight-configs/:id/activate
  *
@@ -18,7 +22,7 @@ import { UUID_REGEX } from "@/lib/validators";
  */
 export async function PUT(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: ActivateRouteParams
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -26,7 +30,7 @@ export async function PUT(
   }
 
   try {
-    const configId = params.id;
+    const { id: configId } = await params;
 
     if (!configId) {
       return NextResponse.json(

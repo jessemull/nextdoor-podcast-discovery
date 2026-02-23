@@ -5,6 +5,10 @@ import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
 
+interface RetryRouteParams {
+  params: Promise<{ id: string }>;
+}
+
 /**
  * POST /api/admin/jobs/:id/retry
  *
@@ -14,7 +18,7 @@ import { UUID_REGEX } from "@/lib/validators";
  */
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RetryRouteParams
 ) {
   const session = await auth0.getSession();
   if (!session?.user) {
@@ -22,7 +26,7 @@ export async function POST(
   }
 
   try {
-    const jobId = params.id;
+    const { id: jobId } = await params;
 
     if (!jobId) {
       return NextResponse.json(
