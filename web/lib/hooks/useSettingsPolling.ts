@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { MutableRefObject } from "react";
 
 import { authFetch } from "@/lib/authFetch.client";
 
 import type { Job, WeightConfig } from "@/lib/types";
+import type { MutableRefObject } from "react";
 
 interface JobsResponse {
   data: Job[];
@@ -27,7 +27,7 @@ const POLL_INTERVAL_MS = 5000; // Initial polling interval (5 seconds)
 
 export interface UseSettingsPollingOptions {
   /** When set to a timestamp, poll will not update activeConfigId until cooldown expires. Set after activate to avoid stale poll overwriting. */
-  activeConfigPollCooldownRef?: MutableRefObject<number | null>;
+  activeConfigPollCooldownRef?: MutableRefObject<null | number>;
 }
 
 /**
@@ -156,7 +156,7 @@ export function useSettingsPolling(options?: UseSettingsPollingOptions) {
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [activeConfigPollCooldownRef]);
 
   const refetchWeightConfigs = useCallback(async () => {
     try {

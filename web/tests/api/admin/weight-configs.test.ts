@@ -554,35 +554,22 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
       single: configSingle,
     });
 
-    // Mock settings upsert
-    const settingsUpsert = vi.fn().mockResolvedValue({
+    // Mock background_jobs insert (activate enqueues a job; cutover happens when job completes)
+    const jobInsert = vi.fn().mockReturnThis();
+    const jobSelect = vi.fn().mockReturnThis();
+    const jobSingle = vi.fn().mockResolvedValue({
+      data: { id: "job-uuid-123", status: "pending" },
       error: null,
     });
-
-    // Mock weight_configs update
-    const configsUpdate = vi.fn().mockReturnThis();
-    const configsNeq = vi.fn().mockReturnThis();
-    const configsEq = vi.fn().mockResolvedValue({
-      error: null,
-    });
-
-    configsUpdate.mockReturnValue({
-      neq: configsNeq,
-      eq: configsEq,
-    });
-    configsNeq.mockReturnValue({
-      eq: configsEq,
-    });
+    jobInsert.mockReturnValue({ select: jobSelect });
+    jobSelect.mockReturnValue({ single: jobSingle });
 
     mockFrom.mockImplementation((table: string) => {
-      if (table === "weight_configs") {
-        return {
-          select: configSelect,
-          update: configsUpdate,
-        };
+      if (table === "background_jobs") {
+        return { insert: jobInsert };
       }
-      if (table === "settings") {
-        return { upsert: settingsUpsert };
+      if (table === "weight_configs") {
+        return { select: configSelect };
       }
       return {};
     });
@@ -595,6 +582,8 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
 
     expect(response.status).toBe(200);
     expect(data.data.success).toBe(true);
-    expect(data.data.active_config_id).toBe(CONFIG_1_UUID);
+    expect(data.data.job_id).toBe("job-uuid-123");
+    expect(data.data.config_name).toBe("Test Config");
+    expect(data.data.message).toContain("Recompute queued");
   });
 });

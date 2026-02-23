@@ -90,7 +90,7 @@ export default function SettingsPage() {
   const [isActivating, setIsActivating] = useState(false);
   const [deleteConfirmConfigId, setDeleteConfirmConfigId] = useState<null | string>(null);
   const [deletingConfigId, setDeletingConfigId] = useState<null | string>(null);
-  const activeConfigPollCooldownRef = useRef<number | null>(null);
+  const activeConfigPollCooldownRef = useRef<null | number>(null);
   // Use polling hook for jobs and weight configs
   const {
     activeConfigId,
