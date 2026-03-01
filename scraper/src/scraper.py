@@ -227,8 +227,8 @@ class NextdoorScraper:
     def navigate_to_feed(self, feed_type: str) -> None:
         """Navigate to a specific feed tab.
 
-        On mobile, opens the Filter by bottom sheet and clicks Recent or
-        Trending. On desktop, relies on URL and tab selectors.
+        Clicks the Trending or Recent chip on the feed (desktop). No reload;
+        URL does not change.
 
         Args:
             feed_type: Which feed to navigate to ("recent" or "trending").
@@ -296,7 +296,7 @@ class NextdoorScraper:
             self.page.wait_for_selector(tab_selector, timeout=min(3000, timeout))
             logger.info("Successfully loaded %s feed", feed_type)
         except PlaywrightTimeoutError:
-            logger.debug("Feed tab selector not found (mobile or different UI)")
+            logger.debug("Feed tab selector not found (different UI)")
 
     def click_first_permalink_to_details(self, timeout_ms: int = 15000) -> bool:
         """Click the first post permalink in the feed to open the details view.

@@ -290,7 +290,7 @@ def main(
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
         feed_type: Which feed to scrape ("recent" or "trending").
-        inspect: If True, open browser (iPhone mobile), go to feed, then pause for DOM inspection.
+        inspect: If True, open browser (desktop), go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
         open_trending_details: If True, open trending tab, click first post permalink to details view, then pause.
         no_embed: If True, skip embedding (overrides default).
@@ -493,12 +493,10 @@ def main(
 
             if inspect:
                 print()
-                print("Browser is open with iPhone mobile view on the news feed.")
+                print("Browser is open on the news feed (desktop).")
                 print(
-                    "Open DevTools (F12 or right-click → Inspect), click the 'Filter by' menu to open it,"
-                )
-                print(
-                    "then inspect the DOM for menu selectors. Press Enter here when done to close the browser."
+                    "Open DevTools (F12 or right-click → Inspect) and inspect the DOM "
+                    "(e.g. feed chips, post cards). Press Enter here when done to close the browser."
                 )
                 input()
                 logger.info("Exiting with code 0")
@@ -701,7 +699,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--inspect",
         action="store_true",
-        help="Open browser (iPhone mobile), go to feed, then pause for DOM inspection (e.g. Filter by menu)",
+        help="Open browser (desktop), go to feed, then pause for DOM inspection",
     )
     parser.add_argument(
         "--max-posts",

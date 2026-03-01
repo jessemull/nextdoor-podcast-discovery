@@ -382,11 +382,12 @@ class PostExtractor:
         """Extract a single post from the current page (e.g. permalink page).
 
         Does not scroll. Uses page URL as permalink when on a single-post page.
-        Optionally opens the comment drawer for the first post.
+        When the URL is a permalink (/p/), the page is a feed with that post first;
+        we open the desktop modal (same as feed) to extract comments.
 
         Args:
             page_url: Permalink URL (e.g. from page). If None, uses extract_permalink.
-            extract_comments: If True, open comment drawer and extract comments.
+            extract_comments: If True, extract comments when on a permalink (via desktop modal).
 
         Returns:
             RawPost or None if no post found.
@@ -409,7 +410,12 @@ class PostExtractor:
 
         comments: list[RawComment] = []
         if extract_comments:
-            comments = self._extract_comments_for_post(container_index)
+            if page_url and "/p/" in page_url:
+                # Permalink page is a feed with this post first; open modal on same page, no details-page navigation.
+                comments = self._extract_comments_via_desktop_modal(container_index)
+            else:
+                # Comment extraction only supported for permalink (we open the modal there); no separate details page.
+                pass
 
         author_id = raw.get("authorId", "")
         author_name = raw.get("authorName", "")
@@ -521,24 +527,6 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
-
-    def _scroll_feed_back_after_drawer_close(self, container_index: int) -> None:
-        """Scroll the feed so we're not stuck at top after closing the comment drawer.
-
-        Opening the drawer often scrolls the page to top; we scroll the next post
-        into view so the next iteration targets the correct post and we don't
-        reopen the same drawer.
-        """
-        try:
-            containers = self.page.locator("div.post, div.js-media-post")
-            next_index = container_index + 1
-            if containers.count() > next_index:
-                containers.nth(next_index).scroll_into_view_if_needed()
-            else:
-                self.page.evaluate("window.scrollBy(0, window.innerHeight)")
-            self.page.wait_for_timeout(150)
-        except Exception:
-            pass
 
     def _count_consecutive_already_seen(self, raw_posts: list[dict[str, Any]]) -> int:
         """Count how many posts from the start of the batch are already in seen_hashes.
@@ -699,12 +687,6 @@ class PostExtractor:
             )
             return None
 
-    # Comment flow timeouts (drawer needs time to open after tap)
-
-    COMMENT_DRAWER_TIMEOUT_MS = 3500
-    COMMENT_SEE_MORE_WAIT_MS = 600
-    COMMENT_CLOSE_WAIT_MS = 200
-
     def _extract_comments_via_details_page(self, post_url: str) -> list[RawComment]:
         """Open details page in a new tab, extract all comments, close tab.
 
@@ -769,10 +751,9 @@ class PostExtractor:
             if containers.count() <= container_index:
                 return []
             container = containers.nth(container_index)
-            # Click only the post-text block (never the ad/smartlink). Prefer the
-            # linktouchable that wraps the post text; fallback to first content block's
-            # touchable; then .cee-media-body. Use a fixed click position to avoid
-            # hitting the inline article link.
+            # Click only the post-text block (never the ad/smartlink). Use the
+            # linktouchable that wraps the post text, or the first content block's
+            # touchable. No fallback; if neither is found we return [] so state is clear.
             post_text_link = container.locator(
                 '[data-testid="post-body"] [data-testid="linktouchable"]:has(.postTextBodySpan)'
             )
@@ -785,10 +766,13 @@ class PostExtractor:
                 touchable_in_block = first_block.locator(
                     '[data-testid="linktouchable"], [role="button"][data-touchable]'
                 )
-                if touchable_in_block.count() > 0:
-                    body = touchable_in_block.first
-                else:
-                    body = container.locator(".cee-media-body").first
+                if touchable_in_block.count() == 0:
+                    logger.warning(
+                        "No post-text click target found for container %d (no linktouchable/postTextBodySpan or content block touchable)",
+                        container_index,
+                    )
+                    return []
+                body = touchable_in_block.first
             body.scroll_into_view_if_needed(timeout=3000)
             self.page.wait_for_timeout(200)
             body.click(position={"x": 15, "y": 15}, timeout=3000)
@@ -885,141 +869,11 @@ class PostExtractor:
             except Exception:
                 pass
 
-    def _extract_comments_for_post(self, container_index: int) -> list[RawComment]:
-        """Open comment drawer for a post, optionally load all, and extract comments.
-
-        Clicks the comment button inside the container at container_index so we
-        target the same card we extracted from (avoiding ad containers).
-
-        Args:
-            container_index: Index of the post container in the DOM (0-based).
-
-        Returns:
-            List of RawComment (author_name, text, timestamp_relative).
-        """
-        try:
-            containers = self.page.locator("div.post, div.js-media-post")
-            total_containers = containers.count()
-            if total_containers <= container_index:
-                return []
-
-            container = containers.nth(container_index)
-            reply_in_container = container.get_by_test_id("post-reply-button")
-            if reply_in_container.count() == 0:
-                return []
-
-            btn = reply_in_container.first
-            btn.scroll_into_view_if_needed()
-            self.page.wait_for_timeout(200)
-            btn.click()
-
-            # Give drawer time to start opening, then wait for content
-
-            self.page.wait_for_timeout(400)
-            comment_list = self.page.locator(
-                ".comment-container, .comment-list-container, .js-media-comment"
-            )
-            try:
-                comment_list.first.wait_for(
-                    state="visible", timeout=self.COMMENT_DRAWER_TIMEOUT_MS
-                )
-            except PlaywrightTimeoutError:
-                self.page.keyboard.press("Escape")
-                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
-                self._scroll_feed_back_after_drawer_close(container_index)
-                return []
-
-            # If "See previous comments" is visible, click to load all (scope to the
-            # drawer we just opened so we match only one element)
-
-            try:
-                drawer = comment_list.first
-                see_more = drawer.locator("[data-testid='seeMoreButton']").first
-                if see_more.is_visible():
-                    see_more.click()
-                    self.page.wait_for_timeout(self.COMMENT_SEE_MORE_WAIT_MS)
-            except Exception:
-                pass
-
-            # Extract from the LAST visible comment drawer (the one we just opened).
-            # DOM order: old drawers stay in the DOM; the newly opened drawer is appended last.
-            result = self.page.evaluate(
-                """
-                (targetContainerIndex) => {
-                    const feed = document.querySelector('[data-testid="feed-container"]');
-                    const containers = feed
-                        ? feed.querySelectorAll('.comment-container')
-                        : document.querySelectorAll('.comment-container');
-                    let lastVisible = null;
-                    for (let i = 0; i < containers.length; i++) {
-                        const c = containers[i];
-                        const nodes = c.querySelectorAll('.js-media-comment');
-                        if (nodes.length === 0) continue;
-                        const rect = c.getBoundingClientRect();
-                        const isVisible = rect.height > 0 && rect.width > 0;
-                        if (!isVisible) continue;
-                        lastVisible = { nodes };
-                    }
-                    if (!lastVisible) return { comments: [] };
-                    const comments = Array.from(lastVisible.nodes).map(el => {
-                        const detail = el.querySelector('[data-testid="comment-detail"]');
-                        const body = el.querySelector('[data-testid="comment-detail-body"]');
-                        const authorLink = detail?.querySelector('.comment-detail-scopeline a');
-                        const ts = el.querySelector('.comment-detail-scopeline-timestamp');
-                        const author = authorLink?.textContent?.trim() ?? '';
-                        const text = body?.innerText?.trim() ?? '';
-                        const timestamp = ts?.textContent?.trim() ?? null;
-                        return { author_name: author, text, timestamp_relative: timestamp };
-                    });
-                    return { comments };
-                }
-                """,
-                container_index,
-            )
-            comments_data = result.get("comments") if isinstance(result, dict) else []
-
-            # Close the drawer (avoid clicking - top of viewport is Create Post prompt)
-            self.page.keyboard.press("Escape")
-            self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
-
-            # Restore scroll position: opening the drawer often scrolls to top; scroll back
-            # down so we don't stay at top and reopen the same post's drawer on next iteration.
-            self._scroll_feed_back_after_drawer_close(container_index)
-
-            out = [
-                RawComment(
-                    author_name=item["author_name"],
-                    text=item["text"],
-                    timestamp_relative=item.get("timestamp_relative"),
-                )
-                for item in (comments_data or [])
-                if item.get("text") or item.get("author_name")
-            ]
-            return out
-
-        except PlaywrightTimeoutError:
-            try:
-                self.page.keyboard.press("Escape")
-                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
-                self._scroll_feed_back_after_drawer_close(container_index)
-            except Exception:
-                pass
-            return []
-        except Exception:
-            try:
-                self.page.keyboard.press("Escape")
-                self.page.wait_for_timeout(self.COMMENT_CLOSE_WAIT_MS)
-                self._scroll_feed_back_after_drawer_close(container_index)
-            except Exception:
-                pass
-            return []
-
     def extract_comments_on_details_page(self) -> list[RawComment]:
         """Extract all comments from the current page (details view).
 
         Use when the browser is on a post details page (URL contains /p/).
-        Waits for the comment area, clicks "See previous comments" until all are
-        loaded, then returns every comment found.
+        Clicks "view more replies/comments" and extracts from comment-thank-container.
 
         Returns:
             List of RawComment (author_name, text, timestamp_relative).
@@ -1027,68 +881,69 @@ class PostExtractor:
         return self._extract_comments_on_page(self.page)
 
     def _extract_comments_on_page(self, page: Page) -> list[RawComment]:
-        """Extract all comments from a details page (any Page instance).
+        """Extract comments when comment-thank-container is already on the page.
 
-        Used by extract_comments_on_details_page (feed tab) and by
-        _extract_comments_via_details_page (new tab). Waits for comment area,
-        clicks "See previous comments" until all loaded, returns comments.
+        Uses "view more replies/comments" buttons and [data-testid="comment-thank-container"].
+        Used when the modal is already open or when comments are rendered inline on a
+        true details view. The main permalink flow uses _extract_comments_via_desktop_modal
+        instead (permalink page is a feed; we open the modal there).
 
         Args:
-            page: Playwright Page that is on a post details view (URL contains /p/).
+            page: Playwright Page that already has comment-thank-container in the DOM.
 
         Returns:
             List of RawComment.
         """
-        SEE_MORE_WAIT_MS = 800
-        MAX_SEE_MORE_CLICKS = 50
-        COMMENT_AREA_TIMEOUT_MS = 8000
+        VIEW_MORE_WAIT_MS = 800
+        MAX_VIEW_MORE_CLICKS = 50
 
-        try:
-            # Wait for comment area: either a comment node or the see-more button
-            comment_or_see_more = page.locator(
-                ".js-media-comment, [data-testid='seeMoreButton']"
-            )
-            comment_or_see_more.first.wait_for(
-                state="visible", timeout=COMMENT_AREA_TIMEOUT_MS
-            )
-        except PlaywrightTimeoutError:
-            logger.warning("No comment area found on details page")
-            return []
-
-        # Load all comments by clicking "See previous comments" until it disappears
-        for _ in range(MAX_SEE_MORE_CLICKS):
-            see_more = page.locator("[data-testid='seeMoreButton']").first
+        view_more = page.get_by_role(
+            "button",
+            name=re.compile(r"view more (replies|comments)", re.IGNORECASE),
+        )
+        if view_more.count() == 0:
+            view_more = page.locator('button:has-text("view more")')
+        for _ in range(MAX_VIEW_MORE_CLICKS):
+            if view_more.count() == 0:
+                break
+            first = view_more.first
             try:
-                if not see_more.is_visible():
+                if not first.is_visible():
                     break
-                see_more.scroll_into_view_if_needed(timeout=2000)
+                first.scroll_into_view_if_needed(timeout=2000)
                 page.wait_for_timeout(200)
-                see_more.click(timeout=2000)
-                page.wait_for_timeout(SEE_MORE_WAIT_MS)
+                first.click(timeout=2000)
+                page.wait_for_timeout(VIEW_MORE_WAIT_MS)
             except Exception:
                 break
 
-        # Extract all .js-media-comment from the page (details view has one main block)
         result = page.evaluate(
             """
             () => {
-                const nodes = document.querySelectorAll('.js-media-comment');
-                const comments = Array.from(nodes).map(el => {
-                    const detail = el.querySelector('[data-testid="comment-detail"]');
-                    const body = el.querySelector('[data-testid="comment-detail-body"]');
-                    const authorLink = detail?.querySelector('.comment-detail-scopeline a');
-                    const ts = el.querySelector('.comment-detail-scopeline-timestamp');
+                const nodes = document.querySelectorAll('[data-testid="comment-thank-container"]');
+                const comments = Array.from(nodes).map(node => {
+                    let block = node.parentElement;
+                    for (let i = 0; i < 5 && block; i++) {
+                        const text = block.innerText || '';
+                        if (text.length > 2 && !text.startsWith('React')) break;
+                        block = block.parentElement;
+                    }
+                    if (!block) return { author_name: '', text: '', timestamp_relative: null };
+                    const authorLink = block.querySelector('a[href*="/profile/"]');
                     const author = authorLink?.textContent?.trim() ?? '';
-                    const text = body?.innerText?.trim() ?? '';
+                    const styled = block.querySelector('[data-testid="styled-text"]');
+                    let text = (styled?.innerText || block.innerText || '').trim();
+                    text = text.replace(/^React\\s*\\d*\\s*$/m, '').trim();
+                    const ts = block.querySelector('[class*="timestamp"], [class*="time"]');
                     const timestamp = ts?.textContent?.trim() ?? null;
-                    return { author_name: author, text, timestamp_relative: timestamp };
+                    return { author_name: author, text: text.slice(0, 5000), timestamp_relative: timestamp };
                 });
                 return { comments };
             }
             """
         )
         comments_data = result.get("comments", []) if isinstance(result, dict) else []
-        out = [
+        return [
             RawComment(
                 author_name=item.get("author_name", ""),
                 text=item.get("text", ""),
@@ -1097,7 +952,6 @@ class PostExtractor:
             for item in (comments_data or [])
             if item.get("text") or item.get("author_name")
         ]
-        return out
 
     def _parse_post_url_from_share_link(self, href: str | None) -> str | None:
         """Parse the post URL from a share link href.
