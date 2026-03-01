@@ -243,14 +243,12 @@ class NextdoorScraper:
         if feed_type not in FEED_URLS:
             raise ValueError(f"Invalid feed type: {feed_type}")
 
-        feed_url = FEED_URLS[feed_type]
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        logger.info("Navigating to %s feed: %s", feed_type, feed_url)
-        self.page.goto(feed_url, timeout=timeout)
-
-        # Wait for feed, then open Filter by sheet (mobile: navbar button with aria-controls) and select feed type
-
+        # After login we're already on the news feed. Do NOT reload — just click the chip.
+        if "news_feed" not in (self.page.url or ""):
+            logger.info("Navigating to news feed")
+            self.page.goto(NEWS_FEED_URL, timeout=timeout)
         try:
             self.page.get_by_test_id("feed-container").wait_for(
                 state="visible", timeout=timeout
@@ -259,24 +257,30 @@ class NextdoorScraper:
             pass
         self._random_delay()
         self.page.evaluate("window.scrollTo(0, 0)")
-        self.page.wait_for_timeout(1000)
+        self.page.wait_for_timeout(800)
 
+        # Click the "Trending" or "Recent" chip (no reload; URL does not change).
+        chip_text = "Trending" if feed_type == "trending" else "Recent"
         try:
-            navbar = self.page.get_by_test_id("navbar")
-            navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
-            dialog = self.page.get_by_role("dialog", name="Filter by")
-            dialog.wait_for(state="visible", timeout=8000)
-            self.page.get_by_role("button", name=feed_type.capitalize()).click(
-                timeout=5000
-            )
-            logger.info("Selected %s feed from Filter by menu", feed_type)
+            # Label is associated with radio; role=radio + name gets the right chip
+            chip = self.page.get_by_role("radio", name=chip_text)
+            chip.wait_for(state="visible", timeout=8000)
+            chip.scroll_into_view_if_needed()
+            self.page.wait_for_timeout(300)
+            chip.click()
+            logger.info("Clicked %s chip", chip_text)
+            self.page.wait_for_timeout(2000)
         except PlaywrightTimeoutError:
-            logger.warning(
-                "Filter by menu not found or failed; feed may still be default (For you)"
-            )
-        self._random_delay()
-
-        self._wait_for_feed_tab_or_continue(feed_type, timeout)
+            # Fallback: click by exact text
+            try:
+                chip = self.page.get_by_text(chip_text, exact=True).first
+                chip.wait_for(state="visible", timeout=3000)
+                chip.scroll_into_view_if_needed()
+                chip.click()
+                logger.info("Clicked %s chip (by text)", chip_text)
+                self.page.wait_for_timeout(2000)
+            except PlaywrightTimeoutError:
+                logger.warning("Chip %r not found", chip_text)
         self._random_delay()
 
     def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
@@ -293,6 +297,40 @@ class NextdoorScraper:
             logger.info("Successfully loaded %s feed", feed_type)
         except PlaywrightTimeoutError:
             logger.debug("Feed tab selector not found (mobile or different UI)")
+
+    def click_first_permalink_to_details(self, timeout_ms: int = 15000) -> bool:
+        """Click the first post permalink in the feed to open the details view.
+
+        Call after navigate_to_feed() when the feed is visible. Waits for the
+        first feed card, finds the first link to /p/..., clicks it, and waits
+        for the URL to change to the details page.
+
+        Args:
+            timeout_ms: Max time to wait for card, link, and navigation.
+
+        Returns:
+            True if details view was opened, False on timeout or no link found.
+        """
+        if not self.page:
+            raise RuntimeError("Browser not started. Call start() first.")
+
+        try:
+            first_card = self.page.get_by_test_id("feed-item-card").first
+            first_card.wait_for(state="visible", timeout=timeout_ms)
+            permalink = first_card.locator('a[href*="/p/"]').first
+            permalink.wait_for(state="visible", timeout=5000)
+            permalink.scroll_into_view_if_needed(timeout=5000)
+            self._random_delay()
+            permalink.click(timeout=5000)
+            self.page.wait_for_url("**/p/**", timeout=timeout_ms)
+            logger.info("Opened details view: %s", self.page.url)
+            return True
+        except PlaywrightTimeoutError as e:
+            logger.warning(
+                "Could not open first permalink to details: %s",
+                e,
+            )
+            return False
 
     def extract_posts(
         self,

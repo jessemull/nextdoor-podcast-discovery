@@ -269,6 +269,7 @@ def main(
     feed_type: str = "recent",
     inspect: bool = False,
     max_posts: int | None = None,
+    open_trending_details: bool = False,
     no_embed: bool = False,
     no_score: bool = False,
     permalink: str | None = None,
@@ -291,6 +292,7 @@ def main(
         feed_type: Which feed to scrape ("recent" or "trending").
         inspect: If True, open browser (iPhone mobile), go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
+        open_trending_details: If True, open trending tab, click first post permalink to details view, then pause.
         no_embed: If True, skip embedding (overrides default).
         no_score: If True, skip LLM scoring (overrides default).
         permalink: If set, fetch single post by URL instead of scraping feed.
@@ -337,6 +339,9 @@ def main(
         )
         logger.info("Exiting with code 1")
         return 1
+
+    if open_trending_details:
+        feed_type = "trending"
 
     # Use default if not specified
 
@@ -412,8 +417,10 @@ def main(
 
         # Start browser (visible flag overrides config)
         headless = False if visible else SCRAPER_CONFIG["headless"]
+        if open_trending_details or inspect:
+            headless = False
 
-        with NextdoorScraper(headless=False if inspect else headless) as scraper:
+        with NextdoorScraper(headless=headless) as scraper:
             # Step 1: Try to load existing session
 
             cookies = session_manager.get_cookies()
@@ -449,6 +456,40 @@ def main(
             scraper.navigate_to_feed(feed_type)
 
             # Inspect mode: pause so user can open DevTools and inspect DOM (e.g. Filter by menu)
+            # Open-trending-details mode: open trending, click first permalink to details, then pause
+
+            if open_trending_details:
+                ok = scraper.click_first_permalink_to_details()
+                if ok:
+                    extractor = PostExtractor(
+                        scraper.page, feed_type="trending", max_posts=1
+                    )
+                    comments = extractor.extract_comments_on_details_page()
+                    logger.info(
+                        "Comments extracted on details page: %d",
+                        len(comments),
+                    )
+                    for i, c in enumerate(comments):
+                        snippet = (c.text or "")[:80]
+                        if (c.text or "") and len(c.text or "") > 80:
+                            snippet += "…"
+                        logger.info(
+                            "  [%d] %s: %s (%s)",
+                            i + 1,
+                            c.author_name or "(no author)",
+                            snippet,
+                            c.timestamp_relative or "",
+                        )
+                    print()
+                    print(
+                        "Details view is open. Inspect the page (and any bugs) — "
+                        "the browser will stay open until you press Enter."
+                    )
+                    input()
+                else:
+                    logger.warning("Could not open first permalink; browser will close.")
+                logger.info("Exiting with code 0")
+                return 0
 
             if inspect:
                 print()
@@ -669,6 +710,12 @@ if __name__ == "__main__":
         help=f"Maximum posts to scrape (default: {SCRAPER_CONFIG['max_posts_per_run']})",  # noqa: E501
     )
     parser.add_argument(
+        "--open-trending-details",
+        action="store_true",
+        dest="open_trending_details",
+        help="Open trending tab, click first post permalink to details view, then pause",
+    )
+    parser.add_argument(
         "--permalink",
         dest="permalink",
         type=str,
@@ -730,6 +777,7 @@ if __name__ == "__main__":
             max_posts=args.max_posts,
             no_embed=getattr(args, "no_embed", False),
             no_score=getattr(args, "no_score", False),
+            open_trending_details=getattr(args, "open_trending_details", False),
             permalink=args.permalink,
             post_id=args.post_id,
             repeat_threshold=args.repeat_threshold,

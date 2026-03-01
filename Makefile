@@ -1,4 +1,4 @@
-.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web scrape-sample inspect-scraper test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
+.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web scrape-sample inspect-scraper open-trending-details test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
 
 # Default target
 help:
@@ -27,6 +27,7 @@ help:
 	@echo "  scrape-sample    Scrape 25 posts from trending with scoring and embeddings (full pipeline)"
 	@echo "  scrape-trending-300  Scrape, score, and embed 300 trending posts (long run; use PYTHONUNBUFFERED=1 and tee for logs)"
 	@echo "  inspect-scraper  Run scraper in inspect mode (browser pauses for DOM inspection)"
+	@echo "  open-trending-details  Open trending tab, click first post to details view, then pause"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint             Run all linters"
@@ -140,6 +141,9 @@ scrape-trending-300:
 
 inspect-scraper:
 	cd scraper && python -m src.main --inspect
+
+open-trending-details:
+	cd scraper && python -m src.main --open-trending-details
 
 dev-web:
 	cd web && npm run dev

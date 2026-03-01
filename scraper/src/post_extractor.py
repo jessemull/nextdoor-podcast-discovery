@@ -5,6 +5,7 @@ __all__ = ["PostExtractor", "RawComment", "RawPost"]
 import hashlib
 import logging
 import random
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -440,6 +441,9 @@ class PostExtractor:
     ) -> int:
         """Process a batch of raw posts and add to posts list.
 
+        Each post: get permalink (Share on feed), then open details in a new tab
+        for comments and close it. Feed tab is never navigated away.
+
         Args:
             raw_posts: List of raw post dicts from JavaScript.
             posts: Accumulator list to add processed posts to.
@@ -501,7 +505,9 @@ class PostExtractor:
 
         container_index = raw.get("containerIndex", raw.get("postIndex", 0))
         post_url = self.extract_permalink(container_index)
-        comments = self._extract_comments_for_post(container_index)
+
+        # Desktop: open post modal (double-click body), extract comments from modal
+        comments = self._extract_comments_via_desktop_modal(container_index)
 
         return RawPost(
             author_id=author_id,
@@ -699,6 +705,168 @@ class PostExtractor:
     COMMENT_SEE_MORE_WAIT_MS = 600
     COMMENT_CLOSE_WAIT_MS = 200
 
+    def _extract_comments_via_details_page(self, post_url: str) -> list[RawComment]:
+        """Open details page in a new tab, extract all comments, close tab.
+
+        Leaves the feed tab untouched so permalink extraction and feed state
+        are never broken.
+
+        Args:
+            post_url: Full URL to the post details page (e.g. https://nextdoor.com/p/XXX).
+
+        Returns:
+            List of RawComment from the details page.
+        """
+        if not post_url or "/p/" not in post_url:
+            return []
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        new_page = self.page.context.new_page()
+        try:
+            new_page.goto(post_url, timeout=timeout)
+            new_page.wait_for_url("**/p/**", timeout=timeout)
+            comments = self._extract_comments_on_page(new_page)
+            logger.info(
+                "Comments via details page (new tab): %d for %s",
+                len(comments),
+                post_url,
+            )
+            return comments
+        except PlaywrightTimeoutError:
+            logger.warning(
+                "Details-page comment extraction failed: %s",
+                post_url,
+            )
+            return []
+        except Exception as e:
+            logger.warning(
+                "Details-page comment extraction error for %s: %s",
+                post_url,
+                e,
+            )
+            return []
+        finally:
+            new_page.close()
+
+    def _extract_comments_via_desktop_modal(self, container_index: int) -> list[RawComment]:
+        """Open the desktop post modal (double-click post body), load all comments, extract, close.
+
+        On desktop, clicking the post text paragraph twice opens a modal with all
+        comments. We click "view more replies" / "view more comments" until none
+        left, then extract from [data-testid="comment-thank-container"].
+
+        Args:
+            container_index: Index of the post card (div.post, div.js-media-post).
+
+        Returns:
+            List of RawComment from the modal.
+        """
+        MODAL_WAIT_MS = 3000
+        VIEW_MORE_WAIT_MS = 800
+        MAX_VIEW_MORE_CLICKS = 50
+
+        try:
+            containers = self.page.locator("div.post, div.js-media-post")
+            if containers.count() <= container_index:
+                return []
+            container = containers.nth(container_index)
+            # Post body: click twice to open the comments modal (desktop)
+            body = container.locator(".cee-media-body").first
+            body.scroll_into_view_if_needed(timeout=3000)
+            self.page.wait_for_timeout(200)
+            body.click(timeout=3000)
+            self.page.wait_for_timeout(400)
+            body.click(timeout=3000)
+            self.page.wait_for_timeout(500)
+            # Wait for expanded post modal
+            self.page.locator("#expanded-post-wrapper").wait_for(
+                state="visible", timeout=MODAL_WAIT_MS
+            )
+            self.page.wait_for_timeout(300)
+            # Click "view more replies" / "view more comments" until all loaded (scope to modal)
+            modal = self.page.locator("#expanded-post-wrapper")
+            for _ in range(MAX_VIEW_MORE_CLICKS):
+                view_more = modal.get_by_role(
+                    "button",
+                    name=re.compile(r"view more (replies|comments)", re.IGNORECASE),
+                )
+                if view_more.count() == 0:
+                    view_more = modal.locator('button:has-text("view more")')
+                if view_more.count() == 0:
+                    break
+                first = view_more.first
+                try:
+                    if not first.is_visible():
+                        break
+                    first.scroll_into_view_if_needed(timeout=2000)
+                    self.page.wait_for_timeout(200)
+                    first.click(timeout=2000)
+                    self.page.wait_for_timeout(VIEW_MORE_WAIT_MS)
+                except Exception:
+                    break
+            # Extract comments from modal: [data-testid="comment-thank-container"] and surrounding block
+            result = self.page.evaluate(
+                """
+                () => {
+                    const root = document.querySelector('#expanded-post-wrapper');
+                    if (!root) return { comments: [] };
+                    const nodes = root.querySelectorAll('[data-testid="comment-thank-container"]');
+                    const comments = Array.from(nodes).map(node => {
+                        let block = node.parentElement;
+                        for (let i = 0; i < 5 && block; i++) {
+                            const text = block.innerText || '';
+                            if (text.length > 2 && !text.startsWith('React')) break;
+                            block = block.parentElement;
+                        }
+                        if (!block) return { author_name: '', text: '', timestamp_relative: null };
+                        const authorLink = block.querySelector('a[href*="/profile/"]');
+                        const author = authorLink?.textContent?.trim() ?? '';
+                        const styled = block.querySelector('[data-testid="styled-text"]');
+                        let text = (styled?.innerText || block.innerText || '').trim();
+                        text = text.replace(/^React\\s*\\d*\\s*$/m, '').trim();
+                        const ts = block.querySelector('[class*="timestamp"], [class*="time"]');
+                        const timestamp = ts?.textContent?.trim() ?? null;
+                        return { author_name: author, text: text.slice(0, 5000), timestamp_relative: timestamp };
+                    });
+                    return { comments };
+                }
+                """
+            )
+            comments_data = result.get("comments", []) if isinstance(result, dict) else []
+            out = [
+                RawComment(
+                    author_name=item.get("author_name", ""),
+                    text=item.get("text", ""),
+                    timestamp_relative=item.get("timestamp_relative"),
+                )
+                for item in (comments_data or [])
+                if item.get("text") or item.get("author_name")
+            ]
+            logger.info(
+                "Comments via desktop modal: %d for container %d",
+                len(out),
+                container_index,
+            )
+            return out
+        except PlaywrightTimeoutError:
+            logger.warning(
+                "Desktop modal comment extraction failed for container %d",
+                container_index,
+            )
+            return []
+        except Exception as e:
+            logger.warning(
+                "Desktop modal comment extraction error for container %d: %s",
+                container_index,
+                e,
+            )
+            return []
+        finally:
+            try:
+                self.page.keyboard.press("Escape")
+                self.page.wait_for_timeout(SCRAPER_CONFIG["modal_close_delay_ms"])
+            except Exception:
+                pass
+
     def _extract_comments_for_post(self, container_index: int) -> list[RawComment]:
         """Open comment drawer for a post, optionally load all, and extract comments.
 
@@ -827,6 +995,91 @@ class PostExtractor:
             except Exception:
                 pass
             return []
+
+    def extract_comments_on_details_page(self) -> list[RawComment]:
+        """Extract all comments from the current page (details view).
+
+        Use when the browser is on a post details page (URL contains /p/).
+        Waits for the comment area, clicks "See previous comments" until all are
+        loaded, then returns every comment found.
+
+        Returns:
+            List of RawComment (author_name, text, timestamp_relative).
+        """
+        return self._extract_comments_on_page(self.page)
+
+    def _extract_comments_on_page(self, page: Page) -> list[RawComment]:
+        """Extract all comments from a details page (any Page instance).
+
+        Used by extract_comments_on_details_page (feed tab) and by
+        _extract_comments_via_details_page (new tab). Waits for comment area,
+        clicks "See previous comments" until all loaded, returns comments.
+
+        Args:
+            page: Playwright Page that is on a post details view (URL contains /p/).
+
+        Returns:
+            List of RawComment.
+        """
+        SEE_MORE_WAIT_MS = 800
+        MAX_SEE_MORE_CLICKS = 50
+        COMMENT_AREA_TIMEOUT_MS = 8000
+
+        try:
+            # Wait for comment area: either a comment node or the see-more button
+            comment_or_see_more = page.locator(
+                ".js-media-comment, [data-testid='seeMoreButton']"
+            )
+            comment_or_see_more.first.wait_for(
+                state="visible", timeout=COMMENT_AREA_TIMEOUT_MS
+            )
+        except PlaywrightTimeoutError:
+            logger.warning("No comment area found on details page")
+            return []
+
+        # Load all comments by clicking "See previous comments" until it disappears
+        for _ in range(MAX_SEE_MORE_CLICKS):
+            see_more = page.locator("[data-testid='seeMoreButton']").first
+            try:
+                if not see_more.is_visible():
+                    break
+                see_more.scroll_into_view_if_needed(timeout=2000)
+                page.wait_for_timeout(200)
+                see_more.click(timeout=2000)
+                page.wait_for_timeout(SEE_MORE_WAIT_MS)
+            except Exception:
+                break
+
+        # Extract all .js-media-comment from the page (details view has one main block)
+        result = page.evaluate(
+            """
+            () => {
+                const nodes = document.querySelectorAll('.js-media-comment');
+                const comments = Array.from(nodes).map(el => {
+                    const detail = el.querySelector('[data-testid="comment-detail"]');
+                    const body = el.querySelector('[data-testid="comment-detail-body"]');
+                    const authorLink = detail?.querySelector('.comment-detail-scopeline a');
+                    const ts = el.querySelector('.comment-detail-scopeline-timestamp');
+                    const author = authorLink?.textContent?.trim() ?? '';
+                    const text = body?.innerText?.trim() ?? '';
+                    const timestamp = ts?.textContent?.trim() ?? null;
+                    return { author_name: author, text, timestamp_relative: timestamp };
+                });
+                return { comments };
+            }
+            """
+        )
+        comments_data = result.get("comments", []) if isinstance(result, dict) else []
+        out = [
+            RawComment(
+                author_name=item.get("author_name", ""),
+                text=item.get("text", ""),
+                timestamp_relative=item.get("timestamp_relative"),
+            )
+            for item in (comments_data or [])
+            if item.get("text") or item.get("author_name")
+        ]
+        return out
 
     def _parse_post_url_from_share_link(self, href: str | None) -> str | None:
         """Parse the post URL from a share link href.

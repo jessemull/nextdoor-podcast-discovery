@@ -98,10 +98,8 @@ class Selectors(TypedDict):
 
 # Scraper settings
 #
-# Mobile viewport (iPhone): Nextdoor's mobile UI is what we target; feed layout,
-# Filter-by flow, and selectors are built for this. Desktop uses different DOM
-# and would need different selectors. Mobile may also be less likely to trigger
-# bot detection than a headless desktop UA, but the main reason is UI consistency.
+# Desktop Chrome: we use desktop view so we can open the post modal (click post
+# body twice) and scrape comments from the modal, including "view more" replies.
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
@@ -115,9 +113,10 @@ SCRAPER_CONFIG: ScraperConfig = {
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
     "user_agent": (
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
     ),
-    "viewport": {"height": 812, "width": 375},
+    "viewport": {"height": 900, "width": 1280},
 }
 
 # URLs
@@ -132,7 +131,8 @@ FEED_URLS = {
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
 
-# Selectors (role-based for reliability)
+# Selectors (desktop: SIGNIN.html, TRENDING.html)
+# Login: desktop uses data-testid and id; role=textbox works for inputs with aria-label.
 
 SELECTORS: Selectors = {
     # CAPTCHA detection
@@ -142,17 +142,18 @@ SELECTORS: Selectors = {
         "[class*='captcha']",
         "[id*='captcha']",
     ],
-    # Login page
-    "email_input": 'role=textbox[name="Email or mobile number"]',
+    # Login page (desktop SIGNIN.html: id_email, id_password, data-testid=signin_button)
+    "email_input": '[data-testid="email-address-input"], #id_email',
     "error_indicators": [
         "[class*='error']",
         "[class*='alert']",
         "[role='alert']",
     ],
-    "feed_tab_recent": 'role=radio[name="Recent"]',
-    "feed_tab_trending": 'role=radio[name="Trending"]',
-    "login_button": 'role=button[name="Log in"]',
-    "password_input": 'role=textbox[name="Password"]',
+    # Feed tabs (desktop TRENDING.html: simple tab buttons)
+    "feed_tab_recent": 'role=tab[name="Most Recent"]',
+    "feed_tab_trending": 'role=tab[name="Trending"]',
+    "login_button": '[data-testid="signin_button"], #signin_button',
+    "password_input": '[data-testid="password-input"], #id_password',
 }
 
 

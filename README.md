@@ -192,6 +192,9 @@ Run **`make help`** for the short list. Targets by section:
 | `build` | `npm run build` in web |
 | `dev-scraper` | `python -m src.main --dry-run` in scraper |
 | `dev-web` | `npm run dev` in web |
+| `inspect-scraper` | Open browser on feed, pause for DOM inspection |
+| `open-trending-details` | Open trending tab, click first post to details view, pause for inspection |
+| `scrape-sample` | Scrape 25 trending posts (full pipeline) |
 
 ### Makefile — Quality
 
