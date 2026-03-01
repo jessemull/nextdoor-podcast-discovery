@@ -71,7 +71,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-HEARTBEAT_INTERVAL_SEC = 60
+HEARTBEAT_INTERVAL_SEC = 300
 
 
 def _heartbeat_loop(start_monotonic: float) -> None:
@@ -515,6 +515,11 @@ def main(
             )
             stored = 0
             total_extracted = 0
+            run_stats: dict[str, int] = {
+                "comment_fallbacks": 0,
+                "comment_mismatches": 0,
+                "modal_failures": 0,
+            }
             storage_stats: dict[str, int] | None = None
             if not dry_run:
                 storage = PostStorage(session_manager.supabase)
@@ -522,6 +527,7 @@ def main(
             for batch in scraper.extract_post_batches(
                 feed_type=feed_type,
                 repeat_threshold=repeat_threshold,
+                run_stats=run_stats,
                 safety_cap=safety_cap,
             ):
                 total_extracted += len(batch)
@@ -603,6 +609,21 @@ def main(
                     feed_type,
                     total_extracted,
                 )
+
+            # Run summary: warnings, failures, and fallbacks
+            fallbacks = run_stats.get("comment_fallbacks", 0)
+            mismatches = run_stats.get("comment_mismatches", 0)
+            modal_failures = run_stats.get("modal_failures", 0)
+            total_warnings = mismatches + modal_failures
+            logger.info(
+                "Run summary: extracted=%d, stored=%s; comment_fallbacks=%d (details page); warnings: comment_mismatch=%d, modal_failure=%d (%d total)",
+                total_extracted,
+                storage_stats["inserted"] if storage_stats else "n/a",
+                fallbacks,
+                mismatches,
+                modal_failures,
+                total_warnings,
+            )
 
             if not dry_run:
                 try:

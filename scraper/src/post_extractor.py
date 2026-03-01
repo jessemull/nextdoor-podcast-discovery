@@ -166,6 +166,7 @@ class PostExtractor:
         feed_type: str = "recent",
         max_posts: int = 250,
         repeat_threshold: int = 10,
+        run_stats: dict[str, int] | None = None,
     ) -> None:
         """Initialize the extractor.
 
@@ -175,11 +176,14 @@ class PostExtractor:
             max_posts: Maximum number of posts to extract.
             repeat_threshold: For Recent feed only: stop when this many consecutive
                 already-seen posts appear from the start of a batch.
+            run_stats: Optional dict to accumulate warning/error counts for run summary.
+                Keys: "comment_fallbacks", "comment_mismatches", "modal_failures".
         """
         self.feed_type = feed_type
         self.max_posts = max_posts
         self.page = page
         self.repeat_threshold = repeat_threshold
+        self.run_stats = run_stats
         self.seen_hashes: set[str] = set()
 
     def extract_posts(self) -> list[RawPost]:
@@ -452,6 +456,10 @@ class PostExtractor:
             timestamp_relative=raw.get("timestamp") or None,
         )
         if post.comment_count is not None and post.comment_count != len(post.comments):
+            if self.run_stats is not None:
+                self.run_stats["comment_mismatches"] = (
+                    self.run_stats.get("comment_mismatches", 0) + 1
+                )
             logger.warning(
                 "Comment count mismatch: UI=%d, scraped=%d (post_url=%s)",
                 post.comment_count,
@@ -536,6 +544,18 @@ class PostExtractor:
         # Desktop: open post modal (double-click body), extract comments from modal
         comments = self._extract_comments_via_desktop_modal(container_index)
 
+        # Fallback: when modal path returned no comments but we have a permalink (and
+        # optionally UI said there are comments), open details page in a new tab.
+        # Permalink flow succeeds where modal often fails after scrolling (stale refs, timing).
+        if not comments and post_url and "/p/" in post_url:
+            comment_count_ui = raw.get("commentCount")
+            if comment_count_ui is None or comment_count_ui > 0:
+                if self.run_stats is not None:
+                    self.run_stats["comment_fallbacks"] = (
+                        self.run_stats.get("comment_fallbacks", 0) + 1
+                    )
+                comments = self._extract_comments_via_details_page(post_url)
+
         post = RawPost(
             author_id=author_id,
             author_name=author_name,
@@ -550,6 +570,10 @@ class PostExtractor:
             timestamp_relative=raw.get("timestamp") or None,
         )
         if post.comment_count is not None and post.comment_count != len(post.comments):
+            if self.run_stats is not None:
+                self.run_stats["comment_mismatches"] = (
+                    self.run_stats.get("comment_mismatches", 0) + 1
+                )
             logger.warning(
                 "Comment count mismatch: UI=%d, scraped=%d (post_url=%s)",
                 post.comment_count,
@@ -737,7 +761,7 @@ class PostExtractor:
             new_page.goto(post_url, timeout=timeout)
             new_page.wait_for_url("**/p/**", timeout=timeout)
             comments = self._extract_comments_on_page(new_page)
-            logger.info(
+            logger.debug(
                 "Comments via details page (new tab): %d for %s",
                 len(comments),
                 post_url,
@@ -773,8 +797,8 @@ class PostExtractor:
         Returns:
             List of RawComment from the modal.
         """
-        MODAL_WAIT_MS = 3000
-        COMMENTS_LOAD_WAIT_MS = 8000
+        MODAL_WAIT_MS = 5000
+        COMMENTS_LOAD_WAIT_MS = 12000
         VIEW_MORE_WAIT_MS = 800
         MAX_VIEW_MORE_CLICKS = 50
 
@@ -899,19 +923,22 @@ class PostExtractor:
                 for item in (comments_data or [])
                 if item.get("text") or item.get("author_name")
             ]
-            logger.info(
-                "Comments via desktop modal: %d for container %d",
-                len(out),
-                container_index,
-            )
             return out
         except PlaywrightTimeoutError:
+            if self.run_stats is not None:
+                self.run_stats["modal_failures"] = (
+                    self.run_stats.get("modal_failures", 0) + 1
+                )
             logger.warning(
                 "Desktop modal comment extraction failed for container %d",
                 container_index,
             )
             return []
         except Exception as e:
+            if self.run_stats is not None:
+                self.run_stats["modal_failures"] = (
+                    self.run_stats.get("modal_failures", 0) + 1
+                )
             logger.warning(
                 "Desktop modal comment extraction error for container %d: %s",
                 container_index,

@@ -374,6 +374,7 @@ class NextdoorScraper:
         self,
         feed_type: str = "recent",
         repeat_threshold: int | None = None,
+        run_stats: dict[str, int] | None = None,
         safety_cap: int = 500,
     ) -> Iterator[list[RawPost]]:
         """Yield batches of posts after each scroll for pipeline store-until-N flow.
@@ -384,6 +385,7 @@ class NextdoorScraper:
             feed_type: Which feed is active ("recent" or "trending").
             repeat_threshold: For Recent feed, stop after this many consecutive
                 already-seen. Defaults to config.
+            run_stats: Optional dict to accumulate comment_mismatches and modal_failures.
             safety_cap: Stop yielding after this many total posts (default 500).
 
         Yields:
@@ -400,6 +402,7 @@ class NextdoorScraper:
             feed_type=feed_type,
             max_posts=safety_cap,
             repeat_threshold=repeat_threshold,
+            run_stats=run_stats,
         )
         yield from extractor.extract_post_batches(safety_cap=safety_cap)
 
