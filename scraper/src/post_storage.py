@@ -124,6 +124,7 @@ class PostStorage:
             posts_data.append(
                 {
                     "author_name": post.author_name or None,
+                    "comment_count": post.comment_count,
                     "comments": comments_payload,
                     "hash": post.content_hash,
                     "image_urls": post.image_urls,
@@ -264,6 +265,7 @@ class PostStorage:
         ]
         post_data: dict[str, Any] = {
             "author_name": post.author_name or None,
+            "comment_count": post.comment_count,
             "comments": comments_payload,
             "hash": post.content_hash,
             "image_urls": post.image_urls,
@@ -332,6 +334,7 @@ class PostStorage:
         ]
 
         update_data: dict[str, Any] = {
+            "comment_count": post.comment_count,
             "comments": comments_payload,
             "image_urls": post.image_urls,
             "reaction_count": post.reaction_count,

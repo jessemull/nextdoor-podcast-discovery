@@ -48,6 +48,7 @@ class RawPost:
 
     # Optional fields (alphabetized)
 
+    comment_count: int | None = None
     comments: list["RawComment"] = field(default_factory=list)
     image_urls: list[str] = field(default_factory=list)
     neighborhood: str | None = None
@@ -71,6 +72,7 @@ def _get_extraction_script(min_content_length: int) -> str:
     content_sel = '[data-testid="styled-text"]'
     image_sel = '[data-testid="resized-image"]'
     reaction_sel = '[data-testid="reaction-button-text"]'
+    reply_sel = '[data-testid="post-reply-button"]'
 
     return f"""
 (() => {{
@@ -81,6 +83,7 @@ def _get_extraction_script(min_content_length: int) -> str:
     const CONTENT_SEL = '{content_sel}';
     const IMAGE_SEL = '{image_sel}';
     const REACTION_SEL = '{reaction_sel}';
+    const REPLY_SEL = '{reply_sel}';
 
     const containers = document.querySelectorAll('div.post, div.js-media-post');
     containers.forEach((el, containerIndex) => {{
@@ -121,8 +124,11 @@ def _get_extraction_script(min_content_length: int) -> str:
             const rxEl = el.querySelector(REACTION_SEL);
             const reactionCount = parseInt(rxEl?.textContent || '0', 10) || 0;
 
+            const replyEl = el.querySelector(REPLY_SEL);
+            const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
+
             posts.push({{
-                authorId, authorName, content, imageUrls,
+                authorId, authorName, commentCount, content, imageUrls,
                 neighborhood, reactionCount, timestamp,
                 containerIndex,
                 postIndex: posts.length
@@ -426,9 +432,10 @@ class PostExtractor:
 
         content_hash = self._generate_hash(author_id, content)
 
-        return RawPost(
+        post = RawPost(
             author_id=author_id,
             author_name=author_name,
+            comment_count=raw.get("commentCount"),
             comments=comments,
             content=content,
             content_hash=content_hash,
@@ -438,6 +445,14 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
+        if post.comment_count is not None and post.comment_count != len(post.comments):
+            logger.warning(
+                "Comment count mismatch: UI=%d, scraped=%d (post_url=%s)",
+                post.comment_count,
+                len(post.comments),
+                post.post_url or "?",
+            )
+        return post
 
     def _process_batch(
         self,
@@ -515,9 +530,10 @@ class PostExtractor:
         # Desktop: open post modal (double-click body), extract comments from modal
         comments = self._extract_comments_via_desktop_modal(container_index)
 
-        return RawPost(
+        post = RawPost(
             author_id=author_id,
             author_name=author_name,
+            comment_count=raw.get("commentCount"),
             comments=comments,
             content=content,
             content_hash=content_hash,
@@ -527,6 +543,14 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
+        if post.comment_count is not None and post.comment_count != len(post.comments):
+            logger.warning(
+                "Comment count mismatch: UI=%d, scraped=%d (post_url=%s)",
+                post.comment_count,
+                len(post.comments),
+                post.post_url or "?",
+            )
+        return post
 
     def _count_consecutive_already_seen(self, raw_posts: list[dict[str, Any]]) -> int:
         """Count how many posts from the start of the batch are already in seen_hashes.
@@ -730,11 +754,12 @@ class PostExtractor:
             new_page.close()
 
     def _extract_comments_via_desktop_modal(self, container_index: int) -> list[RawComment]:
-        """Open the desktop post modal (double-click post body), load all comments, extract, close.
+        """Open the desktop post modal (click post body once or twice), load all comments, extract, close.
 
-        On desktop, clicking the post text paragraph twice opens a modal with all
-        comments. We click "view more replies" / "view more comments" until none
-        left, then extract from [data-testid="comment-thank-container"].
+        Cards with "... see more" need two clicks (first expands body, second opens modal).
+        Cards without it need one click to open the modal. Then we click "view more
+        replies/comments" and "See X more replies" until none left, and extract from
+        [data-testid="comment-thank-container"].
 
         Args:
             container_index: Index of the post card (div.post, div.js-media-post).
@@ -775,9 +800,16 @@ class PostExtractor:
                 body = touchable_in_block.first
             body.scroll_into_view_if_needed(timeout=3000)
             self.page.wait_for_timeout(200)
+            # Cards with "... see more" need two clicks: first expands body, second opens modal.
+            # Cards without it need one click to open the modal (second click would close it).
+            has_see_more = (
+                container.locator("[data-testid='post-body']").get_by_text("see more").count()
+                > 0
+            )
             body.click(position={"x": 15, "y": 15}, timeout=3000)
-            self.page.wait_for_timeout(400)
-            body.click(position={"x": 15, "y": 15}, timeout=3000)
+            if has_see_more:
+                self.page.wait_for_timeout(400)
+                body.click(position={"x": 15, "y": 15}, timeout=3000)
             self.page.wait_for_timeout(500)
             # Wait for expanded post modal
             self.page.locator("#expanded-post-wrapper").wait_for(
