@@ -214,16 +214,22 @@ class PostStorage:
         return stats
 
     def store_post_or_update(
-        self, post: RawPost, post_id: str | None = None
+        self,
+        post: RawPost,
+        post_id: str | None = None,
+        update_if_exists: bool = False,
     ) -> dict[str, Any]:
         """Store a single post: insert if new, update if existing.
 
         Args:
             post: RawPost to store.
             post_id: If provided, update existing post; otherwise insert new.
+            update_if_exists: If True and insert fails due to duplicate, update the
+                existing row with fresh data (e.g. comments). Used for permalink re-runs.
+                If False, duplicate is treated as skip (no update). Used for main feed.
 
         Returns:
-            Dict with keys: action ("inserted" | "updated"), post_id, errors (bool).
+            Dict with keys: action ("inserted" | "updated" | "skipped"), post_id, errors (bool).
         """
         result: dict[str, Any] = {
             "action": "inserted",
@@ -287,8 +293,16 @@ class PostStorage:
                     post.post_url, post.content_hash
                 )
                 if existing:
-                    result["action"] = "skipped"
-                    result["post_id"] = existing.get("id")
+                    existing_id = existing.get("id")
+                    if update_if_exists and existing_id:
+                        if self.update_post(existing_id, post):
+                            result["action"] = "updated"
+                            result["post_id"] = existing_id
+                        else:
+                            result["errors"] = True
+                    else:
+                        result["action"] = "skipped"
+                        result["post_id"] = existing_id
             else:
                 logger.error(
                     "Failed to insert post: %s (%s)",

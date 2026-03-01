@@ -236,7 +236,9 @@ def _run_permalink_fetch(
                 return 0
 
             storage = PostStorage(session_manager.supabase)
-            result = storage.store_post_or_update(post, post_id=post_id)
+            result = storage.store_post_or_update(
+                post, post_id=post_id, update_if_exists=True
+            )
 
             if result["errors"]:
                 logger.error("Failed to store/update post")

@@ -784,15 +784,17 @@ class PostExtractor:
                 state="visible", timeout=MODAL_WAIT_MS
             )
             self.page.wait_for_timeout(300)
-            # Click "view more replies" / "view more comments" until all loaded (scope to modal)
+            # Click "view more replies/comments" and "See X more replies" until all loaded (scope to modal)
             modal = self.page.locator("#expanded-post-wrapper")
             for _ in range(MAX_VIEW_MORE_CLICKS):
                 view_more = modal.get_by_role(
                     "button",
-                    name=re.compile(r"view more (replies|comments)", re.IGNORECASE),
+                    name=re.compile(r"view more (repl(y|ies)|comment(s)?)", re.IGNORECASE),
                 )
                 if view_more.count() == 0:
                     view_more = modal.locator('button:has-text("view more")')
+                if view_more.count() == 0:
+                    view_more = modal.locator("[data-testid='seeMoreButton']")
                 if view_more.count() == 0:
                     break
                 first = view_more.first
@@ -897,13 +899,15 @@ class PostExtractor:
         VIEW_MORE_WAIT_MS = 800
         MAX_VIEW_MORE_CLICKS = 50
 
-        view_more = page.get_by_role(
-            "button",
-            name=re.compile(r"view more (replies|comments)", re.IGNORECASE),
-        )
-        if view_more.count() == 0:
-            view_more = page.locator('button:has-text("view more")')
         for _ in range(MAX_VIEW_MORE_CLICKS):
+            view_more = page.get_by_role(
+                "button",
+                name=re.compile(r"view more (repl(y|ies)|comment(s)?)", re.IGNORECASE),
+            )
+            if view_more.count() == 0:
+                view_more = page.locator('button:has-text("view more")')
+            if view_more.count() == 0:
+                view_more = page.locator("[data-testid='seeMoreButton']")
             if view_more.count() == 0:
                 break
             first = view_more.first
