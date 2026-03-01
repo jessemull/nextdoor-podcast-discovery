@@ -769,13 +769,31 @@ class PostExtractor:
             if containers.count() <= container_index:
                 return []
             container = containers.nth(container_index)
-            # Post body: click twice to open the comments modal (desktop)
-            body = container.locator(".cee-media-body").first
+            # Click only the post-text block (never the ad/smartlink). Prefer the
+            # linktouchable that wraps the post text; fallback to first content block's
+            # touchable; then .cee-media-body. Use a fixed click position to avoid
+            # hitting the inline article link.
+            post_text_link = container.locator(
+                '[data-testid="post-body"] [data-testid="linktouchable"]:has(.postTextBodySpan)'
+            )
+            if post_text_link.count() > 0:
+                body = post_text_link.first
+            else:
+                first_block = container.locator(
+                    '[data-testid="post-body"] .content > div'
+                ).first
+                touchable_in_block = first_block.locator(
+                    '[data-testid="linktouchable"], [role="button"][data-touchable]'
+                )
+                if touchable_in_block.count() > 0:
+                    body = touchable_in_block.first
+                else:
+                    body = container.locator(".cee-media-body").first
             body.scroll_into_view_if_needed(timeout=3000)
             self.page.wait_for_timeout(200)
-            body.click(timeout=3000)
+            body.click(position={"x": 15, "y": 15}, timeout=3000)
             self.page.wait_for_timeout(400)
-            body.click(timeout=3000)
+            body.click(position={"x": 15, "y": 15}, timeout=3000)
             self.page.wait_for_timeout(500)
             # Wait for expanded post modal
             self.page.locator("#expanded-post-wrapper").wait_for(
