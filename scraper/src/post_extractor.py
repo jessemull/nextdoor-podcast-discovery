@@ -22,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 MIN_CONTENT_LENGTH = 10
 
+# Match "view more comments", "See more comments", "see 3 more replies", "View 5 more replies", etc.
+VIEW_MORE_BUTTON_PATTERN = re.compile(
+    r"(view|see)\s+(\d+\s+)?more\s+(repl(y|ies)|comment(s)?)",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class RawComment:
