@@ -43,6 +43,10 @@ def parse_relative_timestamp(relative: str | None) -> datetime | None:
     m = re.match(r"^(\d+)\s*h(?:our)?s?$", text)
     if m:
         return now - timedelta(hours=int(m.group(1)))
+    # N hr / N hrs (Nextdoor abbreviation)
+    m = re.match(r"^(\d+)\s*hrs?$", text)
+    if m:
+        return now - timedelta(hours=int(m.group(1)))
     # N days
     m = re.match(r"^(\d+)\s*d(?:ay)?s?$", text)
     if m:

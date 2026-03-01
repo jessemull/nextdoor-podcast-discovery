@@ -26,11 +26,16 @@ class TestParseRelativeTimestamp:
         assert (datetime.now(timezone.utc) - result).total_seconds() >= 4 * 60
 
     def test_parses_hours(self) -> None:
-        """Should parse N hours and 'N hours ago'."""
+        """Should parse N hours, 'N hours ago', and Nextdoor 'N hr' / 'N hrs'."""
         result = parse_relative_timestamp("2h")
         assert result is not None
         result_ago = parse_relative_timestamp("2 hours ago")
         assert result_ago is not None
+        result_hr = parse_relative_timestamp("7 hr ago")
+        assert result_hr is not None
+        assert (datetime.now(timezone.utc) - result_hr).total_seconds() >= 6 * 3600
+        result_hrs = parse_relative_timestamp("3 hrs")
+        assert result_hrs is not None
 
     def test_parses_yesterday(self) -> None:
         """Should parse Yesterday."""
