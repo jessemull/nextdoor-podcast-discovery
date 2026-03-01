@@ -774,6 +774,7 @@ class PostExtractor:
             List of RawComment from the modal.
         """
         MODAL_WAIT_MS = 3000
+        COMMENTS_LOAD_WAIT_MS = 8000
         VIEW_MORE_WAIT_MS = 800
         MAX_VIEW_MORE_CLICKS = 50
 
@@ -822,29 +823,44 @@ class PostExtractor:
                 state="visible", timeout=MODAL_WAIT_MS
             )
             self.page.wait_for_timeout(300)
-            # Click "view more replies/comments" and "See X more replies" until all loaded (scope to modal)
+            # Wait for comments to load (not just skeletons); modal can show before content.
+            modal = self.page.locator("#expanded-post-wrapper")
+            try:
+                modal.locator("[data-testid='comment-thank-container']").first.wait_for(
+                    state="visible", timeout=COMMENTS_LOAD_WAIT_MS
+                )
+            except PlaywrightTimeoutError:
+                pass
+            self.page.wait_for_timeout(200)
+            # Click every "See X more replies" / "See more comments" until all expanded (scope to modal).
+            # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
             modal = self.page.locator("#expanded-post-wrapper")
             for _ in range(MAX_VIEW_MORE_CLICKS):
-                view_more = modal.get_by_role(
-                    "button",
-                    name=re.compile(r"view more (repl(y|ies)|comment(s)?)", re.IGNORECASE),
-                )
+                view_more = modal.locator("[data-testid='seeMoreButton']")
                 if view_more.count() == 0:
-                    view_more = modal.locator('button:has-text("view more")')
-                if view_more.count() == 0:
-                    view_more = modal.locator("[data-testid='seeMoreButton']")
-                if view_more.count() == 0:
+                    view_more = modal.get_by_role(
+                        "button",
+                        name=VIEW_MORE_BUTTON_PATTERN,
+                    )
+                n = view_more.count()
+                if n == 0:
                     break
-                first = view_more.first
-                try:
-                    if not first.is_visible():
-                        break
-                    first.scroll_into_view_if_needed(timeout=2000)
-                    self.page.wait_for_timeout(200)
-                    first.click(timeout=2000)
-                    self.page.wait_for_timeout(VIEW_MORE_WAIT_MS)
-                except Exception:
+                clicked_any = False
+                for i in range(n):
+                    btn = view_more.nth(i)
+                    try:
+                        if not btn.is_visible():
+                            continue
+                        btn.scroll_into_view_if_needed(timeout=2000)
+                        self.page.wait_for_timeout(200)
+                        btn.click(timeout=2000)
+                        clicked_any = True
+                        self.page.wait_for_timeout(300)
+                    except Exception:
+                        continue
+                if not clicked_any:
                     break
+                self.page.wait_for_timeout(VIEW_MORE_WAIT_MS)
             # Extract comments from modal: [data-testid="comment-thank-container"] and surrounding block
             result = self.page.evaluate(
                 """
@@ -937,27 +953,34 @@ class PostExtractor:
         VIEW_MORE_WAIT_MS = 800
         MAX_VIEW_MORE_CLICKS = 50
 
+        # Click every "See X more replies" / "See more comments" until all expanded.
+        # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
         for _ in range(MAX_VIEW_MORE_CLICKS):
-            view_more = page.get_by_role(
-                "button",
-                name=re.compile(r"view more (repl(y|ies)|comment(s)?)", re.IGNORECASE),
-            )
+            view_more = page.locator("[data-testid='seeMoreButton']")
             if view_more.count() == 0:
-                view_more = page.locator('button:has-text("view more")')
-            if view_more.count() == 0:
-                view_more = page.locator("[data-testid='seeMoreButton']")
-            if view_more.count() == 0:
+                view_more = page.get_by_role(
+                    "button",
+                    name=VIEW_MORE_BUTTON_PATTERN,
+                )
+            n = view_more.count()
+            if n == 0:
                 break
-            first = view_more.first
-            try:
-                if not first.is_visible():
-                    break
-                first.scroll_into_view_if_needed(timeout=2000)
-                page.wait_for_timeout(200)
-                first.click(timeout=2000)
-                page.wait_for_timeout(VIEW_MORE_WAIT_MS)
-            except Exception:
+            clicked_any = False
+            for i in range(n):
+                btn = view_more.nth(i)
+                try:
+                    if not btn.is_visible():
+                        continue
+                    btn.scroll_into_view_if_needed(timeout=2000)
+                    page.wait_for_timeout(200)
+                    btn.click(timeout=2000)
+                    clicked_any = True
+                    page.wait_for_timeout(300)
+                except Exception:
+                    continue
+            if not clicked_any:
                 break
+            page.wait_for_timeout(VIEW_MORE_WAIT_MS)
 
         result = page.evaluate(
             """
