@@ -52,10 +52,14 @@ next-env.d.ts
 # ===================
 # Project specific
 # ===================
-# Scraped Nextdoor HTML (may contain third-party keys)
+# Scraped Nextdoor HTML (may contain third-party keys, trigger secret scanners)
 web/DOM.html
 web/MOST_RECENT.html
 web/TRENDING.html
+COMMENTS_MODAL.html
+PERMALINK.html
+SIGNIN.html
+TRENDING.html
 
 # Session storage (local dev)
 sessions/
