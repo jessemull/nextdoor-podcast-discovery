@@ -11,6 +11,7 @@ export type BulkActionType =
   | "mark_used"
   | "reprocess"
   | "save"
+  | "unsave"
   | "unignore";
 
 export interface BulkQuery {
@@ -53,6 +54,7 @@ export interface UseBulkActionsResult {
   handleBulkIgnore: () => Promise<void>;
   handleBulkMarkUsed: () => Promise<void>;
   handleBulkSave: () => Promise<void>;
+  handleBulkUnsave: () => Promise<void>;
   handleBulkUnignore: () => Promise<void>;
   handleMarkIgnored: (postId: string, ignored: boolean) => Promise<void>;
   handleMarkSaved: (postId: string, saved: boolean) => Promise<void>;
@@ -293,6 +295,29 @@ export function useBulkActions({
     }
   }, [bulkActionLoading, fetchPosts, offset, selectedIds, setError]);
 
+  const handleBulkUnsave = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkActionLoading) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          authFetch(`/api/posts/${id}/saved`, {
+            body: JSON.stringify({ saved: false }),
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      await fetchPosts(offset);
+    } catch (err) {
+      console.error("Bulk unsave failed:", err);
+      setError("Failed to unsave some posts");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkActionLoading, fetchPosts, offset, selectedIds, setError]);
+
   const handleBulkIgnore = useCallback(async () => {
     if (selectedIds.size === 0 || bulkActionLoading) return;
     setBulkActionLoading(true);
@@ -345,6 +370,7 @@ export function useBulkActions({
     handleBulkIgnore,
     handleBulkMarkUsed,
     handleBulkSave,
+    handleBulkUnsave,
     handleBulkUnignore,
     handleMarkIgnored,
     handleMarkSaved,

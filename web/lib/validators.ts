@@ -388,6 +388,7 @@ export const postsBulkBodySchema = z
       "mark_unused",
       "reprocess",
       "save",
+      "unsave",
       "unignore",
     ]),
     apply_to_query: z.boolean().optional(),

@@ -74,6 +74,7 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   mark_used: "Mark As Used",
   reprocess: "Refresh Posts",
   save: "Save",
+  unsave: "Unsave",
   unignore: "Unignore",
 };
 
@@ -83,6 +84,7 @@ const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
   mark_used: "Marked as used",
   reprocess: "Queued for refresh",
   save: "Saved",
+  unsave: "Unsaved",
   unignore: "Unignored",
 };
 
@@ -92,6 +94,7 @@ const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   mark_used: "Mark Posts As Used",
   reprocess: "Refresh Posts",
   save: "Save Posts",
+  unsave: "Unsave Posts",
   unignore: "Unignore Posts",
 };
 
@@ -113,6 +116,7 @@ const BULK_ACTION_OPTIONS = [
     value: "reprocess",
   },
   { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Unsave", value: "unsave" },
   {
     icon: <Eye aria-hidden className="h-4 w-4" />,
     label: "Unignore",

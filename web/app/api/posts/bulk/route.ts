@@ -9,7 +9,7 @@ import { postsBulkBodySchema } from "@/lib/validators";
 /**
  * POST /api/posts/bulk
  *
- * Apply a single action (mark_used, save, ignore, unignore, reprocess) to a set of posts.
+ * Apply a single action (mark_used, mark_unused, save, unsave, ignore, unignore, reprocess) to a set of posts.
  * Body: { action, post_ids?: string[] } or { action, apply_to_query: true, query }.
  * reprocess: creates one fetch_permalink job per post that has a url; returns jobs_queued and skipped.
  * Requires authentication.
@@ -146,6 +146,18 @@ export async function POST(request: NextRequest) {
         .in("id", postIds);
       if (error) {
         logError("[posts/bulk] save", error);
+        return NextResponse.json(
+          { details: error.message, error: "Database error" },
+          { status: 500 }
+        );
+      }
+    } else if (action === "unsave") {
+      const { error } = await supabase
+        .from("posts")
+        .update({ saved: false })
+        .in("id", postIds);
+      if (error) {
+        logError("[posts/bulk] unsave", error);
         return NextResponse.json(
           { details: error.message, error: "Database error" },
           { status: 500 }

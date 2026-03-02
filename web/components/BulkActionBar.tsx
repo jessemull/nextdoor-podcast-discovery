@@ -9,6 +9,7 @@ export interface BulkActionBarProps {
   onBulkIgnore: () => void;
   onBulkMarkUsed: () => void;
   onBulkSave: () => void;
+   onBulkUnsave: () => void;
   onBulkUnignore: () => void;
   onClear: () => void;
   selectedCount: number;
@@ -23,6 +24,7 @@ export function BulkActionBar({
   onBulkIgnore,
   onBulkMarkUsed,
   onBulkSave,
+  onBulkUnsave,
   onBulkUnignore,
   onClear,
   selectedCount,
@@ -49,6 +51,14 @@ export function BulkActionBar({
       >
         <Bookmark aria-hidden className="h-4 w-4" />
         {bulkActionLoading ? "..." : "Save selected"}
+      </Button>
+      <Button
+        disabled={bulkActionLoading}
+        variant="primary"
+        onClick={onBulkUnsave}
+      >
+        <Bookmark aria-hidden className="h-4 w-4" />
+        {bulkActionLoading ? "..." : "Unsave selected"}
       </Button>
       <Button
         disabled={bulkActionLoading}
