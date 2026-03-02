@@ -65,12 +65,11 @@ class TestMain:
         """Should return 1 when ScraperError is raised."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
             with mock.patch("src.main.validate_env"):
-                # Mock something in the pipeline to raise ScraperError
-
-                with mock.patch(
-                    "src.main.logger.info",
-                    side_effect=[None, ScraperError("Test error"), None],
-                ):
+                with mock.patch("src.main.NextdoorScraper") as mock_scraper:
+                    mock_scraper.return_value.__enter__.side_effect = ScraperError(
+                        "Test error"
+                    )
+                    mock_scraper.return_value.__exit__.return_value = None
                     result = main(dry_run=True)
 
         assert result == 1
@@ -81,12 +80,11 @@ class TestMain:
         """Should return 1 when unexpected exception is raised."""
         with mock.patch.dict(os.environ, mock_env, clear=True):
             with mock.patch("src.main.validate_env"):
-                # Mock something to raise an unexpected error
-
-                with mock.patch(
-                    "src.main.logger.info",
-                    side_effect=[None, RuntimeError("Unexpected"), None],
-                ):
+                with mock.patch("src.main.NextdoorScraper") as mock_scraper:
+                    mock_scraper.return_value.__enter__.side_effect = RuntimeError(
+                        "Unexpected"
+                    )
+                    mock_scraper.return_value.__exit__.return_value = None
                     result = main(dry_run=True)
 
         assert result == 1

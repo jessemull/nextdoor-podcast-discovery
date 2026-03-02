@@ -141,7 +141,7 @@ class Embedder:
             chunk = cast(list[dict[str, Any]], result.data or [])
             if not chunk:
                 if chunk_num == 1:
-                    logger.info("No posts need embeddings")
+                    logger.debug("No posts need embeddings")
                 break
 
             logger.info(
@@ -187,7 +187,7 @@ class Embedder:
                     stats["stored"] += stored_count
                     stats["processed"] += len(embeddings)
 
-                    logger.info(
+                    logger.debug(
                         "Stored %d embeddings (chunk %d, batch %d)",
                         stored_count,
                         chunk_num,
@@ -221,7 +221,7 @@ class Embedder:
                     stats["errors"] += len(batch)
                     stats["processed"] += len(batch)
 
-        logger.info(
+        logger.debug(
             "Embedding generation complete: %d processed, %d stored, %d errors",
             stats["processed"],
             stats["stored"],

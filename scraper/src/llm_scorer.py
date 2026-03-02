@@ -194,7 +194,7 @@ class LLMScorer:
             batch = posts[i : i + BATCH_SIZE]
             batch_index = (i // BATCH_SIZE) + 1
             post_ids = [p.get("id", "?") for p in batch]
-            logger.info(
+            logger.debug(
                 "Scoring batch %d/%d (post_ids=%s)",
                 batch_index,
                 total_batches,

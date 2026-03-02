@@ -59,7 +59,7 @@ class NextdoorScraper:
 
     def start(self) -> None:
         """Start the browser."""
-        logger.info("Starting browser (headless=%s)", self.headless)
+        logger.debug("Starting browser (headless=%s)", self.headless)
         self._playwright = sync_playwright().start()
         self.browser = self._playwright.chromium.launch(headless=self.headless)
         self.context = self.browser.new_context(
@@ -70,7 +70,7 @@ class NextdoorScraper:
 
     def stop(self) -> None:
         """Stop the browser and reset instance variables."""
-        logger.info("Stopping browser")
+        logger.debug("Stopping browser")
 
         if self.context:
             self.context.close()
@@ -116,7 +116,7 @@ class NextdoorScraper:
 
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        logger.info("Navigating to login page")
+        logger.debug("Navigating to login page")
         self.page.goto(LOGIN_URL)
 
         # Wait for login form to load
@@ -128,7 +128,7 @@ class NextdoorScraper:
         if self._check_for_captcha():
             raise CaptchaRequiredError("CAPTCHA detected on login page")
 
-        logger.info("Filling login form")
+        logger.debug("Filling login form")
 
         # Fill email
 
@@ -161,7 +161,7 @@ class NextdoorScraper:
 
         try:
             self.page.wait_for_url("**/news_feed/**", timeout=login_timeout)
-            logger.info("Login successful")
+            logger.debug("Login successful")
         except PlaywrightTimeoutError as timeout_error:
             # Check if we hit a CAPTCHA (not retryable)
 
@@ -187,7 +187,7 @@ class NextdoorScraper:
         if not self.context:
             raise RuntimeError("Browser not started. Call start() first.")
 
-        logger.info("Loading %d cookies", len(cookies))
+        logger.debug("Loading %d cookies", len(cookies))
         self.context.add_cookies(cookies)  # type: ignore[arg-type]
 
     def get_cookies(self) -> list[dict[str, Any]]:
@@ -247,7 +247,7 @@ class NextdoorScraper:
 
         # After login we're already on the news feed. Do NOT reload — just click the chip.
         if "news_feed" not in (self.page.url or ""):
-            logger.info("Navigating to news feed")
+            logger.debug("Navigating to news feed")
             self.page.goto(NEWS_FEED_URL, timeout=timeout)
         try:
             self.page.get_by_test_id("feed-container").wait_for(
@@ -277,7 +277,7 @@ class NextdoorScraper:
                 chip.wait_for(state="visible", timeout=3000)
                 chip.scroll_into_view_if_needed()
                 chip.click()
-                logger.info("Clicked %s chip (by text)", chip_text)
+                logger.debug("Clicked %s chip (by text)", chip_text)
                 self.page.wait_for_timeout(2000)
             except PlaywrightTimeoutError:
                 logger.warning("Chip %r not found", chip_text)
@@ -294,7 +294,7 @@ class NextdoorScraper:
             return
         try:
             self.page.wait_for_selector(tab_selector, timeout=min(3000, timeout))
-            logger.info("Successfully loaded %s feed", feed_type)
+            logger.debug("Successfully loaded %s feed", feed_type)
         except PlaywrightTimeoutError:
             logger.debug("Feed tab selector not found (different UI)")
 
@@ -323,7 +323,7 @@ class NextdoorScraper:
             self._random_delay()
             permalink.click(timeout=5000)
             self.page.wait_for_url("**/p/**", timeout=timeout_ms)
-            logger.info("Opened details view: %s", self.page.url)
+            logger.debug("Opened details view: %s", self.page.url)
             return True
         except PlaywrightTimeoutError as e:
             logger.warning(

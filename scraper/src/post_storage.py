@@ -205,7 +205,7 @@ class PostStorage:
                         )
                         stats["errors"] += 1
 
-        logger.info(
+        logger.debug(
             "Storage complete: %d inserted, %d skipped, %d errors",
             stats["inserted"],
             stats["skipped"],
@@ -448,7 +448,7 @@ class PostStorage:
                 row = result.data[0]  # type: ignore[assignment]
                 neighborhood_id = row["id"]
                 self._neighborhood_cache[name] = neighborhood_id
-                logger.info("Created neighborhood: %s (%s)", name, slug)
+                logger.debug("Created neighborhood: %s (%s)", name, slug)
                 return neighborhood_id
 
         except Exception as e:

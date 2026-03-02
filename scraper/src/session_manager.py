@@ -52,7 +52,7 @@ class SessionManager:
         result = query.order("updated_at", desc=True).limit(1).execute()
 
         if not result.data:
-            logger.info("No session found")
+            logger.debug("No session found")
             return None
 
         # Cast to expected type (Supabase returns complex JSON union)
@@ -85,7 +85,7 @@ class SessionManager:
             encrypted = encrypted_str.encode()
             decrypted = self.cipher.decrypt(encrypted)
             cookies: list[dict[str, Any]] = json.loads(decrypted)
-            logger.info("Loaded %d cookies from session", len(cookies))
+            logger.debug("Loaded %d cookies from session", len(cookies))
             return cookies
         except InvalidToken:
             logger.error("Failed to decrypt cookies: invalid encryption key")
@@ -129,7 +129,7 @@ class SessionManager:
             on_conflict="neighborhood_id",
         ).execute()
 
-        logger.info(
+        logger.debug(
             "Saved %d cookies, expires %s",
             len(cookies),
             expires_at.isoformat(),

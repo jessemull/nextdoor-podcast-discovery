@@ -220,28 +220,36 @@ class TestNextdoorScraper:
         assert result is False
 
     def test_navigate_to_feed_recent(self, scraper: NextdoorScraper) -> None:
-        """Should navigate to recent feed."""
+        """Should navigate to news feed then click Recent chip."""
         scraper.page = mock.MagicMock()
+        scraper.page.url = "https://nextdoor.com/login/"
         scraper.page.goto.return_value = None
         scraper.page.wait_for_selector.return_value = None
+        scraper.page.get_by_test_id.return_value.wait_for.return_value = None
+        scraper.page.get_by_role.return_value.wait_for.return_value = None
+        scraper.page.get_by_role.return_value.scroll_into_view_if_needed.return_value = None
+        scraper.page.evaluate.return_value = None
 
         scraper.navigate_to_feed("recent")
 
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
-        scraper.page.goto.assert_called_once_with(FEED_URLS["recent"], timeout=timeout)
+        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL, timeout=timeout)
 
     def test_navigate_to_feed_trending(self, scraper: NextdoorScraper) -> None:
-        """Should navigate to trending feed."""
+        """Should navigate to news feed then click Trending chip."""
         scraper.page = mock.MagicMock()
+        scraper.page.url = "https://nextdoor.com/login/"
         scraper.page.goto.return_value = None
         scraper.page.wait_for_selector.return_value = None
+        scraper.page.get_by_test_id.return_value.wait_for.return_value = None
+        scraper.page.get_by_role.return_value.wait_for.return_value = None
+        scraper.page.get_by_role.return_value.scroll_into_view_if_needed.return_value = None
+        scraper.page.evaluate.return_value = None
 
         scraper.navigate_to_feed("trending")
 
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
-        scraper.page.goto.assert_called_once_with(
-            FEED_URLS["trending"], timeout=timeout
-        )
+        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL, timeout=timeout)
 
     def test_navigate_to_feed_invalid_type(self, scraper: NextdoorScraper) -> None:
         """Should raise ValueError for invalid feed type."""

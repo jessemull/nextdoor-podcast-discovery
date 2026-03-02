@@ -65,10 +65,43 @@ def _record_scraper_run(
 _scraper_dir = Path(__file__).resolve().parent.parent
 load_dotenv(_scraper_dir / ".env")
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+_log_level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+_log_level = getattr(logging, _log_level_name, logging.INFO)
+_log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+_disable_color = bool(os.environ.get("NO_COLOR")) or os.environ.get("LOG_COLOR") in (
+    "0",
+    "false",
+    "False",
 )
+
+try:
+    import colorlog  # type: ignore[import-not-found]
+except Exception:  # pragma: no cover
+    colorlog = None  # type: ignore[assignment]
+
+if colorlog and not _disable_color:
+    _handler = colorlog.StreamHandler()
+    _handler.setFormatter(
+        colorlog.ColoredFormatter(
+            "%(log_color)s" + _log_format + "%(reset)s",
+            log_colors={
+                "DEBUG": "cyan",
+                "ERROR": "red",
+                "INFO": "green",
+                "WARNING": "yellow",
+            },
+        )
+    )
+    logging.basicConfig(
+        handlers=[_handler],
+        level=_log_level,
+    )
+else:
+    logging.basicConfig(
+        format=_log_format,
+        level=_log_level,
+    )
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 HEARTBEAT_INTERVAL_SEC = 300
@@ -372,7 +405,7 @@ def main(
     )
 
     try:
-        logger.info(
+        logger.debug(
             "Run PID=%s started at %s — if this hangs, check heartbeats below; "
             "run with PYTHONUNBUFFERED=1 and 2>&1 | tee scrape.log to capture logs",
             os.getpid(),
@@ -394,7 +427,7 @@ def main(
         if score_only:
             # Skip scraping; run only score and/or embed
             if score and not dry_run:
-                logger.info(
+                logger.debug(
                     "Running LLM scoring on unscored posts (limit=%d)",
                     unscored_batch_limit,
                 )
@@ -403,7 +436,7 @@ def main(
                     unscored_batch_limit=unscored_batch_limit,
                 )
             if embed and not dry_run:
-                logger.info("Running embedding generation for posts without embeddings")
+                logger.debug("Running embedding generation for posts without embeddings")
                 openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 embedder = Embedder(session_manager.supabase, openai_client)
                 embed_stats = embedder.generate_and_store_embeddings(dry_run=False)
@@ -428,21 +461,21 @@ def main(
             cookies = session_manager.get_cookies()
 
             if cookies:
-                logger.info("Found existing session, loading cookies")
+                logger.debug("Found existing session, loading cookies")
                 scraper.load_cookies(cookies)
 
                 # Verify session is still valid
 
                 if scraper.is_logged_in():
-                    logger.info("Session is valid")
+                    logger.info("Using saved session")
                 else:
-                    logger.info("Session expired, need fresh login")
+                    logger.debug("Session expired, need fresh login")
                     cookies = None
 
             # Step 2: Login if no valid session
 
             if not cookies:
-                logger.info("Logging in to Nextdoor")
+                logger.debug("Logging in to Nextdoor")
                 scraper.login()
 
                 # Save new session
@@ -450,11 +483,13 @@ def main(
                 if not dry_run:
                     new_cookies = scraper.get_cookies()
                     session_manager.save_cookies(new_cookies)
-                    logger.info("Saved new session")
+                    logger.info("Logged in; session saved")
+                else:
+                    logger.info("Logged in (dry run, session not saved)")
 
             # Step 3: Navigate to the correct feed
 
-            logger.info("Navigating to %s feed", feed_type)
+            logger.debug("Navigating to %s feed", feed_type)
             scraper.navigate_to_feed(feed_type)
 
             # Inspect mode: pause so user can open DevTools and inspect DOM (e.g. Filter by menu)
@@ -547,7 +582,7 @@ def main(
                     to_store = batch[:remaining] if remaining < len(batch) else batch
                     stats = storage.store_posts(to_store)
                     stored += stats["inserted"]
-                    logger.info(
+                    logger.debug(
                         "Batch: %d in batch, %d inserted, %d skipped (new posts stored: %d, target: %d)",
                         len(batch),
                         stats["inserted"],
@@ -555,6 +590,7 @@ def main(
                         stored,
                         max_posts,
                     )
+                    logger.info("Posts stored: %d / %d", stored, max_posts)
                 if stored >= max_posts:
                     logger.info("Target reached: %d new posts stored", stored)
                     break
@@ -575,7 +611,7 @@ def main(
                 if storage_stats is not None:
                     newly_stored = storage_stats.get("inserted", 0)
                     scoring_limit = max(scoring_limit, newly_stored)
-                logger.info(
+                logger.debug(
                     "Running LLM scoring on unscored posts (limit=%d)",
                     scoring_limit,
                 )
@@ -585,7 +621,7 @@ def main(
                 )
 
             if embed and not dry_run:
-                logger.info("Running embedding generation for posts without embeddings")
+                logger.debug("Running embedding generation for posts without embeddings")
                 openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 embedder = Embedder(session_manager.supabase, openai_client)
                 embed_stats = embedder.generate_and_store_embeddings(dry_run=False)
@@ -610,21 +646,6 @@ def main(
                     total_extracted,
                 )
 
-            # Run summary: warnings, failures, and fallbacks
-            fallbacks = run_stats.get("comment_fallbacks", 0)
-            mismatches = run_stats.get("comment_mismatches", 0)
-            modal_failures = run_stats.get("modal_failures", 0)
-            total_warnings = mismatches + modal_failures
-            logger.info(
-                "Run summary: extracted=%d, stored=%s; comment_fallbacks=%d (details page); warnings: comment_mismatch=%d, modal_failure=%d (%d total)",
-                total_extracted,
-                storage_stats["inserted"] if storage_stats else "n/a",
-                fallbacks,
-                mismatches,
-                modal_failures,
-                total_warnings,
-            )
-
             if not dry_run:
                 try:
                     session_manager.supabase.table("settings").upsert(
@@ -643,6 +664,23 @@ def main(
                         type(e).__name__,
                     )
                 _record_scraper_run(session_manager.supabase, feed_type, "completed")
+
+            # Run summary last so it is the final human-facing message before exit
+            fallbacks = run_stats.get("comment_fallbacks", 0)
+            mismatches = run_stats.get("comment_mismatches", 0)
+            modal_failures = run_stats.get("modal_failures", 0)
+            total_warnings = mismatches + modal_failures
+            logger.info("----------")
+            logger.info(
+                "Run summary: extracted=%d, stored=%s; comment_fallbacks=%d; warnings: comment_mismatch=%d, modal_failure=%d (%d total)",
+                total_extracted,
+                storage_stats["inserted"] if storage_stats else "n/a",
+                fallbacks,
+                mismatches,
+                modal_failures,
+                total_warnings,
+            )
+            logger.info("----------")
 
         logger.info("Exiting with code 0")
         return 0

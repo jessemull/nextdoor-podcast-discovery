@@ -197,13 +197,13 @@ class PostExtractor:
         no_new_posts_count = 0
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        logger.info("Starting post extraction (max_posts=%d)", self.max_posts)
+        logger.debug("Starting post extraction (max_posts=%d)", self.max_posts)
 
         # Wait for feed to load
 
         try:
             self.page.wait_for_selector("div.post, div.js-media-post", timeout=timeout)
-            logger.info("Feed content detected, starting extraction")
+            logger.debug("Feed content detected, starting extraction")
         except PlaywrightTimeoutError:
             logger.warning("Timeout waiting for post containers")
             self._log_page_debug_info()
@@ -223,7 +223,7 @@ class PostExtractor:
             raw_posts = self.page.evaluate(extraction_script)
 
             if scroll_attempts == 0:
-                logger.info("First scroll found %d raw posts", len(raw_posts))
+                logger.debug("First scroll found %d raw posts", len(raw_posts))
 
             # Recent feed: stop before adding if repeat_threshold consecutive already-seen at start
             if self.feed_type == "recent" and self.repeat_threshold > 0:
@@ -239,7 +239,7 @@ class PostExtractor:
 
             new_count = self._process_batch(raw_posts, posts)
 
-            logger.info(
+            logger.debug(
                 "Scroll %d: Found %d new posts (total: %d/%d)",
                 scroll_attempts + 1,
                 new_count,
@@ -279,7 +279,7 @@ class PostExtractor:
             self._scroll_down()
             scroll_attempts += 1
 
-        logger.info("Extraction complete: %d posts", len(posts))
+        logger.debug("Extraction complete: %d posts", len(posts))
         return posts
 
     def extract_post_batches(self, safety_cap: int = 500) -> Iterator[list[RawPost]]:
@@ -302,7 +302,7 @@ class PostExtractor:
         no_new_posts_count = 0
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        logger.info(
+        logger.debug(
             "Starting batch extraction (safety_cap=%d, feed_type=%s)",
             safety_cap,
             self.feed_type,
@@ -310,7 +310,7 @@ class PostExtractor:
 
         try:
             self.page.wait_for_selector("div.post, div.js-media-post", timeout=timeout)
-            logger.info("Feed content detected, starting extraction")
+            logger.debug("Feed content detected, starting extraction")
         except PlaywrightTimeoutError:
             logger.warning("Timeout waiting for post containers")
             self._log_page_debug_info()
@@ -324,7 +324,7 @@ class PostExtractor:
         )
 
         while total_yielded < safety_cap and scroll_attempts < max_scrolls:
-            logger.info(
+            logger.debug(
                 "Extracting from page (scroll %d, yielded so far: %d)",
                 scroll_attempts + 1,
                 total_yielded,
@@ -332,13 +332,13 @@ class PostExtractor:
             raw_posts = self.page.evaluate(extraction_script)
 
             if scroll_attempts == 0:
-                logger.info("First scroll found %d raw posts", len(raw_posts))
+                logger.debug("First scroll found %d raw posts", len(raw_posts))
 
             batch: list[RawPost] = []
             new_count = self._process_batch(raw_posts, batch, cap=safety_cap)
             total_yielded += len(batch)
 
-            logger.info(
+            logger.debug(
                 "Scroll %d: %d new posts (total yielded: %d)",
                 scroll_attempts + 1,
                 new_count,
@@ -375,20 +375,20 @@ class PostExtractor:
                 yield batch
 
             if total_yielded >= safety_cap:
-                logger.info("Safety cap reached (%d posts), stopping", safety_cap)
+                logger.debug("Safety cap reached (%d posts), stopping", safety_cap)
                 return
 
-            logger.info(
+            logger.debug(
                 "Scrolling down (about to run scroll %d)",
                 scroll_attempts + 2,
             )
             self._scroll_down()
-            logger.info(
+            logger.debug(
                 "Scroll down done (next will be scroll %d)", scroll_attempts + 2
             )
             scroll_attempts += 1
 
-        logger.info("Batch extraction complete: %d posts yielded", total_yielded)
+        logger.debug("Batch extraction complete: %d posts yielded", total_yielded)
 
     def extract_single_post_from_current_page(
         self,
