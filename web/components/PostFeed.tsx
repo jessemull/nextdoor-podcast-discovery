@@ -3,6 +3,7 @@
 import {
   ArrowUpDown,
   Bookmark,
+  BookmarkX,
   Check,
   CheckSquare,
   Eye,
@@ -106,9 +107,6 @@ const BULK_ACTION_OPTIONS = [
     label: "Unignore",
     value: "unignore",
   },
-  // Save / Unsave
-  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
-  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Unsave", value: "unsave" },
   // Mark used / unused
   {
     icon: <Check aria-hidden className="h-4 w-4" />,
@@ -119,6 +117,13 @@ const BULK_ACTION_OPTIONS = [
     icon: <RotateCcw aria-hidden className="h-4 w-4" />,
     label: "Mark As Unused",
     value: "mark_unused",
+  },
+  // Save / Unsave
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
+  {
+    icon: <BookmarkX aria-hidden className="h-4 w-4" />,
+    label: "Unsave",
+    value: "unsave",
   },
   // Refresh
   {
