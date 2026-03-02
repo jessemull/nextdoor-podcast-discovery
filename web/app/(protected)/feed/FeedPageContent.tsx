@@ -115,7 +115,10 @@ export function FeedPageContent() {
 
   useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
-      void runSearch(qFromUrl.trim());
+      const q = qFromUrl.trim();
+      setQuery(q);
+      setLastSearchedQuery(q);
+      void runSearch(q);
     }
   }, [qFromUrl, runSearch]);
 
