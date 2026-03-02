@@ -3,8 +3,10 @@
 -- Initial database schema for Nextdoor Podcast Discovery Platform
 -- Run this in Supabase SQL Editor
 
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+-- pgvector in extensions schema (avoids "Extension in Public" Security Advisor warning)
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS vector SCHEMA extensions;
+SET search_path = public, extensions;
 
 -- Function to auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -5784,3 +5786,13 @@ BEGIN
     EXECUTE format('ALTER FUNCTION %I.%I(%s) SET search_path = public', r.nspname, r.proname, r.args);
   END LOOP;
 END $$;
+-- Migration: Move vector extension to extensions schema (fix "Extension in Public" warning)
+-- Run in Supabase SQL Editor.
+--
+-- Supabase Security Advisor flags extensions in public. Moving vector to a
+-- dedicated schema satisfies the linter. Existing tables/functions that use
+-- the vector type continue to work (type OID unchanged).
+
+CREATE SCHEMA IF NOT EXISTS extensions;
+
+ALTER EXTENSION vector SET SCHEMA extensions;
