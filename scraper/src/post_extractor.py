@@ -783,7 +783,9 @@ class PostExtractor:
         finally:
             new_page.close()
 
-    def _extract_comments_via_desktop_modal(self, container_index: int) -> list[RawComment]:
+    def _extract_comments_via_desktop_modal(
+        self, container_index: int
+    ) -> list[RawComment]:
         """Open the desktop post modal (click post body once or twice), load all comments, extract, close.
 
         Cards with "... see more" need two clicks (first expands body, second opens modal).
@@ -797,10 +799,10 @@ class PostExtractor:
         Returns:
             List of RawComment from the modal.
         """
-        MODAL_WAIT_MS = 5000
-        COMMENTS_LOAD_WAIT_MS = 12000
-        VIEW_MORE_WAIT_MS = 800
-        MAX_VIEW_MORE_CLICKS = 50
+        modal_wait_ms = 5000
+        comments_load_wait_ms = 12000
+        view_more_wait_ms = 800
+        max_view_more_clicks = 50
 
         try:
             containers = self.page.locator("div.post, div.js-media-post")
@@ -834,7 +836,9 @@ class PostExtractor:
             # Cards with "... see more" need two clicks: first expands body, second opens modal.
             # Cards without it need one click to open the modal (second click would close it).
             has_see_more = (
-                container.locator("[data-testid='post-body']").get_by_text("see more").count()
+                container.locator("[data-testid='post-body']")
+                .get_by_text("see more")
+                .count()
                 > 0
             )
             body.click(position={"x": 15, "y": 15}, timeout=3000)
@@ -844,14 +848,14 @@ class PostExtractor:
             self.page.wait_for_timeout(500)
             # Wait for expanded post modal
             self.page.locator("#expanded-post-wrapper").wait_for(
-                state="visible", timeout=MODAL_WAIT_MS
+                state="visible", timeout=modal_wait_ms
             )
             self.page.wait_for_timeout(300)
             # Wait for comments to load (not just skeletons); modal can show before content.
             modal = self.page.locator("#expanded-post-wrapper")
             try:
                 modal.locator("[data-testid='comment-thank-container']").first.wait_for(
-                    state="visible", timeout=COMMENTS_LOAD_WAIT_MS
+                    state="visible", timeout=comments_load_wait_ms
                 )
             except PlaywrightTimeoutError:
                 pass
@@ -859,7 +863,7 @@ class PostExtractor:
             # Click every "See X more replies" / "See more comments" until all expanded (scope to modal).
             # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
             modal = self.page.locator("#expanded-post-wrapper")
-            for _ in range(MAX_VIEW_MORE_CLICKS):
+            for _ in range(max_view_more_clicks):
                 view_more = modal.locator("[data-testid='seeMoreButton']")
                 if view_more.count() == 0:
                     view_more = modal.get_by_role(
@@ -884,7 +888,7 @@ class PostExtractor:
                         continue
                 if not clicked_any:
                     break
-                self.page.wait_for_timeout(VIEW_MORE_WAIT_MS)
+                self.page.wait_for_timeout(view_more_wait_ms)
             # Extract comments from modal: [data-testid="comment-thank-container"] and surrounding block
             result = self.page.evaluate(
                 """
@@ -913,7 +917,9 @@ class PostExtractor:
                 }
                 """
             )
-            comments_data = result.get("comments", []) if isinstance(result, dict) else []
+            comments_data = (
+                result.get("comments", []) if isinstance(result, dict) else []
+            )
             out = [
                 RawComment(
                     author_name=item.get("author_name", ""),
@@ -977,12 +983,12 @@ class PostExtractor:
         Returns:
             List of RawComment.
         """
-        VIEW_MORE_WAIT_MS = 800
-        MAX_VIEW_MORE_CLICKS = 50
+        view_more_wait_ms = 800
+        max_view_more_clicks = 50
 
         # Click every "See X more replies" / "See more comments" until all expanded.
         # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
-        for _ in range(MAX_VIEW_MORE_CLICKS):
+        for _ in range(max_view_more_clicks):
             view_more = page.locator("[data-testid='seeMoreButton']")
             if view_more.count() == 0:
                 view_more = page.get_by_role(
@@ -1007,7 +1013,7 @@ class PostExtractor:
                     continue
             if not clicked_any:
                 break
-            page.wait_for_timeout(VIEW_MORE_WAIT_MS)
+            page.wait_for_timeout(view_more_wait_ms)
 
         result = page.evaluate(
             """

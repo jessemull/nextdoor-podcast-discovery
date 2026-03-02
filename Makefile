@@ -152,6 +152,7 @@ dev-web:
 lint: lint-scraper lint-web
 
 lint-scraper:
+	cd scraper && ../.venv/bin/ruff format src/
 	cd scraper && ../.venv/bin/ruff format --check src/
 	cd scraper && ../.venv/bin/ruff check src/
 	cd scraper && ../.venv/bin/mypy src/

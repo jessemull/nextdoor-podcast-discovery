@@ -39,6 +39,9 @@ jobs:
       - name: Install web dependencies
         run: cd web && npm ci --legacy-peer-deps
 
+      - name: Format (auto-fix)
+        run: make format
+
       - name: Lint (scraper + web)
         run: make lint
 
