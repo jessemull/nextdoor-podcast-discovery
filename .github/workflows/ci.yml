@@ -42,8 +42,8 @@ jobs:
       - name: Format (auto-fix)
         run: make format
 
-      - name: Lint (scraper + web)
-        run: make lint
+      - name: Lint (scraper + web, ESLint --fix in CI)
+        run: make lint-ci
 
       - name: Test (scraper + web)
         run: make test

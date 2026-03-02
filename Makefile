@@ -1,4 +1,4 @@
-.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-scraper lint-web open-trending-details scrape-sample scrape-trending-300 security security-scraper security-web tail-logs test test-scraper test-web venv
+.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 security security-scraper security-web tail-logs test test-scraper test-web venv
 
 # Default target
 help:
@@ -30,7 +30,8 @@ help:
 	@echo "  open-trending-details  Open trending tab, click first post to details view, then pause"
 	@echo ""
 	@echo "Quality:"
-	@echo "  lint             Run all linters"
+	@echo "  lint             Run linters (scraper + web, check only)"
+	@echo "  lint-ci          Run linters with ESLint --fix for web (use in CI)"
 	@echo "  lint-scraper     Run Python linters (ruff, mypy)"
 	@echo "  lint-web         Run TypeScript linter (eslint)"
 	@echo "  format           Format all code"
@@ -151,6 +152,9 @@ dev-web:
 # Linting
 lint: lint-scraper lint-web
 
+# For CI: same as lint but web runs eslint --fix so fixable issues are fixed in the runner.
+lint-ci: lint-scraper lint-web-fix
+
 lint-scraper:
 	cd scraper && ../.venv/bin/ruff format src/
 	cd scraper && ../.venv/bin/ruff format --check src/
@@ -159,6 +163,9 @@ lint-scraper:
 
 lint-web:
 	cd web && npm run lint
+
+lint-web-fix:
+	cd web && npm run lint:fix
 
 format:
 	cd scraper && ../.venv/bin/ruff format src/
