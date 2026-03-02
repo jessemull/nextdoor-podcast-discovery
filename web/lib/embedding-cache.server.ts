@@ -10,7 +10,7 @@
 
 import { createHash } from "crypto";
 
-import { getRedis } from "@/lib/redis.server";
+import { getRedis, getRedisKeyPrefix } from "@/lib/redis.server";
 
 const EMBEDDING_CACHE_TTL_MS = 5 * 60 * 1000;
 const EMBEDDING_CACHE_TTL_SEC = 300;
@@ -28,7 +28,7 @@ function cacheKey(query: string, similarityThreshold: number): string {
 function redisKey(query: string, similarityThreshold: number): string {
   const raw = cacheKey(query, similarityThreshold);
   const hash = createHash("sha256").update(raw).digest("hex");
-  return `emb:${hash}`;
+  return `${getRedisKeyPrefix()}:emb:${hash}`;
 }
 
 function pruneL1(): void {

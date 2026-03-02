@@ -5,15 +5,11 @@
  * a Redis instance. Otherwise returns null so callers fall back to in-memory
  * behavior (local dev, tests).
  *
- * Redis keys and TTLs (used by embedding and active-config caches):
+ * Keys are prefixed by environment (VERCEL_ENV or "development") so one Redis
+ * instance can serve both Preview and Production without collision.
  *
- * | Key pattern              | Value           | TTL    | Commands (approx)        |
- * | ------------------------ | --------------- | ------ | ------------------------ |
- * | emb:<sha256(query:thr)>  | JSON float[]    | 300 s  | 1 GET hit, 1 SET+GET miss |
- * | active_config_id         | UUID string     | 45 s   | 1 GET hit, 1 SET on miss; 1 DEL on invalidate |
- *
- * Upstash free tier: 500K commands/month. Typical usage: ~2 per semantic search,
- * 1–2 per feed/settings request; well within limit for small team.
+ * Key patterns (after prefix): <prefix>:active_config_id, <prefix>:emb:<hash>
+ * TTLs: active_config 45s, embedding 300s.
  */
 
 import { Redis } from "@upstash/redis";
@@ -31,6 +27,14 @@ function getRedisClient(): null | Redis {
     return redisClient;
   }
   return null;
+}
+
+/**
+ * Environment prefix for Redis keys so Preview and Production share one Redis
+ * without key collision. Vercel sets VERCEL_ENV to "production" or "preview".
+ */
+export function getRedisKeyPrefix(): string {
+  return process.env.VERCEL_ENV ?? "development";
 }
 
 /**
