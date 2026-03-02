@@ -62,3 +62,7 @@ disable_error_code = ["attr-defined"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
+filterwarnings = [
+  "ignore::pyparsing.exceptions.PyparsingDeprecationWarning",
+  "ignore::pydantic.warnings.PydanticDeprecatedSince212",
+]
