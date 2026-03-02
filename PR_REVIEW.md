@@ -163,7 +163,7 @@ All of the following must pass before merge. Run from repo root.
 
 # 8. CI/CD & INFRA
 
-- [ ] CI workflow and Vercel deploy workflow correct; no scraper in Actions
+- [ ] CI workflow correct; Vercel deploys via Git (main → Preview, release → Production); no scraper in Actions
 - [ ] Cron (if used) runs on the server, not in GitHub
 - [ ] CI caching configured correctly
 - [ ] Vercel deployment unaffected

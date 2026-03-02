@@ -122,7 +122,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 ```
 nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
-├── .github/workflows/     # ci.yml, deploy.yml
+├── .github/workflows/     # ci.yml
 ├── database/
 │   ├── migrations/        # 001–036 SQL (run in numeric order in Supabase)
 │   └── seeds/             # seed_neighborhoods.sql
@@ -137,7 +137,9 @@ nextdoor/
 │   ├── tests/
 │   ├── pyproject.toml, requirements.txt
 ├── docs/
-│   └── DEPLOYMENT.md      # Server setup and deploy from local machine
+│   ├── DEPLOYMENT.md      # Server setup and deploy from local machine
+│   ├── ENVIRONMENTS.md    # Dev vs prod; step-by-step deployment
+│   └── SUPABASE_MIGRATIONS.md  # Run migrations in both Supabase projects
 ├── scripts/
 │   ├── deploy-to-server.sh    # SSH + git pull (optional scrape)
 │   ├── run-embeddings.sh      # Embed + healthcheck
@@ -339,7 +341,8 @@ Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Re
 | Workflow | Trigger / schedule | What it does |
 | :------- | :----------------- | :----------- |
 | **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
-| **Deploy (web)** | Push to `main` (changes under `web/` or deploy workflow) | Deploy to Vercel. Uses `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. |
+
+**Environments:** Two environments (dev and production). **Deploy to dev (web):** Push to `main` → Vercel deploys Preview (dev Supabase). **Deploy to production (web):** Merge `main` into `release` and push → Vercel deploys Production (prod Supabase). **Deploy to production (scraper/worker):** Use [scripts/deploy-to-server.sh](scripts/deploy-to-server.sh) or SSH and `git pull` on the server. Full step-by-step: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -384,4 +387,6 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **.cursorrules** | Project conventions: alphabetization, comments, Python/TypeScript style, testing philosophy. |
 | **database/migrations/** | Source of truth for schema and RPCs; run in order in Supabase. |
 | **docs/DEPLOYMENT.md** | Server setup, deploy from local machine (SSH + git pull), and security. |
+| **docs/ENVIRONMENTS.md** | Dev vs prod; step-by-step deploy to each environment (web and scraper). |
+| **docs/SUPABASE_MIGRATIONS.md** | Run the same migrations in both dev and prod Supabase projects. |
 | **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |

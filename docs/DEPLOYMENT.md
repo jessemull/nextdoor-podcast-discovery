@@ -1,7 +1,9 @@
 # Deployment: web (Vercel) and scraper/worker (server)
 
-- **Web UI** deploys to Vercel on push to `main` when `web/` (or the deploy workflow) changes. No extra steps.
-- **Scraper and worker** run on a server you control. This doc covers one-time setup and deploying changes from your local machine.
+**Environments:** Dev = `main` + Vercel Preview + dev Supabase; Production = `release` branch + Vercel Production + prod Supabase; scraper dev = local with dev Supabase, scraper prod = server with prod Supabase. For step-by-step deployment to each environment, see [ENVIRONMENTS.md](ENVIRONMENTS.md).
+
+- **Web UI** deploys via Vercel’s Git connection: push to `main` → Preview (dev); push to `release` → Production (prod). No GitHub Action required.
+- **Scraper and worker** run on a server you control. This doc covers one-time server setup and deploying code changes from your local machine.
 
 ## One-time setup on the server
 
