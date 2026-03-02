@@ -4,5 +4,5 @@
 - [ ] **Improve error display**: Standardize how errors are surfaced to users across the app (consistent wording, styling, and fallback behavior for API failures).
 - [ ] **Bulk unsave support**: Add a bulk “unsave” action alongside existing bulk actions so multiple saved posts can be cleared in one operation.
 - [ ] **Fix scraper retry pipeline**: Ensure “Retry” on a scraper run creates and runs a real `run_scraper` job, re-scrapes as expected, and updates the Scraper Runs UI to reflect queued/processing/completed states correctly (including how `scraper_runs` and `background_jobs` interact).
-
+- [ ] **Remove robots.txt checks**: Remove robots.txt compliance checks (and any flags/wiring such as `--check-robots`) from the scraper and worker paths so runs are not blocked by robots.txt for this application.
 
