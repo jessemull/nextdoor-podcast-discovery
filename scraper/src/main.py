@@ -105,7 +105,7 @@ else:
     )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE)
+# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE).
 _log_file = os.environ.get("SCRAPER_LOG_FILE")
 _log_dir = os.environ.get("SCRAPER_LOG_DIR")
 if _log_file or _log_dir:
@@ -114,16 +114,23 @@ if _log_file or _log_dir:
     else:
         assert _log_dir is not None
         _file_path = Path(_log_dir).expanduser() / "scraper.log"
-    _file_path.parent.mkdir(parents=True, exist_ok=True)
-    _file_handler = logging.handlers.RotatingFileHandler(
-        _file_path,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3,
-        encoding="utf-8",
-    )
-    _file_handler.setFormatter(logging.Formatter(_log_format))
-    _file_handler.setLevel(_log_level)
-    logging.getLogger().addHandler(_file_handler)
+    try:
+        _file_path.parent.mkdir(parents=True, exist_ok=True)
+        _file_handler = logging.handlers.RotatingFileHandler(
+            _file_path,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    except PermissionError:
+        logging.getLogger(__name__).warning(
+            "Could not create or open log file %s; continuing without file logging",
+            _file_path,
+        )
+    else:
+        _file_handler.setFormatter(logging.Formatter(_log_format))
+        _file_handler.setLevel(_log_level)
+        logging.getLogger().addHandler(_file_handler)
 
 logger = logging.getLogger(__name__)
 

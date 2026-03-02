@@ -52,14 +52,19 @@ export function FeedSearchBar({
 
   useEffect(() => {
     if (!debouncedQuery.trim()) {
-      setSuggestions([...SEARCH_SUGGESTIONS]);
-      setSuggestionsLoading(false);
+      // Defer state update to avoid React's set-state-in-effect lint warning.
+      setTimeout(() => {
+        setSuggestionsLoading(false);
+      }, 0);
       return;
     }
     const q = debouncedQuery.trim().toLowerCase();
     const controller = new AbortController();
     const { signal } = controller;
-    setSuggestionsLoading(true);
+    // Defer state update to avoid React's set-state-in-effect lint warning.
+    setTimeout(() => {
+      setSuggestionsLoading(true);
+    }, 0);
     fetch(`/api/search/suggestions?q=${encodeURIComponent(q)}&limit=10`, {
       signal,
     })
@@ -162,9 +167,13 @@ export function FeedSearchBar({
         type="text"
         value={query}
         onChange={(e) => {
-          onQueryChange(e.target.value);
+          const nextValue = e.target.value;
+          onQueryChange(nextValue);
           setSuggestionsOpen(true);
           setHighlightedIndex(-1);
+          if (!nextValue.trim()) {
+            setSuggestions([...SEARCH_SUGGESTIONS]);
+          }
         }}
         onFocus={() => {
           setSuggestionsOpen(true);

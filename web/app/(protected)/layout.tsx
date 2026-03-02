@@ -1,11 +1,20 @@
+import { redirect } from "next/navigation";
+
 import { auth0 } from "@/lib/auth0";
 
-import type { AppRouterPageRoute } from "@auth0/nextjs-auth0/server";
+import type { ReactNode } from "react";
 
-// Layout receives { children, params }; SDK types expect page opts (params, searchParams). Cast inside.
-const ProtectedLayout: AppRouterPageRoute = async (obj) => {
-  const props = obj as { children: React.ReactNode };
-  return <>{props.children}</>;
-};
+interface ProtectedLayoutProps {
+  children: ReactNode;
+}
 
-export default auth0.withPageAuthRequired(ProtectedLayout, { returnTo: "/" });
+export default async function ProtectedLayout({
+  children,
+}: ProtectedLayoutProps) {
+  const session = await auth0.getSession();
+  if (!session) {
+    redirect("/api/auth/login?returnTo=/");
+  }
+
+  return <>{children}</>;
+}

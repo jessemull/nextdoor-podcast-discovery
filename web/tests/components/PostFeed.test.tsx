@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   render,
   screen,
@@ -5,8 +6,6 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactElement } from "react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +13,7 @@ import { PostFeed } from "@/components/PostFeed";
 import { ToastProvider } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
+import type { ReactElement } from "react";
 
 function renderWithProviders(ui: ReactElement) {
   const Wrapper = ({ children }: { children: React.ReactNode }) => {

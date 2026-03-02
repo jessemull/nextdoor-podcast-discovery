@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/admin/weight-configs/route";
+import { PUT } from "@/app/api/admin/weight-configs/[id]/activate/route";
 import {
   DELETE,
   PATCH,
 } from "@/app/api/admin/weight-configs/[id]/route";
-import { PUT } from "@/app/api/admin/weight-configs/[id]/activate/route";
+import { GET } from "@/app/api/admin/weight-configs/route";
 
 // Mock next-auth
 // Mock Auth0
@@ -15,25 +15,25 @@ vi.mock("@/lib/auth0", () => ({
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockFrom = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockUpdate = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockDelete = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockUpsert = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockSelect = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockEq = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockSingle = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockOrder = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockIn = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockNeq = vi.fn() as any;
 
 const mockSupabase = {

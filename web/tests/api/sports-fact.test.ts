@@ -114,7 +114,7 @@ describe("GET /api/sports-fact", () => {
         {
           type: "image",
           // Claude API content block type is dynamic; use any for test fixture.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
         } as any,
       ],
     });

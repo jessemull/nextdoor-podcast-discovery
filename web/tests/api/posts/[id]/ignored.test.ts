@@ -8,7 +8,7 @@ vi.mock("@/lib/auth0", () => ({
   auth0: { getSession: vi.fn() },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockFrom = vi.fn() as any;
 const mockEq = vi.fn().mockReturnThis();
 const mockSelect = vi.fn().mockReturnThis();
