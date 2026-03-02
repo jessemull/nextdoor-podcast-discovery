@@ -47,7 +47,7 @@ def configure_logging(app_name: str = "scraper") -> None:
 
     if not disable_color:
         try:
-            import colorlog as _colorlog  # type: ignore[import]
+            import colorlog as _colorlog
 
             colorlog = _colorlog
             use_colorlog = True

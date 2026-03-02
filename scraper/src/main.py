@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import Client
 
-from src.config import FEED_URLS, LOGIN_URL, SCRAPER_CONFIG, validate_env
+from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
 from src.embedder import Embedder
 from src.exceptions import (
     CaptchaRequiredError,
@@ -27,8 +27,8 @@ from src.exceptions import (
     LoginFailedError,
     ScraperError,
 )
-from src.logging_config import configure_logging
 from src.llm_scorer import LLMScorer
+from src.logging_config import configure_logging
 from src.post_extractor import PostExtractor
 from src.post_storage import PostStorage
 from src.scraper import NextdoorScraper

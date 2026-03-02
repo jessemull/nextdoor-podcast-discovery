@@ -113,6 +113,7 @@ export function FeedPageContent() {
     useKeywordSearch,
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
       const q = qFromUrl.trim();
@@ -121,6 +122,7 @@ export function FeedPageContent() {
       void runSearch(q);
     }
   }, [qFromUrl, runSearch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateUrl = useCallback(
     (updates: { q?: string; threshold?: number }) => {

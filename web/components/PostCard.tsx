@@ -592,9 +592,9 @@ export const PostCard = memo(function PostCard({
             <Image
               alt="Post"
               className="h-auto w-full rounded-lg border border-border"
+              height={800}
               src={mainImageUrl}
               width={1200}
-              height={800}
             />
           </div>
           {hasMultipleImages && (
