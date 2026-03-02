@@ -27,6 +27,7 @@ from src.exceptions import (
     LoginFailedError,
     ScraperError,
 )
+from src.logging_config import configure_logging
 from src.llm_scorer import LLMScorer
 from src.post_extractor import PostExtractor
 from src.post_storage import PostStorage
@@ -66,71 +67,7 @@ def _record_scraper_run(
 _scraper_dir = Path(__file__).resolve().parent.parent
 load_dotenv(_scraper_dir / ".env")
 
-_log_level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
-_log_level = getattr(logging, _log_level_name, logging.INFO)
-_log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-_disable_color = bool(os.environ.get("NO_COLOR")) or os.environ.get("LOG_COLOR") in (
-    "0",
-    "false",
-    "False",
-)
-
-colorlog: Any = None
-try:
-    import colorlog
-except Exception:  # pragma: no cover
-    pass
-
-if colorlog and not _disable_color:
-    _handler = colorlog.StreamHandler()
-    _handler.setFormatter(
-        colorlog.ColoredFormatter(
-            "%(log_color)s" + _log_format + "%(reset)s",
-            log_colors={
-                "DEBUG": "cyan",
-                "ERROR": "red",
-                "INFO": "green",
-                "WARNING": "yellow",
-            },
-        )
-    )
-    logging.basicConfig(
-        handlers=[_handler],
-        level=_log_level,
-    )
-else:
-    logging.basicConfig(
-        format=_log_format,
-        level=_log_level,
-    )
-logging.getLogger("httpx").setLevel(logging.WARNING)
-
-# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE).
-_log_file = os.environ.get("SCRAPER_LOG_FILE")
-_log_dir = os.environ.get("SCRAPER_LOG_DIR")
-if _log_file or _log_dir:
-    if _log_file:
-        _file_path = Path(_log_file).expanduser()
-    else:
-        assert _log_dir is not None
-        _file_path = Path(_log_dir).expanduser() / "scraper.log"
-    try:
-        _file_path.parent.mkdir(parents=True, exist_ok=True)
-        _file_handler = logging.handlers.RotatingFileHandler(
-            _file_path,
-            maxBytes=5 * 1024 * 1024,
-            backupCount=3,
-            encoding="utf-8",
-        )
-    except PermissionError:
-        logging.getLogger(__name__).warning(
-            "Could not create or open log file %s; continuing without file logging",
-            _file_path,
-        )
-    else:
-        _file_handler.setFormatter(logging.Formatter(_log_format))
-        _file_handler.setLevel(_log_level)
-        logging.getLogger().addHandler(_file_handler)
+configure_logging("scraper-main")
 
 logger = logging.getLogger(__name__)
 

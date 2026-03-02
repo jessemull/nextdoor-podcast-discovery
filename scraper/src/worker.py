@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 from supabase import Client
 
 from src.config import ConfigurationError, validate_env
+from src.logging_config import configure_logging
 
 load_dotenv()  # noqa: E402
 from src.llm_prompts import SCORING_DIMENSIONS  # noqa: E402
@@ -203,8 +204,10 @@ def _load_job_dependencies(
     novelty_config = load_novelty_config(supabase)
     frequencies = load_topic_frequencies(supabase)
 
-    logger.info("Loaded weights from config %s: %s", weight_config_id, weights)
-    logger.info("Loaded novelty config: %s", novelty_config)
+    logger.debug(
+        "Loaded weights from config %s and novelty config for recompute job",
+        weight_config_id,
+    )
 
     return weights, novelty_config, frequencies
 
@@ -877,11 +880,8 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # Set up logging
-    logging.basicConfig(
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        level=logging.INFO,
-    )
+    # Set up logging (shared configuration with color and quiet httpx).
+    configure_logging("scraper-worker")
 
     try:
         validate_env()

@@ -14,16 +14,12 @@ from openai import OpenAI
 from src.config import validate_env
 from src.embedder import Embedder
 from src.exceptions import ConfigurationError
+from src.logging_config import configure_logging
 from src.session_manager import SessionManager
 
-# Load environment variables from .env file
-
+# Load environment variables from .env file and configure logging
 load_dotenv()
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+configure_logging("scraper-embed")
 logger = logging.getLogger(__name__)
 
 
