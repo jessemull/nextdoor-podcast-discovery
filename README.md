@@ -142,6 +142,7 @@ nextdoor/
 │   └── SUPABASE_MIGRATIONS.md  # Run migrations in both Supabase projects
 ├── scripts/
 │   ├── deploy-to-server.sh    # SSH + git pull (optional scrape)
+│   ├── setup-server.sh        # One-time production host setup
 │   ├── run-embeddings.sh      # Embed (optional healthcheck ping)
 │   ├── run-scrape.sh          # Scrape + recount (optional healthcheck ping)
 │   ├── tail-logs.sh           # SSH + tail scraper log
@@ -163,6 +164,7 @@ nextdoor/
 | :----- | :------ |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
+| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
 | `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), `--check-robots`, then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |

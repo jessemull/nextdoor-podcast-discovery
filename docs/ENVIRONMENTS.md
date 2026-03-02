@@ -114,14 +114,14 @@ The production host runs the scraper and worker with a `scraper/.env` that refer
 
 Execute in order. Dependencies are implied by the sequence.
 
-1. **Supabase:** Create two projects (dev, prod). In each project, execute all migrations in `database/migrations/` in numeric order via the SQL Editor. Record project URLs and anon/service keys for both.
+1. **Supabase:** Create two projects (dev, prod). For each new project, run `database/bootstrap.sql` once in the SQL Editor (see [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md)). Record project URLs and anon/service keys for both.
 2. **Auth0:** Create one application. Add Production and Preview callback URLs and logout URLs. Generate two session secrets (one for Preview, one for Production).
 3. **Upstash:** Create a Redis database. Record REST URL and token. One database suffices; keys are namespaced by environment.
 4. **Vercel:** Connect the repository. Set Root Directory to `web`. Set Production Branch to `release`. Create and push branch `release` if it does not exist.
 5. **Vercel — Preview:** In Settings → Environment Variables, configure for Preview: dev Supabase (all four vars), Auth0 (domain, client ID, client secret), Preview `AUTH0_SECRET`, `APP_BASE_URL` (Preview origin), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
 6. **Vercel — Production:** Configure for Production: prod Supabase (all four vars), same Auth0 app vars, Production `AUTH0_SECRET`, `APP_BASE_URL` (Production origin), API keys, Redis vars. Add `INTERNAL_API_SECRET` when the production worker will call the cache-invalidate endpoint.
 7. **Local development:** Create `web/.env.local` and `scraper/.env` from the corresponding `.env.example` files. Populate with dev Supabase and dev credentials. Apply migrations to the dev project as needed.
-8. **Production server:** Provision the host and configure `scraper/.env` with prod Supabase only, prod `APP_URL` and `INTERNAL_API_SECRET` when using cache invalidation, and a distinct `SESSION_ENCRYPTION_KEY`. Do not add dev Supabase credentials to this host. See [DEPLOYMENT.md](DEPLOYMENT.md).
+8. **Production server:** Run `scripts/setup-server.sh` on the host (see [DEPLOYMENT.md](DEPLOYMENT.md)). Edit `scraper/.env` with production credentials. Start the worker (e.g. systemd or long-lived process).
 
 ---
 

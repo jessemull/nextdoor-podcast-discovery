@@ -16,55 +16,30 @@ The production server runs the scraper and worker only. Its `scraper/.env` must 
 
 ## Production server setup
 
-Prerequisites: host with Python 3.11+, Git, and Playwright system dependencies; network access restricted (e.g. Tailscale) so SSH is not exposed to the public internet.
+Run the one-time setup script on the host. The script installs system dependencies (Python 3.11, git, Chromium libraries), creates a dedicated user (when run as root), clones the repository (when `GIT_REPO` is set or repo is present), creates the virtual environment, installs the scraper and Playwright Chromium, copies `scraper/.env.example` to `scraper/.env`, creates the log directory, and adds cron entries for the scraper.
 
-### 1. Network and access
+**Prerequisites:** Ubuntu 22.04, Debian 12, or Amazon Linux 2 (or similar). SSH and key-based access configured. Restrict SSH to a private network (e.g. Tailscale); do not expose it to the public internet.
 
-Restrict SSH to a private network (e.g. Tailscale). Use the host’s private hostname for SSH. Use key-based authentication; disable password and root login.
+**Run the script:**
 
-### 2. System user and dependencies
+- From the host (repo already cloned, e.g. to `/home/nextdoor/nextdoor`):
+  ```bash
+  cd /home/nextdoor/nextdoor && sudo ./scripts/setup-server.sh
+  ```
+- Or as root with `GIT_REPO` set (script clones to `/home/nextdoor/nextdoor`):
+  ```bash
+  sudo GIT_REPO=https://github.com/<org>/<repo>.git ./scripts/setup-server.sh
+  ```
+- From your local machine via SSH (script must be on the host):
+  ```bash
+  scp scripts/setup-server.sh <user>@<host>:/tmp/ && ssh <user>@<host> "sudo bash /tmp/setup-server.sh"
+  ```
+  Or clone the repo on the host first, then `ssh <user>@<host> "cd /path/to/nextdoor && sudo ./scripts/setup-server.sh"`.
 
-Create a dedicated system user for the scraper (e.g. `nextdoor`). Install Python 3.11+, Git, and Playwright system dependencies. Install Chromium for Playwright (e.g. `playwright install chromium` from the scraper directory with venv active).
+**Post-setup:**
 
-### 3. Repository and runtime
-
-Clone the repository (e.g. to `~/nextdoor`). From the repository root:
-
-- Create the virtual environment: `make venv`
-- Activate it: `source .venv/bin/activate`
-- Install scraper dependencies: `make install-scraper`
-- Install Playwright Chromium from the `scraper/` directory (or with `PATH` set so the venv’s playwright is used)
-
-### 4. Configuration
-
-Copy `scraper/.env.example` to `scraper/.env`. Populate with production values only:
-
-- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` — production Supabase project
-- `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`
-- `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root)
-- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
-- When the worker will call the Production app’s cache-invalidate endpoint: `APP_URL` (Production origin), `INTERNAL_API_SECRET` (must match Vercel Production)
-
-Do not commit `.env`. Do not add development Supabase credentials.
-
-### 5. Logging (optional)
-
-Set `SCRAPER_LOG_DIR` in `scraper/.env` (e.g. `~/nextdoor-logs`). Create that directory. Logs rotate by size (see application logging configuration). To tail logs from a local machine: `DEPLOY_HOST=<user>@<host> ./scripts/tail-logs.sh` or use the Makefile target `make tail-logs DEPLOY_HOST=<user>@<host>`.
-
-### 6. Scheduling
-
-Schedule the scraper via cron (or equivalent). Run from the repository root with the virtual environment activated. Example crontab entries:
-
-```
-0 2 * * * cd /home/nextdoor/nextdoor && . .venv/bin/activate && ./scripts/run-scrape.sh recent >> /home/nextdoor/nextdoor-logs/cron.log 2>&1
-0 18 * * * cd /home/nextdoor/nextdoor && . .venv/bin/activate && ./scripts/run-scrape.sh trending >> /home/nextdoor/nextdoor-logs/cron.log 2>&1
-```
-
-Adjust paths and schedule to match the host and requirements. Optionally schedule `scripts/run-embeddings.sh` similarly.
-
-### 7. Worker process
-
-Run the worker so that “Save & Recompute” and “Activate” in the Production UI complete. Run `python -m src.worker --job-type recompute_final_scores` as a long-lived process (e.g. under systemd or a process manager). Ensure the process uses the same virtual environment and `scraper/.env` as the scraper.
+1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production).
+2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `python -m src.worker --job-type recompute_final_scores` as a long-lived process (e.g. under systemd or a process manager). Use the same virtual environment and `scraper/.env` as the scraper.
 
 ---
 
