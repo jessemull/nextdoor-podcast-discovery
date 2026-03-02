@@ -585,21 +585,16 @@ export const PostCard = memo(function PostCard({
         </div>
       )}
 
-      {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
+      {/* Images: main full-width image with direct border/radius; carousel floats below */}
       {imageUrls.length > 0 && (
         <>
-          <div
-            className={cn(
-              "relative aspect-[21/10] w-full overflow-hidden rounded-lg border border-border bg-surface-hover",
-              hasMultipleImages ? "" : "mb-6"
-            )}
-          >
+          <div className={cn(hasMultipleImages ? "" : "mb-6")}>
             <Image
               alt="Post"
-              className="object-cover"
-              fill
-              sizes="(max-width: 768px) 100vw, 672px"
+              className="h-auto w-full rounded-lg border border-border"
               src={mainImageUrl}
+              width={1200}
+              height={800}
             />
           </div>
           {hasMultipleImages && (
