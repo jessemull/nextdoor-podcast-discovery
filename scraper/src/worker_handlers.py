@@ -170,7 +170,8 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
         }
     ).eq("id", job_id).execute()
 
-    repo_root = Path(__file__).resolve().parent.parent
+    # repo_root is the monorepo root (one level above scraper/)
+    repo_root = Path(__file__).resolve().parent.parent.parent
     script = repo_root / "scripts" / "run-scrape.sh"
     if not script.is_file():
         supabase.table("background_jobs").update(
