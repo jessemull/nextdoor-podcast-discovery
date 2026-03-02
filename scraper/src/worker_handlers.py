@@ -82,9 +82,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
     )
 
     if _fetch_permalink_job_was_cancelled(supabase, job_id):
-        logger.info(
-            "[permalink] job=%s cancelled before run, skipping", job_id
-        )
+        logger.info("[permalink] job=%s cancelled before run, skipping", job_id)
         return True
 
     scraper_dir = Path(__file__).resolve().parent.parent
@@ -101,9 +99,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
             timeout=300,
         )
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
-            logger.info(
-                "[permalink] job=%s cancelled during run, not updating", job_id
-            )
+            logger.info("[permalink] job=%s cancelled during run, not updating", job_id)
             return True
         if result.returncode == 0:
             supabase.table("background_jobs").update(
@@ -206,9 +202,7 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error(
-            "[run_scraper] job=%s script not found at %s", job_id, script
-        )
+        logger.error("[run_scraper] job=%s script not found at %s", job_id, script)
         return
 
     try:

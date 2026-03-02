@@ -100,4 +100,3 @@ def configure_logging(app_name: str = "scraper") -> None:
             logging.getLogger().addHandler(file_handler)
 
     _CONFIGURED = True
-

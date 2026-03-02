@@ -27,9 +27,6 @@ fi
 echo "$(date -Iseconds): Starting $FEED_TYPE scrape..."
 
 cd "$SCRAPER_DIR"
-# Robots.txt compliance check is available via --check-robots, but the
-# long-running worker/queue path should not hard-fail on robots.txt so jobs
-# can be retried consistently. Run without --check-robots here.
 if "$PYTHON" -m src.main --feed-type "$FEED_TYPE" --score; then
   echo "$(date -Iseconds): Scrape successful, recounting topic frequencies..."
   if "$PYTHON" -m src.recount_topics; then

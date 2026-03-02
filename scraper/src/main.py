@@ -31,7 +31,6 @@ from src.logging_config import configure_logging
 from src.llm_scorer import LLMScorer
 from src.post_extractor import PostExtractor
 from src.post_storage import PostStorage
-from src.robots import check_robots_allowed
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
 
@@ -265,7 +264,6 @@ def _run_permalink_fetch(
 
 
 def main(
-    check_robots: bool = False,
     dry_run: bool = False,
     embed: bool = True,
     feed_type: str = "recent",
@@ -288,7 +286,6 @@ def main(
     or --no-embed to skip those steps.
 
     Args:
-        check_robots: If True, fetch robots.txt and exit with 1 if our paths are disallowed.
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
         feed_type: Which feed to scrape ("recent" or "trending").
@@ -320,18 +317,6 @@ def main(
             dry_run=dry_run,
             visible=visible,
         )
-
-    # Optional robots.txt check before scraping
-    if check_robots:
-        base_url = LOGIN_URL.rstrip("/").rsplit("/", 1)[0] or "https://nextdoor.com"
-        paths = ["/login/", "/news_feed/"]
-        allowed, message = check_robots_allowed(base_url, paths)
-        if allowed:
-            logger.info("Robots check: %s", message)
-        else:
-            logger.error("Robots check failed: %s", message)
-            logger.info("Exiting with code 1")
-            return 1
 
     # Validate feed type
 
@@ -709,11 +694,6 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Nextdoor scraper pipeline")
     parser.add_argument(
-        "--check-robots",
-        action="store_true",
-        help="Fetch robots.txt and exit with error if our paths are disallowed",
-    )
-    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Run without making changes to the database",
@@ -802,7 +782,6 @@ if __name__ == "__main__":
 
     sys.exit(
         main(
-            check_robots=args.check_robots,
             dry_run=args.dry_run,
             feed_type=args.feed_type,
             inspect=args.inspect,
