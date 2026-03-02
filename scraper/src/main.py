@@ -75,10 +75,11 @@ _disable_color = bool(os.environ.get("NO_COLOR")) or os.environ.get("LOG_COLOR")
     "False",
 )
 
+colorlog: Any = None
 try:
-    import colorlog  # type: ignore[import-not-found]
+    import colorlog
 except Exception:  # pragma: no cover
-    colorlog = None  # type: ignore[assignment]
+    pass
 
 if colorlog and not _disable_color:
     _handler = colorlog.StreamHandler()
@@ -104,21 +105,32 @@ else:
     )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE)
+# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE).
 _log_file = os.environ.get("SCRAPER_LOG_FILE")
 _log_dir = os.environ.get("SCRAPER_LOG_DIR")
 if _log_file or _log_dir:
-    _file_path = Path(_log_file).expanduser() if _log_file else Path(_log_dir).expanduser() / "scraper.log"
-    _file_path.parent.mkdir(parents=True, exist_ok=True)
-    _file_handler = logging.handlers.RotatingFileHandler(
-        _file_path,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3,
-        encoding="utf-8",
-    )
-    _file_handler.setFormatter(logging.Formatter(_log_format))
-    _file_handler.setLevel(_log_level)
-    logging.getLogger().addHandler(_file_handler)
+    if _log_file:
+        _file_path = Path(_log_file).expanduser()
+    else:
+        assert _log_dir is not None
+        _file_path = Path(_log_dir).expanduser() / "scraper.log"
+    try:
+        _file_path.parent.mkdir(parents=True, exist_ok=True)
+        _file_handler = logging.handlers.RotatingFileHandler(
+            _file_path,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    except PermissionError:
+        logging.getLogger(__name__).warning(
+            "Could not create or open log file %s; continuing without file logging",
+            _file_path,
+        )
+    else:
+        _file_handler.setFormatter(logging.Formatter(_log_format))
+        _file_handler.setLevel(_log_level)
+        logging.getLogger().addHandler(_file_handler)
 
 logger = logging.getLogger(__name__)
 
@@ -454,7 +466,9 @@ def main(
                     unscored_batch_limit=unscored_batch_limit,
                 )
             if embed and not dry_run:
-                logger.debug("Running embedding generation for posts without embeddings")
+                logger.debug(
+                    "Running embedding generation for posts without embeddings"
+                )
                 openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 embedder = Embedder(session_manager.supabase, openai_client)
                 embed_stats = embedder.generate_and_store_embeddings(dry_run=False)
@@ -515,7 +529,7 @@ def main(
 
             if open_trending_details:
                 ok = scraper.click_first_permalink_to_details()
-                if ok:
+                if ok and scraper.page is not None:
                     extractor = PostExtractor(
                         scraper.page, feed_type="trending", max_posts=1
                     )
@@ -542,7 +556,9 @@ def main(
                     )
                     input()
                 else:
-                    logger.warning("Could not open first permalink; browser will close.")
+                    logger.warning(
+                        "Could not open first permalink; browser will close."
+                    )
                 logger.info("Exiting with code 0")
                 return 0
 
@@ -639,7 +655,9 @@ def main(
                 )
 
             if embed and not dry_run:
-                logger.debug("Running embedding generation for posts without embeddings")
+                logger.debug(
+                    "Running embedding generation for posts without embeddings"
+                )
                 openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 embedder = Embedder(session_manager.supabase, openai_client)
                 embed_stats = embedder.generate_and_store_embeddings(dry_run=False)

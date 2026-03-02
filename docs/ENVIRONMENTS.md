@@ -1,100 +1,131 @@
-# Environments and deployment steps
+# Environments
 
-There are two environments: **dev** (integration / preview) and **production**. This doc is the single source of truth for what each environment is and how to deploy to it.
+This document defines the development and production environments, their configuration, and deployment procedures.
 
-## Environments overview
+## Overview
 
-| | Dev | Production |
-|--|-----|------------|
-| **Web** | Local (`make dev-web`) or Vercel **Preview** (deploys from `main`) | Vercel **Production** (deploys from `release` branch) |
-| **Supabase** | Dev project (URL/keys in Preview env or `web/.env.local`) | Prod project (URL/keys in Production env or server `scraper/.env`) |
-| **Scraper / worker** | Run locally; `scraper/.env` points at **dev** Supabase | Run on server; `scraper/.env` points at **prod** Supabase |
+The system has two environments. Isolation is enforced by separate Supabase projects, separate Vercel deployment targets, and environment-specific configuration.
 
-**Branch strategy:** `main` is the default branch for development. A long-lived branch `release` is used for production. In Vercel, set **Production Branch** to `release` so that pushes to `main` create Preview deployments and pushes to `release` create Production deployments.
+| Component | Development | Production |
+|-----------|-------------|------------|
+| Web | Vercel Preview (branch `main`) or local | Vercel Production (branch `release`) |
+| Database | Supabase project (dev) | Supabase project (prod) |
+| Scraper / worker | Local execution; dev Supabase | Server execution; prod Supabase only |
+| Auth | Single Auth0 app; both origins registered | Same app; distinct session secret |
+| Cache | Upstash Redis (keys namespaced by env) | Same Redis or separate instance |
 
----
+**Branch convention:** `main` triggers Preview deployments. `release` triggers Production deployments. Configure Vercel Production Branch to `release`.
 
-## One-time setup
+**Vercel behavior:** Environment variables are not shared between Preview and Production. Configure both targets explicitly.
 
-### Create the `release` branch (once)
-
-From your local machine, with `main` up to date:
-
-```bash
-git checkout main
-git pull origin main
-git checkout -b release
-git push -u origin release
-```
-
-In Vercel: **Project Settings → Git → Production Branch** → select `release`. Ensure **Root Directory** is `web`.
-
-### Vercel environment variables
-
-In the Vercel project (**Settings → Environment Variables**), set variables per environment:
-
-- **Preview** (used for `main` and other non-release branches): Dev Supabase URL, anon key, service key; dev Auth0 app (domain, client ID, secret, etc.); `APP_BASE_URL` set to your preview URL or leave default. In Auth0, add the Preview callback and logout URLs (e.g. `https://your-project-*.vercel.app` or the specific preview URL).
-- **Production** (used for `release` branch): Prod Supabase URL, anon key, service key; prod Auth0 app; `APP_BASE_URL` set to your production domain (e.g. `https://yourdomain.com`).
-
-### Auth0
-
-Preview and Production need valid callback and logout URLs. Use either:
-
-- Two Auth0 applications (one for dev, one for prod), or  
-- One Auth0 application with both Preview and Production URLs added to the allowed callback/logout lists.
+**Production server constraint:** The host running the scraper and worker in production uses a single `scraper/.env` containing only production credentials. Development Supabase credentials must not be present on that host.
 
 ---
 
-## Web — Deploy to dev (preview)
+## Configuration reference
+
+### Vercel (web)
+
+**Location:** Project → Settings → Environment Variables. Assign each variable to Preview, Production, or both.
+
+| Variable | Preview | Production |
+|----------|---------|------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Dev project URL | Prod project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Dev anon key | Prod anon key |
+| `SUPABASE_URL` | Dev project URL | Prod project URL |
+| `SUPABASE_SERVICE_KEY` | Dev service key | Prod service key |
+| `AUTH0_DOMAIN` | Auth0 tenant | Same |
+| `AUTH0_CLIENT_ID` | Auth0 client ID | Same |
+| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Same |
+| `AUTH0_SECRET` | Secret A (Preview) | Secret B (Production; must differ) |
+| `APP_BASE_URL` | Preview origin (e.g. `https://<project>-git-main-<scope>.vercel.app`) | Production origin |
+| `ANTHROPIC_API_KEY` | API key | Same or separate |
+| `OPENAI_API_KEY` | API key | Same or separate |
+| `UPSTASH_REDIS_REST_URL` | Redis REST URL | Same or separate |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis REST token | Same or separate |
+| `INTERNAL_API_SECRET` | Not required | Required when production worker calls cache-invalidate; must match server `scraper/.env` |
+
+Redis keys are prefixed by `VERCEL_ENV` (production, preview, or development). A single Upstash database can serve both deployment targets.
+
+### Scraper and worker
+
+**Location:** `scraper/.env`. Use one file per environment (e.g. `.env` for current context; do not mix dev and prod on the same host).
+
+| Variable | Development (local) | Production (server) |
+|----------|---------------------|----------------------|
+| `SUPABASE_URL` | Dev project URL | Prod project URL only |
+| `SUPABASE_SERVICE_KEY` | Dev service key | Prod service key only |
+| `SESSION_ENCRYPTION_KEY` | Dev key | Prod key (distinct from dev) |
+| `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD` | Credentials | Same credentials |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | API keys | API keys |
+| `APP_URL` | Unset or Preview origin | Production origin (when using cache invalidation) |
+| `INTERNAL_API_SECRET` | Unset | Must match Vercel Production when `APP_URL` is set |
+
+---
+
+## Auth0 configuration
+
+A single Auth0 application supports both environments.
+
+1. Open the application in the Auth0 Dashboard → Settings.
+2. **Allowed Callback URLs:** Add Production and Preview callback URLs, comma-separated (e.g. `https://<production-domain>/api/auth/callback`, `https://<project>-git-main-<scope>.vercel.app/api/auth/callback`).
+3. **Allowed Logout URLs:** Add the same two origins.
+4. Use the same `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET` in both Vercel environments. Set `APP_BASE_URL` per environment to the deployment origin so redirects target the correct URL.
+
+---
+
+## Deployment procedures
+
+### Web — Preview (development)
 
 1. Push to `main`: `git push origin main`.
-2. CI runs (lint, test, build) on push/PR.
-3. Vercel deploys the commit as a **Preview** deployment (if the repo is connected to Vercel). Use the deployment URL from the Vercel dashboard or the GitHub commit checks.
-4. Test the preview URL; it uses **Preview** env vars (dev Supabase, dev Auth0).
+2. CI runs; Vercel builds and deploys to Preview. The Preview URL for `main` is stable (e.g. `https://<project>-git-main-<scope>.vercel.app`).
+3. The deployment uses variables configured for Preview.
 
----
+### Web — Production
 
-## Web — Deploy to production
-
-1. Validate the app on a Preview deployment (from `main`).
+1. Verify behavior on a Preview deployment.
 2. Merge `main` into `release` and push:
    ```bash
-   git checkout release
-   git pull origin release
-   git merge main
-   git push origin release
+   git checkout release && git pull origin release && git merge main --no-edit && git push origin release && git checkout main
    ```
-3. Vercel deploys **Production** from the `release` branch. The production URL uses **Production** env vars (prod Supabase, prod Auth0).
+   Alternatively: `make deploy-web-prod` (validates clean working tree, then performs the same sequence).
+3. Vercel builds and deploys from `release`. The deployment uses variables configured for Production.
+
+### Scraper and worker — Development
+
+Run the scraper or worker locally. Use a `scraper/.env` that references the dev Supabase project and dev credentials. Jobs and scraper runs created via the Preview UI are stored in the dev database; the production worker does not consume them.
+
+### Scraper and worker — Production
+
+The production host runs the scraper and worker with a `scraper/.env` that references only the prod Supabase project. To ship code changes: run `DEPLOY_HOST=<user>@<host> ./scripts/deploy-to-server.sh` from the repo root, or SSH to the host and run `git pull`. See [DEPLOYMENT.md](DEPLOYMENT.md) for host setup.
 
 ---
 
-## Scraper / worker — Dev
+## Verification
 
-- Run the scraper or worker **locally** (e.g. from your machine). Use a `scraper/.env` (or a copy like `scraper/.env.dev`) that points at **dev** Supabase (URL, service key, and any other dev credentials).
-- No server deploy. Dev is for testing scraper/worker logic against dev data.
-
----
-
-## Scraper / worker — Production
-
-- The **server** has a single `scraper/.env` with **prod** Supabase (and prod API keys). Cron (or systemd) runs `run-scrape.sh` and the worker there.
-- To deploy scraper/worker code to production after you’ve merged to `main` (or `release`, if you prefer to deploy scraper only after a production web release):
-
-  1. From your local machine, run the deploy script:  
-     `DEPLOY_HOST=nextdoor@your-server ./scripts/deploy-to-server.sh`  
-     or SSH and pull:  
-     `ssh nextdoor@your-server "cd ~/nextdoor && git pull"`.
-  2. The next cron run (or a manual run of `run-scrape.sh` / the worker) uses the updated code.
+- **Preview vs Production:** Create a test resource (e.g. post or weight config) in the Preview UI. Confirm it does not appear in the Production UI (distinct Supabase projects).
+- **Redis:** Using a shared Redis instance, perform an action in Preview that updates cached state. Confirm Production cached state is unchanged (key namespacing).
+- **Worker:** Enqueue a job from the Production UI. Confirm only the worker on the production host (prod Supabase) processes it.
 
 ---
 
-## Summary
+## Setup checklist
 
-| Action | Result |
-|--------|--------|
-| Push to `main` | CI runs; Vercel deploys **Preview** (dev Supabase). Test there. |
-| Merge `main` into `release` and push | Vercel deploys **Production** (prod Supabase). |
-| Run scraper/worker locally with dev `.env` | **Dev** scraper/worker (dev Supabase). |
-| Run `deploy-to-server.sh` or `git pull` on server | **Production** scraper/worker code updated; server uses prod Supabase. |
+Execute in order. Dependencies are implied by the sequence.
 
-For server setup and security, see [DEPLOYMENT.md](DEPLOYMENT.md). For running migrations in both Supabase projects, see [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md).
+1. **Supabase:** Create two projects (dev, prod). For each new project, run `database/bootstrap.sql` once in the SQL Editor (see [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md)). Record project URLs and anon/service keys for both.
+2. **Auth0:** Create one application. Add Production and Preview callback URLs and logout URLs. Generate two session secrets (one for Preview, one for Production).
+3. **Upstash:** Create a Redis database. Record REST URL and token. One database suffices; keys are namespaced by environment.
+4. **Vercel:** Connect the repository. Set Root Directory to `web`. Set Production Branch to `release`. Create and push branch `release` if it does not exist.
+5. **Vercel — Preview:** In Settings → Environment Variables, configure for Preview: dev Supabase (all four vars), Auth0 (domain, client ID, client secret), Preview `AUTH0_SECRET`, `APP_BASE_URL` (Preview origin), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+6. **Vercel — Production:** Configure for Production: prod Supabase (all four vars), same Auth0 app vars, Production `AUTH0_SECRET`, `APP_BASE_URL` (Production origin), API keys, Redis vars. Add `INTERNAL_API_SECRET` when the production worker will call the cache-invalidate endpoint.
+7. **Local development:** Create `web/.env.local` and `scraper/.env` from the corresponding `.env.example` files. Populate with dev Supabase and dev credentials. Apply migrations to the dev project as needed.
+8. **Production server:** Run `scripts/setup-server.sh` on the host (see [DEPLOYMENT.md](DEPLOYMENT.md)). Edit `scraper/.env` with production credentials. Start the worker (e.g. systemd or long-lived process).
+
+---
+
+## Related documentation
+
+- [DEPLOYMENT.md](DEPLOYMENT.md) — Production server setup and scraper/worker deployment.
+- [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md) — Applying migrations to both Supabase projects.

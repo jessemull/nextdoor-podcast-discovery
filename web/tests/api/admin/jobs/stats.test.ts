@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/admin/jobs/stats/route";
+
 import type { MockSupabaseClient, MockSupabaseQueryBuilder } from "@/tests/mocks/types";
 
 // Mock Auth0

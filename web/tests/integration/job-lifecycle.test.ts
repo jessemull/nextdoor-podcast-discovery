@@ -12,9 +12,9 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { POST } from "@/app/api/admin/recompute-scores/route";
 import { PUT } from "@/app/api/admin/jobs/[id]/cancel/route";
 import { GET } from "@/app/api/admin/jobs/route";
+import { POST } from "@/app/api/admin/recompute-scores/route";
 
 // Mock next-auth
 // Mock Auth0
@@ -23,21 +23,21 @@ vi.mock("@/lib/auth0", () => ({
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockFrom = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockInsert = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockSelect = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockUpdate = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockEq = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockSingle = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockOrder = vi.fn() as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockLimit = vi.fn() as any;
 
 const mockSupabase = {

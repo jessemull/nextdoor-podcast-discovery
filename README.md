@@ -142,8 +142,9 @@ nextdoor/
 │   └── SUPABASE_MIGRATIONS.md  # Run migrations in both Supabase projects
 ├── scripts/
 │   ├── deploy-to-server.sh    # SSH + git pull (optional scrape)
-│   ├── run-embeddings.sh      # Embed + healthcheck
-│   ├── run-scrape.sh          # Scrape + recount + healthcheck
+│   ├── setup-server.sh        # One-time production host setup
+│   ├── run-embeddings.sh      # Embed (optional healthcheck ping)
+│   ├── run-scrape.sh          # Scrape + recount (optional healthcheck ping)
 │   ├── tail-logs.sh           # SSH + tail scraper log
 │   ├── generate-encryption-key.py
 │   └── test-supabase-connection.py
@@ -163,8 +164,9 @@ nextdoor/
 | :----- | :------ |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
-| `scripts/run-embeddings.sh` | Runs `python -m src.embed`; pings `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL`. |
-| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), plus `--check-robots`, then `recount_topics`. Pings `HEALTHCHECK_URL` on success or `/fail` on failure. Needs repo `.venv` and `scraper/.env`. |
+| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
+| `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
+| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), `--check-robots`, then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
 
@@ -238,19 +240,8 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 ## Environment variables
 
-Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so sessions and data live in one project.
-
-### Scraper
-
-- **Config file:** `scraper/.env` (copy from `.env.example`)
-- **Required:** `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SESSION_ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
-- **Optional:** `APP_URL`, `HEALTHCHECK_EMBED_URL`, `HEALTHCHECK_URL`, `INTERNAL_API_SECRET` (worker: cache invalidation after activate cutover), `UNSCORED_BATCH_LIMIT`, `SCRAPER_LOG_DIR` (e.g. `~/nextdoor-logs`) or `SCRAPER_LOG_FILE` for rotating file logs on the server
-
-### Web
-
-- **Config file:** `web/.env.local` (copy from `.env.example`)
-- **Required:** Supabase URL/keys (public + service), Auth0 domain/client/secret, `APP_BASE_URL`
-- **Optional:** `ANTHROPIC_API_KEY` (sports fact on home page), `INTERNAL_API_SECRET` (for worker-triggered cache invalidation after activate cutover), `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared caching; when unset, in-memory fallback)
+- **Scraper:** `scraper/.env` (copy from `scraper/.env.example`). Required: Nextdoor credentials, Supabase URL and service key, `SESSION_ENCRYPTION_KEY`, Anthropic and OpenAI keys. Optional: `APP_URL` and `INTERNAL_API_SECRET` (production worker → app cache invalidation), `SCRAPER_LOG_DIR` or `SCRAPER_LOG_FILE`, `UNSCORED_BATCH_LIMIT`. For dev use dev Supabase; on the server use **production** Supabase only. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+- **Web:** `web/.env.local` (copy from `web/.env.example`). Required: Supabase URL/keys, Auth0 domain/client/secret, `APP_BASE_URL`. Optional: `ANTHROPIC_API_KEY` (sports fact), `INTERNAL_API_SECRET`. Recommended for Vercel: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (cache; keys are namespaced by env). Full matrix and dev vs prod: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ## Setup & quick start
 
@@ -342,7 +333,7 @@ Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Re
 | :------- | :----------------- | :----------- |
 | **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
 
-**Environments:** Two environments (dev and production). **Deploy to dev (web):** Push to `main` → Vercel deploys Preview (dev Supabase). **Deploy to production (web):** Merge `main` into `release` and push → Vercel deploys Production (prod Supabase). **Deploy to production (scraper/worker):** Use [scripts/deploy-to-server.sh](scripts/deploy-to-server.sh) or SSH and `git pull` on the server. Full step-by-step: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+**Environments:** Dev (Preview + dev Supabase, local scraper) and production (Vercel Production + prod Supabase, server scraper/worker). [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) has the full variable matrix, Auth0/Redis notes, and deploy steps.
 
 Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

@@ -16,6 +16,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -334,6 +335,10 @@ def _maybe_invalidate_app_cache() -> None:
         )
         return
     url = f"{base_url}/api/admin/invalidate-active-config"
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        logger.warning("APP_URL scheme not allowed: %s", parsed.scheme)
+        return
     req = urllib.request.Request(
         url,
         data=None,
@@ -341,7 +346,7 @@ def _maybe_invalidate_app_cache() -> None:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
             if 200 <= resp.getcode() < 300:
                 logger.info("Invalidated app active-config cache")
             else:

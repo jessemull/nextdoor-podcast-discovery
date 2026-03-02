@@ -5,13 +5,16 @@
  * the same value. When Redis is not set (local dev, tests), in-memory only.
  */
 
-import { getRedis } from "@/lib/redis.server";
+import { getRedis, getRedisKeyPrefix } from "@/lib/redis.server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TTL_MS = 45_000;
 const TTL_SEC = 45;
-const REDIS_KEY = "active_config_id";
+
+function activeConfigRedisKey(): string {
+  return `${getRedisKeyPrefix()}:active_config_id`;
+}
 
 interface CacheEntry {
   expiresAt: number;
@@ -29,7 +32,7 @@ export async function invalidateActiveConfigCache(): Promise<void> {
   const redis = getRedis();
   if (redis) {
     try {
-      await redis.del(REDIS_KEY);
+      await redis.del(activeConfigRedisKey());
     } catch {
       // Non-fatal
     }
@@ -52,7 +55,7 @@ export async function getActiveWeightConfigId(
   const redis = getRedis();
   if (redis) {
     try {
-      const raw = await redis.get(REDIS_KEY);
+      const raw = await redis.get(activeConfigRedisKey());
       if (raw != null && typeof raw === "string") {
         cacheL1 = {
           expiresAt: now + TTL_MS,
@@ -73,7 +76,7 @@ export async function getActiveWeightConfigId(
 
   if (redis && value != null) {
     try {
-      await redis.set(REDIS_KEY, value, { ex: TTL_SEC });
+      await redis.set(activeConfigRedisKey(), value, { ex: TTL_SEC });
     } catch {
       // Non-fatal: L1 is already updated
     }

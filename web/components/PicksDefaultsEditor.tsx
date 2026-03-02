@@ -36,10 +36,6 @@ export function PicksDefaultsEditor({
     String(picksDefaults.picks_min)
   );
 
-  useEffect(() => {
-    setMinScoreInput(String(picksDefaults.picks_min));
-  }, [picksDefaults.picks_min]);
-
   const commitMinScore = () => {
     const v = parseFloat(minScoreInput);
     const clamped = Number.isNaN(v)

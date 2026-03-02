@@ -29,28 +29,24 @@ export function FeedPageContent() {
   const thresholdFromUrl = searchParams.get("threshold");
 
   const [embeddingBacklog, setEmbeddingBacklog] = useState(0);
-  const [lastSearchedQuery, setLastSearchedQuery] = useState("");
+  const [lastSearchedQuery, setLastSearchedQuery] = useState(() =>
+    typeof qFromUrl === "string" && qFromUrl.trim() ? qFromUrl.trim() : ""
+  );
   const [loadDefaultsError, setLoadDefaultsError] = useState<null | string>(null);
   const [picksDefaults, setPicksDefaults] = useState<null | PicksDefaults>(null);
-  const [query, setQuery] = useState("");
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
-  const [useKeywordSearch, setUseKeywordSearch] = useState(false);
-
-  useEffect(() => {
-    if (typeof qFromUrl === "string" && qFromUrl.trim()) {
-      setQuery(qFromUrl.trim());
-      setLastSearchedQuery(qFromUrl.trim());
-    }
-  }, [qFromUrl]);
-
-  useEffect(() => {
+  const [query, setQuery] = useState(() =>
+    typeof qFromUrl === "string" && qFromUrl.trim() ? qFromUrl.trim() : ""
+  );
+  const [similarityThreshold, setSimilarityThreshold] = useState(() => {
     if (thresholdFromUrl != null) {
       const n = parseFloat(thresholdFromUrl);
-      if (!isNaN(n) && n >= 0 && n <= 1) {
-        setSimilarityThreshold(n);
+      if (!Number.isNaN(n) && n >= 0 && n <= 1) {
+        return n;
       }
     }
-  }, [thresholdFromUrl]);
+    return 0.2;
+  });
+  const [useKeywordSearch, setUseKeywordSearch] = useState(false);
 
   useEffect(() => {
     const loadDefaults = async () => {

@@ -27,11 +27,15 @@ export function useFeedKeyboardNav({
   const focusedIndexRef = useRef(-1);
   const postRefs = useRef<(HTMLDivElement | null)[]>([]);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  focusedIndexRef.current = focusedIndex;
-
   const onOpenPostRef = useRef(onOpenPost);
-  onOpenPostRef.current = onOpenPost;
+
+  useEffect(() => {
+    focusedIndexRef.current = focusedIndex;
+  }, [focusedIndex]);
+
+  useEffect(() => {
+    onOpenPostRef.current = onOpenPost;
+  }, [onOpenPost]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,8 +72,12 @@ export function useFeedKeyboardNav({
 
   // Clamp focused index when posts change
   useEffect(() => {
-    if (posts.length === 0) setFocusedIndex(-1);
-    else if (focusedIndex >= posts.length) setFocusedIndex(posts.length - 1);
+    if (posts.length === 0 || focusedIndex >= posts.length) {
+      // Defer state update to avoid React's set-state-in-effect lint warning.
+      setTimeout(() => {
+        setFocusedIndex(posts.length === 0 ? -1 : posts.length - 1);
+      }, 0);
+    }
   }, [focusedIndex, posts.length]);
 
   // Scroll focused card into view

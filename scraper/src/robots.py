@@ -27,12 +27,14 @@ def _fetch_robots_txt(base_url: str, timeout_seconds: int = 10) -> str | None:
     parsed = urllib.parse.urlparse(base_url)
     if not parsed.scheme or not parsed.netloc:
         return None
+    if parsed.scheme not in ("http", "https"):
+        return None
     robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
     request = urllib.request.Request(
         robots_url, headers={"User-Agent": ROBOTS_USER_AGENT}
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as resp:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as resp:  # nosec B310
             return cast(str, resp.read().decode("utf-8", errors="replace"))
     except (URLError, OSError) as e:
         logger.debug("Could not fetch robots.txt from %s: %s", robots_url, e)

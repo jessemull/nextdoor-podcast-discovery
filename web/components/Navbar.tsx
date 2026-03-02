@@ -64,9 +64,6 @@ export function Navbar() {
   }, [mobileMenuOpen, closeMobileMenu]);
 
   const pathname = usePathname();
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
 
   const initial = user?.email?.slice(0, 1).toUpperCase() ?? "?";
 

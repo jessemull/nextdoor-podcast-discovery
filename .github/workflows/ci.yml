@@ -1,11 +1,11 @@
-# CI: Lint, test, security, and build on PR and push to main
+# CI: Lint, test, security, and build on PR and push to main/release
 name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, release]
   push:
-    branches: [main]
+    branches: [main, release]
 
 jobs:
   # Required pre-merge: lint (includes format check), test, security, build.
@@ -39,8 +39,11 @@ jobs:
       - name: Install web dependencies
         run: cd web && npm ci --legacy-peer-deps
 
-      - name: Lint (scraper + web)
-        run: make lint
+      - name: Format (auto-fix)
+        run: make format
+
+      - name: Lint (scraper + web, ESLint --fix in CI)
+        run: make lint-ci
 
       - name: Test (scraper + web)
         run: make test

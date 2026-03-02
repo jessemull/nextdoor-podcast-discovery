@@ -1,57 +1,84 @@
-# Deployment: web (Vercel) and scraper/worker (server)
+# Deployment
 
-**Environments:** Dev = `main` + Vercel Preview + dev Supabase; Production = `release` branch + Vercel Production + prod Supabase; scraper dev = local with dev Supabase, scraper prod = server with prod Supabase. For step-by-step deployment to each environment, see [ENVIRONMENTS.md](ENVIRONMENTS.md).
+This document covers deployment of the web application (Vercel) and the scraper/worker (self-hosted server). Environment configuration and variable reference are in [ENVIRONMENTS.md](ENVIRONMENTS.md).
 
-- **Web UI** deploys via Vercel’s Git connection: push to `main` → Preview (dev); push to `release` → Production (prod). No GitHub Action required.
-- **Scraper and worker** run on a server you control. This doc covers one-time server setup and deploying code changes from your local machine.
+## Scope
 
-## One-time setup on the server
+| Target | Mechanism | Reference |
+|--------|------------|-----------|
+| Web (Preview) | Push to `main`; Vercel deploys from Git | [ENVIRONMENTS.md](ENVIRONMENTS.md#web--preview-development) |
+| Web (Production) | Merge `main` into `release`, push; Vercel deploys from Git | [ENVIRONMENTS.md](ENVIRONMENTS.md#web--production) |
+| Scraper / worker (Production) | SSH + `git pull` or deploy script from local machine | This document |
 
-1. **Tailscale (recommended)**  
-   Install [Tailscale](https://tailscale.com) on the server and on your local machine. Use the server’s Tailscale name for SSH so you never open SSH to the public internet.
+The production server runs the scraper and worker only. Its `scraper/.env` must contain production credentials only. Do not configure development Supabase or development-only URLs on that host.
 
-2. **OS and dependencies**  
-   Install updates, Python 3.11+, Git, and Playwright system deps. Create a dedicated user (e.g. `nextdoor`) to run the scraper.
+---
 
-3. **Repo and venv**  
-   Clone the repo (e.g. `~/nextdoor`). From repo root: `make venv`, `source .venv/bin/activate`, `make install-scraper`, `playwright install chromium` (from `scraper/` or with `PATH` set). Create `scraper/.env` from `scraper/.env.example` and fill all required variables (Nextdoor, Supabase, session encryption, Anthropic, OpenAI). Never commit `.env`.
+## Production server setup
 
-4. **Logging (optional)**  
-   In `scraper/.env` set `SCRAPER_LOG_DIR=~/nextdoor-logs` so scraper and worker write rotating logs. Create the directory if needed: `mkdir -p ~/nextdoor-logs`. To inspect: `tail -n 500 ~/nextdoor-logs/scraper.log` or `grep -i error ~/nextdoor-logs/scraper.log`.
+Run the one-time setup script on the host. The script installs system dependencies (Python 3.11, git, Chromium libraries), creates a dedicated user (when run as root), clones the repository (when `GIT_REPO` is set or repo is present), creates the virtual environment, installs the scraper and Playwright Chromium, copies `scraper/.env.example` to `scraper/.env`, creates the log directory, and adds cron entries for the scraper.
 
-5. **Cron (or systemd)**  
-   Schedule `scripts/run-scrape.sh` and `scripts/run-embeddings.sh` (e.g. daily). Example crontab (run from repo root with venv active):
-   ```text
-   0 2 * * * cd /home/nextdoor/nextdoor && . .venv/bin/activate && ./scripts/run-scrape.sh recent >> /home/nextdoor/nextdoor-logs/cron.log 2>&1
-   0 18 * * * cd /home/nextdoor/nextdoor && . .venv/bin/activate && ./scripts/run-scrape.sh trending >> /home/nextdoor/nextdoor-logs/cron.log 2>&1
-   ```
-   Adjust paths and times to match your timezone and preferences.
+**Prerequisites:** Ubuntu 22.04, Debian 12, or Amazon Linux 2 (or similar). SSH and key-based access configured. Restrict SSH to a private network (e.g. Tailscale); do not expose it to the public internet.
 
-6. **Worker (optional)**  
-   Run the worker so “Save & Recompute” and “Activate” in the UI complete. Either a long-lived process (`python -m src.worker --job-type recompute_final_scores`) or a systemd service that runs it.
+**Run the script:**
 
-## Deploying scraper changes from your local machine
+- From the host (repo already cloned, e.g. to `/home/nextdoor/nextdoor`):
+  ```bash
+  cd /home/nextdoor/nextdoor && sudo ./scripts/setup-server.sh
+  ```
+- Or as root with `GIT_REPO` set (script clones to `/home/nextdoor/nextdoor`):
+  ```bash
+  sudo GIT_REPO=https://github.com/<org>/<repo>.git ./scripts/setup-server.sh
+  ```
+- From your local machine via SSH (script must be on the host):
+  ```bash
+  scp scripts/setup-server.sh <user>@<host>:/tmp/ && ssh <user>@<host> "sudo bash /tmp/setup-server.sh"
+  ```
+  Or clone the repo on the host first, then `ssh <user>@<host> "cd /path/to/nextdoor && sudo ./scripts/setup-server.sh"`.
 
-After you push code to GitHub, update the server so the next cron run (or manual run) uses the new code:
+**Post-setup:**
 
-- **Option A — SSH and pull**  
-  From your local machine:  
-  `ssh nextdoor@<server-host> "cd ~/nextdoor && git pull"`  
-  Optionally run a scrape once:  
-  `ssh nextdoor@<server-host> "cd ~/nextdoor && . .venv/bin/activate && ./scripts/run-scrape.sh recent"`
+1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production).
+2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `python -m src.worker --job-type recompute_final_scores` as a long-lived process (e.g. under systemd or a process manager). Use the same virtual environment and `scraper/.env` as the scraper.
 
-- **Option B — Deploy script**  
-  Use `scripts/deploy-to-server.sh`. Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`) in the environment, then run `./scripts/deploy-to-server.sh` from your local machine.
+---
 
-- **Option C — Server polls GitHub**  
-  On the server, add a cron job that runs every few minutes: `git -C ~/nextdoor pull`. Then you only push from your local machine; the server auto-updates. You still need SSH for initial setup and for viewing logs.
+## Deploying scraper/worker code changes
 
-## Security
+After pushing changes to the remote repository, update the production host so the next run uses the new code.
 
-- Do **not** expose the server’s SSH (or any port) to the public internet. Use Tailscale (or a similar VPN) so SSH is only over the private network.
-- Use SSH key-based auth; disable password and root login.
-- Keep secrets only in `scraper/.env` on the server (and in GitHub Secrets for CI/Vercel if needed). Never commit secrets.
+**Option A — Deploy script (from repository root):**
 
-## Supabase (dev vs prod)
+```bash
+DEPLOY_HOST=<user>@<host> ./scripts/deploy-to-server.sh
+```
 
-For local or dev runs use a dev Supabase project; for production scraping use prod URL and service key in `scraper/.env` on the server. See [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md) if you maintain separate dev and prod projects and run migrations in both.
+Pass `FEED=recent` or `FEED=trending` to run a scrape after pulling (e.g. `DEPLOY_HOST=... FEED=recent ./scripts/deploy-to-server.sh`).
+
+**Option B — Makefile:**
+
+```bash
+make deploy-scraper DEPLOY_HOST=<user>@<host>
+```
+
+**Option C — SSH and pull:**
+
+```bash
+ssh <user>@<host> "cd ~/nextdoor && git pull"
+```
+
+The next cron run or manual invocation of the scraper/worker uses the updated code.
+
+---
+
+## Security requirements
+
+- SSH must not be exposed to the public internet. Use a private network (e.g. Tailscale) or equivalent.
+- Use SSH key-based authentication. Disable password authentication and direct root login.
+- Store secrets in `scraper/.env` on the host and in Vercel/GitHub as appropriate. Do not commit secrets to the repository.
+
+---
+
+## Supabase and migrations
+
+The production server uses a single Supabase project (production). For creating and maintaining dev and prod projects and applying schema changes, see [ENVIRONMENTS.md](ENVIRONMENTS.md) and [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md).
