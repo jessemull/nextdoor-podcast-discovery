@@ -13,7 +13,7 @@ export default async function ProtectedLayout({
 }: ProtectedLayoutProps) {
   const session = await auth0.getSession();
   if (!session) {
-    redirect("/api/auth/login?returnTo=/");
+    redirect("/auth/login?returnTo=/");
   }
 
   return <>{children}</>;
