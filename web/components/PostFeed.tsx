@@ -99,7 +99,17 @@ const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
 };
 
 const BULK_ACTION_OPTIONS = [
+  // Ignore / Unignore
   { icon: <EyeOff aria-hidden className="h-4 w-4" />, label: "Ignore", value: "ignore" },
+  {
+    icon: <Eye aria-hidden className="h-4 w-4" />,
+    label: "Unignore",
+    value: "unignore",
+  },
+  // Save / Unsave
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Unsave", value: "unsave" },
+  // Mark used / unused
   {
     icon: <Check aria-hidden className="h-4 w-4" />,
     label: "Mark As Used",
@@ -110,19 +120,13 @@ const BULK_ACTION_OPTIONS = [
     label: "Mark As Unused",
     value: "mark_unused",
   },
+  // Refresh
   {
     icon: <RefreshCw aria-hidden className="h-4 w-4" />,
     label: "Refresh Posts",
     value: "reprocess",
   },
-  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
-  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Unsave", value: "unsave" },
-  {
-    icon: <Eye aria-hidden className="h-4 w-4" />,
-    label: "Unignore",
-    value: "unignore",
-  },
-].sort((a, b) => a.label.localeCompare(b.label));
+];
 
 const SKELETON_CARD_COUNT = 8;
 
