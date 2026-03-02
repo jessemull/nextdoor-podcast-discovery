@@ -1,4 +1,4 @@
-.PHONY: help build db-up db-down db-reset db-migrate-local db-migrate-prod dev-scraper dev-web scrape-sample inspect-scraper open-trending-details test gen-key install install-scraper install-web clean venv lint lint-scraper lint-web format security security-scraper security-web
+.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-scraper lint-web open-trending-details scrape-sample scrape-trending-300 security security-scraper security-web tail-logs test test-scraper test-web venv
 
 # Default target
 help:
@@ -44,6 +44,12 @@ help:
 	@echo "  test             Run all tests"
 	@echo "  test-scraper     Run scraper tests only"
 	@echo "  test-web         Run web tests only"
+	@echo ""
+	@echo "Deploy:"
+	@echo "  deploy-scraper   Deploy scraper to server (set DEPLOY_HOST; optional FEED=recent|trending)"
+	@echo "  deploy-web-prod Merge main into release and push (promotes web to production)"
+	@echo "  tail-logs       Tail scraper logs on server (set DEPLOY_HOST; optional ARGS=\"-n 500\")"
+	@echo "  (Deploy web to dev: push to main, e.g. git push origin main)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  gen-key          Generate encryption key for sessions"
@@ -185,6 +191,32 @@ test-scraper:
 
 test-web:
 	cd web && npm test
+
+# Deploy
+deploy-scraper:
+	@if [ -z "$$DEPLOY_HOST" ]; then \
+		echo "Error: set DEPLOY_HOST (e.g. make deploy-scraper DEPLOY_HOST=user@host)"; \
+		exit 1; \
+	fi
+	./scripts/deploy-to-server.sh $(FEED)
+
+deploy-web-prod:
+	@if git status --porcelain | grep -q .; then \
+		echo "Error: uncommitted changes; commit or stash first"; \
+		exit 1; \
+	fi
+	git checkout release && \
+	git pull origin release && \
+	git merge main --no-edit && \
+	git push origin release && \
+	git checkout main
+
+tail-logs:
+	@if [ -z "$$DEPLOY_HOST" ]; then \
+		echo "Error: set DEPLOY_HOST (e.g. make tail-logs DEPLOY_HOST=user@host)"; \
+		exit 1; \
+	fi
+	./scripts/tail-logs.sh $(ARGS)
 
 # Utilities
 gen-key:
