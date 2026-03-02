@@ -5,7 +5,7 @@ This checklist applies to:
 - Python 3.11+ scraper & workers
 - TypeScript (strict) + Next.js 14+ (React 19)
 - SQL (PostgreSQL, Supabase, pgvector, PL/pgSQL)
-- CI/CD (GitHub Actions, Vercel)
+- CI/CD (GitHub Actions for CI only, Vercel for web deploy)
 - Security tooling (bandit, pip-audit, ESLint, etc.)
 - Infrastructure (Docker, Redis, Auth0, Supabase)
 
@@ -163,8 +163,8 @@ All of the following must pass before merge. Run from repo root.
 
 # 8. CI/CD & INFRA
 
-- [ ] GitHub Actions updated if needed
-- [ ] Scheduled cron jobs correct
+- [ ] CI workflow and Vercel deploy workflow correct; no scraper in Actions
+- [ ] Cron (if used) runs on the server, not in GitHub
 - [ ] CI caching configured correctly
 - [ ] Vercel deployment unaffected
 - [ ] Docker config valid

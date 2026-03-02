@@ -92,21 +92,19 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 
 **Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), Auth0, Zod, Vitest + Testing Library.
 
-**Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby), GitHub Actions.
+**Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby).
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  GitHub Actions │     │    Supabase     │     │     Vercel      │
-│  or local cron  │────▶│  (PostgreSQL +  │◀────│   (Next.js)     │
-│  - Scraper      │     │   pgvector)     │     │   Web UI        │
-│  - Score        │     │  - posts        │     │   API routes    │
-│  - Embed        │     │  - llm_scores   │     │                 │
-│  - Worker       │     │  - post_scores  │     │                 │
-└─────────────────┘     │  - sessions    │     └─────────────────┘
-        │                │  - jobs, etc.  │
-        ▼                └─────────────────┘
+┌─────────────────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Server (scraper + worker)   │     │    Supabase     │     │     Vercel      │
+│  cron / systemd             │────▶│  (PostgreSQL +  │◀────│   (Next.js)     │
+│  - Scraper, Score, Embed    │     │   pgvector)     │     │   Web UI        │
+│  - Worker                    │     │  - posts, etc.  │     │   API routes    │
+└─────────────────────────────┘     └─────────────────┘     └─────────────────┘
+        │
+        ▼
 ┌─────────────────┐
 │  Claude Haiku   │  Scoring + sports facts
 │  OpenAI         │  Embeddings
@@ -117,14 +115,14 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Embedder** (`src.embed`) — Reads `posts` and `llm_scores`; writes `post_embeddings`. No browser.
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
 - **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Auth0 session; access is controlled solely by Auth0 (no server-side email whitelist).
-- **Vercel** — Hosts Next.js only. Scraper and worker run in GitHub Actions and/or your own machine.
+- **Vercel** — Hosts Next.js only. Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Repository structure
 
 ```
 nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
-├── .github/workflows/     # ci.yml, deploy.yml, scrape.yml, scrape-trending.yml
+├── .github/workflows/     # ci.yml, deploy.yml
 ├── database/
 │   ├── migrations/        # 001–036 SQL (run in numeric order in Supabase)
 │   └── seeds/             # seed_neighborhoods.sql
@@ -138,9 +136,13 @@ nextdoor/
 │   │   ├── config.py, exceptions.py, robots.py
 │   ├── tests/
 │   ├── pyproject.toml, requirements.txt
+├── docs/
+│   └── DEPLOYMENT.md      # Server setup and deploy from local machine
 ├── scripts/
-│   ├── run-scrape.sh      # Scrape + recount + healthcheck
-│   ├── run-embeddings.sh  # Embed + healthcheck
+│   ├── deploy-to-server.sh    # SSH + git pull (optional scrape)
+│   ├── run-embeddings.sh      # Embed + healthcheck
+│   ├── run-scrape.sh          # Scrape + recount + healthcheck
+│   ├── tail-logs.sh           # SSH + tail scraper log
 │   ├── generate-encryption-key.py
 │   └── test-supabase-connection.py
 ├── web/                   # Next.js app
@@ -157,9 +159,11 @@ nextdoor/
 
 | Script | Purpose |
 | :----- | :------ |
-| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), plus `--check-robots`, then `recount_topics`. Pings `HEALTHCHECK_URL` on success or `/fail` on failure. Needs repo `.venv` and `scraper/.env`. |
-| `scripts/run-embeddings.sh` | Runs `python -m src.embed`; pings `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL`. |
+| `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
+| `scripts/run-embeddings.sh` | Runs `python -m src.embed`; pings `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL`. |
+| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), plus `--check-robots`, then `recount_topics`. Pings `HEALTHCHECK_URL` on success or `/fail` on failure. Needs repo `.venv` and `scraper/.env`. |
+| `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
 
 ## Makefile
@@ -238,7 +242,7 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 - **Config file:** `scraper/.env` (copy from `.env.example`)
 - **Required:** `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SESSION_ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
-- **Optional:** `APP_URL`, `HEALTHCHECK_EMBED_URL`, `HEALTHCHECK_URL`, `INTERNAL_API_SECRET` (worker: cache invalidation after activate cutover), `UNSCORED_BATCH_LIMIT`
+- **Optional:** `APP_URL`, `HEALTHCHECK_EMBED_URL`, `HEALTHCHECK_URL`, `INTERNAL_API_SECRET` (worker: cache invalidation after activate cutover), `UNSCORED_BATCH_LIMIT`, `SCRAPER_LOG_DIR` (e.g. `~/nextdoor-logs`) or `SCRAPER_LOG_FILE` for rotating file logs on the server
 
 ### Web
 
@@ -293,6 +297,8 @@ Use the **same** `SUPABASE_SERVICE_KEY` for both scraper and web server-side so 
 
 **Worker:** `python -m src.worker` polls `background_jobs` and processes `recompute_final_scores` jobs (writes `post_scores` for a weight config).
 
+**Logging:** By default logs go to stdout. On the server, set `SCRAPER_LOG_DIR=~/nextdoor-logs` (or `SCRAPER_LOG_FILE=/path/to/scraper.log`) in `scraper/.env` to also write rotating logs (5 MB per file, 3 backups). To inspect when something goes wrong: SSH to the server and run `tail -n 500 ~/nextdoor-logs/scraper.log` or `grep -i error ~/nextdoor-logs/scraper.log`, or use `scripts/tail-logs.sh`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 **Long runs and debugging:** For large runs use `make scrape-trending-300` (or `python -m src.main --feed-type trending --max-posts 300`). The Make target runs under **caffeinate** (`-dis`: display and system stay awake) so the Mac does not sleep or show the screensaver and freeze the browser. The pipeline may stop before `max_posts` if the feed runs out of new content: after **5 consecutive scrolls** with 0 new posts it logs "No new posts after 5 scrolls, stopping" (e.g. 200 posts instead of 300). The pipeline logs PID and start time, and a **heartbeat every 60s** so you can tell if it’s still running or stuck. If heartbeats continue but no new “Scroll N” or “Scrolling down” logs, the main thread is stuck in a Playwright call (often due to display/sleep having fired before caffeinate). Granular logs (“Extracting from page (scroll N…)”, “Scrolling down (about to run scroll N)”, “Scroll down done”) show where it stalled. To capture logs: `PYTHONUNBUFFERED=1 make scrape-trending-300 2>&1 | tee scrape.log`. Every exit logs `Exiting with code 0` or `Exiting with code 1`.
 
 Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at least once.
@@ -333,11 +339,9 @@ Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Re
 | Workflow | Trigger / schedule | What it does |
 | :------- | :----------------- | :----------- |
 | **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
-| **Deploy (web)** | Push to `main` (changes under `web/` or workflow file) | Vercel deploy. Uses `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. |
-| **scrape.yml** | Daily 2:00 AM UTC (or manual) | Recent feed → score → recount → embed. On failure: create/update issue with label `scraper-failure`. |
-| **scrape-trending.yml** | Daily 6:00 PM UTC (or manual) | Trending feed → same pipeline; same failure handling. |
+| **Deploy (web)** | Push to `main` (changes under `web/` or deploy workflow) | Deploy to Vercel. Uses `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. |
 
-Both scrape workflows use GitHub Secrets (Nextdoor, Supabase, Anthropic, OpenAI, session encryption). **No worker in Actions**—recompute jobs run when you run the worker locally (or on a machine you control).
+Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Cost
 
@@ -347,10 +351,11 @@ Target **~$2–4/month**:
 | :------ | :--- |
 | Supabase | Free (500MB) |
 | Vercel | Free (Hobby) |
-| GitHub Actions | Free (2,000 min/month; scrape uses a few min/day) |
 | Claude Haiku | ~$1.50–3.00 (ensemble scoring 3x + sports facts) |
 | OpenAI embeddings | ~$0.10–0.50 |
 | **Total** | **~$2–4/month** |
+
+CI uses minimal GitHub Actions minutes (lint/test/build only).
 
 More posts → more tokens; stay within Supabase 500MB (roughly tens of thousands of posts with embeddings).
 
@@ -376,6 +381,7 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 
 | Doc | Purpose |
 | :-- | :------ |
-| **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |
 | **.cursorrules** | Project conventions: alphabetization, comments, Python/TypeScript style, testing philosophy. |
 | **database/migrations/** | Source of truth for schema and RPCs; run in order in Supabase. |
+| **docs/DEPLOYMENT.md** | Server setup, deploy from local machine (SSH + git pull), and security. |
+| **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |
