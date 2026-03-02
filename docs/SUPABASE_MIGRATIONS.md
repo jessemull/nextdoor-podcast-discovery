@@ -26,6 +26,20 @@ All data in the dropped tables is permanently removed.
 
 Run only **new** migration files—those not yet applied—in numeric order from `database/migrations/`. Copy each file’s contents into the SQL Editor and execute. Repeat for the other project (dev and prod) so both stay in sync.
 
+### Reload API schema cache after migrations
+
+The Supabase API (PostgREST) caches the database schema. After running migrations or bootstrap in the SQL Editor, the API may still return "Could not find the function … in the schema cache" until the cache is refreshed. In the same project's SQL Editor, run:
+
+```sql
+NOTIFY pgrst, 'reload schema';
+```
+
+Then retry the request. No rows are returned; the notification tells PostgREST to reload tables and RPCs.
+
+### Repair feed RPCs (function missing in production)
+
+If the API still reports that `get_posts_with_scores` (or `get_posts_with_scores_count`) is not in the schema cache after a reload—for example after a partial reset or failed bootstrap—run `database/scripts/repair_feed_rpcs.sql` in the project's SQL Editor. It recreates both functions and triggers a schema reload. Then retry the app.
+
 ## Adding a new migration
 
 1. Add a new file to `database/migrations/` with the next number and a descriptive name (e.g. `044_new_feature.sql`).
