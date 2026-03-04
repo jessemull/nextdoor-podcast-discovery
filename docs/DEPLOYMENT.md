@@ -39,7 +39,7 @@ Run the one-time setup script on the host. The script installs system dependenci
 **Post-setup:**
 
 1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production). See [HOST_ENV_CHECKLIST.md](HOST_ENV_CHECKLIST.md). Then run `./scripts/verify-host-env.sh` from the repo root to validate and test Supabase.
-2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `python -m src.worker --job-type recompute_final_scores` as a long-lived process (e.g. under systemd or a process manager). Use the same virtual environment and `scraper/.env` as the scraper. A systemd unit is provided in `scripts/nextdoor-worker.service`; see the script header for install steps. For power, cron, and monitoring on a laptop host, see [HOST_POWER_AND_MONITORING.md](HOST_POWER_AND_MONITORING.md).
+2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `sudo ./scripts/install-worker-service.sh` from the host repo root. That script installs the systemd unit, enables it (start on boot), and starts it now. For power, cron, and monitoring on a laptop host, see [HOST_POWER_AND_MONITORING.md](HOST_POWER_AND_MONITORING.md).
 
 ---
 

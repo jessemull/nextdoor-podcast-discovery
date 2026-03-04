@@ -164,6 +164,7 @@ nextdoor/
 | `scripts/bootstrap-host.sh` | Prompts to run setup-server.sh with sudo (uses git remote as GIT_REPO). Use on the host laptop to create the `nextdoor` user and clone. |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
+| `scripts/install-worker-service.sh` | Install systemd unit for the worker (enable + start). Run with sudo from host repo root after setup-server.sh and editing scraper/.env. |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
 | `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
 | `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |

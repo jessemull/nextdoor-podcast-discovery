@@ -1,10 +1,7 @@
 # systemd unit for the Nextdoor scraper background worker.
 #
-# Install (run as root):
-#   sudo cp /home/nextdoor/nextdoor/scripts/nextdoor-worker.service /etc/systemd/system/
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable nextdoor-worker
-#   sudo systemctl start nextdoor-worker
+# Install (run as root from host): sudo ./scripts/install-worker-service.sh
+# Or manually: cp this file to /etc/systemd/system/, daemon-reload, enable, start.
 #
 # Check status: sudo systemctl status nextdoor-worker
 # Logs: journalctl -u nextdoor-worker -f

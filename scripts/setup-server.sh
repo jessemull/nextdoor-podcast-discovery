@@ -64,6 +64,11 @@ if [ "$(id -u)" = "0" ]; then
   fi
 
   TARGET_REPO="/home/${SETUP_USER}/nextdoor"
+  # If GIT_REPO is set and target already exists, remove and re-clone so we get latest (avoids stale script after push)
+  if [ -n "${GIT_REPO:-}" ] && [ -d "$TARGET_REPO" ]; then
+    echo "Warning: $TARGET_REPO already exists. Removing and re-cloning to get latest (any local changes there will be lost)."
+    rm -rf "$TARGET_REPO"
+  fi
   if [ ! -d "$TARGET_REPO/.git" ]; then
     if [ -n "${GIT_REPO:-}" ]; then
       # Use HTTPS for clone so nextdoor user does not need SSH keys (works for public repos)
