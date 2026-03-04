@@ -2,8 +2,9 @@
 # One-time production host setup: install dependencies, clone repo, venv, scraper,
 # Playwright Chromium, .env from example, log directory, and cron entries.
 #
-# Prerequisites: Ubuntu 22.04, Debian 12, or Amazon Linux 2 (or similar). SSH and
+# Prerequisites: Ubuntu 22.04, Ubuntu 24.04, Debian 12, or Amazon Linux 2 (or similar). SSH and
 # key-based access configured. Network access for git clone and pip/Playwright.
+# On Ubuntu 24.04, uses system Python (3.12) and libasound2t64 when python3.11 is not in repos.
 #
 # Usage:
 #   As root (full setup): clone repo to /home/nextdoor/nextdoor, then
@@ -30,14 +31,28 @@ if [ "$(id -u)" = "0" ]; then
 
   if command -v apt-get &>/dev/null; then
     apt-get update -qq
-    apt-get install -y -qq python3.11 python3.11-venv git \
-      libnss3 libatk-bridge2.0-0 libxss1 libasound2 libgbm1 libgtk-3-0 \
+    # Ubuntu 24.04 (noble) uses libasound2t64; older use libasound2
+    ASOUND_PKG="libasound2"
+    if [ -f /etc/os-release ]; then
+      # shellcheck source=/dev/null
+      . /etc/os-release
+      case "${ID:-}-${VERSION_CODENAME:-}" in
+        ubuntu-noble) ASOUND_PKG="libasound2t64" ;;
+        *) ;;
+      esac
+    fi
+    # Use system Python (3.11+); on Ubuntu 24.04 use python3/python3-venv (3.12) if 3.11 not in repos
+    if apt-cache show python3.11-venv &>/dev/null; then
+      PYTHON_PKGS="python3.11 python3.11-venv"
+    else
+      PYTHON_PKGS="python3 python3-venv"
+    fi
+    apt-get install -y -qq curl make $PYTHON_PKGS git \
+      libnss3 libatk-bridge2.0-0 libxss1 $ASOUND_PKG libgbm1 libgtk-3-0 \
       libxshmfence1 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxi6
   elif command -v yum &>/dev/null || command -v dnf &>/dev/null; then
-    (command -v dnf &>/dev/null && dnf install -y -q || yum install -y -q) \
-      python3.11 python3.11-venv git \
-      nss at-spi2-atk libXScrnSaver alsa-lib libgbm gtk3 \
-      libXcomposite libXcursor libXdamage libXi 2>/dev/null || true
+    PKGS="curl make python3.11 python3.11-venv git nss at-spi2-atk libXScrnSaver alsa-lib libgbm gtk3 libXcomposite libXcursor libXdamage libXi"
+    (command -v dnf &>/dev/null && dnf install -y -q $PKGS || yum install -y -q $PKGS) 2>/dev/null || true
   else
     echo "Unsupported package manager (apt-get or yum/dnf required). Install Python 3.11+, git, and Playwright/Chromium deps manually."
     exit 1
@@ -51,7 +66,14 @@ if [ "$(id -u)" = "0" ]; then
   TARGET_REPO="/home/${SETUP_USER}/nextdoor"
   if [ ! -d "$TARGET_REPO/.git" ]; then
     if [ -n "${GIT_REPO:-}" ]; then
-      sudo -u "$SETUP_USER" git clone "$GIT_REPO" "$TARGET_REPO"
+      # Use HTTPS for clone so nextdoor user does not need SSH keys (works for public repos)
+      CLONE_URL="$GIT_REPO"
+      if [[ "$GIT_REPO" =~ ^git@github\.com:(.+)$ ]]; then
+        CLONE_URL="https://github.com/${BASH_REMATCH[1]}"
+        [[ "$CLONE_URL" != *.git ]] && CLONE_URL="${CLONE_URL}.git"
+        echo "Using HTTPS clone URL for nextdoor user (no SSH keys): $CLONE_URL"
+      fi
+      sudo -u "$SETUP_USER" git clone "$CLONE_URL" "$TARGET_REPO"
       echo "Cloned repository to $TARGET_REPO."
     else
       echo "Error: $TARGET_REPO does not exist. Set GIT_REPO and re-run, or clone the repo there and run again."

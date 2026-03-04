@@ -1,0 +1,32 @@
+# systemd unit for the Nextdoor scraper background worker.
+#
+# Install (run as root):
+#   sudo cp /home/nextdoor/nextdoor/scripts/nextdoor-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable nextdoor-worker
+#   sudo systemctl start nextdoor-worker
+#
+# Check status: sudo systemctl status nextdoor-worker
+# Logs: journalctl -u nextdoor-worker -f
+#
+# Customize job types in ExecStart (default: recompute_final_scores).
+# Supported: recompute_final_scores, run_scraper, fetch_permalink, backfill_dimension
+# Example for multiple: --job-type recompute_final_scores,run_scraper,fetch_permalink
+
+[Unit]
+Description=Nextdoor podcast discovery background worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nextdoor
+Group=nextdoor
+WorkingDirectory=/home/nextdoor/nextdoor/scraper
+EnvironmentFile=/home/nextdoor/nextdoor/scraper/.env
+ExecStart=/home/nextdoor/nextdoor/.venv/bin/python -m src.worker --job-type recompute_final_scores
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

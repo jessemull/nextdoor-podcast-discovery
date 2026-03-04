@@ -161,13 +161,15 @@ nextdoor/
 
 | Script | Purpose |
 | :----- | :------ |
+| `scripts/bootstrap-host.sh` | Prompts to run setup-server.sh with sudo (uses git remote as GIT_REPO). Use on the host laptop to create the `nextdoor` user and clone. |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
-| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
 | `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
+| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
+| `scripts/verify-host-env.sh` | After editing `scraper/.env`, run from repo root to validate required vars and test Supabase. See [docs/HOST_ENV_CHECKLIST.md](docs/HOST_ENV_CHECKLIST.md). |
 
 ## Makefile
 
@@ -372,5 +374,7 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **database/migrations/** | Source of truth for schema and RPCs; run in order in Supabase. |
 | **docs/DEPLOYMENT.md** | Server setup, deploy from local machine (SSH + git pull), and security. |
 | **docs/ENVIRONMENTS.md** | Dev vs prod; step-by-step deploy to each environment (web and scraper). |
+| **docs/HOST_ENV_CHECKLIST.md** | Production `scraper/.env` checklist and validation steps. |
+| **docs/HOST_POWER_AND_MONITORING.md** | Power/sleep, cron, systemd worker, Healthchecks, and logs on the host. |
 | **docs/SUPABASE_MIGRATIONS.md** | Run the same migrations in both dev and prod Supabase projects. |
 | **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |
