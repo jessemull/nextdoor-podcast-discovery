@@ -127,86 +127,6 @@ class TestPostExtractor:
         # Should have called evaluate multiple times (once per scroll attempt)
         assert extractor.page.evaluate.call_count > 1
 
-    def test_extract_permalink_success(self, extractor: PostExtractor) -> None:
-        """Should extract permalink by clicking Share button."""
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        share_btn.click.return_value = None
-        container.locator.return_value = share_btn
-
-        # Single return value for both page.locator(...) calls: post containers and FB share link
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.return_value = None
-        locator_mock.get_attribute.return_value = "https://www.facebook.com/sharer/sharer.php?href=https%3A%2F%2Fnextdoor.com%2Fp%2FABC123"
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.return_value = None
-        extractor.page.wait_for_timeout.return_value = None
-
-        result = extractor.extract_permalink(0)
-
-        assert result == "https://nextdoor.com/p/ABC123"
-        share_btn.click.assert_called_once()
-
-    def test_extract_permalink_returns_none_when_no_share_button(
-        self, extractor: PostExtractor
-    ) -> None:
-        """Should return None when Share button not found."""
-        extractor.page.locator.return_value.count.return_value = 5
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 0  # No share button
-        container.locator.return_value = share_btn
-        extractor.page.locator.return_value.nth.return_value = container
-
-        result = extractor.extract_permalink(0)
-
-        assert result is None
-
-    def test_extract_permalink_handles_timeout(self, extractor: PostExtractor) -> None:
-        """Should return None when modal timeout occurs."""
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        container.locator.return_value = share_btn
-
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.side_effect = PlaywrightTimeoutError("Timeout")
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.return_value = None
-
-        result = extractor.extract_permalink(0)
-
-        assert result is None
-
-    def test_extract_permalink_handles_timeout_then_escape_failure(
-        self, extractor: PostExtractor
-    ) -> None:
-        """Should return None when modal timeout occurs and closing modal raises.
-
-        Regression test: the inner except must use container_index (not post_index)
-        so that no NameError is raised when Escape fails.
-        """
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        container.locator.return_value = share_btn
-
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.side_effect = PlaywrightTimeoutError("Timeout")
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.side_effect = RuntimeError("Escape failed")
-
-        result = extractor.extract_permalink(0)
-
-        assert result is None
-
     def test_normalize_post_url_returns_clean_url(
         self, extractor: PostExtractor
     ) -> None:
@@ -291,10 +211,10 @@ class TestPostExtractor:
         call_args = extractor.page.evaluate.call_args
         assert call_args[0][1] == [4]
 
-    def test_process_raw_post_skips_modal_when_comment_count_zero(
+    def test_process_raw_post_opens_modal_even_when_comment_count_zero(
         self, extractor: PostExtractor
     ) -> None:
-        """Should not open modal or wait for comments when UI reports 0 comments."""
+        """Should still open modal to read permalink when UI reports 0 comments."""
         raw = {
             "authorId": "author1",
             "authorName": "Test Author",
@@ -310,14 +230,41 @@ class TestPostExtractor:
         with mock.patch.object(
             extractor,
             "_extract_comments_via_desktop_modal",
-            return_value=[],
+            return_value=([], None),
         ) as mock_modal:
             result = extractor._process_raw_post(raw)
 
         assert result is not None
         assert result.comments == []
         assert result.comment_count == 0
-        mock_modal.assert_not_called()
+        mock_modal.assert_called_once_with(0, comment_count_ui=0)
+
+    def test_process_raw_post_uses_modal_permalink_when_feed_has_no_permalink(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should set post_url from modal timestamp link when feed has no /p/ link."""
+        raw = {
+            "authorId": "author1",
+            "authorName": "Test Author",
+            "commentCount": 2,
+            "containerIndex": 0,
+            "content": "This is a test post with enough content to pass validation",
+            "imageUrls": [],
+            "neighborhood": "Test Neighborhood",
+            "postUrl": None,
+            "reactionCount": 0,
+            "timestamp": "1 hr ago",
+        }
+        modal_permalink = "https://nextdoor.com/p/ABC123"
+        with mock.patch.object(
+            extractor,
+            "_extract_comments_via_desktop_modal",
+            return_value=([], modal_permalink),
+        ):
+            result = extractor._process_raw_post(raw)
+
+        assert result is not None
+        assert result.post_url == modal_permalink
 
     def test_generate_hash_creates_consistent_hash(
         self, extractor: PostExtractor
