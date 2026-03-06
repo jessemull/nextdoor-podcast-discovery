@@ -61,7 +61,16 @@ class NextdoorScraper:
         """Start the browser."""
         logger.debug("Starting browser (headless=%s)", self.headless)
         self._playwright = sync_playwright().start()
-        self.browser = self._playwright.chromium.launch(headless=self.headless)
+        # Stability and memory flags for headless (fewer crashes / OOM)
+        chromium_args = [
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--js-flags=--max-old-space-size=4096",
+        ]
+        self.browser = self._playwright.chromium.launch(
+            args=chromium_args,
+            headless=self.headless,
+        )
         self.context = self.browser.new_context(
             user_agent=SCRAPER_CONFIG["user_agent"],
             viewport=SCRAPER_CONFIG["viewport"],

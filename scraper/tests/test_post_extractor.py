@@ -207,6 +207,52 @@ class TestPostExtractor:
 
         assert result is None
 
+    def test_normalize_post_url_returns_clean_url(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should normalize post URL to canonical form."""
+        assert extractor._normalize_post_url("https://nextdoor.com/p/ABC123") == "https://nextdoor.com/p/ABC123"
+        assert extractor._normalize_post_url("https://nextdoor.com/p/ABC123?utm_x=1") == "https://nextdoor.com/p/ABC123"
+        assert extractor._normalize_post_url("/p/XYZ") == "https://nextdoor.com/p/XYZ"
+
+    def test_normalize_post_url_returns_none_for_invalid(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return None for non-post URLs or invalid input."""
+        assert extractor._normalize_post_url(None) is None
+        assert extractor._normalize_post_url("") is None
+        assert extractor._normalize_post_url("  ") is None
+        assert extractor._normalize_post_url("https://nextdoor.com/feed") is None
+        assert extractor._normalize_post_url("https://nextdoor.com/profile/foo") is None
+
+    def test_process_raw_post_skips_modal_when_comment_count_zero(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should not open modal or wait for comments when UI reports 0 comments."""
+        raw = {
+            "authorId": "author1",
+            "authorName": "Test Author",
+            "commentCount": 0,
+            "containerIndex": 0,
+            "content": "This is a test post with enough content to pass validation",
+            "imageUrls": [],
+            "neighborhood": "Test Neighborhood",
+            "postUrl": "https://nextdoor.com/p/ABC123",
+            "reactionCount": 0,
+            "timestamp": "2 hours ago",
+        }
+        with mock.patch.object(
+            extractor,
+            "_extract_comments_via_desktop_modal",
+            return_value=[],
+        ) as mock_modal:
+            result = extractor._process_raw_post(raw)
+
+        assert result is not None
+        assert result.comments == []
+        assert result.comment_count == 0
+        mock_modal.assert_not_called()
+
     def test_generate_hash_creates_consistent_hash(
         self, extractor: PostExtractor
     ) -> None:

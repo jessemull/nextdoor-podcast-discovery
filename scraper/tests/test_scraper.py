@@ -52,7 +52,14 @@ class TestNextdoorScraper:
             assert scraper.browser is not None
             assert scraper.context is not None
             assert scraper.page is not None
-            mock_playwright.chromium.launch.assert_called_once_with(headless=True)
+            mock_playwright.chromium.launch.assert_called_once_with(
+                args=[
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--js-flags=--max-old-space-size=4096",
+                ],
+                headless=True,
+            )
 
     def test_stop_cleans_up_resources(self, scraper: NextdoorScraper) -> None:
         """Should clean up browser, context, and playwright on stop."""

@@ -133,9 +133,16 @@ def _get_extraction_script(min_content_length: int) -> str:
             const replyEl = el.querySelector(REPLY_SEL);
             const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
 
+            let postUrl = null;
+            const postLink = el.querySelector('a[href*="/p/"]');
+            if (postLink) {{
+                const h = postLink.getAttribute('href');
+                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            }}
+
             posts.push({{
                 authorId, authorName, commentCount, content, imageUrls,
-                neighborhood, reactionCount, timestamp,
+                neighborhood, postUrl, reactionCount, timestamp,
                 containerIndex,
                 postIndex: posts.length
             }});
@@ -422,13 +429,17 @@ class PostExtractor:
         if page_url:
             post_url = page_url
         else:
-            post_url = self.extract_permalink(container_index)
+            post_url = self._normalize_post_url(raw.get("postUrl"))
+            if not post_url:
+                post_url = self.extract_permalink(container_index)
 
         comments: list[RawComment] = []
         if extract_comments:
             if page_url and "/p/" in page_url:
-                # Permalink page is a feed with this post first; open modal on same page, no details-page navigation.
-                comments = self._extract_comments_via_desktop_modal(container_index)
+                # Skip opening modal when UI reports 0 comments (avoids 12s wait).
+                if raw.get("commentCount") != 0:
+                    # Permalink page is a feed with this post first; open modal on same page.
+                    comments = self._extract_comments_via_desktop_modal(container_index)
             else:
                 # Comment extraction only supported for permalink (we open the modal there); no separate details page.
                 pass
@@ -539,22 +550,28 @@ class PostExtractor:
         content_hash = self._generate_hash(author_id, content)
 
         container_index = raw.get("containerIndex", raw.get("postIndex", 0))
-        post_url = self.extract_permalink(container_index)
+        post_url = self._normalize_post_url(raw.get("postUrl"))
+        if not post_url:
+            post_url = self.extract_permalink(container_index)
 
-        # Desktop: open post modal (double-click body), extract comments from modal
-        comments = self._extract_comments_via_desktop_modal(container_index)
+        # Skip opening modal when UI reports 0 comments (avoids 12s wait for comment-thank-container).
+        comment_count_ui = raw.get("commentCount")
+        if comment_count_ui is not None and comment_count_ui == 0:
+            comments = []
+        else:
+            # Desktop: open post modal (double-click body), extract comments from modal
+            comments = self._extract_comments_via_desktop_modal(container_index)
 
-        # Fallback: when modal path returned no comments but we have a permalink (and
-        # optionally UI said there are comments), open details page in a new tab.
-        # Permalink flow succeeds where modal often fails after scrolling (stale refs, timing).
-        if not comments and post_url and "/p/" in post_url:
-            comment_count_ui = raw.get("commentCount")
-            if comment_count_ui is None or comment_count_ui > 0:
-                if self.run_stats is not None:
-                    self.run_stats["comment_fallbacks"] = (
-                        self.run_stats.get("comment_fallbacks", 0) + 1
-                    )
-                comments = self._extract_comments_via_details_page(post_url)
+            # Fallback: when modal path returned no comments but we have a permalink (and
+            # optionally UI said there are comments), open details page in a new tab.
+            # Permalink flow succeeds where modal often fails after scrolling (stale refs, timing).
+            if not comments and post_url and "/p/" in post_url:
+                if comment_count_ui is None or comment_count_ui > 0:
+                    if self.run_stats is not None:
+                        self.run_stats["comment_fallbacks"] = (
+                            self.run_stats.get("comment_fallbacks", 0) + 1
+                        )
+                    comments = self._extract_comments_via_details_page(post_url)
 
         post = RawPost(
             author_id=author_id,
@@ -1050,6 +1067,25 @@ class PostExtractor:
             for item in (comments_data or [])
             if item.get("text") or item.get("author_name")
         ]
+
+    def _normalize_post_url(self, url: str | None) -> str | None:
+        """Normalize a post URL to canonical form https://nextdoor.com/p/XXX.
+
+        Args:
+            url: URL string from DOM or None.
+
+        Returns:
+            Clean URL or None if not a valid post permalink.
+        """
+        if not url or not isinstance(url, str) or not url.strip():
+            return None
+        try:
+            parsed = urlparse(url.strip())
+            if "/p/" not in (parsed.path or ""):
+                return None
+            return f"https://nextdoor.com{parsed.path}"
+        except (ValueError, TypeError):
+            return None
 
     def _parse_post_url_from_share_link(self, href: str | None) -> str | None:
         """Parse the post URL from a share link href.
