@@ -38,6 +38,7 @@ next-env.d.ts
 .env.local
 .env.*.local
 !.env.example
+.env.*
 
 # ===================
 # IDE
