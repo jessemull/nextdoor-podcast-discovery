@@ -225,6 +225,72 @@ class TestPostExtractor:
         assert extractor._normalize_post_url("https://nextdoor.com/feed") is None
         assert extractor._normalize_post_url("https://nextdoor.com/profile/foo") is None
 
+    def test_get_first_visible_post_returns_none_when_no_post_in_view(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return None when no post is in the viewport."""
+        extractor.page.evaluate.return_value = None
+
+        result = extractor._get_first_visible_post()
+
+        assert result is None
+
+    def test_get_first_visible_post_returns_index_and_raw_when_visible(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return (container_index, raw) when evaluate returns a post."""
+        extractor.page.evaluate.return_value = {
+            "containerIndex": 2,
+            "raw": {
+                "authorId": "a1",
+                "authorName": "Author",
+                "commentCount": 0,
+                "content": "Enough content here",
+                "imageUrls": [],
+                "neighborhood": "Hood",
+                "postUrl": "https://nextdoor.com/p/XYZ",
+                "reactionCount": 1,
+                "timestamp": "1h ago",
+                "containerIndex": 2,
+                "postIndex": 0,
+            },
+        }
+
+        result = extractor._get_first_visible_post()
+
+        assert result is not None
+        idx, raw = result
+        assert idx == 2
+        assert raw["authorId"] == "a1"
+        assert raw["content"] == "Enough content here"
+
+    def test_scroll_next_post_into_view_returns_false_when_no_next(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return False when there is no next container."""
+        extractor.page.locator.return_value.count.return_value = 5
+
+        result = extractor._scroll_next_post_into_view(4)
+
+        assert result is False
+
+    def test_scroll_next_post_into_view_returns_true_when_next_exists(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return True and scroll next container to top of viewport."""
+        mock_containers = mock.MagicMock()
+        mock_containers.count.return_value = 10
+        extractor.page.locator.return_value = mock_containers
+        extractor.page.evaluate.return_value = True
+        extractor.page.wait_for_timeout.return_value = None
+
+        result = extractor._scroll_next_post_into_view(3)
+
+        assert result is True
+        extractor.page.evaluate.assert_called_once()
+        call_args = extractor.page.evaluate.call_args
+        assert call_args[0][1] == [4]
+
     def test_process_raw_post_skips_modal_when_comment_count_zero(
         self, extractor: PostExtractor
     ) -> None:

@@ -156,6 +156,91 @@ def _get_extraction_script(min_content_length: int) -> str:
 """
 
 
+def _get_first_visible_post_script(min_content_length: int) -> str:
+    """Generate JavaScript to find the first post container in the viewport and return its index and raw data."""
+    author_sel = 'a[href*="/profile/"][href*="is=feed_author"]'
+    timestamp_sel = '[data-testid="post-timestamp"]'
+    content_sel = '[data-testid="styled-text"]'
+    image_sel = '[data-testid="resized-image"]'
+    reaction_sel = '[data-testid="reaction-button-text"]'
+    reply_sel = '[data-testid="post-reply-button"]'
+
+    return f"""
+(() => {{
+    const MIN_LEN = {min_content_length};
+    const AUTHOR_SEL = '{author_sel}';
+    const TIMESTAMP_SEL = '{timestamp_sel}';
+    const CONTENT_SEL = '{content_sel}';
+    const IMAGE_SEL = '{image_sel}';
+    const REACTION_SEL = '{reaction_sel}';
+    const REPLY_SEL = '{reply_sel}';
+
+    const containers = document.querySelectorAll('div.post, div.js-media-post');
+    for (let containerIndex = 0; containerIndex < containers.length; containerIndex++) {{
+        const el = containers[containerIndex];
+        try {{
+            if (el.textContent?.includes('Sponsored')) continue;
+            if (el.closest('[class*="gam-ad"], [class*="ad-placeholder"], [class*="feed-gam-ad"]')) continue;
+
+            const rect = el.getBoundingClientRect();
+            if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
+
+            const authorLink = el.querySelector(AUTHOR_SEL);
+            if (!authorLink) continue;
+
+            const href = authorLink.getAttribute('href') || '';
+            const match = href.match(/\\/profile\\/([^/?]+)/);
+            const authorId = match?.[1];
+            if (!authorId) continue;
+
+            let authorName = '';
+            for (const link of el.querySelectorAll(AUTHOR_SEL)) {{
+                const t = link.textContent?.trim() || '';
+                if (t && !t.startsWith('Avatar for') && t.length > 1) {{ authorName = t; break; }}
+            }}
+
+            const hoodLink = el.querySelector('a[href*="/neighborhood/"]');
+            const neighborhood = hoodLink?.textContent?.trim() || null;
+
+            const tsEl = el.querySelector(TIMESTAMP_SEL);
+            const timestamp = tsEl?.textContent?.trim() || null;
+
+            const contentEl = el.querySelector(CONTENT_SEL);
+            const content = contentEl?.textContent?.trim() || '';
+            if (!content || content.length < MIN_LEN) continue;
+
+            const imgs = el.querySelectorAll(IMAGE_SEL);
+            const imageUrls = Array.from(imgs).map(i => i.src).filter(Boolean);
+
+            const rxEl = el.querySelector(REACTION_SEL);
+            const reactionCount = parseInt(rxEl?.textContent || '0', 10) || 0;
+
+            const replyEl = el.querySelector(REPLY_SEL);
+            const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
+
+            let postUrl = null;
+            const postLink = el.querySelector('a[href*="/p/"]');
+            if (postLink) {{
+                const h = postLink.getAttribute('href');
+                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            }}
+
+            return {{
+                containerIndex,
+                raw: {{
+                    authorId, authorName, commentCount, content, imageUrls,
+                    neighborhood, postUrl, reactionCount, timestamp,
+                    containerIndex,
+                    postIndex: 0
+                }}
+            }};
+        }} catch (e) {{ continue; }}
+    }}
+    return null;
+}})()
+"""
+
+
 class PostExtractor:
     """Extracts posts from Nextdoor feed page."""
 
@@ -166,6 +251,10 @@ class PostExtractor:
     # Maximum scroll attempts before giving up (Recent feed)
 
     MAX_SCROLL_ATTEMPTS = 100
+
+    # One-by-one flow: stop when same first-visible post seen this many times
+
+    STUCK_THRESHOLD = 10
 
     def __init__(
         self,
@@ -306,7 +395,6 @@ class PostExtractor:
         """
         total_yielded = 0
         scroll_attempts = 0
-        no_new_posts_count = 0
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
         logger.debug(
@@ -317,83 +405,119 @@ class PostExtractor:
 
         try:
             self.page.wait_for_selector("div.post, div.js-media-post", timeout=timeout)
-            logger.debug("Feed content detected, starting extraction")
+            logger.debug(
+                "Feed content detected, starting one-post-per-cycle extraction"
+            )
         except PlaywrightTimeoutError:
             logger.warning("Timeout waiting for post containers")
             self._log_page_debug_info()
             return
 
-        extraction_script = _get_extraction_script(MIN_CONTENT_LENGTH)
-        max_scrolls = (
-            SCRAPER_CONFIG["max_scroll_attempts_trending"]
-            if self.feed_type == "trending"
-            else self.MAX_SCROLL_ATTEMPTS
-        )
+        max_cycles = safety_cap * 3
+        cycle = 0
+        stuck_count = 0
+        no_visible_count = 0
+        last_known_scroll_y: float = 0.0
 
-        while total_yielded < safety_cap and scroll_attempts < max_scrolls:
+        while total_yielded < safety_cap and cycle < max_cycles:
+            cycle += 1
             logger.debug(
-                "Extracting from page (scroll %d, yielded so far: %d)",
-                scroll_attempts + 1,
-                total_yielded,
-            )
-            raw_posts = self.page.evaluate(extraction_script)
-
-            if scroll_attempts == 0:
-                logger.debug("First scroll found %d raw posts", len(raw_posts))
-
-            batch: list[RawPost] = []
-            new_count = self._process_batch(raw_posts, batch, cap=safety_cap)
-            total_yielded += len(batch)
-
-            logger.debug(
-                "Scroll %d: %d new posts (total yielded: %d)",
-                scroll_attempts + 1,
-                new_count,
+                "Cycle %d: first visible (yielded so far: %d)",
+                cycle,
                 total_yielded,
             )
 
-            # Recent feed: stop only when we see many already-seen at top and got no new posts
-            # (so we don't stop when new posts exist further down the list)
-            if (
-                self.feed_type == "recent"
-                and self.repeat_threshold > 0
-                and new_count == 0
-            ):
-                consecutive_seen = self._count_consecutive_already_seen(raw_posts)
-                if consecutive_seen >= self.repeat_threshold:
-                    logger.info(
-                        "Repeat threshold reached (%d consecutive already-seen, 0 new), stopping",
-                        consecutive_seen,
-                    )
-                    return
-
-            if new_count == 0:
-                no_new_posts_count += 1
-                if no_new_posts_count >= self.MAX_EMPTY_SCROLLS:
+            result = self._get_first_visible_post()
+            if result is None:
+                no_visible_count += 1
+                logger.debug(
+                    "No post in view (attempt %d/%d), scrolling down",
+                    no_visible_count,
+                    self.MAX_EMPTY_SCROLLS,
+                )
+                if no_visible_count >= self.MAX_EMPTY_SCROLLS:
                     logger.warning(
-                        "No new posts after %d scrolls, stopping",
-                        self.MAX_EMPTY_SCROLLS,
+                        "No post in view after %d attempts, stopping",
+                        no_visible_count,
                     )
                     return
-            else:
-                no_new_posts_count = 0
+                self._scroll_down()
+                scroll_attempts += 1
+                continue
+            no_visible_count = 0
 
-            if batch:
-                yield batch
+            container_index, raw = result
+            author_id = raw.get("authorId") or ""
+            content = (raw.get("content") or "").strip()
+            if not author_id or not content:
+                self._scroll_next_post_into_view(container_index)
+                continue
+            content_hash = self._generate_hash(author_id, content)
+
+            if content_hash in self.seen_hashes:
+                stuck_count += 1
+                logger.debug(
+                    "Stuck: same first-visible post (index=%d, stuck_count=%d/%d)",
+                    container_index,
+                    stuck_count,
+                    self.STUCK_THRESHOLD,
+                )
+                if stuck_count >= self.STUCK_THRESHOLD:
+                    logger.info(
+                        "Repeat threshold reached (same first-visible post %d times), stopping",
+                        stuck_count,
+                    )
+                    return
+                has_next = self._scroll_next_post_into_view(container_index)
+                if not has_next:
+                    self._scroll_down()
+                    scroll_attempts += 1
+                try:
+                    scroll_y = self.page.evaluate("() => window.scrollY") or 0
+                    if scroll_y < 100 and last_known_scroll_y > 200:
+                        self.page.evaluate(
+                            f"() => window.scrollTo(0, {last_known_scroll_y})"
+                        )
+                        self.page.wait_for_timeout(500)
+                    else:
+                        last_known_scroll_y = float(scroll_y)
+                except Exception:
+                    pass
+                continue
+            stuck_count = 0
+
+            post = self._scrape_one_post(container_index, raw)
+            if post is None:
+                self._scroll_next_post_into_view(container_index)
+                continue
+            if post.content_hash in self.seen_hashes:
+                self._scroll_next_post_into_view(container_index)
+                continue
+
+            self.seen_hashes.add(post.content_hash)
+            total_yielded += 1
+            yield [post]
 
             if total_yielded >= safety_cap:
                 logger.debug("Safety cap reached (%d posts), stopping", safety_cap)
                 return
 
-            logger.debug(
-                "Scrolling down (about to run scroll %d)",
-                scroll_attempts + 2,
-            )
-            self._scroll_down()
-            logger.debug(
-                "Scroll down done (next will be scroll %d)", scroll_attempts + 2
-            )
-            scroll_attempts += 1
+            has_next = self._scroll_next_post_into_view(container_index)
+            if not has_next:
+                self._scroll_down()
+                scroll_attempts += 1
+
+            try:
+                scroll_y = self.page.evaluate("() => window.scrollY") or 0
+                if scroll_y < 100 and last_known_scroll_y > 200:
+                    self.page.evaluate(
+                        f"() => window.scrollTo(0, {last_known_scroll_y})"
+                    )
+                    self.page.wait_for_timeout(500)
+                else:
+                    last_known_scroll_y = float(scroll_y)
+            except Exception:
+                pass
 
         logger.debug("Batch extraction complete: %d posts yielded", total_yielded)
 
@@ -526,6 +650,155 @@ class PostExtractor:
             })
             """)
         logger.debug("Page debug info: %s", debug_info)
+
+    def _get_first_visible_post_diagnostics(self) -> dict[str, Any]:
+        """Return counts for debugging: total containers, in viewport, skipped ads, with author."""
+        return self.page.evaluate(
+            """
+            () => {
+                const containers = document.querySelectorAll('div.post, div.js-media-post');
+                let inView = 0, hasAuthor = 0, skippedAd = 0;
+                for (let i = 0; i < containers.length; i++) {
+                    const el = containers[i];
+                    if (el.textContent?.includes('Sponsored') || el.closest('[class*="gam-ad"], [class*="ad-placeholder"], [class*="feed-gam-ad"]')) {
+                        skippedAd++;
+                        continue;
+                    }
+                    const rect = el.getBoundingClientRect();
+                    if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
+                    inView++;
+                    const authorLink = el.querySelector('a[href*="/profile/"][href*="is=feed_author"]');
+                    if (authorLink && authorLink.getAttribute('href')?.match(/\\/profile\\/([^/?]+)/)) hasAuthor++;
+                }
+                return { total: containers.length, inViewport: inView, skippedAds: skippedAd, inViewWithAuthor: hasAuthor, scrollY: window.scrollY };
+            }
+            """
+        ) or {}
+
+    def _get_first_visible_post(self) -> tuple[int, dict[str, Any]] | None:
+        """Return the first post container in the viewport and its raw data.
+
+        Returns:
+            (container_index, raw_dict) or None if no post in view.
+        """
+        script = _get_first_visible_post_script(MIN_CONTENT_LENGTH)
+        result = self.page.evaluate(script)
+        if not result or not isinstance(result, dict):
+            diag = self._get_first_visible_post_diagnostics()
+            logger.debug(
+                "First visible: none (total=%s, inViewport=%s, skippedAds=%s, inViewWithAuthor=%s, scrollY=%s)",
+                diag.get("total"),
+                diag.get("inViewport"),
+                diag.get("skippedAds"),
+                diag.get("inViewWithAuthor"),
+                diag.get("scrollY"),
+            )
+            return None
+        raw = result.get("raw")
+        idx = result.get("containerIndex", 0)
+        if raw is None:
+            return None
+        logger.debug("First visible: container_index=%d", idx)
+        return (idx, raw)
+
+    def _scroll_next_post_into_view(self, current_index: int) -> bool:
+        """Scroll the next post container to the top of the viewport so it becomes first visible.
+
+        Uses block: 'start' so the previous card moves above the viewport and we don't
+        re-detect the same post as "first visible" on the next cycle.
+
+        Returns:
+            True if there was a next container and we scrolled to it, False otherwise.
+        """
+        containers = self.page.locator("div.post, div.js-media-post")
+        count = containers.count()
+        if count <= current_index + 1:
+            logger.debug(
+                "No next container (count=%d, current_index=%d)",
+                count,
+                current_index,
+            )
+            return False
+        # Scroll next container to top of viewport so previous card is out of view
+        scrolled = self.page.evaluate(
+            """
+            ([nextIdx]) => {
+                const containers = document.querySelectorAll('div.post, div.js-media-post');
+                if (containers.length <= nextIdx) return false;
+                containers[nextIdx].scrollIntoView({ block: 'start', behavior: 'instant' });
+                return true;
+            }
+            """,
+            [current_index + 1],
+        )
+        self.page.wait_for_timeout(300)
+        return bool(scrolled)
+
+    def _scrape_one_post(
+        self, container_index: int, raw: dict[str, Any]
+    ) -> RawPost | None:
+        """Scroll container into view, get permalink and comments, build RawPost.
+
+        Returns:
+            RawPost or None if invalid.
+        """
+        author_id = raw.get("authorId", "")
+        author_name = raw.get("authorName", "")
+        content = raw.get("content", "")
+
+        if not author_id or not content or len(content) < MIN_CONTENT_LENGTH:
+            return None
+
+        content_hash = self._generate_hash(author_id, content)
+
+        containers = self.page.locator("div.post, div.js-media-post")
+        if containers.count() <= container_index:
+            return None
+        containers.nth(container_index).scroll_into_view_if_needed(timeout=3000)
+        self.page.wait_for_timeout(200)
+
+        post_url = self._normalize_post_url(raw.get("postUrl"))
+        if not post_url:
+            post_url = self.extract_permalink(container_index)
+
+        comment_count_ui = raw.get("commentCount")
+        if comment_count_ui is not None and comment_count_ui == 0:
+            comments = []
+        else:
+            comments = self._extract_comments_via_desktop_modal(container_index)
+            if not comments and post_url and "/p/" in post_url:
+                if comment_count_ui is None or comment_count_ui > 0:
+                    if self.run_stats is not None:
+                        self.run_stats["comment_fallbacks"] = (
+                            self.run_stats.get("comment_fallbacks", 0) + 1
+                        )
+                    comments = self._extract_comments_via_details_page(post_url)
+
+        post = RawPost(
+            author_id=author_id,
+            author_name=author_name,
+            comment_count=raw.get("commentCount"),
+            comments=comments,
+            content=content,
+            content_hash=content_hash,
+            image_urls=raw.get("imageUrls", []),
+            neighborhood=raw.get("neighborhood") or None,
+            post_url=post_url,
+            reaction_count=raw.get("reactionCount", 0),
+            timestamp_relative=raw.get("timestamp") or None,
+        )
+        if post.comment_count is not None and post.comment_count != len(post.comments):
+            if self.run_stats is not None:
+                self.run_stats["comment_mismatches"] = (
+                    self.run_stats.get("comment_mismatches", 0) + 1
+                )
+            logger.warning(
+                "Comment count mismatch: UI=%d, scraped=%d (post_url=%s)",
+                post.comment_count,
+                len(post.comments),
+                post.post_url or "?",
+            )
+        return post
 
     def _process_raw_post(self, raw: dict[str, Any]) -> RawPost | None:
         """Process raw post data from JavaScript.
@@ -701,8 +974,13 @@ class PostExtractor:
         """
         try:
             containers = self.page.locator("div.post, div.js-media-post")
-            if containers.count() <= container_index:
-                logger.warning("Container index %d out of range", container_index)
+            count = containers.count()
+            if count <= container_index:
+                logger.warning(
+                    "Permalink extraction skipped: container index %d out of range (page has %d post containers)",
+                    container_index,
+                    count,
+                )
                 return None
 
             container = containers.nth(container_index)
