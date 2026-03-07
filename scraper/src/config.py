@@ -98,8 +98,9 @@ class Selectors(TypedDict):
 
 # Scraper settings
 #
-# Desktop Chrome: we use desktop view so we can open the post modal (click post
-# body twice) and scrape comments from the modal, including "view more" replies.
+# Mobile Chrome: use mobile viewport and user agent for inspect / comment flow
+# experimentation. Desktop was used for modal comment extraction but caused feed
+# scroll reset; mobile may offer a different pattern for comments.
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
@@ -113,10 +114,10 @@ SCRAPER_CONFIG: ScraperConfig = {
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
     "user_agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Mobile Safari/537.36"
     ),
-    "viewport": {"height": 900, "width": 1280},
+    "viewport": {"height": 844, "width": 390},
 }
 
 # URLs

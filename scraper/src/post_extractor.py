@@ -1,18 +1,9 @@
 """Post extraction from Nextdoor feed."""
 
-__all__ = ["PostExtractor", "RawComment", "RawPost", "ScrollResetDetected"]
-
-
-class ScrollResetDetected(Exception):
-    """Raised when the feed scroll position resets (e.g. jump back to top) during scraping."""
-
-    def __init__(self, last_action: str) -> None:
-        self.last_action = last_action
-        super().__init__(f"Scroll reset detected after: {last_action}")
+__all__ = ["PostExtractor", "RawComment", "RawPost"]
 
 import hashlib
 import logging
-import os
 import random
 import re
 from collections.abc import Iterator
@@ -26,13 +17,6 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from src.config import SCRAPER_CONFIG
 
 logger = logging.getLogger(__name__)
-
-# Debug: scroll through posts without scraping (to see if something causes jump to top)
-DEBUG_SCROLL_ONLY = os.environ.get("SCRAPER_DEBUG_SCROLL_ONLY", "").lower() in (
-    "1",
-    "true",
-    "yes",
-)
 
 # Minimum content length to consider a post valid (skip empty/stub posts)
 
@@ -297,36 +281,6 @@ class PostExtractor:
         self.repeat_threshold = repeat_threshold
         self.run_stats = run_stats
         self.seen_hashes: set[str] = set()
-        # Set by extract_post_batches before scraping a post; used to detect scroll reset
-        self._last_known_scroll_y: float | None = None
-
-    def _check_scroll_reset(self, last_action: str, log_reset: bool = True) -> None:
-        """If scroll position dropped significantly, restore it; log only when log_reset is True."""
-        if self._last_known_scroll_y is None:
-            return
-        # Only treat as reset if we had scrolled down meaningfully; avoid false positive at start (scroll_y=0, was=0)
-        if self._last_known_scroll_y < 300:
-            return
-        try:
-            scroll_y = self.page.evaluate("() => window.scrollY") or 0
-            scroll_y_f = float(scroll_y)
-        except Exception:
-            return
-        if scroll_y_f < 100 or scroll_y_f < self._last_known_scroll_y - 500:
-            if log_reset:
-                logger.warning(
-                    "Scroll reset detected after: %s (scroll_y=%.0f, was %.0f), restoring",
-                    last_action,
-                    scroll_y_f,
-                    self._last_known_scroll_y,
-                )
-            try:
-                self.page.evaluate(
-                    f"() => window.scrollTo(0, {self._last_known_scroll_y})"
-                )
-                self.page.wait_for_timeout(500)
-            except Exception:
-                pass
 
     def extract_posts(self) -> list[RawPost]:
         """Scroll through feed and extract posts.
@@ -459,27 +413,18 @@ class PostExtractor:
             self._log_page_debug_info()
             return
 
-        if DEBUG_SCROLL_ONLY:
-            safety_cap = min(safety_cap, 100)
-            logger.info(
-                "Debug scroll-only: scrolling through up to %d posts (no scraping)",
-                safety_cap,
-            )
-
         max_cycles = safety_cap * 3
         cycle = 0
         stuck_count = 0
         no_visible_count = 0
-        last_known_scroll_y: float = 0.0
 
         while total_yielded < safety_cap and cycle < max_cycles:
             cycle += 1
-            if not DEBUG_SCROLL_ONLY:
-                logger.debug(
-                    "Cycle %d: first visible (yielded so far: %d)",
-                    cycle,
-                    total_yielded,
-                )
+            logger.debug(
+                "Cycle %d: first visible (yielded so far: %d)",
+                cycle,
+                total_yielded,
+            )
 
             result = self._get_first_visible_post()
             if result is None:
@@ -510,13 +455,12 @@ class PostExtractor:
 
             if content_hash in self.seen_hashes:
                 stuck_count += 1
-                if not DEBUG_SCROLL_ONLY:
-                    logger.debug(
-                        "Stuck: same first-visible post (index=%d, stuck_count=%d/%d)",
-                        container_index,
-                        stuck_count,
-                        self.STUCK_THRESHOLD,
-                    )
+                logger.debug(
+                    "Stuck: same first-visible post (index=%d, stuck_count=%d/%d)",
+                    container_index,
+                    stuck_count,
+                    self.STUCK_THRESHOLD,
+                )
                 if stuck_count >= self.STUCK_THRESHOLD:
                     logger.info(
                         "Repeat threshold reached (same first-visible post %d times), stopping",
@@ -527,68 +471,9 @@ class PostExtractor:
                 if not has_next:
                     self._scroll_down()
                     scroll_attempts += 1
-                try:
-                    scroll_y = self.page.evaluate("() => window.scrollY") or 0
-                    if scroll_y < 100 and last_known_scroll_y > 200:
-                        logger.info(
-                            "JUMP BACK TO TOP: scroll_y=%.0f (was %.0f)",
-                            float(scroll_y),
-                            last_known_scroll_y,
-                        )
-                        self.page.evaluate(
-                            f"() => window.scrollTo(0, {last_known_scroll_y})"
-                        )
-                        self.page.wait_for_timeout(500)
-                    else:
-                        last_known_scroll_y = float(scroll_y)
-                except Exception:
-                    pass
                 continue
             stuck_count = 0
 
-            # Debug mode: do not scrape (no modal open); just count and scroll, log position
-            if DEBUG_SCROLL_ONLY:
-                try:
-                    scroll_y = self.page.evaluate("() => window.scrollY") or 0
-                    logger.info(
-                        "Post %d: scroll_y=%.0f",
-                        total_yielded + 1,
-                        float(scroll_y),
-                    )
-                except Exception:
-                    pass
-                self.seen_hashes.add(content_hash)
-                total_yielded += 1
-                if total_yielded >= safety_cap:
-                    logger.info(
-                        "Debug scroll-only: reached %d posts, stopping",
-                        safety_cap,
-                    )
-                    return
-                has_next = self._scroll_next_post_into_view(container_index)
-                if not has_next:
-                    self._scroll_down()
-                    scroll_attempts += 1
-                try:
-                    scroll_y = self.page.evaluate("() => window.scrollY") or 0
-                    if scroll_y < 100 and last_known_scroll_y > 200:
-                        logger.info(
-                            "JUMP BACK TO TOP: scroll_y=%.0f (was %.0f)",
-                            float(scroll_y),
-                            last_known_scroll_y,
-                        )
-                        self.page.evaluate(
-                            f"() => window.scrollTo(0, {last_known_scroll_y})"
-                        )
-                        self.page.wait_for_timeout(500)
-                    else:
-                        last_known_scroll_y = float(scroll_y)
-                except Exception:
-                    pass
-                yield []
-                continue
-
-            self._last_known_scroll_y = last_known_scroll_y
             post = self._scrape_one_post(container_index, raw)
             if post is None:
                 self._scroll_next_post_into_view(container_index)
@@ -609,23 +494,6 @@ class PostExtractor:
             if not has_next:
                 self._scroll_down()
                 scroll_attempts += 1
-
-            try:
-                scroll_y = self.page.evaluate("() => window.scrollY") or 0
-                if scroll_y < 100 and last_known_scroll_y > 200:
-                    logger.info(
-                        "JUMP BACK TO TOP: scroll_y=%.0f (was %.0f)",
-                        float(scroll_y),
-                        last_known_scroll_y,
-                    )
-                    self.page.evaluate(
-                        f"() => window.scrollTo(0, {last_known_scroll_y})"
-                    )
-                    self.page.wait_for_timeout(500)
-                else:
-                    last_known_scroll_y = float(scroll_y)
-            except Exception:
-                pass
 
         logger.debug("Batch extraction complete: %d posts yielded", total_yielded)
 
@@ -1188,18 +1056,6 @@ class PostExtractor:
                 state="visible", timeout=modal_wait_ms
             )
             self.page.wait_for_timeout(300)
-            # Modal open causes the feed to scroll to top; restore once so rest of modal steps see correct position.
-            if self._last_known_scroll_y is not None and self._last_known_scroll_y >= 300:
-                try:
-                    scroll_y = self.page.evaluate("() => window.scrollY") or 0
-                    if float(scroll_y) < self._last_known_scroll_y - 500:
-                        self.page.evaluate(
-                            f"() => window.scrollTo(0, {self._last_known_scroll_y})"
-                        )
-                        self.page.wait_for_timeout(300)
-                except Exception:
-                    pass
-            self._check_scroll_reset("after_modal_open_300ms_wait", log_reset=False)
             # Read permalink from modal timestamp link (desktop has no /p/ link on feed cards).
             modal_permalink: str | None = None
             try:
@@ -1215,7 +1071,6 @@ class PostExtractor:
                     modal_permalink = self._normalize_post_url(href.strip())
             except Exception:
                 pass
-            self._check_scroll_reset("after_modal_permalink_read")
             has_comments = comment_count_ui is None or comment_count_ui > 0
             out: list[RawComment] = []
             if has_comments:
@@ -1228,7 +1083,6 @@ class PostExtractor:
                 except PlaywrightTimeoutError:
                     pass
                 self.page.wait_for_timeout(200)
-                self._check_scroll_reset("after_comment_wait")
                 # Click every "See X more replies" / "See more comments" until all expanded (scope to modal).
                 # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
                 modal = self.page.locator("#expanded-post-wrapper")
@@ -1258,7 +1112,6 @@ class PostExtractor:
                     if not clicked_any:
                         break
                     self.page.wait_for_timeout(view_more_wait_ms)
-                self._check_scroll_reset("after_see_more_clicks")
                 # Extract comments from modal: [data-testid="comment-thank-container"] and surrounding block
                 result = self.page.evaluate(
                     """
@@ -1310,8 +1163,6 @@ class PostExtractor:
                 container_index,
             )
             return ([], None)
-        except ScrollResetDetected:
-            raise
         except Exception as e:
             if self.run_stats is not None:
                 self.run_stats["modal_failures"] = (
@@ -1325,10 +1176,8 @@ class PostExtractor:
             return ([], None)
         finally:
             try:
-                self._check_scroll_reset("before_modal_close")
                 self.page.keyboard.press("Escape")
                 self.page.wait_for_timeout(SCRAPER_CONFIG["modal_close_delay_ms"])
-                self._check_scroll_reset("after_modal_close")
             except Exception:
                 pass
 
