@@ -300,8 +300,8 @@ class PostExtractor:
         # Set by extract_post_batches before scraping a post; used to detect scroll reset
         self._last_known_scroll_y: float | None = None
 
-    def _check_scroll_reset(self, last_action: str) -> None:
-        """If scroll position dropped significantly, log and restore it so we can continue."""
+    def _check_scroll_reset(self, last_action: str, log_reset: bool = True) -> None:
+        """If scroll position dropped significantly, restore it; log only when log_reset is True."""
         if self._last_known_scroll_y is None:
             return
         # Only treat as reset if we had scrolled down meaningfully; avoid false positive at start (scroll_y=0, was=0)
@@ -313,12 +313,13 @@ class PostExtractor:
         except Exception:
             return
         if scroll_y_f < 100 or scroll_y_f < self._last_known_scroll_y - 500:
-            logger.warning(
-                "Scroll reset detected after: %s (scroll_y=%.0f, was %.0f), restoring",
-                last_action,
-                scroll_y_f,
-                self._last_known_scroll_y,
-            )
+            if log_reset:
+                logger.warning(
+                    "Scroll reset detected after: %s (scroll_y=%.0f, was %.0f), restoring",
+                    last_action,
+                    scroll_y_f,
+                    self._last_known_scroll_y,
+                )
             try:
                 self.page.evaluate(
                     f"() => window.scrollTo(0, {self._last_known_scroll_y})"
