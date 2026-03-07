@@ -211,10 +211,10 @@ class TestPostExtractor:
         call_args = extractor.page.evaluate.call_args
         assert call_args[0][1] == [4]
 
-    def test_process_raw_post_opens_modal_even_when_comment_count_zero(
+    def test_process_raw_post_skips_comments_button_when_comment_count_zero(
         self, extractor: PostExtractor
     ) -> None:
-        """Should still open modal to read permalink when UI reports 0 comments."""
+        """Should not click comments button when UI reports 0 comments."""
         raw = {
             "authorId": "author1",
             "authorName": "Test Author",
@@ -229,20 +229,21 @@ class TestPostExtractor:
         }
         with mock.patch.object(
             extractor,
-            "_extract_comments_via_desktop_modal",
-            return_value=([], None),
-        ) as mock_modal:
+            "_extract_comments_via_comments_button",
+            return_value=[],
+        ) as mock_comments_btn:
             result = extractor._process_raw_post(raw)
 
         assert result is not None
         assert result.comments == []
         assert result.comment_count == 0
-        mock_modal.assert_called_once_with(0, comment_count_ui=0)
+        assert result.post_url == "https://nextdoor.com/p/ABC123"
+        mock_comments_btn.assert_not_called()
 
-    def test_process_raw_post_uses_modal_permalink_when_feed_has_no_permalink(
+    def test_process_raw_post_has_no_permalink_when_feed_has_no_permalink(
         self, extractor: PostExtractor
     ) -> None:
-        """Should set post_url from modal timestamp link when feed has no /p/ link."""
+        """When feed has no /p/ link, post_url stays None; no comments button call."""
         raw = {
             "authorId": "author1",
             "authorName": "Test Author",
@@ -255,16 +256,17 @@ class TestPostExtractor:
             "reactionCount": 0,
             "timestamp": "1 hr ago",
         }
-        modal_permalink = "https://nextdoor.com/p/ABC123"
         with mock.patch.object(
             extractor,
-            "_extract_comments_via_desktop_modal",
-            return_value=([], modal_permalink),
-        ):
+            "_extract_comments_via_comments_button",
+            return_value=[],
+        ) as mock_comments_btn:
             result = extractor._process_raw_post(raw)
 
         assert result is not None
-        assert result.post_url == modal_permalink
+        assert result.post_url is None
+        assert result.comments == []
+        mock_comments_btn.assert_not_called()
 
     def test_generate_hash_creates_consistent_hash(
         self, extractor: PostExtractor

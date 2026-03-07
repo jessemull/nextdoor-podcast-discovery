@@ -227,7 +227,7 @@ class TestNextdoorScraper:
         assert result is False
 
     def test_navigate_to_feed_recent(self, scraper: NextdoorScraper) -> None:
-        """Should navigate to news feed then click Recent chip."""
+        """Should navigate to feed URL with ordering=recent."""
         scraper.page = mock.MagicMock()
         scraper.page.url = "https://nextdoor.com/login/"
         scraper.page.goto.return_value = None
@@ -240,10 +240,10 @@ class TestNextdoorScraper:
         scraper.navigate_to_feed("recent")
 
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
-        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL, timeout=timeout)
+        scraper.page.goto.assert_called_once_with(FEED_URLS["recent"], timeout=timeout)
 
     def test_navigate_to_feed_trending(self, scraper: NextdoorScraper) -> None:
-        """Should navigate to news feed then click Trending chip."""
+        """Should navigate to feed URL with ordering=trending."""
         scraper.page = mock.MagicMock()
         scraper.page.url = "https://nextdoor.com/login/"
         scraper.page.goto.return_value = None
@@ -256,7 +256,7 @@ class TestNextdoorScraper:
         scraper.navigate_to_feed("trending")
 
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
-        scraper.page.goto.assert_called_once_with(NEWS_FEED_URL, timeout=timeout)
+        scraper.page.goto.assert_called_once_with(FEED_URLS["trending"], timeout=timeout)
 
     def test_navigate_to_feed_invalid_type(self, scraper: NextdoorScraper) -> None:
         """Should raise ValueError for invalid feed type."""

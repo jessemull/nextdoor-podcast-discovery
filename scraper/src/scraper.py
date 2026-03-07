@@ -272,9 +272,7 @@ class NextdoorScraper:
         # Mobile: open Filter by bottom sheet (navbar button with aria-controls), then click feed type.
         try:
             navbar = self.page.get_by_test_id("navbar")
-            navbar.locator('[role="button"][aria-controls]').first.click(
-                timeout=8000
-            )
+            navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
             dialog = self.page.get_by_role("dialog", name="Filter by")
             dialog.wait_for(state="visible", timeout=8000)
             self.page.get_by_role("button", name=feed_type.capitalize()).click(
@@ -291,7 +289,7 @@ class NextdoorScraper:
         self._random_delay()
 
     def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
-        """Wait for desktop feed tab if present; otherwise no-op."""
+        """Wait for feed tab if present; otherwise no-op."""
         tab_selectors = {
             "recent": SELECTORS["feed_tab_recent"],
             "trending": SELECTORS["feed_tab_trending"],
@@ -308,9 +306,8 @@ class NextdoorScraper:
     def click_first_permalink_to_details(self, timeout_ms: int = 15000) -> bool:
         """Click the first post permalink in the feed to open the details view.
 
-        Call after navigate_to_feed() when the feed is visible. Waits for the
-        first feed card, finds the first link to /p/..., clicks it, and waits
-        for the URL to change to the details page.
+        Finds the first feed card that contains a /p/ link (skips prompt card),
+        then clicks that link and waits for the details page.
 
         Args:
             timeout_ms: Max time to wait for card, link, and navigation.
@@ -322,9 +319,14 @@ class NextdoorScraper:
             raise RuntimeError("Browser not started. Call start() first.")
 
         try:
-            first_card = self.page.get_by_test_id("feed-item-card").first
-            first_card.wait_for(state="visible", timeout=timeout_ms)
-            permalink = first_card.locator('a[href*="/p/"]').first
+            # First card that actually has a permalink (first feed-item-card may be "What's happening?" prompt)
+            card_with_link = (
+                self.page.get_by_test_id("feed-item-card")
+                .filter(has=self.page.locator('a[href*="/p/"]'))
+                .first
+            )
+            card_with_link.wait_for(state="visible", timeout=timeout_ms)
+            permalink = card_with_link.locator('a[href*="/p/"]').first
             permalink.wait_for(state="visible", timeout=5000)
             permalink.scroll_into_view_if_needed(timeout=5000)
             self._random_delay()
@@ -392,7 +394,7 @@ class NextdoorScraper:
             feed_type: Which feed is active ("recent" or "trending").
             repeat_threshold: For Recent feed, stop after this many consecutive
                 already-seen. Defaults to config.
-            run_stats: Optional dict to accumulate comment_mismatches and modal_failures.
+            run_stats: Optional dict to accumulate comment_mismatches.
             safety_cap: Stop yielding after this many total posts (default 500).
 
         Yields:

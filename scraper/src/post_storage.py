@@ -174,7 +174,7 @@ class PostStorage:
             # Fall back to individual inserts on batch failure
 
             for i, post_data in enumerate(posts_data):
-                post = posts[i] if i < len(posts) else None
+                current_post: RawPost | None = posts[i] if i < len(posts) else None
                 try:
                     result = (
                         self.supabase.table("posts")
@@ -192,12 +192,13 @@ class PostStorage:
                         continue
                     # On neighborhood FK (23503), re-resolve neighborhood and retry once
                     if (
-                        ("23503" in error_msg or "foreign key" in error_msg)
-                        and post is not None
-                    ):
-                        name = post.neighborhood or "Unknown"
+                        "23503" in error_msg or "foreign key" in error_msg
+                    ) and current_post is not None:
+                        name = current_post.neighborhood or "Unknown"
                         self._neighborhood_cache.pop(name, None)
-                        new_id = self._get_or_create_neighborhood(post.neighborhood)
+                        new_id = self._get_or_create_neighborhood(
+                            current_post.neighborhood
+                        )
                         if new_id:
                             post_data = dict(post_data)
                             post_data["neighborhood_id"] = new_id

@@ -74,8 +74,6 @@ class ScraperConfig(TypedDict):
     login_timeout_ms: int
     max_posts_per_run: int
     max_scroll_attempts_trending: int
-    modal_close_delay_ms: int
-    modal_timeout_ms: int
     navigation_timeout_ms: int
     repeat_threshold_recent: int
     scroll_delay_ms: tuple[int, int]
@@ -98,17 +96,14 @@ class Selectors(TypedDict):
 
 # Scraper settings
 #
-# Mobile: viewport and user agent for mobile UI. Feed navigation uses Filter by
-# sheet (navbar → dialog); login uses role=textbox / role=button. Desktop used
-# tab chips and data-testid selectors (see git history around 0dd4c64).
+# Mobile: viewport and user agent; feed navigation uses Filter by sheet;
+# login uses role=textbox / role=button.
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
     "max_scroll_attempts_trending": 50,
-    "modal_close_delay_ms": 300,
-    "modal_timeout_ms": 5000,
     "navigation_timeout_ms": 10000,
     "repeat_threshold_recent": 10,
     "scroll_delay_ms": (2000, 5000),

@@ -289,7 +289,7 @@ def main(
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
         feed_type: Which feed to scrape ("recent" or "trending").
-        inspect: If True, open browser (desktop), go to feed, then pause for DOM inspection.
+        inspect: If True, open browser, go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
         open_trending_details: If True, open trending tab, click first post permalink to details view, then pause.
         no_embed: If True, skip embedding (overrides default).
@@ -486,7 +486,7 @@ def main(
 
             if inspect:
                 print()
-                print("Browser is open on the news feed (desktop).")
+                print("Browser is open on the news feed.")
                 print(
                     "Open DevTools (F12 or right-click → Inspect) and inspect the DOM "
                     "(e.g. feed chips, post cards). Press Enter here when done to close the browser."
@@ -507,9 +507,7 @@ def main(
             stored = 0
             total_extracted = 0
             run_stats: dict[str, int] = {
-                "comment_fallbacks": 0,
                 "comment_mismatches": 0,
-                "modal_failures": 0,
             }
             storage_stats: dict[str, int] | None = None
             if not dry_run:
@@ -625,19 +623,13 @@ def main(
                 _record_scraper_run(session_manager.supabase, feed_type, "completed")
 
             # Run summary last so it is the final human-facing message before exit
-            fallbacks = run_stats.get("comment_fallbacks", 0)
             mismatches = run_stats.get("comment_mismatches", 0)
-            modal_failures = run_stats.get("modal_failures", 0)
-            total_warnings = mismatches + modal_failures
             logger.info("----------")
             logger.info(
-                "Run summary: extracted=%d, stored=%s; comment_fallbacks=%d; warnings: comment_mismatch=%d, modal_failure=%d (%d total)",
+                "Run summary: extracted=%d, stored=%s; comment_mismatches=%d",
                 total_extracted,
                 storage_stats["inserted"] if storage_stats else "n/a",
-                fallbacks,
                 mismatches,
-                modal_failures,
-                total_warnings,
             )
             logger.info("----------")
 
@@ -714,7 +706,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--inspect",
         action="store_true",
-        help="Open browser (desktop), go to feed, then pause for DOM inspection",
+        help="Open browser, go to feed, then pause for DOM inspection",
     )
     parser.add_argument(
         "--max-posts",

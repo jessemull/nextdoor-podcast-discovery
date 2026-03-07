@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-from src.config import SCRAPER_CONFIG
+from src.config import FEED_URLS, SCRAPER_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,8 @@ def _get_extraction_script(min_content_length: int) -> str:
             const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
 
             let postUrl = null;
-            const postLink = el.querySelector('a[href*="/p/"]');
+            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
+            const postLink = timestampLink || el.querySelector('a[href*="/p/"]');
             if (postLink) {{
                 const h = postLink.getAttribute('href');
                 if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
@@ -219,7 +220,8 @@ def _get_first_visible_post_script(min_content_length: int) -> str:
             const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
 
             let postUrl = null;
-            const postLink = el.querySelector('a[href*="/p/"]');
+            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
+            const postLink = timestampLink || el.querySelector('a[href*="/p/"]');
             if (postLink) {{
                 const h = postLink.getAttribute('href');
                 if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
@@ -273,7 +275,7 @@ class PostExtractor:
             repeat_threshold: For Recent feed only: stop when this many consecutive
                 already-seen posts appear from the start of a batch.
             run_stats: Optional dict to accumulate warning/error counts for run summary.
-                Keys: "comment_fallbacks", "comment_mismatches", "modal_failures".
+                Keys: "comment_mismatches".
         """
         self.feed_type = feed_type
         self.max_posts = max_posts
@@ -502,15 +504,14 @@ class PostExtractor:
         page_url: str | None = None,
         extract_comments: bool = True,
     ) -> RawPost | None:
-        """Extract a single post from the current page (e.g. permalink page).
+        """Extract a single post from the current page (e.g. permalink/details page).
 
         Does not scroll. Uses page URL as permalink when on a single-post page.
-        When the URL is a permalink (/p/), the page is a feed with that post first;
-        we open the desktop modal (same as feed) to extract comments.
+        Comments are extracted from the current page if already on a details view.
 
         Args:
-            page_url: Permalink URL (e.g. from page). If None, may be set from the comment modal when opened.
-            extract_comments: If True, extract comments when on a permalink (via desktop modal).
+            page_url: Permalink URL (e.g. from page). If None, taken from raw postUrl.
+            extract_comments: If True, extract comments from current page.
 
         Returns:
             RawPost or None if no post found.
@@ -523,28 +524,18 @@ class PostExtractor:
             return None
 
         raw = raw_posts[0]
-        container_index = raw.get("containerIndex", raw.get("postIndex", 0))
 
         post_url: str | None
         if page_url:
-            post_url = page_url
+            post_url = self._normalize_post_url(page_url)
         else:
             post_url = self._normalize_post_url(raw.get("postUrl"))
 
         comments: list[RawComment] = []
-        if extract_comments:
-            if page_url and "/p/" in page_url:
-                # Permalink page is a feed with this post first; open modal on same page.
-                comment_count_ui = raw.get("commentCount")
-                comments, modal_permalink = self._extract_comments_via_desktop_modal(
-                    container_index,
-                    comment_count_ui=comment_count_ui,
-                )
-                if not post_url and modal_permalink:
-                    post_url = modal_permalink
-            else:
-                # Comment extraction only supported for permalink (we open the modal there); no separate details page.
-                pass
+        if extract_comments and post_url and "/p/" in post_url:
+            comment_count_ui = raw.get("commentCount")
+            if comment_count_ui is None or comment_count_ui > 0:
+                comments = self._extract_comments_on_page(self.page)
 
         author_id = raw.get("authorId", "")
         author_name = raw.get("authorName", "")
@@ -589,8 +580,8 @@ class PostExtractor:
     ) -> int:
         """Process a batch of raw posts and add to posts list.
 
-        Each post: get permalink (Share on feed), then open details in a new tab
-        for comments and close it. Feed tab is never navigated away.
+        Each post: scroll to container, click comments button to open details,
+        extract comments, return to feed.
 
         Args:
             raw_posts: List of raw post dicts from JavaScript.
@@ -739,22 +730,26 @@ class PostExtractor:
         self.page.wait_for_timeout(200)
 
         post_url = self._normalize_post_url(raw.get("postUrl"))
+        if not post_url:
+            try:
+                href = (
+                    containers.nth(container_index)
+                    .locator('[data-testid="post-timestamp"] a[href*="/p/"]')
+                    .get_attribute("href")
+                )
+                post_url = self._normalize_post_url(href)
+            except Exception:
+                pass
 
         comment_count_ui = raw.get("commentCount")
-        comments: list[RawComment]
-        comments, modal_permalink = self._extract_comments_via_desktop_modal(
-            container_index,
-            comment_count_ui=comment_count_ui,
-        )
-        if not post_url and modal_permalink:
-            post_url = modal_permalink
-        if not comments and post_url and "/p/" in post_url:
+        comments: list[RawComment] = []
+        if post_url and "/p/" in post_url:
             if comment_count_ui is None or comment_count_ui > 0:
-                if self.run_stats is not None:
-                    self.run_stats["comment_fallbacks"] = (
-                        self.run_stats.get("comment_fallbacks", 0) + 1
-                    )
-                comments = self._extract_comments_via_details_page(post_url)
+                comments = self._extract_comments_via_comments_button(container_index)
+            elif comment_count_ui == 0:
+                comments = []
+        elif not post_url:
+            logger.debug("No permalink for post, skipping comments")
 
         post = RawPost(
             author_id=author_id,
@@ -804,29 +799,31 @@ class PostExtractor:
 
         content_hash = self._generate_hash(author_id, content)
 
-        container_index = raw.get("containerIndex", raw.get("postIndex", 0))
         post_url = self._normalize_post_url(raw.get("postUrl"))
 
         comment_count_ui = raw.get("commentCount")
-        comments: list[RawComment]
-        # Desktop: always open post modal so we can read permalink from the timestamp link,
-        # but when UI reports 0 comments we skip the expensive comment-wait path inside.
-        comments, modal_permalink = self._extract_comments_via_desktop_modal(
-            container_index,
-            comment_count_ui=comment_count_ui,
-        )
-        if not post_url and modal_permalink:
-            post_url = modal_permalink
-        # Fallback: when modal path returned no comments but we have a permalink (and
-        # optionally UI said there are comments), open details page in a new tab.
-        # Permalink flow succeeds where modal often fails after scrolling (stale refs, timing).
-        if not comments and post_url and "/p/" in post_url:
+        comments: list[RawComment] = []
+        if post_url and "/p/" in post_url:
             if comment_count_ui is None or comment_count_ui > 0:
-                if self.run_stats is not None:
-                    self.run_stats["comment_fallbacks"] = (
-                        self.run_stats.get("comment_fallbacks", 0) + 1
+                container_index = raw.get("containerIndex", raw.get("postIndex", 0))
+                try:
+                    containers = self.page.locator("div.post, div.js-media-post")
+                    if containers.count() > container_index:
+                        containers.nth(container_index).scroll_into_view_if_needed(
+                            timeout=3000
+                        )
+                        self.page.wait_for_timeout(200)
+                    comments = self._extract_comments_via_comments_button(
+                        container_index
                     )
-                comments = self._extract_comments_via_details_page(post_url)
+                except Exception as e:
+                    logger.debug(
+                        "Comments via button failed (container %s): %s",
+                        container_index,
+                        e,
+                    )
+            elif comment_count_ui == 0:
+                comments = []
 
         post = RawPost(
             author_id=author_id,
@@ -942,244 +939,74 @@ class PostExtractor:
         logger.debug("_scroll_down: wait_for_timeout %d ms", delay)
         self.page.wait_for_timeout(delay)
 
-    def _extract_comments_via_details_page(self, post_url: str) -> list[RawComment]:
-        """Open details page in a new tab, extract all comments, close tab.
+    def _extract_comments_via_comments_button(
+        self, container_index: int
+    ) -> list[RawComment]:
+        """Open details by clicking the comments button on the feed card, scrape, return to feed.
 
-        Leaves the feed tab untouched so permalink extraction and feed state
-        are never broken.
+        Clicks [data-testid="post-reply-button"] on the given container, waits for
+        details page, extracts comments, then navigates back to the feed.
 
         Args:
-            post_url: Full URL to the post details page (e.g. https://nextdoor.com/p/XXX).
+            container_index: Index of the post container (div.post, div.js-media-post).
 
         Returns:
-            List of RawComment from the details page.
+            List of RawComment from the details page, or [] on failure.
         """
-        if not post_url or "/p/" not in post_url:
-            return []
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
-        new_page = self.page.context.new_page()
-        try:
-            new_page.goto(post_url, timeout=timeout)
-            new_page.wait_for_url("**/p/**", timeout=timeout)
-            comments = self._extract_comments_on_page(new_page)
-            logger.debug(
-                "Comments via details page (new tab): %d for %s",
-                len(comments),
-                post_url,
-            )
-            return comments
-        except PlaywrightTimeoutError:
-            logger.warning(
-                "Details-page comment extraction failed: %s",
-                post_url,
-            )
-            return []
-        except Exception as e:
-            logger.warning(
-                "Details-page comment extraction error for %s: %s",
-                post_url,
-                e,
-            )
-            return []
-        finally:
-            new_page.close()
-
-    def _extract_comments_via_desktop_modal(
-        self,
-        container_index: int,
-        comment_count_ui: int | None = None,
-    ) -> tuple[list[RawComment], str | None]:
-        """Open the desktop post modal (click post body once or twice), load all comments, extract, close.
-
-        Cards with "... see more" need two clicks (first expands body, second opens modal).
-        Cards without it need one click to open the modal. Then we click "view more
-        replies/comments" and "See X more replies" until none left, and extract from
-        [data-testid="comment-thank-container"]. Also reads permalink from the modal's
-        timestamp link [data-testid="post-timestamp"] a[href*="/p/"].
-
-        Args:
-            container_index: Index of the post card (div.post, div.js-media-post).
-            comment_count_ui: Comment count reported by the feed UI, if available.
-
-        Returns:
-            Tuple of (list of RawComment from the modal, normalized permalink or None).
-        """
-        modal_wait_ms = 5000
         comments_load_wait_ms = 12000
-        view_more_wait_ms = 800
-        max_view_more_clicks = 50
-
+        containers = self.page.locator("div.post, div.js-media-post")
+        if containers.count() <= container_index:
+            return []
+        container = containers.nth(container_index)
         try:
-            containers = self.page.locator("div.post, div.js-media-post")
-            if containers.count() <= container_index:
-                return ([], None)
-            container = containers.nth(container_index)
-            # Click only the post-text block (never the ad/smartlink). Use the
-            # linktouchable that wraps the post text, or the first content block's
-            # touchable. No fallback; if neither is found we return [] so state is clear.
-            post_text_link = container.locator(
-                '[data-testid="post-body"] [data-testid="linktouchable"]:has(.postTextBodySpan)'
-            )
-            if post_text_link.count() > 0:
-                body = post_text_link.first
-            else:
-                first_block = container.locator(
-                    '[data-testid="post-body"] .content > div'
-                ).first
-                touchable_in_block = first_block.locator(
-                    '[data-testid="linktouchable"], [role="button"][data-touchable]'
-                )
-                if touchable_in_block.count() == 0:
-                    logger.warning(
-                        "No post-text click target found for container %d (no linktouchable/postTextBodySpan or content block touchable)",
-                        container_index,
-                    )
-                    return ([], None)
-                body = touchable_in_block.first
-            body.scroll_into_view_if_needed(timeout=3000)
-            self.page.wait_for_timeout(200)
-            # Cards with "... see more" need two clicks: first expands body, second opens modal.
-            # Cards without it need one click to open the modal (second click would close it).
-            has_see_more = (
-                container.locator("[data-testid='post-body']")
-                .get_by_text("see more")
-                .count()
-                > 0
-            )
-            body.click(position={"x": 15, "y": 15}, timeout=3000)
-            if has_see_more:
-                self.page.wait_for_timeout(400)
-                body.click(position={"x": 15, "y": 15}, timeout=3000)
-            self.page.wait_for_timeout(500)
-            # Wait for expanded post modal
-            self.page.locator("#expanded-post-wrapper").wait_for(
-                state="visible", timeout=modal_wait_ms
-            )
-            self.page.wait_for_timeout(300)
-            # Read permalink from modal timestamp link (desktop has no /p/ link on feed cards).
-            modal_permalink: str | None = None
-            try:
-                href = self.page.evaluate(
-                    """() => {
-                        const root = document.querySelector('#expanded-post-wrapper');
-                        if (!root) return null;
-                        const a = root.querySelector('[data-testid="post-timestamp"] a[href*="/p/"]');
-                        return a ? a.getAttribute('href') : null;
-                    }"""
-                )
-                if isinstance(href, str) and href.strip():
-                    modal_permalink = self._normalize_post_url(href.strip())
-            except Exception:
-                pass
-            has_comments = comment_count_ui is None or comment_count_ui > 0
-            out: list[RawComment] = []
-            if has_comments:
-                # Wait for comments to load (not just skeletons); modal can show before content.
-                modal = self.page.locator("#expanded-post-wrapper")
-                try:
-                    modal.locator(
-                        "[data-testid='comment-thank-container']"
-                    ).first.wait_for(state="visible", timeout=comments_load_wait_ms)
-                except PlaywrightTimeoutError:
-                    pass
-                self.page.wait_for_timeout(200)
-                # Click every "See X more replies" / "See more comments" until all expanded (scope to modal).
-                # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
-                modal = self.page.locator("#expanded-post-wrapper")
-                for _ in range(max_view_more_clicks):
-                    view_more = modal.locator("[data-testid='seeMoreButton']")
-                    if view_more.count() == 0:
-                        view_more = modal.get_by_role(
-                            "button",
-                            name=VIEW_MORE_BUTTON_PATTERN,
-                        )
-                    n = view_more.count()
-                    if n == 0:
-                        break
-                    clicked_any = False
-                    for i in range(n):
-                        btn = view_more.nth(i)
-                        try:
-                            if not btn.is_visible():
-                                continue
-                            btn.scroll_into_view_if_needed(timeout=2000)
-                            self.page.wait_for_timeout(200)
-                            btn.click(timeout=2000)
-                            clicked_any = True
-                            self.page.wait_for_timeout(300)
-                        except Exception:
-                            continue
-                    if not clicked_any:
-                        break
-                    self.page.wait_for_timeout(view_more_wait_ms)
-                # Extract comments from modal: [data-testid="comment-thank-container"] and surrounding block
-                result = self.page.evaluate(
-                    """
-                    () => {
-                        const root = document.querySelector('#expanded-post-wrapper');
-                        if (!root) return { comments: [] };
-                        const nodes = root.querySelectorAll('[data-testid="comment-thank-container"]');
-                        const comments = Array.from(nodes).map(node => {
-                            let block = node.parentElement;
-                            for (let i = 0; i < 5 && block; i++) {
-                                const text = block.innerText || '';
-                                if (text.length > 2 && !text.startsWith('React')) break;
-                                block = block.parentElement;
-                            }
-                            if (!block) return { author_name: '', text: '', timestamp_relative: null };
-                            const authorLink = block.querySelector('a[href*=\"/profile/\"]');
-                            const author = authorLink?.textContent?.trim() ?? '';
-                            const styled = block.querySelector('[data-testid=\"styled-text\"]');
-                            let text = (styled?.innerText || block.innerText || '').trim();
-                            text = text.replace(/^React\\s*\\d*\\s*$/m, '').trim();
-                            const ts = block.querySelector('[class*=\"timestamp\"], [class*=\"time\"]');
-                            const timestamp = ts?.textContent?.trim() ?? null;
-                            return { author_name: author, text: text.slice(0, 5000), timestamp_relative: timestamp };
-                        });
-                        return { comments };
-                    }
-                    """
-                )
-                comments_data = (
-                    result.get("comments", []) if isinstance(result, dict) else []
-                )
-                out = [
-                    RawComment(
-                        author_name=item.get("author_name", ""),
-                        text=item.get("text", ""),
-                        timestamp_relative=item.get("timestamp_relative"),
-                    )
-                    for item in (comments_data or [])
-                    if item.get("text") or item.get("author_name")
-                ]
-            return (out, modal_permalink)
-        except PlaywrightTimeoutError:
-            if self.run_stats is not None:
-                self.run_stats["modal_failures"] = (
-                    self.run_stats.get("modal_failures", 0) + 1
-                )
-            logger.warning(
-                "Desktop modal comment extraction failed for container %d",
-                container_index,
-            )
-            return ([], None)
+            comment_btn = container.locator('[data-testid="post-reply-button"]').first
+            comment_btn.click(timeout=5000)
         except Exception as e:
-            if self.run_stats is not None:
-                self.run_stats["modal_failures"] = (
-                    self.run_stats.get("modal_failures", 0) + 1
-                )
-            logger.warning(
-                "Desktop modal comment extraction error for container %d: %s",
+            logger.debug(
+                "Comments button click failed (container %d): %s",
                 container_index,
                 e,
             )
-            return ([], None)
-        finally:
-            try:
-                self.page.keyboard.press("Escape")
-                self.page.wait_for_timeout(SCRAPER_CONFIG["modal_close_delay_ms"])
-            except Exception:
-                pass
+            return []
+        try:
+            self.page.wait_for_url("**/p/**", timeout=timeout)
+        except PlaywrightTimeoutError:
+            logger.warning(
+                "Did not navigate to details after comments button (container %d)",
+                container_index,
+            )
+            self._return_to_feed()
+            return []
+        try:
+            self.page.locator('[data-testid="comment-thank-container"]').first.wait_for(
+                state="attached", timeout=comments_load_wait_ms
+            )
+            self.page.wait_for_timeout(800)
+        except PlaywrightTimeoutError:
+            logger.debug(
+                "No comment-thank-container within %d ms (container %d)",
+                comments_load_wait_ms,
+                container_index,
+            )
+        comments = self._extract_comments_on_page(self.page)
+        self._return_to_feed()
+        return comments
+
+    def _return_to_feed(self) -> None:
+        """Navigate back to the current feed (recent or trending)."""
+        feed_url = FEED_URLS.get(self.feed_type)
+        if not feed_url:
+            feed_url = FEED_URLS["recent"]
+        try:
+            self.page.goto(feed_url, timeout=SCRAPER_CONFIG["navigation_timeout_ms"])
+            self.page.wait_for_selector(
+                "div.post, div.js-media-post",
+                timeout=SCRAPER_CONFIG["navigation_timeout_ms"],
+            )
+            self.page.wait_for_timeout(500)
+        except Exception as e:
+            logger.warning("Return to feed failed: %s", e)
 
     def extract_comments_on_details_page(self) -> list[RawComment]:
         """Extract all comments from the current page (details view).
@@ -1196,9 +1023,7 @@ class PostExtractor:
         """Extract comments when comment-thank-container is already on the page.
 
         Uses "view more replies/comments" buttons and [data-testid="comment-thank-container"].
-        Used when the modal is already open or when comments are rendered inline on a
-        true details view. The main permalink flow uses _extract_comments_via_desktop_modal
-        instead (permalink page is a feed; we open the modal there).
+        Used when comments are rendered on a details page (e.g. after navigating via the comments button on the feed).
 
         Args:
             page: Playwright Page that already has comment-thank-container in the DOM.
@@ -1210,7 +1035,7 @@ class PostExtractor:
         max_view_more_clicks = 50
 
         # Click every "See X more replies" / "See more comments" until all expanded.
-        # Use stable testid first; fallback to text pattern. Click all visible buttons each round.
+        # Use seeMoreButton then role=button with view-more pattern. Click all visible buttons each round.
         for _ in range(max_view_more_clicks):
             view_more = page.locator("[data-testid='seeMoreButton']")
             if view_more.count() == 0:
