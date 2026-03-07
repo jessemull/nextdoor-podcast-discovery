@@ -29,7 +29,7 @@ from src.exceptions import (
 )
 from src.llm_scorer import LLMScorer
 from src.logging_config import configure_logging
-from src.post_extractor import PostExtractor
+from src.post_extractor import PostExtractor, ScrollResetDetected
 from src.post_storage import PostStorage
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
@@ -515,41 +515,46 @@ def main(
             if not dry_run:
                 storage = PostStorage(session_manager.supabase)
 
-            for batch in scraper.extract_post_batches(
-                feed_type=feed_type,
-                repeat_threshold=repeat_threshold,
-                run_stats=run_stats,
-                safety_cap=safety_cap,
-            ):
-                total_extracted += len(batch)
-                if dry_run:
-                    stored += len(batch)
-                    if total_extracted == len(batch):
-                        for i, post in enumerate(batch[:5]):
-                            logger.info(
-                                "Sample post %d: [%s] %s... (%d chars)",
-                                i + 1,
-                                post.author_name,
-                                post.content[:80],
-                                len(post.content),
-                            )
-                else:
-                    remaining = max_posts - stored
-                    to_store = batch[:remaining] if remaining < len(batch) else batch
-                    stats = storage.store_posts(to_store)
-                    stored += stats["inserted"]
-                    logger.debug(
-                        "Batch: %d in batch, %d inserted, %d skipped (new posts stored: %d, target: %d)",
-                        len(batch),
-                        stats["inserted"],
-                        stats["skipped"],
-                        stored,
-                        max_posts,
-                    )
-                    logger.info("Posts stored: %d / %d", stored, max_posts)
-                if stored >= max_posts:
-                    logger.info("Target reached: %d new posts stored", stored)
-                    break
+            try:
+                for batch in scraper.extract_post_batches(
+                    feed_type=feed_type,
+                    repeat_threshold=repeat_threshold,
+                    run_stats=run_stats,
+                    safety_cap=safety_cap,
+                ):
+                    total_extracted += len(batch)
+                    if dry_run:
+                        stored += len(batch)
+                        if total_extracted == len(batch):
+                            for i, post in enumerate(batch[:5]):
+                                logger.info(
+                                    "Sample post %d: [%s] %s... (%d chars)",
+                                    i + 1,
+                                    post.author_name,
+                                    post.content[:80],
+                                    len(post.content),
+                                )
+                    else:
+                        remaining = max_posts - stored
+                        to_store = batch[:remaining] if remaining < len(batch) else batch
+                        stats = storage.store_posts(to_store)
+                        stored += stats["inserted"]
+                        logger.debug(
+                            "Batch: %d in batch, %d inserted, %d skipped (new posts stored: %d, target: %d)",
+                            len(batch),
+                            stats["inserted"],
+                            stats["skipped"],
+                            stored,
+                            max_posts,
+                        )
+                        if batch or stats["inserted"]:
+                            logger.info("Posts stored: %d / %d", stored, max_posts)
+                    if stored >= max_posts:
+                        logger.info("Target reached: %d new posts stored", stored)
+                        break
+            except ScrollResetDetected as e:
+                logger.error("Scraper exiting: %s", e)
+                return 1
 
             if dry_run:
                 logger.info(
