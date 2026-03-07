@@ -98,9 +98,9 @@ class Selectors(TypedDict):
 
 # Scraper settings
 #
-# Mobile Chrome: use mobile viewport and user agent for inspect / comment flow
-# experimentation. Desktop was used for modal comment extraction but caused feed
-# scroll reset; mobile may offer a different pattern for comments.
+# Mobile: viewport and user agent for mobile UI. Feed navigation uses Filter by
+# sheet (navbar → dialog); login uses role=textbox / role=button. Desktop used
+# tab chips and data-testid selectors (see git history around 0dd4c64).
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
@@ -132,8 +132,7 @@ FEED_URLS = {
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
 
-# Selectors (desktop: SIGNIN.html, TRENDING.html)
-# Login: desktop uses data-testid and id; role=textbox works for inputs with aria-label.
+# Selectors (mobile: role-based for Filter by and login; from pre-0dd4c64 mobile scraper)
 
 SELECTORS: Selectors = {
     # CAPTCHA detection
@@ -143,18 +142,18 @@ SELECTORS: Selectors = {
         "[class*='captcha']",
         "[id*='captcha']",
     ],
-    # Login page (desktop SIGNIN.html: id_email, id_password, data-testid=signin_button)
-    "email_input": '[data-testid="email-address-input"], #id_email',
+    # Login page (mobile: role=textbox with accessible names)
+    "email_input": 'role=textbox[name="Email or mobile number"]',
     "error_indicators": [
         "[class*='error']",
         "[class*='alert']",
         "[role='alert']",
     ],
-    # Feed tabs (desktop TRENDING.html: simple tab buttons)
-    "feed_tab_recent": 'role=tab[name="Most Recent"]',
-    "feed_tab_trending": 'role=tab[name="Trending"]',
-    "login_button": '[data-testid="signin_button"], #signin_button',
-    "password_input": '[data-testid="password-input"], #id_password',
+    # Feed tabs (mobile: role=radio for Recent/Trending chips; also used after Filter by)
+    "feed_tab_recent": 'role=radio[name="Recent"]',
+    "feed_tab_trending": 'role=radio[name="Trending"]',
+    "login_button": 'role=button[name="Log in"]',
+    "password_input": 'role=textbox[name="Password"]',
 }
 
 

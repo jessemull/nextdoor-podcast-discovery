@@ -236,8 +236,8 @@ class NextdoorScraper:
     def navigate_to_feed(self, feed_type: str) -> None:
         """Navigate to a specific feed tab.
 
-        Clicks the Trending or Recent chip on the feed (desktop). No reload;
-        URL does not change.
+        On mobile: navigates to the feed URL, then opens the Filter by
+        bottom sheet and selects Recent or Trending. Waits for feed tab.
 
         Args:
             feed_type: Which feed to navigate to ("recent" or "trending").
@@ -252,12 +252,13 @@ class NextdoorScraper:
         if feed_type not in FEED_URLS:
             raise ValueError(f"Invalid feed type: {feed_type}")
 
+        feed_url = FEED_URLS[feed_type]
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        # After login we're already on the news feed. Do NOT reload — just click the chip.
-        if "news_feed" not in (self.page.url or ""):
-            logger.debug("Navigating to news feed")
-            self.page.goto(NEWS_FEED_URL, timeout=timeout)
+        # Mobile: go directly to feed URL, then open Filter by sheet and select Recent/Trending.
+        logger.info("Navigating to %s feed: %s", feed_type, feed_url)
+        self.page.goto(feed_url, timeout=timeout)
+
         try:
             self.page.get_by_test_id("feed-container").wait_for(
                 state="visible", timeout=timeout
@@ -266,30 +267,27 @@ class NextdoorScraper:
             pass
         self._random_delay()
         self.page.evaluate("window.scrollTo(0, 0)")
-        self.page.wait_for_timeout(800)
+        self.page.wait_for_timeout(1000)
 
-        # Click the "Trending" or "Recent" chip (no reload; URL does not change).
-        chip_text = "Trending" if feed_type == "trending" else "Recent"
+        # Mobile: open Filter by bottom sheet (navbar button with aria-controls), then click feed type.
         try:
-            # Label is associated with radio; role=radio + name gets the right chip
-            chip = self.page.get_by_role("radio", name=chip_text)
-            chip.wait_for(state="visible", timeout=8000)
-            chip.scroll_into_view_if_needed()
-            self.page.wait_for_timeout(300)
-            chip.click()
-            logger.info("Clicked %s chip", chip_text)
-            self.page.wait_for_timeout(2000)
+            navbar = self.page.get_by_test_id("navbar")
+            navbar.locator('[role="button"][aria-controls]').first.click(
+                timeout=8000
+            )
+            dialog = self.page.get_by_role("dialog", name="Filter by")
+            dialog.wait_for(state="visible", timeout=8000)
+            self.page.get_by_role("button", name=feed_type.capitalize()).click(
+                timeout=5000
+            )
+            logger.info("Selected %s feed from Filter by menu", feed_type)
+            self.page.wait_for_timeout(1000)
         except PlaywrightTimeoutError:
-            # Fallback: click by exact text
-            try:
-                chip = self.page.get_by_text(chip_text, exact=True).first
-                chip.wait_for(state="visible", timeout=3000)
-                chip.scroll_into_view_if_needed()
-                chip.click()
-                logger.debug("Clicked %s chip (by text)", chip_text)
-                self.page.wait_for_timeout(2000)
-            except PlaywrightTimeoutError:
-                logger.warning("Chip %r not found", chip_text)
+            logger.warning(
+                "Filter by menu not found or failed; feed may still be default (For you)"
+            )
+
+        self._wait_for_feed_tab_or_continue(feed_type, timeout)
         self._random_delay()
 
     def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
