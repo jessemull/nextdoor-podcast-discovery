@@ -275,9 +275,9 @@ class NextdoorScraper:
             navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
             dialog = self.page.get_by_role("dialog", name="Filter by")
             dialog.wait_for(state="visible", timeout=8000)
-            self.page.get_by_role("button", name=feed_type.capitalize()).click(
-                timeout=5000
-            )
+            self.page.get_by_role(
+                "button", name=feed_type.capitalize(), exact=True
+            ).click(timeout=5000)
             logger.info("Selected %s feed from Filter by menu", feed_type)
             self.page.wait_for_timeout(1000)
         except PlaywrightTimeoutError:

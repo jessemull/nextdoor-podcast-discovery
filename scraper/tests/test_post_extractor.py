@@ -296,7 +296,10 @@ class TestPostExtractor:
 
         extractor._scroll_down()
 
-        extractor.page.evaluate.assert_called_once()
+        # evaluate is used for scroll-position logging and for the actual scroll
+        extractor.page.evaluate.assert_any_call(
+            "window.scrollBy(0, window.innerHeight)"
+        )
         extractor.page.wait_for_timeout.assert_called_once()
 
     def test_scroll_down_handles_network_timeout(

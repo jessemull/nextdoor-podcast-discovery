@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 MIN_CONTENT_LENGTH = 10
 
+# Pixels to scroll for "one card" nudge (virtualization-safe; avoids relying on container index)
+
+SCROLL_ONE_CARD_PX = 400
+
 # Match "view more comments", "See more comments", "see 3 more replies", "View 5 more replies", etc.
 VIEW_MORE_BUTTON_PATTERN = re.compile(
     r"(view|see)\s+(\d+\s+)?more\s+(repl(y|ies)|comment(s)?)",
@@ -422,6 +426,7 @@ class PostExtractor:
 
         while total_yielded < safety_cap and cycle < max_cycles:
             cycle += 1
+            self._log_scroll_position(f"cycle {cycle} start (yielded={total_yielded})")
             logger.debug(
                 "Cycle %d: first visible (yielded so far: %d)",
                 cycle,
@@ -442,7 +447,9 @@ class PostExtractor:
                         no_visible_count,
                     )
                     return
+                self._log_scroll_position("before _scroll_down (no visible)")
                 self._scroll_down()
+                self._log_scroll_position("after _scroll_down")
                 scroll_attempts += 1
                 continue
             no_visible_count = 0
@@ -471,12 +478,21 @@ class PostExtractor:
                     return
                 has_next = self._scroll_next_post_into_view(container_index)
                 if not has_next:
+                    self._scroll_viewport_by(SCROLL_ONE_CARD_PX)
+                    self._log_scroll_position("before _scroll_down (stuck, no next)")
                     self._scroll_down()
+                    self._log_scroll_position("after _scroll_down (stuck)")
                     scroll_attempts += 1
                 continue
             stuck_count = 0
 
+            self._log_scroll_position(
+                f"before _scrape_one_post container_index={container_index}"
+            )
             post = self._scrape_one_post(container_index, raw)
+            self._log_scroll_position(
+                f"after _scrape_one_post container_index={container_index}"
+            )
             if post is None:
                 self._scroll_next_post_into_view(container_index)
                 continue
@@ -492,10 +508,7 @@ class PostExtractor:
                 logger.debug("Safety cap reached (%d posts), stopping", safety_cap)
                 return
 
-            has_next = self._scroll_next_post_into_view(container_index)
-            if not has_next:
-                self._scroll_down()
-                scroll_attempts += 1
+            self._scroll_viewport_by(SCROLL_ONE_CARD_PX)
 
         logger.debug("Batch extraction complete: %d posts yielded", total_yielded)
 
@@ -674,10 +687,10 @@ class PostExtractor:
         return (idx, raw)
 
     def _scroll_next_post_into_view(self, current_index: int) -> bool:
-        """Scroll the next post container to the top of the viewport so it becomes first visible.
+        """Scroll so the next post container is at the top of the viewport.
 
-        Uses block: 'start' so the previous card moves above the viewport and we don't
-        re-detect the same post as "first visible" on the next cycle.
+        Uses window.scrollBy(offset) instead of scrollIntoView to avoid re-anchoring
+        scroll on virtualized feeds. Returns False if there is no next container.
 
         Returns:
             True if there was a next container and we scrolled to it, False otherwise.
@@ -691,13 +704,13 @@ class PostExtractor:
                 current_index,
             )
             return False
-        # Scroll next container to top of viewport so previous card is out of view
         scrolled = self.page.evaluate(
             """
             ([nextIdx]) => {
                 const containers = document.querySelectorAll('div.post, div.js-media-post');
                 if (containers.length <= nextIdx) return false;
-                containers[nextIdx].scrollIntoView({ block: 'start', behavior: 'instant' });
+                const rect = containers[nextIdx].getBoundingClientRect();
+                window.scrollBy(0, rect.top);
                 return true;
             }
             """,
@@ -726,7 +739,17 @@ class PostExtractor:
         containers = self.page.locator("div.post, div.js-media-post")
         if containers.count() <= container_index:
             return None
-        containers.nth(container_index).scroll_into_view_if_needed(timeout=3000)
+        self.page.evaluate(
+            """
+            ([idx]) => {
+                const containers = document.querySelectorAll('div.post, div.js-media-post');
+                if (containers.length <= idx) return;
+                const rect = containers[idx].getBoundingClientRect();
+                window.scrollBy(0, rect.top);
+            }
+            """,
+            [container_index],
+        )
         self.page.wait_for_timeout(200)
 
         post_url = self._normalize_post_url(raw.get("postUrl"))
@@ -745,7 +768,7 @@ class PostExtractor:
         comments: list[RawComment] = []
         if post_url and "/p/" in post_url:
             if comment_count_ui is None or comment_count_ui > 0:
-                comments = self._extract_comments_via_comments_button(container_index)
+                comments = self._extract_comments_via_new_tab(post_url)
             elif comment_count_ui == 0:
                 comments = []
         elif not post_url:
@@ -805,23 +828,7 @@ class PostExtractor:
         comments: list[RawComment] = []
         if post_url and "/p/" in post_url:
             if comment_count_ui is None or comment_count_ui > 0:
-                container_index = raw.get("containerIndex", raw.get("postIndex", 0))
-                try:
-                    containers = self.page.locator("div.post, div.js-media-post")
-                    if containers.count() > container_index:
-                        containers.nth(container_index).scroll_into_view_if_needed(
-                            timeout=3000
-                        )
-                        self.page.wait_for_timeout(200)
-                    comments = self._extract_comments_via_comments_button(
-                        container_index
-                    )
-                except Exception as e:
-                    logger.debug(
-                        "Comments via button failed (container %s): %s",
-                        container_index,
-                        e,
-                    )
+                comments = self._extract_comments_via_new_tab(post_url)
             elif comment_count_ui == 0:
                 comments = []
 
@@ -875,6 +882,22 @@ class PostExtractor:
                 break
         return count
 
+    def _log_scroll_position(self, label: str) -> None:
+        """Log current scroll position for debugging reset issues."""
+        try:
+            scroll_y = self.page.evaluate("() => window.scrollY")
+            scroll_height = self.page.evaluate(
+                "() => document.documentElement.scrollHeight"
+            )
+            logger.debug(
+                "[scroll] %s: scrollY=%s docHeight=%s",
+                label,
+                scroll_y,
+                scroll_height,
+            )
+        except Exception as e:
+            logger.debug("[scroll] %s: (failed to read: %s)", label, e)
+
     def _generate_hash(self, author_id: str, content: str) -> str:
         """Generate SHA256 hash for deduplication.
 
@@ -891,6 +914,19 @@ class PostExtractor:
         hash_input = f"{author_id}:{normalized}"
         return hashlib.sha256(hash_input.encode()).hexdigest()
 
+    def _scroll_viewport_by(self, delta_y: int, wait_ms: int = 300) -> None:
+        """Scroll the window by a fixed amount (virtualization-safe; no scrollIntoView).
+
+        Use for nudging the viewport so the next post becomes first visible without
+        relying on container indices that can change after re-render.
+        """
+        self.page.evaluate(
+            "([dy]) => { window.scrollBy(0, dy); }",
+            [delta_y],
+        )
+        if wait_ms > 0:
+            self.page.wait_for_timeout(wait_ms)
+
     def _scroll_down(self) -> None:
         """Scroll down to load more posts.
 
@@ -900,14 +936,22 @@ class PostExtractor:
         """
         min_delay, max_delay = SCRAPER_CONFIG["scroll_delay_ms"]
 
-        logger.debug("_scroll_down: evaluate scroll")
+        self._log_scroll_position("_scroll_down BEFORE scroll")
         if self.feed_type == "recent":
-            # Scroll to bottom so infinite-scroll triggers; otherwise no new posts load
+            # Incremental scroll to reduce virtualized-list re-render jumps
+            step_px = self.page.evaluate("() => window.innerHeight") or 800
+            for _ in range(4):
+                self.page.evaluate(
+                    "([dy]) => { window.scrollBy(0, dy); }",
+                    [step_px],
+                )
+                self.page.wait_for_timeout(400)
             self.page.evaluate(
                 "() => { window.scrollTo(0, document.documentElement.scrollHeight); }"
             )
         else:
             self.page.evaluate("window.scrollBy(0, window.innerHeight)")
+        self._log_scroll_position("_scroll_down AFTER scroll")
 
         logger.debug("_scroll_down: wait_for_load_state networkidle")
         try:
@@ -939,13 +983,55 @@ class PostExtractor:
         logger.debug("_scroll_down: wait_for_timeout %d ms", delay)
         self.page.wait_for_timeout(delay)
 
+    def _extract_comments_via_new_tab(self, post_url: str) -> list[RawComment]:
+        """Open the post URL in a new tab, scrape comments, close the tab.
+
+        The feed tab (self.page) is never navigated away, so scroll and DOM stay
+        unchanged. Use this instead of clicking the comments button on the feed.
+
+        Args:
+            post_url: Full post permalink (e.g. https://nextdoor.com/p/XXX).
+
+        Returns:
+            List of RawComment from the details page, or [] on failure.
+        """
+        if not post_url or "/p/" not in post_url:
+            return []
+        detail_url = (
+            post_url
+            if "view=detail" in post_url
+            else (post_url + "&view=detail" if "?" in post_url else post_url + "?view=detail")
+        )
+        comments_load_wait_ms = 12000
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        new_page = self.page.context.new_page()
+        try:
+            new_page.goto(detail_url, timeout=timeout)
+            try:
+                new_page.locator(
+                    '[data-testid="comment-thank-container"]'
+                ).first.wait_for(state="attached", timeout=comments_load_wait_ms)
+                new_page.wait_for_timeout(800)
+            except PlaywrightTimeoutError:
+                logger.debug(
+                    "No comment-thank-container within %d ms (url=%s)",
+                    comments_load_wait_ms,
+                    detail_url[:60],
+                )
+            return self._extract_comments_on_page(new_page)
+        except Exception as e:
+            logger.debug("Comments via new tab failed (%s): %s", detail_url[:50], e)
+            return []
+        finally:
+            new_page.close()
+
     def _extract_comments_via_comments_button(
         self, container_index: int
     ) -> list[RawComment]:
-        """Open details by clicking the comments button on the feed card, scrape, return to feed.
+        """Open details by clicking the comments button (navigates same tab).
 
-        Clicks [data-testid="post-reply-button"] on the given container, waits for
-        details page, extracts comments, then navigates back to the feed.
+        Prefer _extract_comments_via_new_tab(post_url) so the feed tab is never
+        left. This is kept for fallback when permalink is not available.
 
         Args:
             container_index: Index of the post container (div.post, div.js-media-post).
@@ -994,10 +1080,12 @@ class PostExtractor:
         return comments
 
     def _return_to_feed(self) -> None:
-        """Navigate back to the current feed (recent or trending)."""
-        feed_url = FEED_URLS.get(self.feed_type)
-        if not feed_url:
-            feed_url = FEED_URLS["recent"]
+        """Navigate back to the current feed (recent or trending).
+
+        Only used after _extract_comments_via_comments_button (same-tab flow).
+        Prefer _extract_comments_via_new_tab so the feed tab is never left.
+        """
+        feed_url = FEED_URLS.get(self.feed_type) or FEED_URLS["recent"]
         try:
             self.page.goto(feed_url, timeout=SCRAPER_CONFIG["navigation_timeout_ms"])
             self.page.wait_for_selector(
