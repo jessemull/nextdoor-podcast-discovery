@@ -1,6 +1,6 @@
 """Post extraction from Nextdoor feed."""
 
-__all__ = ["PostExtractor", "RawComment", "RawPost"]
+__all__ = ["PostExtractor", "RawComment", "RawPost", "get_post_details_url"]
 
 import hashlib
 import logging
@@ -31,6 +31,20 @@ VIEW_MORE_BUTTON_PATTERN = re.compile(
     r"(view|see)\s+(\d+\s+)?more\s+(repl(y|ies)|comment(s)?)",
     re.IGNORECASE,
 )
+
+
+def get_post_details_url(post_url: str) -> str:
+    """Return the post URL with view=detail for loading the details view.
+
+    Use when navigating to a post permalink for extraction or comments so the
+    page matches the feed's comment-tab URL. Idempotent if view=detail present.
+    """
+    if not post_url or not post_url.strip():
+        return post_url or ""
+    u = post_url.strip()
+    if "view=detail" in u:
+        return u
+    return u + "&view=detail" if "?" in u else u + "?view=detail"
 
 
 @dataclass
@@ -572,7 +586,12 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
-        if post.comment_count is not None and post.comment_count != len(post.comments):
+        # Only warn when we extracted comments in this call (caller may add them later)
+        if (
+            extract_comments
+            and post.comment_count is not None
+            and post.comment_count != len(post.comments)
+        ):
             if self.run_stats is not None:
                 self.run_stats["comment_mismatches"] = (
                     self.run_stats.get("comment_mismatches", 0) + 1
@@ -997,11 +1016,7 @@ class PostExtractor:
         """
         if not post_url or "/p/" not in post_url:
             return []
-        detail_url = (
-            post_url
-            if "view=detail" in post_url
-            else (post_url + "&view=detail" if "?" in post_url else post_url + "?view=detail")
-        )
+        detail_url = get_post_details_url(post_url)
         comments_load_wait_ms = 12000
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
         new_page = self.page.context.new_page()

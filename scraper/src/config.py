@@ -70,6 +70,7 @@ class ViewportSize(TypedDict):
 class ScraperConfig(TypedDict):
     """Typed configuration for the scraper."""
 
+    consecutive_duplicate_batches_before_stop: int
     headless: bool
     login_timeout_ms: int
     max_posts_per_run: int
@@ -100,12 +101,13 @@ class Selectors(TypedDict):
 # login uses role=textbox / role=button.
 
 SCRAPER_CONFIG: ScraperConfig = {
+    "consecutive_duplicate_batches_before_stop": 25,
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
     "max_scroll_attempts_trending": 50,
     "navigation_timeout_ms": 10000,
-    "repeat_threshold_recent": 10,
+    "repeat_threshold_recent": 25,
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
     "user_agent": (

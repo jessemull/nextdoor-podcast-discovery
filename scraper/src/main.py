@@ -204,7 +204,8 @@ def _run_permalink_fetch(
                 logger.error("Browser page not available")
                 return 1
 
-            # Navigate to permalink URL
+            # Navigate to raw permalink (post view with same DOM as feed card), not the
+            # comments/details view, so extraction finds div.post / div.js-media-post.
             timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
             logger.info("Navigating to permalink: %s", permalink)
             scraper.page.goto(permalink, timeout=timeout)
@@ -218,8 +219,12 @@ def _run_permalink_fetch(
             extractor = PostExtractor(scraper.page, feed_type="recent", max_posts=1)
             post = extractor.extract_single_post_from_current_page(
                 page_url=permalink,
-                extract_comments=True,
+                extract_comments=False,
             )
+            if post and post.post_url:
+                # Get comments the same way as feed: open post URL with view=detail in
+                # a new tab, extract comments, close tab (current page stays on post view).
+                post.comments = extractor._extract_comments_via_new_tab(post.post_url)
 
             if not post:
                 logger.error("No post found at permalink: %s", permalink)
@@ -507,6 +512,9 @@ def main(
             )
             stored = 0
             total_extracted = 0
+            total_skipped = 0
+            consecutive_duplicate_batches = 0
+            duplicate_batch_limit = SCRAPER_CONFIG["consecutive_duplicate_batches_before_stop"]
             run_stats: dict[str, int] = {
                 "comment_mismatches": 0,
             }
@@ -537,18 +545,36 @@ def main(
                     to_store = batch[:remaining] if remaining < len(batch) else batch
                     stats = storage.store_posts(to_store)
                     stored += stats["inserted"]
+                    skipped_this_batch = stats.get("skipped", 0)
+                    total_skipped += skipped_this_batch
+                    if stats["inserted"] > 0:
+                        consecutive_duplicate_batches = 0
+                        logger.info("Posts stored: %d / %d", stored, max_posts)
+                    elif batch and skipped_this_batch > 0:
+                        consecutive_duplicate_batches += 1
+                        logger.info(
+                            "Skipped %d duplicate(s) (%d total), stored: %d / %d",
+                            skipped_this_batch,
+                            total_skipped,
+                            stored,
+                            max_posts,
+                        )
                     logger.debug(
                         "Batch: %d in batch, %d inserted, %d skipped (new posts stored: %d, target: %d)",
                         len(batch),
                         stats["inserted"],
-                        stats["skipped"],
+                        skipped_this_batch,
                         stored,
                         max_posts,
                     )
-                    if batch or stats["inserted"]:
-                        logger.info("Posts stored: %d / %d", stored, max_posts)
                 if stored >= max_posts:
                     logger.info("Target reached: %d new posts stored", stored)
+                    break
+                if not dry_run and consecutive_duplicate_batches >= duplicate_batch_limit:
+                    logger.info(
+                        "Stopping after %d consecutive batches with no new posts (all duplicates)",
+                        duplicate_batch_limit,
+                    )
                     break
 
             if dry_run:
@@ -627,9 +653,10 @@ def main(
             mismatches = run_stats.get("comment_mismatches", 0)
             logger.info("----------")
             logger.info(
-                "Run summary: extracted=%d, stored=%s; comment_mismatches=%d",
+                "Run summary: extracted=%d, stored=%s, duplicates=%d; comment_mismatches=%d",
                 total_extracted,
                 storage_stats["inserted"] if storage_stats else "n/a",
+                total_skipped,
                 mismatches,
             )
             logger.info("----------")
