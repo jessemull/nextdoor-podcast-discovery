@@ -54,6 +54,7 @@ next-env.d.ts
 # Project specific
 # ===================
 # Scraped Nextdoor HTML (may contain third-party keys, trigger secret scanners)
+web/DETAILS.html
 web/DOM.html
 web/MOST_RECENT.html
 web/TRENDING.html
