@@ -288,7 +288,7 @@ def main(
     Args:
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
-        feed_type: Which feed to scrape ("recent" or "trending").
+        feed_type: Which feed to scrape ("for_you", "recent", or "trending").
         inspect: If True, open browser, go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
         open_trending_details: If True, open trending tab, click first post permalink to details view, then pause.
@@ -322,7 +322,8 @@ def main(
 
     if feed_type not in FEED_URLS:
         logger.error(
-            "Invalid feed type: %s (must be 'recent' or 'trending')", feed_type
+            "Invalid feed type: %s (must be 'for_you', 'recent', or 'trending')",
+            feed_type,
         )
         logger.info("Exiting with code 1")
         return 1
@@ -699,9 +700,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--feed-type",
-        choices=["recent", "trending"],
+        choices=["for_you", "recent", "trending"],
         default="recent",
-        help="Which feed to scrape (default: recent)",
+        help="Which feed to scrape: for_you (default tab), recent, or trending (default: recent)",
     )
     parser.add_argument(
         "--inspect",

@@ -123,6 +123,7 @@ NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
 # Feed URLs for different tabs
 
 FEED_URLS = {
+    "for_you": "https://nextdoor.com/news_feed/",
     "recent": "https://nextdoor.com/news_feed/?ordering=recent",
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }

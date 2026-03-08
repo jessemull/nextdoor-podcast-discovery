@@ -269,21 +269,25 @@ class NextdoorScraper:
         self.page.evaluate("window.scrollTo(0, 0)")
         self.page.wait_for_timeout(1000)
 
-        # Mobile: open Filter by bottom sheet (navbar button with aria-controls), then click feed type.
-        try:
-            navbar = self.page.get_by_test_id("navbar")
-            navbar.locator('[role="button"][aria-controls]').first.click(timeout=8000)
-            dialog = self.page.get_by_role("dialog", name="Filter by")
-            dialog.wait_for(state="visible", timeout=8000)
-            self.page.get_by_role(
-                "button", name=feed_type.capitalize(), exact=True
-            ).click(timeout=5000)
-            logger.info("Selected %s feed from Filter by menu", feed_type)
-            self.page.wait_for_timeout(1000)
-        except PlaywrightTimeoutError:
-            logger.warning(
-                "Filter by menu not found or failed; feed may still be default (For you)"
-            )
+        # For you (default): no tab selection; page is already on default feed.
+        # Recent/trending: open Filter by and click the tab.
+        if feed_type != "for_you":
+            try:
+                navbar = self.page.get_by_test_id("navbar")
+                navbar.locator('[role="button"][aria-controls]').first.click(
+                    timeout=8000
+                )
+                dialog = self.page.get_by_role("dialog", name="Filter by")
+                dialog.wait_for(state="visible", timeout=8000)
+                self.page.get_by_role(
+                    "button", name=feed_type.capitalize(), exact=True
+                ).click(timeout=5000)
+                logger.info("Selected %s feed from Filter by menu", feed_type)
+                self.page.wait_for_timeout(1000)
+            except PlaywrightTimeoutError:
+                logger.warning(
+                    "Filter by menu not found or failed; feed may still be default (For you)"
+                )
 
         self._wait_for_feed_tab_or_continue(feed_type, timeout)
         self._random_delay()

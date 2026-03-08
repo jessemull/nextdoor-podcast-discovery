@@ -242,6 +242,23 @@ class TestNextdoorScraper:
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
         scraper.page.goto.assert_called_once_with(FEED_URLS["recent"], timeout=timeout)
 
+    def test_navigate_to_feed_for_you(self, scraper: NextdoorScraper) -> None:
+        """Should navigate to default feed URL and not open Filter by menu."""
+        scraper.page = mock.MagicMock()
+        scraper.page.url = "https://nextdoor.com/login/"
+        scraper.page.goto.return_value = None
+        scraper.page.wait_for_selector.return_value = None
+        scraper.page.get_by_test_id.return_value.wait_for.return_value = None
+        scraper.page.evaluate.return_value = None
+
+        scraper.navigate_to_feed("for_you")
+
+        timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
+        scraper.page.goto.assert_called_once_with(
+            FEED_URLS["for_you"], timeout=timeout
+        )
+        scraper.page.get_by_role.assert_not_called()
+
     def test_navigate_to_feed_trending(self, scraper: NextdoorScraper) -> None:
         """Should navigate to feed URL with ordering=trending."""
         scraper.page = mock.MagicMock()
