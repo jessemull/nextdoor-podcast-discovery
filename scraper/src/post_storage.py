@@ -173,7 +173,8 @@ class PostStorage:
 
             # Fall back to individual inserts on batch failure
 
-            for post_data in posts_data:
+            for i, post_data in enumerate(posts_data):
+                current_post: RawPost | None = posts[i] if i < len(posts) else None
                 try:
                     result = (
                         self.supabase.table("posts")
@@ -185,13 +186,47 @@ class PostStorage:
                     else:
                         stats["skipped"] += 1
                 except Exception as inner_e:
-                    # Supabase doesn't export specific exception types; inspect message
                     error_msg = str(inner_e).lower()
-                    # Handle duplicate/unique constraint violations gracefully
                     if "duplicate" in error_msg or "unique" in error_msg:
                         stats["skipped"] += 1
+                        continue
+                    # On neighborhood FK (23503), re-resolve neighborhood and retry once
+                    if (
+                        "23503" in error_msg or "foreign key" in error_msg
+                    ) and current_post is not None:
+                        name = current_post.neighborhood or "Unknown"
+                        self._neighborhood_cache.pop(name, None)
+                        new_id = self._get_or_create_neighborhood(
+                            current_post.neighborhood
+                        )
+                        if new_id:
+                            post_data = dict(post_data)
+                            post_data["neighborhood_id"] = new_id
+                            try:
+                                result = (
+                                    self.supabase.table("posts")
+                                    .insert(cast(Any, post_data))
+                                    .execute()
+                                )
+                                if result.data:
+                                    stats["inserted"] += 1
+                                else:
+                                    stats["skipped"] += 1
+                            except Exception as retry_e:
+                                logger.error(
+                                    "Individual insert error after FK retry (hash=%s): %s",
+                                    post_data.get("hash", "?"),
+                                    retry_e,
+                                )
+                                stats["errors"] += 1
+                        else:
+                            logger.error(
+                                "Could not resolve neighborhood for post (hash=%s): %s",
+                                post_data.get("hash", "?"),
+                                post.neighborhood,
+                            )
+                            stats["errors"] += 1
                     else:
-                        # Other errors (network, validation, etc.) are logged with context
                         post_hash = (
                             post_data.get("hash", "?")
                             if isinstance(post_data, dict)

@@ -14,7 +14,9 @@ from supabase import create_client
 
 from src.config import validate_env
 from src.exceptions import ConfigurationError
+from src.logging_config import configure_logging
 
+configure_logging("scraper-recount")
 logger = logging.getLogger(__name__)
 
 
@@ -26,11 +28,6 @@ def main() -> int:
     Returns:
         Exit code (0 success, 1 error).
     """
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.INFO,
-    )
-
     try:
         validate_env()
     except ConfigurationError as e:

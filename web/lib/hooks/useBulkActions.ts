@@ -11,6 +11,7 @@ export type BulkActionType =
   | "mark_used"
   | "reprocess"
   | "save"
+  | "unsave"
   | "unignore";
 
 export interface BulkQuery {

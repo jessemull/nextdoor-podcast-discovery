@@ -5,11 +5,11 @@ import { getPostById } from "@/lib/posts.server";
 import { UUID_REGEX } from "@/lib/validators";
 
 interface PostDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function PostDetailPage({ params }: PostDetailPageProps) {
-  const id = params.id;
+  const { id } = await params;
 
   if (!UUID_REGEX.test(id)) {
     return (

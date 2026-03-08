@@ -26,7 +26,7 @@ Run the one-time setup script on the host. The script installs system dependenci
   ```bash
   cd /home/nextdoor/nextdoor && sudo ./scripts/setup-server.sh
   ```
-- Or as root with `GIT_REPO` set (script clones to `/home/nextdoor/nextdoor`):
+- Or from any clone: run `./scripts/bootstrap-host.sh` (prompts for sudo and uses `git remote origin` as `GIT_REPO`), or as root with `GIT_REPO` set (script clones to `/home/nextdoor/nextdoor`):
   ```bash
   sudo GIT_REPO=https://github.com/<org>/<repo>.git ./scripts/setup-server.sh
   ```
@@ -38,8 +38,8 @@ Run the one-time setup script on the host. The script installs system dependenci
 
 **Post-setup:**
 
-1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production).
-2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `python -m src.worker --job-type recompute_final_scores` as a long-lived process (e.g. under systemd or a process manager). Use the same virtual environment and `scraper/.env` as the scraper.
+1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production). See [HOST_ENV_CHECKLIST.md](HOST_ENV_CHECKLIST.md). Then run `./scripts/verify-host-env.sh` from the repo root to validate and test Supabase.
+2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `sudo ./scripts/install-worker-service.sh` from the host repo root. That script installs the systemd unit, enables it (start on boot), and starts it now. For power, cron, and monitoring on a laptop host, see [HOST_POWER_AND_MONITORING.md](HOST_POWER_AND_MONITORING.md).
 
 ---
 

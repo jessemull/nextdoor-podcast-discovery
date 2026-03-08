@@ -3,6 +3,7 @@
 import {
   ArrowUpDown,
   Bookmark,
+  BookmarkX,
   Check,
   CheckSquare,
   Eye,
@@ -74,6 +75,7 @@ const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   mark_used: "Mark As Used",
   reprocess: "Refresh Posts",
   save: "Save",
+  unsave: "Unsave",
   unignore: "Unignore",
 };
 
@@ -83,6 +85,7 @@ const BULK_ACTION_SUCCESS: Record<BulkActionType, string> = {
   mark_used: "Marked as used",
   reprocess: "Queued for refresh",
   save: "Saved",
+  unsave: "Unsaved",
   unignore: "Unignored",
 };
 
@@ -92,11 +95,19 @@ const BULK_ACTION_TITLES: Record<BulkActionType, string> = {
   mark_used: "Mark Posts As Used",
   reprocess: "Refresh Posts",
   save: "Save Posts",
+  unsave: "Unsave Posts",
   unignore: "Unignore Posts",
 };
 
 const BULK_ACTION_OPTIONS = [
+  // Ignore / Unignore
   { icon: <EyeOff aria-hidden className="h-4 w-4" />, label: "Ignore", value: "ignore" },
+  {
+    icon: <Eye aria-hidden className="h-4 w-4" />,
+    label: "Unignore",
+    value: "unignore",
+  },
+  // Mark used / unused
   {
     icon: <Check aria-hidden className="h-4 w-4" />,
     label: "Mark As Used",
@@ -107,18 +118,20 @@ const BULK_ACTION_OPTIONS = [
     label: "Mark As Unused",
     value: "mark_unused",
   },
+  // Save / Unsave
+  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
+  {
+    icon: <BookmarkX aria-hidden className="h-4 w-4" />,
+    label: "Unsave",
+    value: "unsave",
+  },
+  // Refresh
   {
     icon: <RefreshCw aria-hidden className="h-4 w-4" />,
     label: "Refresh Posts",
     value: "reprocess",
   },
-  { icon: <Bookmark aria-hidden className="h-4 w-4" />, label: "Save", value: "save" },
-  {
-    icon: <Eye aria-hidden className="h-4 w-4" />,
-    label: "Unignore",
-    value: "unignore",
-  },
-].sort((a, b) => a.label.localeCompare(b.label));
+];
 
 const SKELETON_CARD_COUNT = 8;
 

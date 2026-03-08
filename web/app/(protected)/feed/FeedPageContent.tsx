@@ -113,11 +113,16 @@ export function FeedPageContent() {
     useKeywordSearch,
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (typeof qFromUrl === "string" && qFromUrl.trim()) {
-      void runSearch(qFromUrl.trim());
+      const q = qFromUrl.trim();
+      setQuery(q);
+      setLastSearchedQuery(q);
+      void runSearch(q);
     }
   }, [qFromUrl, runSearch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateUrl = useCallback(
     (updates: { q?: string; threshold?: number }) => {

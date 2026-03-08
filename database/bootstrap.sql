@@ -3,8 +3,10 @@
 -- Initial database schema for Nextdoor Podcast Discovery Platform
 -- Run this in Supabase SQL Editor
 
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+-- pgvector in extensions schema (avoids "Extension in Public" Security Advisor warning)
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS vector SCHEMA extensions;
+SET search_path = public, extensions;
 
 -- Function to auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -3297,7 +3299,7 @@ CREATE TABLE scraper_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status TEXT NOT NULL CHECK (status IN ('completed', 'error')),
-    feed_type TEXT NOT NULL CHECK (feed_type IN ('recent', 'trending')),
+    feed_type TEXT NOT NULL CHECK (feed_type IN ('for_you', 'recent', 'trending')),
     error_message TEXT
 );
 
@@ -5747,3 +5749,118 @@ ALTER TABLE post_scores_staging ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS comment_count INT DEFAULT NULL;
 
 COMMENT ON COLUMN posts.comment_count IS 'Comment count from feed card UI (comment icon); used to detect scraping gaps vs len(comments).';
+-- Migration: Fix Supabase Security Advisor — RLS and function search_path
+-- Run in Supabase SQL Editor.
+--
+-- 1. Ensures RLS is enabled on post_scores_staging (fixes "RLS Disabled in Public" error).
+-- 2. Sets search_path = public on all custom functions (fixes "Function Search Path Mutable" warnings).
+--    Skips functions owned by extensions (e.g. vector).
+
+-- ============================================================================
+-- 1. RLS on post_scores_staging (idempotent)
+-- ============================================================================
+
+ALTER TABLE post_scores_staging ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================================
+-- 2. Set search_path on all custom functions (exclude extension-owned)
+-- ============================================================================
+
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public'
+      AND p.prokind = 'f'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.objid = p.oid
+          AND d.classid = 'pg_proc'::regclass
+          AND d.refclassid = 'pg_extension'::regclass
+      )
+  LOOP
+    EXECUTE format('ALTER FUNCTION %I.%I(%s) SET search_path = public', r.nspname, r.proname, r.args);
+  END LOOP;
+END $$;
+-- Migration: Move vector extension to extensions schema (fix "Extension in Public" warning)
+-- Run in Supabase SQL Editor.
+--
+-- Supabase Security Advisor flags extensions in public. Moving vector to a
+-- dedicated schema satisfies the linter. Existing tables/functions that use
+-- the vector type continue to work (type OID unchanged).
+
+CREATE SCHEMA IF NOT EXISTS extensions;
+
+ALTER EXTENSION vector SET SCHEMA extensions;
+-- Migration: Fix "type public.vector does not exist" when inserting into post_embeddings via API
+-- Run after 045_vector_extension_in_extensions_schema.sql.
+--
+-- After moving the vector extension to the extensions schema, the column type
+-- is still the same OID but introspection/PostgREST may still reference public.vector.
+-- Explicitly set the column type to extensions.vector(1536) so API inserts work.
+
+ALTER TABLE post_embeddings
+  ALTER COLUMN embedding TYPE extensions.vector(1536) USING embedding::extensions.vector(1536);
+
+NOTIFY pgrst, 'reload schema';
+-- Migration: Use extensions.vector in search_posts_by_embedding so RPC works after 045
+-- Run after 046_post_embeddings_vector_type_explicit.sql.
+--
+-- PostgREST casts RPC args using the function's parameter types. After moving the
+-- vector extension to the extensions schema, the unqualified VECTOR(1536) param
+-- can be introspected as public.vector and cause "type public.vector does not exist"
+-- when calling from the API. Recreate the function with extensions.vector(1536)
+-- so the schema cache and RPC calls use the correct type.
+
+DROP FUNCTION IF EXISTS search_posts_by_embedding(vector, double precision, integer);
+
+CREATE OR REPLACE FUNCTION search_posts_by_embedding(
+    query_embedding extensions.vector(1536),
+    similarity_threshold FLOAT DEFAULT 0.5,
+    result_limit INT DEFAULT 10
+)
+RETURNS TABLE(
+    id UUID,
+    text TEXT,
+    similarity DOUBLE PRECISION,
+    created_at TIMESTAMPTZ,
+    neighborhood_id UUID,
+    post_id_ext TEXT,
+    url TEXT,
+    user_id_hash TEXT,
+    image_urls JSONB,
+    hash TEXT,
+    used_on_episode BOOLEAN
+) AS $$
+BEGIN
+    SET search_path = public, extensions;
+    RETURN QUERY
+    SELECT
+        p.id,
+        p.text,
+        (1 - (pe.embedding <=> query_embedding))::DOUBLE PRECISION AS similarity,
+        p.created_at,
+        p.neighborhood_id,
+        p.post_id_ext::TEXT,
+        p.url::TEXT,
+        p.user_id_hash::TEXT,
+        p.image_urls,
+        p.hash::TEXT,
+        COALESCE(p.used_on_episode, false)
+    FROM posts p
+    INNER JOIN post_embeddings pe ON p.id = pe.post_id
+    WHERE 1 - (pe.embedding <=> query_embedding) >= similarity_threshold
+        AND COALESCE(p.ignored, false) = false
+    ORDER BY pe.embedding <=> query_embedding
+    LIMIT result_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION search_posts_by_embedding(extensions.vector(1536), double precision, integer)
+  SET search_path = public, extensions;
+
+NOTIFY pgrst, 'reload schema';

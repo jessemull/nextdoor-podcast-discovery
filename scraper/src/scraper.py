@@ -61,7 +61,16 @@ class NextdoorScraper:
         """Start the browser."""
         logger.debug("Starting browser (headless=%s)", self.headless)
         self._playwright = sync_playwright().start()
-        self.browser = self._playwright.chromium.launch(headless=self.headless)
+        # Stability and memory flags for headless (fewer crashes / OOM)
+        chromium_args = [
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--js-flags=--max-old-space-size=4096",
+        ]
+        self.browser = self._playwright.chromium.launch(
+            args=chromium_args,
+            headless=self.headless,
+        )
         self.context = self.browser.new_context(
             user_agent=SCRAPER_CONFIG["user_agent"],
             viewport=SCRAPER_CONFIG["viewport"],
@@ -227,8 +236,8 @@ class NextdoorScraper:
     def navigate_to_feed(self, feed_type: str) -> None:
         """Navigate to a specific feed tab.
 
-        Clicks the Trending or Recent chip on the feed (desktop). No reload;
-        URL does not change.
+        On mobile: navigates to the feed URL, then opens the Filter by
+        bottom sheet and selects Recent or Trending. Waits for feed tab.
 
         Args:
             feed_type: Which feed to navigate to ("recent" or "trending").
@@ -243,12 +252,13 @@ class NextdoorScraper:
         if feed_type not in FEED_URLS:
             raise ValueError(f"Invalid feed type: {feed_type}")
 
+        feed_url = FEED_URLS[feed_type]
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
 
-        # After login we're already on the news feed. Do NOT reload — just click the chip.
-        if "news_feed" not in (self.page.url or ""):
-            logger.debug("Navigating to news feed")
-            self.page.goto(NEWS_FEED_URL, timeout=timeout)
+        # Mobile: go directly to feed URL, then open Filter by sheet and select Recent/Trending.
+        logger.info("Navigating to %s feed: %s", feed_type, feed_url)
+        self.page.goto(feed_url, timeout=timeout)
+
         try:
             self.page.get_by_test_id("feed-container").wait_for(
                 state="visible", timeout=timeout
@@ -257,34 +267,33 @@ class NextdoorScraper:
             pass
         self._random_delay()
         self.page.evaluate("window.scrollTo(0, 0)")
-        self.page.wait_for_timeout(800)
+        self.page.wait_for_timeout(1000)
 
-        # Click the "Trending" or "Recent" chip (no reload; URL does not change).
-        chip_text = "Trending" if feed_type == "trending" else "Recent"
-        try:
-            # Label is associated with radio; role=radio + name gets the right chip
-            chip = self.page.get_by_role("radio", name=chip_text)
-            chip.wait_for(state="visible", timeout=8000)
-            chip.scroll_into_view_if_needed()
-            self.page.wait_for_timeout(300)
-            chip.click()
-            logger.info("Clicked %s chip", chip_text)
-            self.page.wait_for_timeout(2000)
-        except PlaywrightTimeoutError:
-            # Fallback: click by exact text
+        # For you (default): no tab selection; page is already on default feed.
+        # Recent/trending: open Filter by and click the tab.
+        if feed_type != "for_you":
             try:
-                chip = self.page.get_by_text(chip_text, exact=True).first
-                chip.wait_for(state="visible", timeout=3000)
-                chip.scroll_into_view_if_needed()
-                chip.click()
-                logger.debug("Clicked %s chip (by text)", chip_text)
-                self.page.wait_for_timeout(2000)
+                navbar = self.page.get_by_test_id("navbar")
+                navbar.locator('[role="button"][aria-controls]').first.click(
+                    timeout=8000
+                )
+                dialog = self.page.get_by_role("dialog", name="Filter by")
+                dialog.wait_for(state="visible", timeout=8000)
+                self.page.get_by_role(
+                    "button", name=feed_type.capitalize(), exact=True
+                ).click(timeout=5000)
+                logger.info("Selected %s feed from Filter by menu", feed_type)
+                self.page.wait_for_timeout(1000)
             except PlaywrightTimeoutError:
-                logger.warning("Chip %r not found", chip_text)
+                logger.warning(
+                    "Filter by menu not found or failed; feed may still be default (For you)"
+                )
+
+        self._wait_for_feed_tab_or_continue(feed_type, timeout)
         self._random_delay()
 
     def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
-        """Wait for desktop feed tab if present; otherwise no-op."""
+        """Wait for feed tab if present; otherwise no-op."""
         tab_selectors = {
             "recent": SELECTORS["feed_tab_recent"],
             "trending": SELECTORS["feed_tab_trending"],
@@ -301,9 +310,8 @@ class NextdoorScraper:
     def click_first_permalink_to_details(self, timeout_ms: int = 15000) -> bool:
         """Click the first post permalink in the feed to open the details view.
 
-        Call after navigate_to_feed() when the feed is visible. Waits for the
-        first feed card, finds the first link to /p/..., clicks it, and waits
-        for the URL to change to the details page.
+        Finds the first feed card that contains a /p/ link (skips prompt card),
+        then clicks that link and waits for the details page.
 
         Args:
             timeout_ms: Max time to wait for card, link, and navigation.
@@ -315,9 +323,14 @@ class NextdoorScraper:
             raise RuntimeError("Browser not started. Call start() first.")
 
         try:
-            first_card = self.page.get_by_test_id("feed-item-card").first
-            first_card.wait_for(state="visible", timeout=timeout_ms)
-            permalink = first_card.locator('a[href*="/p/"]').first
+            # First card that actually has a permalink (first feed-item-card may be "What's happening?" prompt)
+            card_with_link = (
+                self.page.get_by_test_id("feed-item-card")
+                .filter(has=self.page.locator('a[href*="/p/"]'))
+                .first
+            )
+            card_with_link.wait_for(state="visible", timeout=timeout_ms)
+            permalink = card_with_link.locator('a[href*="/p/"]').first
             permalink.wait_for(state="visible", timeout=5000)
             permalink.scroll_into_view_if_needed(timeout=5000)
             self._random_delay()
@@ -385,7 +398,7 @@ class NextdoorScraper:
             feed_type: Which feed is active ("recent" or "trending").
             repeat_threshold: For Recent feed, stop after this many consecutive
                 already-seen. Defaults to config.
-            run_stats: Optional dict to accumulate comment_mismatches and modal_failures.
+            run_stats: Optional dict to accumulate comment_mismatches.
             safety_cap: Stop yielding after this many total posts (default 500).
 
         Yields:

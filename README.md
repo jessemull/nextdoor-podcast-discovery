@@ -60,7 +60,6 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 | Novelty adjustment | 30-day topic frequency boosts rare topics, dampens over-posted ones (e.g. coyote #47) |
 | Embeddings | Standalone `embed` script: OpenAI embeddings for unscored posts (no browser); powers semantic search |
 | Topic recount | `recount_topics` updates 30-day topic counts for novelty |
-| robots.txt check | `--check-robots` verifies allowed paths before scraping |
 | Dry run & inspect | `--dry-run` skips DB writes; `--inspect` opens browser and pauses for manual inspection |
 
 ### Web UI
@@ -162,13 +161,16 @@ nextdoor/
 
 | Script | Purpose |
 | :----- | :------ |
+| `scripts/bootstrap-host.sh` | Prompts to run setup-server.sh with sudo (uses git remote as GIT_REPO). Use on the host laptop to create the `nextdoor` user and clone. |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
-| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
+| `scripts/install-worker-service.sh` | Install systemd unit for the worker (enable + start). Run with sudo from host repo root after setup-server.sh and editing scraper/.env. |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
-| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), `--check-robots`, then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
+| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
+| `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
+| `scripts/verify-host-env.sh` | After editing `scraper/.env`, run from repo root to validate required vars and test Supabase. See [docs/HOST_ENV_CHECKLIST.md](docs/HOST_ENV_CHECKLIST.md). |
 
 ## Makefile
 
@@ -280,7 +282,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 ## Scraper (Python)
 
-**Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--dry-run`, `--check-robots`, `--visible`, `--inspect`. Scoring and embedding run by default; use `--no-score` or `--no-embed` to skip.
+**Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--dry-run`, `--visible`, `--inspect`. Scoring and embedding run by default; use `--no-score` or `--no-embed` to skip.
 
 **Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
 
@@ -365,12 +367,6 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **Session cookies in Supabase** | Reuse login across runs → fewer CAPTCHAs; Fernet encryption at rest |
 | **Mobile viewport for scraper** | Nextdoor mobile UI; feed selection and selectors differ from desktop |
 
-## Scraping policy
-
-- **Rate limiting** — Configurable scroll and typing delays in `scraper/src/config.py`; no aggressive throttling by default.
-- **robots.txt** — Not enforced by default. Use `--check-robots` to exit with an error if our paths are disallowed (`src/robots.py`, config URLs).
-- **Data use** — For personal/podcast curation only; comply with Nextdoor’s terms and your own ethics.
-
 ## Related documentation
 
 | Doc | Purpose |
@@ -379,5 +375,7 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **database/migrations/** | Source of truth for schema and RPCs; run in order in Supabase. |
 | **docs/DEPLOYMENT.md** | Server setup, deploy from local machine (SSH + git pull), and security. |
 | **docs/ENVIRONMENTS.md** | Dev vs prod; step-by-step deploy to each environment (web and scraper). |
+| **docs/HOST_ENV_CHECKLIST.md** | Production `scraper/.env` checklist and validation steps. |
+| **docs/HOST_POWER_AND_MONITORING.md** | Power/sleep, cron, systemd worker, Healthchecks, and logs on the host. |
 | **docs/SUPABASE_MIGRATIONS.md** | Run the same migrations in both dev and prod Supabase projects. |
 | **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |

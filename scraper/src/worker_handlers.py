@@ -48,6 +48,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
+        logger.error("[permalink] job=%s invalid params", job_id)
         return False
 
     url = params.get("url")
@@ -59,6 +60,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
+        logger.error("[permalink] job=%s missing or invalid params.url", job_id)
         return False
 
     post_id = params.get("post_id")
@@ -72,8 +74,15 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
         }
     ).eq("id", job_id).execute()
 
+    logger.info(
+        "[permalink] job=%s url=%s post_id=%s starting fetch",
+        job_id,
+        url,
+        post_id or "new",
+    )
+
     if _fetch_permalink_job_was_cancelled(supabase, job_id):
-        logger.info("Permalink job %s was cancelled before run, skipping", job_id)
+        logger.info("[permalink] job=%s cancelled before run, skipping", job_id)
         return True
 
     scraper_dir = Path(__file__).resolve().parent.parent
@@ -90,9 +99,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
             timeout=300,
         )
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
-            logger.info(
-                "Permalink job %s was cancelled during run, not updating", job_id
-            )
+            logger.info("[permalink] job=%s cancelled during run, not updating", job_id)
             return True
         if result.returncode == 0:
             supabase.table("background_jobs").update(
@@ -101,13 +108,16 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                     "status": "completed",
                 }
             ).eq("id", job_id).execute()
-            logger.info("Permalink job %s completed successfully", job_id)
+            logger.info(
+                "[permalink] job=%s completed (post_id=%s)", job_id, post_id or "new"
+            )
         else:
             error_msg = (
                 result.stderr
                 or result.stdout
                 or f"Scraper exited with {result.returncode}"
             )
+            summary = (error_msg.splitlines()[0] if error_msg else "").strip()
             supabase.table("background_jobs").update(
                 {
                     "completed_at": datetime.now(UTC).isoformat(),
@@ -115,12 +125,17 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                     "status": "error",
                 }
             ).eq("id", job_id).execute()
-            logger.error("Permalink job %s failed: %s", job_id, error_msg[:200])
+            logger.error(
+                "[permalink] job=%s failed (exit_code=%d): %s",
+                job_id,
+                result.returncode,
+                (summary or error_msg)[:200],
+            )
         return False
     except subprocess.TimeoutExpired:
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
             logger.info(
-                "Permalink job %s was cancelled (timed out), not updating", job_id
+                "[permalink] job=%s cancelled (timed out), not updating", job_id
             )
             return True
         supabase.table("background_jobs").update(
@@ -130,11 +145,13 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error("Permalink job %s timed out", job_id)
+        logger.error("[permalink] job=%s timed out after 300s", job_id)
         return False
     except Exception as e:
         if _fetch_permalink_job_was_cancelled(supabase, job_id):
-            logger.info("Permalink job %s was cancelled, not updating", job_id)
+            logger.info(
+                "[permalink] job=%s cancelled after error, not updating", job_id
+            )
             return True
         error_msg = str(e)
         supabase.table("background_jobs").update(
@@ -144,7 +161,7 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.exception("Permalink job %s failed: %s", job_id, e)
+        logger.exception("[permalink] job=%s failed: %s", job_id, e)
         return False
 
 
@@ -161,7 +178,11 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
     if feed_type not in ("recent", "trending"):
         feed_type = "recent"
 
-    logger.info("Processing run_scraper job %s (feed_type=%s)", job_id, feed_type)
+    logger.info(
+        "[run_scraper] job=%s feed_type=%s starting run-scrape.sh",
+        job_id,
+        feed_type,
+    )
 
     supabase.table("background_jobs").update(
         {
@@ -170,7 +191,8 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
         }
     ).eq("id", job_id).execute()
 
-    repo_root = Path(__file__).resolve().parent.parent
+    # repo_root is the monorepo root (one level above scraper/)
+    repo_root = Path(__file__).resolve().parent.parent.parent
     script = repo_root / "scripts" / "run-scrape.sh"
     if not script.is_file():
         supabase.table("background_jobs").update(
@@ -180,7 +202,7 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error("run_scraper job %s: script not found at %s", job_id, script)
+        logger.error("[run_scraper] job=%s script not found at %s", job_id, script)
         return
 
     try:
@@ -198,13 +220,18 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                     "status": "completed",
                 }
             ).eq("id", job_id).execute()
-            logger.info("run_scraper job %s completed successfully", job_id)
+            logger.info(
+                "[run_scraper] job=%s feed_type=%s completed",
+                job_id,
+                feed_type,
+            )
         else:
             error_msg = (
                 result.stderr
                 or result.stdout
                 or f"run-scrape.sh exited with {result.returncode}"
             )
+            summary = (error_msg.splitlines()[0] if error_msg else "").strip()
             supabase.table("background_jobs").update(
                 {
                     "completed_at": datetime.now(UTC).isoformat(),
@@ -212,7 +239,13 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                     "status": "error",
                 }
             ).eq("id", job_id).execute()
-            logger.error("run_scraper job %s failed: %s", job_id, error_msg[:200])
+            logger.error(
+                "[run_scraper] job=%s feed_type=%s failed (exit_code=%d): %s",
+                job_id,
+                feed_type,
+                result.returncode,
+                (summary or error_msg)[:200],
+            )
     except subprocess.TimeoutExpired:
         supabase.table("background_jobs").update(
             {
@@ -221,7 +254,11 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error("run_scraper job %s timed out", job_id)
+        logger.error(
+            "[run_scraper] job=%s feed_type=%s timed out after 7200s",
+            job_id,
+            feed_type,
+        )
     except Exception as e:
         error_msg = str(e)
         supabase.table("background_jobs").update(
@@ -231,4 +268,6 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.exception("run_scraper job %s failed: %s", job_id, e)
+        logger.exception(
+            "[run_scraper] job=%s feed_type=%s failed: %s", job_id, feed_type, e
+        )

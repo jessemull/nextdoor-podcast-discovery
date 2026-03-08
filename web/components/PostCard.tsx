@@ -3,8 +3,10 @@
 import {
   Bookmark,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ExternalLink,
   EyeOff,
   List,
@@ -90,6 +92,7 @@ export const PostCard = memo(function PostCard({
   const [carouselOverflows, setCarouselOverflows] = useState(false);
   const [carouselDragging, setCarouselDragging] = useState(false);
   const [expanded, setExpanded] = useState(!!defaultExpanded);
+  const [imageExpanded, setImageExpanded] = useState(false);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -585,22 +588,48 @@ export const PostCard = memo(function PostCard({
         </div>
       )}
 
-      {/* Images: main full-width with border + radius; carousel floats below (no shared container) */}
+      {/* Images: constrained aspect by default; button to expand to full image */}
       {imageUrls.length > 0 && (
         <>
-          <div
-            className={cn(
-              "relative aspect-[21/10] w-full overflow-hidden rounded-lg border border-border bg-surface-hover",
-              hasMultipleImages ? "" : "mb-6"
+          <div className={cn(hasMultipleImages ? "" : "mb-6")}>
+            {imageExpanded ? (
+              <Image
+                alt="Post"
+                className="h-auto w-full rounded-lg border border-border"
+                height={800}
+                src={mainImageUrl}
+                width={1200}
+              />
+            ) : (
+              <div className="relative aspect-[21/10] w-full overflow-hidden rounded-lg border border-border bg-surface-hover">
+                <Image
+                  alt="Post"
+                  className="object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 672px"
+                  src={mainImageUrl}
+                />
+              </div>
             )}
-          >
-            <Image
-              alt="Post"
-              className="object-cover"
-              fill
-              sizes="(max-width: 768px) 100vw, 672px"
-              src={mainImageUrl}
-            />
+            <button
+              aria-expanded={imageExpanded}
+              aria-label={imageExpanded ? "Collapse image" : "Expand image"}
+              className="text-muted-foreground hover:text-foreground mt-1.5 flex items-center gap-1 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
+              type="button"
+              onClick={() => setImageExpanded((e) => !e)}
+            >
+              {imageExpanded ? (
+                <>
+                  <ChevronUp aria-hidden className="h-4 w-4" />
+                  Collapse image
+                </>
+              ) : (
+                <>
+                  <ChevronDown aria-hidden className="h-4 w-4" />
+                  Expand image
+                </>
+              )}
+            </button>
           </div>
           {hasMultipleImages && (
             <div className="relative mb-6 mt-2 flex items-center gap-1">

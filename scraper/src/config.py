@@ -74,8 +74,6 @@ class ScraperConfig(TypedDict):
     login_timeout_ms: int
     max_posts_per_run: int
     max_scroll_attempts_trending: int
-    modal_close_delay_ms: int
-    modal_timeout_ms: int
     navigation_timeout_ms: int
     repeat_threshold_recent: int
     scroll_delay_ms: tuple[int, int]
@@ -98,25 +96,23 @@ class Selectors(TypedDict):
 
 # Scraper settings
 #
-# Desktop Chrome: we use desktop view so we can open the post modal (click post
-# body twice) and scrape comments from the modal, including "view more" replies.
+# Mobile: viewport and user agent; feed navigation uses Filter by sheet;
+# login uses role=textbox / role=button.
 
 SCRAPER_CONFIG: ScraperConfig = {
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
     "max_scroll_attempts_trending": 50,
-    "modal_close_delay_ms": 300,
-    "modal_timeout_ms": 5000,
     "navigation_timeout_ms": 10000,
     "repeat_threshold_recent": 10,
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
     "user_agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Mobile Safari/537.36"
     ),
-    "viewport": {"height": 900, "width": 1280},
+    "viewport": {"height": 844, "width": 390},
 }
 
 # URLs
@@ -127,12 +123,12 @@ NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
 # Feed URLs for different tabs
 
 FEED_URLS = {
+    "for_you": "https://nextdoor.com/news_feed/",
     "recent": "https://nextdoor.com/news_feed/?ordering=recent",
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
 
-# Selectors (desktop: SIGNIN.html, TRENDING.html)
-# Login: desktop uses data-testid and id; role=textbox works for inputs with aria-label.
+# Selectors (mobile: role-based for Filter by and login; from pre-0dd4c64 mobile scraper)
 
 SELECTORS: Selectors = {
     # CAPTCHA detection
@@ -142,18 +138,18 @@ SELECTORS: Selectors = {
         "[class*='captcha']",
         "[id*='captcha']",
     ],
-    # Login page (desktop SIGNIN.html: id_email, id_password, data-testid=signin_button)
-    "email_input": '[data-testid="email-address-input"], #id_email',
+    # Login page (mobile: role=textbox with accessible names)
+    "email_input": 'role=textbox[name="Email or mobile number"]',
     "error_indicators": [
         "[class*='error']",
         "[class*='alert']",
         "[role='alert']",
     ],
-    # Feed tabs (desktop TRENDING.html: simple tab buttons)
-    "feed_tab_recent": 'role=tab[name="Most Recent"]',
-    "feed_tab_trending": 'role=tab[name="Trending"]',
-    "login_button": '[data-testid="signin_button"], #signin_button',
-    "password_input": '[data-testid="password-input"], #id_password',
+    # Feed tabs (mobile: role=radio for Recent/Trending chips; also used after Filter by)
+    "feed_tab_recent": 'role=radio[name="Recent"]',
+    "feed_tab_trending": 'role=radio[name="Trending"]',
+    "login_button": 'role=button[name="Log in"]',
+    "password_input": 'role=textbox[name="Password"]',
 }
 
 

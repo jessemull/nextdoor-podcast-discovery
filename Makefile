@@ -1,4 +1,4 @@
-.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 security security-scraper security-web tail-logs test test-scraper test-web venv
+.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 scrape-visible security security-scraper security-web tail-logs test test-scraper test-web venv
 
 # Default target
 help:
@@ -26,6 +26,7 @@ help:
 	@echo "  dev-web          Start Next.js dev server"
 	@echo "  scrape-sample    Scrape 25 posts from trending with scoring and embeddings (full pipeline)"
 	@echo "  scrape-trending-300  Scrape, score, and embed 300 trending posts (long run; use PYTHONUNBUFFERED=1 and tee for logs)"
+	@echo "  scrape-visible   Run scraper with browser visible (5 trending posts; use to watch Nextdoor)"
 	@echo "  inspect-scraper  Run scraper in inspect mode (browser pauses for DOM inspection)"
 	@echo "  open-trending-details  Open trending tab, click first post to details view, then pause"
 	@echo ""
@@ -133,6 +134,10 @@ dev-scraper:
 
 scrape-sample:
 	cd scraper && python -m src.main --feed-type trending --max-posts 25
+
+# Visible browser: open Chromium so you can watch the scraper on Nextdoor (small run).
+scrape-visible:
+	cd scraper && python -m src.main --feed-type trending --max-posts 5 --visible
 
 # Long run: 300 trending posts (scrape + score + embed). caffeinate keeps Mac/display
 # awake so browser does not freeze when screensaver or sleep would kick in.

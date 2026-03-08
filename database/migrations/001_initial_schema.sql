@@ -1,8 +1,10 @@
 -- Initial database schema for Nextdoor Podcast Discovery Platform
 -- Run this in Supabase SQL Editor
 
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+-- pgvector in extensions schema (avoids "Extension in Public" Security Advisor warning)
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS vector SCHEMA extensions;
+SET search_path = public, extensions;
 
 -- Function to auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 from supabase import Client
 
 from src.config import ConfigurationError, validate_env
+from src.logging_config import configure_logging
 
 load_dotenv()  # noqa: E402
 from src.llm_prompts import SCORING_DIMENSIONS  # noqa: E402
@@ -203,8 +204,10 @@ def _load_job_dependencies(
     novelty_config = load_novelty_config(supabase)
     frequencies = load_topic_frequencies(supabase)
 
-    logger.info("Loaded weights from config %s: %s", weight_config_id, weights)
-    logger.info("Loaded novelty config: %s", novelty_config)
+    logger.debug(
+        "Loaded weights from config %s and novelty config for recompute job",
+        weight_config_id,
+    )
 
     return weights, novelty_config, frequencies
 
@@ -289,7 +292,13 @@ def _update_job_progress(
         }
     ).eq("id", job_id).execute()
 
-    logger.info("Processed %d / %d posts (%d%%)", processed, total, progress_pct)
+    logger.info(
+        "[recompute] job=%s progress=%d/%d (%d%%)",
+        job_id,
+        processed,
+        total,
+        progress_pct,
+    )
 
 
 def _cleanup_staging(supabase: Client, job_id: str) -> None:
@@ -436,7 +445,9 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         )
 
     logger.info(
-        "Processing recompute job %s for weight config %s", job_id, weight_config_id
+        "[recompute] job=%s weight_config_id=%s starting recompute_final_scores",
+        job_id,
+        weight_config_id,
     )
 
     # Update job status to running
@@ -461,7 +472,12 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         )
         total = count_result.count or 0
 
-        logger.info("Found %d posts to process", total)
+        logger.info(
+            "[recompute] job=%s weight_config_id=%s found %d posts with scores",
+            job_id,
+            weight_config_id,
+            total,
+        )
 
         # Update job with total
         supabase.table("background_jobs").update(
@@ -554,10 +570,21 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
             }
         ).eq("id", job_id).execute()
 
-        logger.info("Job %s completed successfully", job_id)
+        logger.info(
+            "[recompute] job=%s weight_config_id=%s completed (processed=%d, total=%d)",
+            job_id,
+            weight_config_id,
+            processed,
+            total,
+        )
 
         # Compute-then-cutover: become active only after scores are applied
         if params.get("activate_on_completion"):
+            logger.info(
+                "[recompute] job=%s weight_config_id=%s activating config and invalidating cache",
+                job_id,
+                weight_config_id,
+            )
             _cutover_active_config(supabase, weight_config_id)
             _maybe_invalidate_app_cache()
 
@@ -565,7 +592,9 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         # Permanent failure: invalid config or params (don't retry)
         error_msg = str(e)
         logger.error(
-            "Permanent error processing job %s: %s", job_id, error_msg, exc_info=True
+            "[recompute] job=%s permanent error: %s",
+            job_id,
+            error_msg,
         )
 
         _cleanup_staging(supabase, job_id)
@@ -621,7 +650,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error("backfill_dimension job %s: params must be a dict", job_id)
+        logger.error(
+            "[backfill_dimension] job=%s invalid params (expected dict)", job_id
+        )
         return
 
     dimension = (
@@ -638,11 +669,15 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.error("backfill_dimension job %s: %s", job_id, error_msg)
+        logger.error(
+            "[backfill_dimension] job=%s invalid dimension: %s", job_id, error_msg
+        )
         return
 
     logger.info(
-        "Processing backfill_dimension job %s for dimension %s", job_id, dimension
+        "[backfill_dimension] job=%s dimension=%s starting backfill",
+        job_id,
+        dimension,
     )
 
     supabase.table("background_jobs").update(
@@ -673,7 +708,9 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                     else None
                 )
                 if job_data and job_data.get("status") == "cancelled":
-                    logger.info("Job %s was cancelled", job_id)
+                    logger.info(
+                        "[backfill_dimension] job=%s cancelled, stopping", job_id
+                    )
                     supabase.table("background_jobs").update(
                         {
                             "completed_at": datetime.now(UTC).isoformat(),
@@ -724,7 +761,10 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
             }
         ).eq("id", job_id).execute()
         logger.info(
-            "backfill_dimension job %s completed: %d posts updated", job_id, processed
+            "[backfill_dimension] job=%s dimension=%s completed (%d posts updated)",
+            job_id,
+            dimension,
+            processed,
         )
 
     except Exception as e:
@@ -736,7 +776,12 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 "status": "error",
             }
         ).eq("id", job_id).execute()
-        logger.exception("backfill_dimension job %s failed: %s", job_id, e)
+        logger.exception(
+            "[backfill_dimension] job=%s dimension=%s failed: %s",
+            job_id,
+            dimension,
+            e,
+        )
 
 
 def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -> None:
@@ -778,7 +823,7 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                     was_cancelled = process_fetch_permalink_job(supabase, job)
                     if was_cancelled:
                         logger.debug(
-                            "Previous permalink job was cancelled, waiting %d seconds before next poll",
+                            "[permalink] previous job was cancelled, waiting %d seconds before next poll",
                             poll_interval,
                         )
                         time.sleep(poll_interval)
@@ -787,7 +832,7 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
                 elif actual_type == "backfill_dimension":
                     process_backfill_dimension_job(supabase, job)
                 else:
-                    logger.warning("Unknown job type: %s", actual_type)
+                    logger.warning("Unknown job type received: %s", actual_type)
 
             else:
                 # No jobs, wait before polling again
@@ -835,11 +880,8 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # Set up logging
-    logging.basicConfig(
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        level=logging.INFO,
-    )
+    # Set up logging (shared configuration with color and quiet httpx).
+    configure_logging("scraper-worker")
 
     try:
         validate_env()

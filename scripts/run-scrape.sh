@@ -27,7 +27,7 @@ fi
 echo "$(date -Iseconds): Starting $FEED_TYPE scrape..."
 
 cd "$SCRAPER_DIR"
-if "$PYTHON" -m src.main --feed-type "$FEED_TYPE" --score --check-robots; then
+if "$PYTHON" -m src.main --feed-type "$FEED_TYPE" --score; then
   echo "$(date -Iseconds): Scrape successful, recounting topic frequencies..."
   if "$PYTHON" -m src.recount_topics; then
     echo "$(date -Iseconds): Recount complete."

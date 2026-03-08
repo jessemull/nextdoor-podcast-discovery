@@ -127,85 +127,146 @@ class TestPostExtractor:
         # Should have called evaluate multiple times (once per scroll attempt)
         assert extractor.page.evaluate.call_count > 1
 
-    def test_extract_permalink_success(self, extractor: PostExtractor) -> None:
-        """Should extract permalink by clicking Share button."""
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        share_btn.click.return_value = None
-        container.locator.return_value = share_btn
+    def test_normalize_post_url_returns_clean_url(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should normalize post URL to canonical form."""
+        assert extractor._normalize_post_url("https://nextdoor.com/p/ABC123") == "https://nextdoor.com/p/ABC123"
+        assert extractor._normalize_post_url("https://nextdoor.com/p/ABC123?utm_x=1") == "https://nextdoor.com/p/ABC123"
+        assert extractor._normalize_post_url("/p/XYZ") == "https://nextdoor.com/p/XYZ"
 
-        # Single return value for both page.locator(...) calls: post containers and FB share link
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.return_value = None
-        locator_mock.get_attribute.return_value = "https://www.facebook.com/sharer/sharer.php?href=https%3A%2F%2Fnextdoor.com%2Fp%2FABC123"
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.return_value = None
+    def test_normalize_post_url_returns_none_for_invalid(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return None for non-post URLs or invalid input."""
+        assert extractor._normalize_post_url(None) is None
+        assert extractor._normalize_post_url("") is None
+        assert extractor._normalize_post_url("  ") is None
+        assert extractor._normalize_post_url("https://nextdoor.com/feed") is None
+        assert extractor._normalize_post_url("https://nextdoor.com/profile/foo") is None
+
+    def test_get_first_visible_post_returns_none_when_no_post_in_view(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return None when no post is in the viewport."""
+        extractor.page.evaluate.return_value = None
+
+        result = extractor._get_first_visible_post()
+
+        assert result is None
+
+    def test_get_first_visible_post_returns_index_and_raw_when_visible(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return (container_index, raw) when evaluate returns a post."""
+        extractor.page.evaluate.return_value = {
+            "containerIndex": 2,
+            "raw": {
+                "authorId": "a1",
+                "authorName": "Author",
+                "commentCount": 0,
+                "content": "Enough content here",
+                "imageUrls": [],
+                "neighborhood": "Hood",
+                "postUrl": "https://nextdoor.com/p/XYZ",
+                "reactionCount": 1,
+                "timestamp": "1h ago",
+                "containerIndex": 2,
+                "postIndex": 0,
+            },
+        }
+
+        result = extractor._get_first_visible_post()
+
+        assert result is not None
+        idx, raw = result
+        assert idx == 2
+        assert raw["authorId"] == "a1"
+        assert raw["content"] == "Enough content here"
+
+    def test_scroll_next_post_into_view_returns_false_when_no_next(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return False when there is no next container."""
+        extractor.page.locator.return_value.count.return_value = 5
+
+        result = extractor._scroll_next_post_into_view(4)
+
+        assert result is False
+
+    def test_scroll_next_post_into_view_returns_true_when_next_exists(
+        self, extractor: PostExtractor
+    ) -> None:
+        """Should return True and scroll next container to top of viewport."""
+        mock_containers = mock.MagicMock()
+        mock_containers.count.return_value = 10
+        extractor.page.locator.return_value = mock_containers
+        extractor.page.evaluate.return_value = True
         extractor.page.wait_for_timeout.return_value = None
 
-        result = extractor.extract_permalink(0)
+        result = extractor._scroll_next_post_into_view(3)
 
-        assert result == "https://nextdoor.com/p/ABC123"
-        share_btn.click.assert_called_once()
+        assert result is True
+        extractor.page.evaluate.assert_called_once()
+        call_args = extractor.page.evaluate.call_args
+        assert call_args[0][1] == [4]
 
-    def test_extract_permalink_returns_none_when_no_share_button(
+    def test_process_raw_post_skips_comments_button_when_comment_count_zero(
         self, extractor: PostExtractor
     ) -> None:
-        """Should return None when Share button not found."""
-        extractor.page.locator.return_value.count.return_value = 5
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 0  # No share button
-        container.locator.return_value = share_btn
-        extractor.page.locator.return_value.nth.return_value = container
+        """Should not click comments button when UI reports 0 comments."""
+        raw = {
+            "authorId": "author1",
+            "authorName": "Test Author",
+            "commentCount": 0,
+            "containerIndex": 0,
+            "content": "This is a test post with enough content to pass validation",
+            "imageUrls": [],
+            "neighborhood": "Test Neighborhood",
+            "postUrl": "https://nextdoor.com/p/ABC123",
+            "reactionCount": 0,
+            "timestamp": "2 hours ago",
+        }
+        with mock.patch.object(
+            extractor,
+            "_extract_comments_via_comments_button",
+            return_value=[],
+        ) as mock_comments_btn:
+            result = extractor._process_raw_post(raw)
 
-        result = extractor.extract_permalink(0)
+        assert result is not None
+        assert result.comments == []
+        assert result.comment_count == 0
+        assert result.post_url == "https://nextdoor.com/p/ABC123"
+        mock_comments_btn.assert_not_called()
 
-        assert result is None
-
-    def test_extract_permalink_handles_timeout(self, extractor: PostExtractor) -> None:
-        """Should return None when modal timeout occurs."""
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        container.locator.return_value = share_btn
-
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.side_effect = PlaywrightTimeoutError("Timeout")
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.return_value = None
-
-        result = extractor.extract_permalink(0)
-
-        assert result is None
-
-    def test_extract_permalink_handles_timeout_then_escape_failure(
+    def test_process_raw_post_has_no_permalink_when_feed_has_no_permalink(
         self, extractor: PostExtractor
     ) -> None:
-        """Should return None when modal timeout occurs and closing modal raises.
+        """When feed has no /p/ link, post_url stays None; no comments button call."""
+        raw = {
+            "authorId": "author1",
+            "authorName": "Test Author",
+            "commentCount": 2,
+            "containerIndex": 0,
+            "content": "This is a test post with enough content to pass validation",
+            "imageUrls": [],
+            "neighborhood": "Test Neighborhood",
+            "postUrl": None,
+            "reactionCount": 0,
+            "timestamp": "1 hr ago",
+        }
+        with mock.patch.object(
+            extractor,
+            "_extract_comments_via_comments_button",
+            return_value=[],
+        ) as mock_comments_btn:
+            result = extractor._process_raw_post(raw)
 
-        Regression test: the inner except must use container_index (not post_index)
-        so that no NameError is raised when Escape fails.
-        """
-        container = mock.MagicMock()
-        share_btn = mock.MagicMock()
-        share_btn.count.return_value = 1
-        container.locator.return_value = share_btn
-
-        locator_mock = mock.MagicMock()
-        locator_mock.count.return_value = 5
-        locator_mock.nth.return_value = container
-        locator_mock.wait_for.side_effect = PlaywrightTimeoutError("Timeout")
-        extractor.page.locator.return_value = locator_mock
-        extractor.page.keyboard.press.side_effect = RuntimeError("Escape failed")
-
-        result = extractor.extract_permalink(0)
-
-        assert result is None
+        assert result is not None
+        assert result.post_url is None
+        assert result.comments == []
+        mock_comments_btn.assert_not_called()
 
     def test_generate_hash_creates_consistent_hash(
         self, extractor: PostExtractor
@@ -235,7 +296,10 @@ class TestPostExtractor:
 
         extractor._scroll_down()
 
-        extractor.page.evaluate.assert_called_once()
+        # evaluate is used for scroll-position logging and for the actual scroll
+        extractor.page.evaluate.assert_any_call(
+            "window.scrollBy(0, window.innerHeight)"
+        )
         extractor.page.wait_for_timeout.assert_called_once()
 
     def test_scroll_down_handles_network_timeout(

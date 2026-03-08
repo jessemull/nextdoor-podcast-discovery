@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import Client
 
-from src.config import FEED_URLS, LOGIN_URL, SCRAPER_CONFIG, validate_env
+from src.config import FEED_URLS, SCRAPER_CONFIG, validate_env
 from src.embedder import Embedder
 from src.exceptions import (
     CaptchaRequiredError,
@@ -28,9 +28,9 @@ from src.exceptions import (
     ScraperError,
 )
 from src.llm_scorer import LLMScorer
+from src.logging_config import configure_logging
 from src.post_extractor import PostExtractor
 from src.post_storage import PostStorage
-from src.robots import check_robots_allowed
 from src.scraper import NextdoorScraper
 from src.session_manager import SessionManager
 
@@ -66,71 +66,7 @@ def _record_scraper_run(
 _scraper_dir = Path(__file__).resolve().parent.parent
 load_dotenv(_scraper_dir / ".env")
 
-_log_level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
-_log_level = getattr(logging, _log_level_name, logging.INFO)
-_log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-_disable_color = bool(os.environ.get("NO_COLOR")) or os.environ.get("LOG_COLOR") in (
-    "0",
-    "false",
-    "False",
-)
-
-colorlog: Any = None
-try:
-    import colorlog
-except Exception:  # pragma: no cover
-    pass
-
-if colorlog and not _disable_color:
-    _handler = colorlog.StreamHandler()
-    _handler.setFormatter(
-        colorlog.ColoredFormatter(
-            "%(log_color)s" + _log_format + "%(reset)s",
-            log_colors={
-                "DEBUG": "cyan",
-                "ERROR": "red",
-                "INFO": "green",
-                "WARNING": "yellow",
-            },
-        )
-    )
-    logging.basicConfig(
-        handlers=[_handler],
-        level=_log_level,
-    )
-else:
-    logging.basicConfig(
-        format=_log_format,
-        level=_log_level,
-    )
-logging.getLogger("httpx").setLevel(logging.WARNING)
-
-# Optional: rotate logs to a file when running on the laptop (SCRAPER_LOG_DIR or SCRAPER_LOG_FILE).
-_log_file = os.environ.get("SCRAPER_LOG_FILE")
-_log_dir = os.environ.get("SCRAPER_LOG_DIR")
-if _log_file or _log_dir:
-    if _log_file:
-        _file_path = Path(_log_file).expanduser()
-    else:
-        assert _log_dir is not None
-        _file_path = Path(_log_dir).expanduser() / "scraper.log"
-    try:
-        _file_path.parent.mkdir(parents=True, exist_ok=True)
-        _file_handler = logging.handlers.RotatingFileHandler(
-            _file_path,
-            maxBytes=5 * 1024 * 1024,
-            backupCount=3,
-            encoding="utf-8",
-        )
-    except PermissionError:
-        logging.getLogger(__name__).warning(
-            "Could not create or open log file %s; continuing without file logging",
-            _file_path,
-        )
-    else:
-        _file_handler.setFormatter(logging.Formatter(_log_format))
-        _file_handler.setLevel(_log_level)
-        logging.getLogger().addHandler(_file_handler)
+configure_logging("scraper-main")
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +264,6 @@ def _run_permalink_fetch(
 
 
 def main(
-    check_robots: bool = False,
     dry_run: bool = False,
     embed: bool = True,
     feed_type: str = "recent",
@@ -351,11 +286,10 @@ def main(
     or --no-embed to skip those steps.
 
     Args:
-        check_robots: If True, fetch robots.txt and exit with 1 if our paths are disallowed.
         dry_run: If True, don't make any changes to the database.
         embed: If True, run embedding after scrape/score (default True; use --no-embed to skip).
-        feed_type: Which feed to scrape ("recent" or "trending").
-        inspect: If True, open browser (desktop), go to feed, then pause for DOM inspection.
+        feed_type: Which feed to scrape ("for_you", "recent", or "trending").
+        inspect: If True, open browser, go to feed, then pause for DOM inspection.
         max_posts: Maximum number of posts to scrape (default from config).
         open_trending_details: If True, open trending tab, click first post permalink to details view, then pause.
         no_embed: If True, skip embedding (overrides default).
@@ -384,23 +318,12 @@ def main(
             visible=visible,
         )
 
-    # Optional robots.txt check before scraping
-    if check_robots:
-        base_url = LOGIN_URL.rstrip("/").rsplit("/", 1)[0] or "https://nextdoor.com"
-        paths = ["/login/", "/news_feed/"]
-        allowed, message = check_robots_allowed(base_url, paths)
-        if allowed:
-            logger.info("Robots check: %s", message)
-        else:
-            logger.error("Robots check failed: %s", message)
-            logger.info("Exiting with code 1")
-            return 1
-
     # Validate feed type
 
     if feed_type not in FEED_URLS:
         logger.error(
-            "Invalid feed type: %s (must be 'recent' or 'trending')", feed_type
+            "Invalid feed type: %s (must be 'for_you', 'recent', or 'trending')",
+            feed_type,
         )
         logger.info("Exiting with code 1")
         return 1
@@ -564,7 +487,7 @@ def main(
 
             if inspect:
                 print()
-                print("Browser is open on the news feed (desktop).")
+                print("Browser is open on the news feed.")
                 print(
                     "Open DevTools (F12 or right-click → Inspect) and inspect the DOM "
                     "(e.g. feed chips, post cards). Press Enter here when done to close the browser."
@@ -585,9 +508,7 @@ def main(
             stored = 0
             total_extracted = 0
             run_stats: dict[str, int] = {
-                "comment_fallbacks": 0,
                 "comment_mismatches": 0,
-                "modal_failures": 0,
             }
             storage_stats: dict[str, int] | None = None
             if not dry_run:
@@ -624,7 +545,8 @@ def main(
                         stored,
                         max_posts,
                     )
-                    logger.info("Posts stored: %d / %d", stored, max_posts)
+                    if batch or stats["inserted"]:
+                        logger.info("Posts stored: %d / %d", stored, max_posts)
                 if stored >= max_posts:
                     logger.info("Target reached: %d new posts stored", stored)
                     break
@@ -702,19 +624,13 @@ def main(
                 _record_scraper_run(session_manager.supabase, feed_type, "completed")
 
             # Run summary last so it is the final human-facing message before exit
-            fallbacks = run_stats.get("comment_fallbacks", 0)
             mismatches = run_stats.get("comment_mismatches", 0)
-            modal_failures = run_stats.get("modal_failures", 0)
-            total_warnings = mismatches + modal_failures
             logger.info("----------")
             logger.info(
-                "Run summary: extracted=%d, stored=%s; comment_fallbacks=%d; warnings: comment_mismatch=%d, modal_failure=%d (%d total)",
+                "Run summary: extracted=%d, stored=%s; comment_mismatches=%d",
                 total_extracted,
                 storage_stats["inserted"] if storage_stats else "n/a",
-                fallbacks,
                 mismatches,
-                modal_failures,
-                total_warnings,
             )
             logger.info("----------")
 
@@ -772,11 +688,6 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Nextdoor scraper pipeline")
     parser.add_argument(
-        "--check-robots",
-        action="store_true",
-        help="Fetch robots.txt and exit with error if our paths are disallowed",
-    )
-    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Run without making changes to the database",
@@ -789,14 +700,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--feed-type",
-        choices=["recent", "trending"],
+        choices=["for_you", "recent", "trending"],
         default="recent",
-        help="Which feed to scrape (default: recent)",
+        help="Which feed to scrape: for_you (default tab), recent, or trending (default: recent)",
     )
     parser.add_argument(
         "--inspect",
         action="store_true",
-        help="Open browser (desktop), go to feed, then pause for DOM inspection",
+        help="Open browser, go to feed, then pause for DOM inspection",
     )
     parser.add_argument(
         "--max-posts",
@@ -865,7 +776,6 @@ if __name__ == "__main__":
 
     sys.exit(
         main(
-            check_robots=args.check_robots,
             dry_run=args.dry_run,
             feed_type=args.feed_type,
             inspect=args.inspect,
