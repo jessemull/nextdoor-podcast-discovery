@@ -342,7 +342,10 @@ class PostExtractor:
                 logger.debug("First scroll found %d raw posts", len(raw_posts))
 
             # Recent/for_you/nearby: stop before adding if repeat_threshold consecutive already-seen at start
-            if self.feed_type in ("for_you", "nearby", "recent") and self.repeat_threshold > 0:
+            if (
+                self.feed_type in ("for_you", "nearby", "recent")
+                and self.repeat_threshold > 0
+            ):
                 consecutive_seen = self._count_consecutive_already_seen(raw_posts)
                 if consecutive_seen >= self.repeat_threshold:
                     logger.info(

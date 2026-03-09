@@ -514,7 +514,9 @@ def main(
             total_extracted = 0
             total_skipped = 0
             consecutive_duplicate_batches = 0
-            duplicate_batch_limit = SCRAPER_CONFIG["consecutive_duplicate_batches_before_stop"]
+            duplicate_batch_limit = SCRAPER_CONFIG[
+                "consecutive_duplicate_batches_before_stop"
+            ]
             run_stats: dict[str, int] = {
                 "comment_mismatches": 0,
             }
@@ -570,7 +572,10 @@ def main(
                 if stored >= max_posts:
                     logger.info("Target reached: %d new posts stored", stored)
                     break
-                if not dry_run and consecutive_duplicate_batches >= duplicate_batch_limit:
+                if (
+                    not dry_run
+                    and consecutive_duplicate_batches >= duplicate_batch_limit
+                ):
                     logger.info(
                         "Stopping after %d consecutive batches with no new posts (all duplicates)",
                         duplicate_batch_limit,
