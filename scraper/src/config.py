@@ -89,6 +89,7 @@ class Selectors(TypedDict):
     captcha_indicators: list[str]
     email_input: str
     error_indicators: list[str]
+    feed_tab_nearby: str
     feed_tab_recent: str
     feed_tab_trending: str
     login_button: str
@@ -126,6 +127,7 @@ NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
 
 FEED_URLS = {
     "for_you": "https://nextdoor.com/news_feed/",
+    "nearby": "https://nextdoor.com/news_feed/?ordering=nearby",
     "recent": "https://nextdoor.com/news_feed/?ordering=recent",
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
@@ -147,7 +149,8 @@ SELECTORS: Selectors = {
         "[class*='alert']",
         "[role='alert']",
     ],
-    # Feed tabs (mobile: role=radio for Recent/Trending chips; also used after Filter by)
+    # Feed tabs (mobile: role=radio for Recent/Trending/Nearby chips; also used after Filter by)
+    "feed_tab_nearby": 'role=radio[name="Nearby"]',
     "feed_tab_recent": 'role=radio[name="Recent"]',
     "feed_tab_trending": 'role=radio[name="Trending"]',
     "login_button": 'role=button[name="Log in"]',

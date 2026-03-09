@@ -3299,7 +3299,7 @@ CREATE TABLE scraper_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status TEXT NOT NULL CHECK (status IN ('completed', 'error')),
-    feed_type TEXT NOT NULL CHECK (feed_type IN ('for_you', 'recent', 'trending')),
+    feed_type TEXT NOT NULL CHECK (feed_type IN ('for_you', 'nearby', 'recent', 'trending')),
     error_message TEXT
 );
 

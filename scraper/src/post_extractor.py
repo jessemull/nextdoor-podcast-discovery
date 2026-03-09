@@ -288,7 +288,7 @@ class PostExtractor:
 
         Args:
             page: Playwright page object.
-            feed_type: "for_you", "recent", or "trending"; affects stop logic and max scrolls.
+            feed_type: "for_you", "nearby", "recent", or "trending"; affects stop logic and max scrolls.
             max_posts: Maximum number of posts to extract.
             repeat_threshold: For Recent feed only: stop when this many consecutive
                 already-seen posts appear from the start of a batch.
@@ -332,7 +332,7 @@ class PostExtractor:
             SCRAPER_CONFIG["max_scroll_attempts_trending"]
             if self.feed_type == "trending"
             else self.MAX_SCROLL_ATTEMPTS
-        )  # for_you and recent use MAX_SCROLL_ATTEMPTS
+        )  # for_you, nearby, recent use MAX_SCROLL_ATTEMPTS
         while len(posts) < self.max_posts and scroll_attempts < max_scrolls:
             # Extract visible posts using JavaScript
 
@@ -341,8 +341,8 @@ class PostExtractor:
             if scroll_attempts == 0:
                 logger.debug("First scroll found %d raw posts", len(raw_posts))
 
-            # Recent/for_you: stop before adding if repeat_threshold consecutive already-seen at start
-            if self.feed_type in ("for_you", "recent") and self.repeat_threshold > 0:
+            # Recent/for_you/nearby: stop before adding if repeat_threshold consecutive already-seen at start
+            if self.feed_type in ("for_you", "nearby", "recent") and self.repeat_threshold > 0:
                 consecutive_seen = self._count_consecutive_already_seen(raw_posts)
                 if consecutive_seen >= self.repeat_threshold:
                     logger.info(
@@ -363,9 +363,9 @@ class PostExtractor:
                 self.max_posts,
             )
 
-            # Recent/for_you: stop only when many already-seen at top and no new posts this round
+            # Recent/for_you/nearby: stop only when many already-seen at top and no new posts this round
             if (
-                self.feed_type in ("for_you", "recent")
+                self.feed_type in ("for_you", "nearby", "recent")
                 and self.repeat_threshold > 0
                 and new_count == 0
             ):
@@ -956,7 +956,7 @@ class PostExtractor:
         min_delay, max_delay = SCRAPER_CONFIG["scroll_delay_ms"]
 
         self._log_scroll_position("_scroll_down BEFORE scroll")
-        if self.feed_type in ("for_you", "recent"):
+        if self.feed_type in ("for_you", "nearby", "recent"):
             # Incremental scroll to reduce virtualized-list re-render jumps
             step_px = self.page.evaluate("() => window.innerHeight") or 800
             for _ in range(4):
@@ -978,8 +978,8 @@ class PostExtractor:
         except PlaywrightTimeoutError:
             logger.debug("Network didn't settle after scroll, continuing anyway")
 
-        # Wait for DOM to grow (new posts) on for_you/recent feed, up to 4s
-        if self.feed_type in ("for_you", "recent"):
+        # Wait for DOM to grow (new posts) on for_you/nearby/recent feed, up to 4s
+        if self.feed_type in ("for_you", "nearby", "recent"):
             prev_height = (
                 self.page.evaluate("() => document.documentElement.scrollHeight") or 0
             )
