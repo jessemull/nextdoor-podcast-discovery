@@ -10,7 +10,7 @@ This document covers deployment of the web application (Vercel) and the scraper/
 | Web (Production) | Merge `main` into `release`, push; Vercel deploys from Git | [ENVIRONMENTS.md](ENVIRONMENTS.md#web--production) |
 | Scraper / worker (Production) | SSH + `git pull` or deploy script from local machine | This document |
 
-The production server runs the scraper and worker only. Its `scraper/.env` must contain production credentials only. Do not configure development Supabase or development-only URLs on that host.
+The production server runs the scraper and two workers. Its `scraper/.env` must contain production credentials only. Do not configure development Supabase or development-only URLs on that host.
 
 ---
 
@@ -39,7 +39,16 @@ Run the one-time setup script on the host. The script installs system dependenci
 **Post-setup:**
 
 1. Edit `scraper/.env` on the host with production values only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `NEXTDOOR_EMAIL`, `NEXTDOOR_PASSWORD`, `SESSION_ENCRYPTION_KEY` (generate via `make gen-key` from repo root), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. When the worker will call the Production app’s cache-invalidate endpoint, set `APP_URL` (Production origin) and `INTERNAL_API_SECRET` (must match Vercel Production). See [HOST_ENV_CHECKLIST.md](HOST_ENV_CHECKLIST.md). Then run `./scripts/verify-host-env.sh` from the repo root to validate and test Supabase.
-2. Start the worker so that “Save & Recompute” and “Activate” in the Production UI complete: run `sudo ./scripts/install-worker-service.sh` from the host repo root. That script installs the systemd unit, enables it (start on boot), and starts it now. For power, cron, and monitoring on a laptop host, see [HOST_POWER_AND_MONITORING.md](HOST_POWER_AND_MONITORING.md).
+2. Start the workers so that "Save & Recompute", "Activate", and the permalink queue (UI "refresh" / "add permalink") work: run `sudo ./scripts/install-worker-service.sh` from the host repo root. That script installs both systemd units, enables them (start on boot), and starts them now. For power, cron, and monitoring on a laptop host, see [HOST_POWER_AND_MONITORING.md](HOST_POWER_AND_MONITORING.md).
+
+### Workers
+
+| Unit | Job type | Purpose |
+|------|----------|---------|
+| **nextdoor-worker** | `recompute_final_scores` | Save & Recompute, Activate in UI. Long-running; no browser. |
+| **nextdoor-permalink-worker** | `fetch_permalink` | Permalink queue from UI (refresh post, add permalink). Uses browser. |
+
+Cron runs `run-scrape.sh` for feed scrapes (for_you, recent, nearby, trending) in separate processes; it does not use the workers. A cron scrape and a permalink job can run at the same time (two browser processes). Session contention is possible but rare; failed permalink runs can be retried from the UI.
 
 ---
 

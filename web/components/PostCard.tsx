@@ -606,7 +606,7 @@ export const PostCard = memo(function PostCard({
                   alt="Post"
                   className="object-cover"
                   fill
-                  sizes="(max-width: 768px) 100vw, 672px"
+                  sizes="(max-width: 768px) 100%, 672px"
                   src={mainImageUrl}
                 />
               </div>

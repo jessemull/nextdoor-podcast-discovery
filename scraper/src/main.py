@@ -781,6 +781,12 @@ if __name__ == "__main__":
         help="Skip LLM scoring (default is to score unscored posts after scraping)",
     )
     parser.add_argument(
+        "--score",
+        action="store_true",
+        dest="score_flag",
+        help="Run LLM scoring after scrape (default; used by run-scrape.sh)",
+    )
+    parser.add_argument(
         "--score-only",
         action="store_true",
         dest="score_only",

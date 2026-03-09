@@ -81,7 +81,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 ### Worker
 
 - **Role** — Polls Supabase for `recompute_final_scores` jobs; processes one at a time; writes `post_scores` for that weight config; cancel/retry and progress updates.
-- **Run** — Same machine as scraper (or any with Supabase access): `python -m src.worker --job-type recompute_final_scores` or `--once`.
+- **Run** — Same machine as scraper (or any with Supabase access): `python -m src.worker --job-type recompute_final_scores` or `fetch_permalink`, or `--once`.
 
 ## Technologies used
 
@@ -114,7 +114,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Embedder** (`src.embed`) — Reads `posts` and `llm_scores`; writes `post_embeddings`. No browser.
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
 - **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Auth0 session; access is controlled solely by Auth0 (no server-side email whitelist).
-- **Vercel** — Hosts Next.js only. Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- **Vercel** — Hosts Next.js only. Scraper and two workers (recompute + permalink) run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Repository structure
 
@@ -164,7 +164,7 @@ nextdoor/
 | `scripts/bootstrap-host.sh` | Prompts to run setup-server.sh with sudo (uses git remote as GIT_REPO). Use on the host laptop to create the `nextdoor` user and clone. |
 | `scripts/deploy-to-server.sh` | Deploy scraper changes: SSH to server and run `git pull` (optional: run scrape). Set `DEPLOY_HOST` (e.g. `nextdoor@scraper-server`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
-| `scripts/install-worker-service.sh` | Install systemd unit for the worker (enable + start). Run with sudo from host repo root after setup-server.sh and editing scraper/.env. |
+| `scripts/install-worker-service.sh` | Install both systemd units (recompute + permalink workers), enable and start. Run with sudo from host repo root after setup-server.sh and editing scraper/.env. |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
 | `scripts/run-scrape.sh` | Scrape one feed (`for_you`, `nearby`, `recent`, or `trending`) with score and embed (default), then `recount_topics`. Production cron runs each feed once per day (250 max per run). Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
 | `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
@@ -268,7 +268,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in with Auth0.
 
-6. **Worker (optional)** — With scraper env loaded: `cd scraper && python -m src.worker --job-type recompute_final_scores` (or `--once`).
+6. **Workers (optional)** — With scraper env loaded: `cd scraper && python -m src.worker --job-type recompute_final_scores` or `fetch_permalink` (or `--once`). On the server, `sudo ./scripts/install-worker-service.sh` starts both.
 
 ## Database
 
@@ -290,7 +290,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 **Embeddings:** `python -m src.embed` (no browser) reads posts with scores but no embedding, batches to OpenAI, and writes `post_embeddings`.
 
-**Worker:** `python -m src.worker` polls `background_jobs` and processes `recompute_final_scores` jobs (writes `post_scores` for a weight config).
+**Workers:** Two systemd units (or run manually): `nextdoor-worker` processes `recompute_final_scores` jobs (writes `post_scores` for a weight config); `nextdoor-permalink-worker` processes `fetch_permalink` jobs (UI permalink queue). `python -m src.worker` polls `background_jobs` by job type.
 
 **Logging:** By default logs go to stdout. On the server, set `SCRAPER_LOG_DIR=~/nextdoor-logs` (or `SCRAPER_LOG_FILE=/path/to/scraper.log`) in `scraper/.env` to also write rotating logs (5 MB per file, 3 backups). To inspect when something goes wrong: SSH to the server and run `tail -n 500 ~/nextdoor-logs/scraper.log` or `grep -i error ~/nextdoor-logs/scraper.log`, or use `scripts/tail-logs.sh`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -310,11 +310,13 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 ## Worker (background jobs)
 
-Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Recompute” (new config) or “Activate” (switch to a config). Each job has a `weight_config_id`; the worker recomputes final scores (weights + novelty) for all posts and writes `post_scores`. **Activate** uses compute-then-cutover: the config becomes active only after the job completes. Jobs created from Activate include `activate_on_completion: true`; when the job finishes, the worker sets that config as active and optionally pings the app to invalidate the active-config cache.
+**Recompute worker** processes `recompute_final_scores` jobs. Created when a user clicks “Save & Recompute” (new config) or “Activate” (switch to a config). Each job has a `weight_config_id`; the worker recomputes final scores (weights + novelty) for all posts and writes `post_scores`. **Activate** uses compute-then-cutover: the config becomes active only after the job completes. Jobs created from Activate include `activate_on_completion: true`; when the job finishes, the worker sets that config as active and optionally pings the app to invalidate the active-config cache.
 
-**Run:** `python -m src.worker --job-type recompute_final_scores` (continuous) or `--once`. Same env as scraper (Supabase only). Jobs support cancel and retry; the worker processes one job at a time.
+**Permalink worker** processes `fetch_permalink` jobs (UI "refresh post" / "add permalink"). Runs the scraper in permalink mode to fetch or update a single post.
 
-**Optional (worker):** `APP_URL` (e.g. `https://yourapp.vercel.app`) and `INTERNAL_API_SECRET` — when set, the worker POSTs to `APP_URL/api/admin/invalidate-active-config` after an activate cutover so the app sees the new active config immediately; otherwise the cache refreshes within its TTL.
+**Run:** `python -m src.worker --job-type recompute_final_scores` or `fetch_permalink` (continuous) or `--once`. Same env as scraper (Supabase only). On the server, `sudo ./scripts/install-worker-service.sh` installs and starts both units. Jobs support cancel and retry; each worker processes one job at a time.
+
+**Optional (workers):** `APP_URL` (e.g. `https://yourapp.vercel.app`) and `INTERNAL_API_SECRET` — when set, the worker POSTs to `APP_URL/api/admin/invalidate-active-config` after an activate cutover so the app sees the new active config immediately; otherwise the cache refreshes within its TTL.
 
 ## Testing & linting
 
@@ -337,7 +339,7 @@ Processes `recompute_final_scores` jobs. Created when a user clicks “Save & Re
 
 **Environments:** Dev (Preview + dev Supabase, local scraper) and production (Vercel Production + prod Supabase, server scraper/worker). [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) has the full variable matrix, Auth0/Redis notes, and deploy steps.
 
-Scraper and worker run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Scraper and two workers run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Cost
 
@@ -376,6 +378,6 @@ More posts → more tokens; stay within Supabase 500MB (roughly tens of thousand
 | **docs/DEPLOYMENT.md** | Server setup, deploy from local machine (SSH + git pull), and security. |
 | **docs/ENVIRONMENTS.md** | Dev vs prod; step-by-step deploy to each environment (web and scraper). |
 | **docs/HOST_ENV_CHECKLIST.md** | Production `scraper/.env` checklist and validation steps. |
-| **docs/HOST_POWER_AND_MONITORING.md** | Power/sleep, cron, systemd worker, Healthchecks, and logs on the host. |
+| **docs/HOST_POWER_AND_MONITORING.md** | Power/sleep, cron, systemd workers, Healthchecks, and logs on the host. |
 | **docs/SUPABASE_MIGRATIONS.md** | Run the same migrations in both dev and prod Supabase projects. |
 | **DOM.html** | Optional mobile feed DOM snapshot for debugging selectors. |
