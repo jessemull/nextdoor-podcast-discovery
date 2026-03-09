@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run scraper pipeline (scrape + score + recount) with Healthchecks.io monitoring.
 # Usage: ./scripts/run-scrape.sh [for_you|nearby|recent|trending]
+# Do NOT pass --score-only here; that skips scraping and only runs score/embed.
 # Set HEALTHCHECK_URL in scraper/.env (e.g. https://hc-ping.com/your-uuid)
 # If unset, skips healthcheck ping.
 
@@ -35,7 +36,8 @@ fi
 echo "$(date -Iseconds): Starting $FEED_TYPE scrape..."
 
 cd "$SCRAPER_DIR"
-if "$PYTHON" -m src.main --feed-type "$FEED_TYPE" --max-posts 250 --score; then
+# Full scrape (no --score-only): scrape feed, then score and embed
+if "$PYTHON" -m src.main --feed-type "$FEED_TYPE" --max-posts 250; then
   echo "$(date -Iseconds): Scrape successful, recounting topic frequencies..."
   if "$PYTHON" -m src.recount_topics; then
     echo "$(date -Iseconds): Recount complete."
