@@ -3,8 +3,8 @@
 # Optional: run a scrape after pulling.
 #
 # Set DEPLOY_HOST (e.g. nextdoor@scraper-server) in the environment.
-# Usage: ./scripts/deploy-to-server.sh [recent|trending]
-#   With no arg: only git pull. With recent|trending: pull then run that feed once.
+# Usage: ./scripts/deploy-to-server.sh [for_you|nearby|recent|trending]
+#   With no arg: only git pull. With a feed: pull then run that feed once.
 
 set -e
 

@@ -36,6 +36,8 @@ function DetailRow({
 }
 
 function feedLabel(feedType: string): string {
+  if (feedType === "for_you") return "For you";
+  if (feedType === "nearby") return "Nearby";
   if (feedType === "recent") return "Most Recent";
   if (feedType === "trending") return "Trending";
   return feedType;

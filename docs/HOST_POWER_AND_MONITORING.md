@@ -14,9 +14,11 @@ Use this after the production host (laptop or server) is set up so it runs relia
 
 ## Cron (scraper schedule)
 
-After `scripts/setup-server.sh`, the `nextdoor` user (or the user who ran the app phase) has cron entries for:
+After `scripts/setup-server.sh`, the `nextdoor` user (or the user who ran the app phase) has cron entries for one run per feed per day (max 250 posts per run):
 
-- `./scripts/run-scrape.sh recent` at 02:00
+- `./scripts/run-scrape.sh for_you` at 02:00
+- `./scripts/run-scrape.sh recent` at 06:00
+- `./scripts/run-scrape.sh nearby` at 10:00
 - `./scripts/run-scrape.sh trending` at 18:00
 
 To confirm:

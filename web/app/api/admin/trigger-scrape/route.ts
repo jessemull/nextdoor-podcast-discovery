@@ -9,7 +9,7 @@ import { triggerScrapeBodySchema } from "@/lib/validators";
  * POST /api/admin/trigger-scrape
  *
  * Creates a run_scraper background job so the worker runs the scraper.
- * Body: { feed_type: "recent" | "trending", scraper_run_id?: string }.
+ * Body: { feed_type: "for_you" | "nearby" | "recent" | "trending", scraper_run_id?: string }.
  * scraper_run_id ties the retry to a specific failed run (for UI "Queued" state).
  * Requires authentication.
  */
