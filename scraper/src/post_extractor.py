@@ -1,6 +1,6 @@
 """Post extraction from Nextdoor feed."""
 
-__all__ = ["PostExtractor", "RawComment", "RawPost"]
+__all__ = ["PostExtractor", "RawComment", "RawPost", "get_post_details_url"]
 
 import hashlib
 import logging
@@ -31,6 +31,20 @@ VIEW_MORE_BUTTON_PATTERN = re.compile(
     r"(view|see)\s+(\d+\s+)?more\s+(repl(y|ies)|comment(s)?)",
     re.IGNORECASE,
 )
+
+
+def get_post_details_url(post_url: str) -> str:
+    """Return the post URL with view=detail for loading the details view.
+
+    Use when navigating to a post permalink for extraction or comments so the
+    page matches the feed's comment-tab URL. Idempotent if view=detail present.
+    """
+    if not post_url or not post_url.strip():
+        return post_url or ""
+    u = post_url.strip()
+    if "view=detail" in u:
+        return u
+    return u + "&view=detail" if "?" in u else u + "?view=detail"
 
 
 @dataclass
@@ -274,7 +288,7 @@ class PostExtractor:
 
         Args:
             page: Playwright page object.
-            feed_type: "for_you", "recent", or "trending"; affects stop logic and max scrolls.
+            feed_type: "for_you", "nearby", "recent", or "trending"; affects stop logic and max scrolls.
             max_posts: Maximum number of posts to extract.
             repeat_threshold: For Recent feed only: stop when this many consecutive
                 already-seen posts appear from the start of a batch.
@@ -318,7 +332,7 @@ class PostExtractor:
             SCRAPER_CONFIG["max_scroll_attempts_trending"]
             if self.feed_type == "trending"
             else self.MAX_SCROLL_ATTEMPTS
-        )  # for_you and recent use MAX_SCROLL_ATTEMPTS
+        )  # for_you, nearby, recent use MAX_SCROLL_ATTEMPTS
         while len(posts) < self.max_posts and scroll_attempts < max_scrolls:
             # Extract visible posts using JavaScript
 
@@ -327,8 +341,11 @@ class PostExtractor:
             if scroll_attempts == 0:
                 logger.debug("First scroll found %d raw posts", len(raw_posts))
 
-            # Recent/for_you: stop before adding if repeat_threshold consecutive already-seen at start
-            if self.feed_type in ("for_you", "recent") and self.repeat_threshold > 0:
+            # Recent/for_you/nearby: stop before adding if repeat_threshold consecutive already-seen at start
+            if (
+                self.feed_type in ("for_you", "nearby", "recent")
+                and self.repeat_threshold > 0
+            ):
                 consecutive_seen = self._count_consecutive_already_seen(raw_posts)
                 if consecutive_seen >= self.repeat_threshold:
                     logger.info(
@@ -349,9 +366,9 @@ class PostExtractor:
                 self.max_posts,
             )
 
-            # Recent/for_you: stop only when many already-seen at top and no new posts this round
+            # Recent/for_you/nearby: stop only when many already-seen at top and no new posts this round
             if (
-                self.feed_type in ("for_you", "recent")
+                self.feed_type in ("for_you", "nearby", "recent")
                 and self.repeat_threshold > 0
                 and new_count == 0
             ):
@@ -472,7 +489,7 @@ class PostExtractor:
                 )
                 if stuck_count >= self.STUCK_THRESHOLD:
                     logger.info(
-                        "Repeat threshold reached (same first-visible post %d times), stopping",
+                        "Stuck detection threshold met. Same post re-processed %dx. We may have reached the end of the scrollable content.",
                         stuck_count,
                     )
                     return
@@ -572,7 +589,12 @@ class PostExtractor:
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
         )
-        if post.comment_count is not None and post.comment_count != len(post.comments):
+        # Only warn when we extracted comments in this call (caller may add them later)
+        if (
+            extract_comments
+            and post.comment_count is not None
+            and post.comment_count != len(post.comments)
+        ):
             if self.run_stats is not None:
                 self.run_stats["comment_mismatches"] = (
                     self.run_stats.get("comment_mismatches", 0) + 1
@@ -937,7 +959,7 @@ class PostExtractor:
         min_delay, max_delay = SCRAPER_CONFIG["scroll_delay_ms"]
 
         self._log_scroll_position("_scroll_down BEFORE scroll")
-        if self.feed_type in ("for_you", "recent"):
+        if self.feed_type in ("for_you", "nearby", "recent"):
             # Incremental scroll to reduce virtualized-list re-render jumps
             step_px = self.page.evaluate("() => window.innerHeight") or 800
             for _ in range(4):
@@ -959,8 +981,8 @@ class PostExtractor:
         except PlaywrightTimeoutError:
             logger.debug("Network didn't settle after scroll, continuing anyway")
 
-        # Wait for DOM to grow (new posts) on for_you/recent feed, up to 4s
-        if self.feed_type in ("for_you", "recent"):
+        # Wait for DOM to grow (new posts) on for_you/nearby/recent feed, up to 4s
+        if self.feed_type in ("for_you", "nearby", "recent"):
             prev_height = (
                 self.page.evaluate("() => document.documentElement.scrollHeight") or 0
             )
@@ -997,11 +1019,7 @@ class PostExtractor:
         """
         if not post_url or "/p/" not in post_url:
             return []
-        detail_url = (
-            post_url
-            if "view=detail" in post_url
-            else (post_url + "&view=detail" if "?" in post_url else post_url + "?view=detail")
-        )
+        detail_url = get_post_details_url(post_url)
         comments_load_wait_ms = 12000
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
         new_page = self.page.context.new_page()

@@ -70,6 +70,7 @@ class ViewportSize(TypedDict):
 class ScraperConfig(TypedDict):
     """Typed configuration for the scraper."""
 
+    consecutive_duplicate_batches_before_stop: int
     headless: bool
     login_timeout_ms: int
     max_posts_per_run: int
@@ -88,6 +89,7 @@ class Selectors(TypedDict):
     captcha_indicators: list[str]
     email_input: str
     error_indicators: list[str]
+    feed_tab_nearby: str
     feed_tab_recent: str
     feed_tab_trending: str
     login_button: str
@@ -100,12 +102,13 @@ class Selectors(TypedDict):
 # login uses role=textbox / role=button.
 
 SCRAPER_CONFIG: ScraperConfig = {
+    "consecutive_duplicate_batches_before_stop": 25,
     "headless": True,
     "login_timeout_ms": 15000,
     "max_posts_per_run": 250,
     "max_scroll_attempts_trending": 50,
     "navigation_timeout_ms": 10000,
-    "repeat_threshold_recent": 10,
+    "repeat_threshold_recent": 25,
     "scroll_delay_ms": (2000, 5000),
     "typing_delay_ms": (50, 150),
     "user_agent": (
@@ -124,6 +127,7 @@ NEWS_FEED_URL = "https://nextdoor.com/news_feed/"
 
 FEED_URLS = {
     "for_you": "https://nextdoor.com/news_feed/",
+    "nearby": "https://nextdoor.com/news_feed/?ordering=nearby",
     "recent": "https://nextdoor.com/news_feed/?ordering=recent",
     "trending": "https://nextdoor.com/news_feed/?ordering=trending",
 }
@@ -145,7 +149,8 @@ SELECTORS: Selectors = {
         "[class*='alert']",
         "[role='alert']",
     ],
-    # Feed tabs (mobile: role=radio for Recent/Trending chips; also used after Filter by)
+    # Feed tabs (mobile: role=radio for Recent/Trending/Nearby chips; also used after Filter by)
+    "feed_tab_nearby": 'role=radio[name="Nearby"]',
     "feed_tab_recent": 'role=radio[name="Recent"]',
     "feed_tab_trending": 'role=radio[name="Trending"]',
     "login_button": 'role=button[name="Log in"]',

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cn, formatRelativeTime, POST_PREVIEW_LENGTH, truncate } from "@/lib/utils";
 
@@ -42,36 +42,42 @@ describe("truncate", () => {
 });
 
 describe("formatRelativeTime", () => {
+  const FIXED_NOW = new Date("2025-02-22T12:00:00.000Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("should return 'Unknown' for null", () => {
     expect(formatRelativeTime(null)).toBe("Unknown");
   });
 
   it("should return 'Today' for same day", () => {
-    const now = new Date();
-    expect(formatRelativeTime(now.toISOString())).toBe("Today");
+    expect(formatRelativeTime(FIXED_NOW.toISOString())).toBe("Today");
   });
 
   it("should return 'Yesterday' for previous day", () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterday = new Date("2025-02-21T12:00:00.000Z");
     expect(formatRelativeTime(yesterday.toISOString())).toBe("Yesterday");
   });
 
   it("should return days ago for recent dates", () => {
-    const fiveDaysAgo = new Date();
-    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    const fiveDaysAgo = new Date("2025-02-17T12:00:00.000Z");
     expect(formatRelativeTime(fiveDaysAgo.toISOString())).toBe("5 days ago");
   });
 
   it("should return weeks ago for older dates", () => {
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const twoWeeksAgo = new Date("2025-02-08T12:00:00.000Z");
     expect(formatRelativeTime(twoWeeksAgo.toISOString())).toBe("2 weeks ago");
   });
 
   it("should handle future dates", () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = new Date("2025-02-23T12:00:00.000Z");
     expect(formatRelativeTime(tomorrow.toISOString())).toBe("Tomorrow");
   });
 });

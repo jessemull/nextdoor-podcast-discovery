@@ -180,7 +180,9 @@ export type BackfillDimensionBody = z.infer<typeof backfillDimensionBodySchema>;
 
 /** POST /api/admin/trigger-scrape body */
 export const triggerScrapeBodySchema = z.object({
-  feed_type: z.enum(["recent", "trending"]).default("recent"),
+  feed_type: z
+    .enum(["for_you", "nearby", "recent", "trending"])
+    .default("recent"),
   scraper_run_id: z
     .string()
     .trim()

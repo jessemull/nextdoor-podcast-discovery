@@ -53,7 +53,7 @@ After pushing changes to the remote repository, update the production host so th
 DEPLOY_HOST=<user>@<host> ./scripts/deploy-to-server.sh
 ```
 
-Pass `FEED=recent` or `FEED=trending` to run a scrape after pulling (e.g. `DEPLOY_HOST=... FEED=recent ./scripts/deploy-to-server.sh`).
+Pass a feed to run a scrape after pulling: `FEED=for_you`, `FEED=nearby`, `FEED=recent`, or `FEED=trending` (e.g. `DEPLOY_HOST=... FEED=recent ./scripts/deploy-to-server.sh`).
 
 **Option B — Makefile:**
 

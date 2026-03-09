@@ -166,7 +166,7 @@ nextdoor/
 | `scripts/generate-encryption-key.py` | Prints a Fernet key for `SESSION_ENCRYPTION_KEY`. |
 | `scripts/install-worker-service.sh` | Install systemd unit for the worker (enable + start). Run with sudo from host repo root after setup-server.sh and editing scraper/.env. |
 | `scripts/run-embeddings.sh` | Runs `python -m src.embed`. Optional: set `HEALTHCHECK_EMBED_URL` or `HEALTHCHECK_URL` in `scraper/.env` to ping an external monitor on success/fail. |
-| `scripts/run-scrape.sh` | Scrape `recent` or `trending` with score and embed (default), then `recount_topics`. Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
+| `scripts/run-scrape.sh` | Scrape one feed (`for_you`, `nearby`, `recent`, or `trending`) with score and embed (default), then `recount_topics`. Production cron runs each feed once per day (250 max per run). Needs repo `.venv` and `scraper/.env`. Optional: `HEALTHCHECK_URL` to ping external monitor. |
 | `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
@@ -282,7 +282,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 ## Scraper (Python)
 
-**Entry:** `python -m src.main` with optional args: `--feed-type recent|trending`, `--max-posts N`, `--dry-run`, `--visible`, `--inspect`. Scoring and embedding run by default; use `--no-score` or `--no-embed` to skip.
+**Entry:** `python -m src.main` with optional args: `--feed-type for_you|nearby|recent|trending`, `--max-posts N`, `--dry-run`, `--visible`, `--inspect`. Scoring and embedding run by default; use `--no-score` or `--no-embed` to skip.
 
 **Flow:** Load or create session (cookies) → navigate to feed → (mobile feed selection) → scroll and extract posts → upsert to `posts` → optionally run scoring and/or embed.
 

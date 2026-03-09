@@ -175,7 +175,7 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
     job_id = job["id"]
     params = job.get("params", {}) or {}
     feed_type = params.get("feed_type") or "recent"
-    if feed_type not in ("recent", "trending"):
+    if feed_type not in ("for_you", "nearby", "recent", "trending"):
         feed_type = "recent"
 
     logger.info(

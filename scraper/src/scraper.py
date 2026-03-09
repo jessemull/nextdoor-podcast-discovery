@@ -295,6 +295,7 @@ class NextdoorScraper:
     def _wait_for_feed_tab_or_continue(self, feed_type: str, timeout: int) -> None:
         """Wait for feed tab if present; otherwise no-op."""
         tab_selectors = {
+            "nearby": SELECTORS["feed_tab_nearby"],
             "recent": SELECTORS["feed_tab_recent"],
             "trending": SELECTORS["feed_tab_trending"],
         }

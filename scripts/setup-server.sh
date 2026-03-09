@@ -152,10 +152,12 @@ if ! crontab -l 2>/dev/null | grep -q "$CRON_MARKER"; then
   (
     crontab -l 2>/dev/null || true
     echo "# $CRON_MARKER"
-    echo "0 2 * * * cd $REPO_DIR && . .venv/bin/activate && ./scripts/run-scrape.sh recent >> $LOG_DIR/cron.log 2>&1"
+    echo "0 2 * * * cd $REPO_DIR && . .venv/bin/activate && ./scripts/run-scrape.sh for_you >> $LOG_DIR/cron.log 2>&1"
+    echo "0 6 * * * cd $REPO_DIR && . .venv/bin/activate && ./scripts/run-scrape.sh recent >> $LOG_DIR/cron.log 2>&1"
+    echo "0 10 * * * cd $REPO_DIR && . .venv/bin/activate && ./scripts/run-scrape.sh nearby >> $LOG_DIR/cron.log 2>&1"
     echo "0 18 * * * cd $REPO_DIR && . .venv/bin/activate && ./scripts/run-scrape.sh trending >> $LOG_DIR/cron.log 2>&1"
   ) | crontab -
-  echo "Added cron entries for run-scrape.sh (recent and trending)."
+  echo "Added cron entries for run-scrape.sh (for_you, recent, nearby, trending)."
 else
   echo "Cron entries already present; skipping."
 fi

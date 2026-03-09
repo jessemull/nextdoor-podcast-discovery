@@ -202,7 +202,11 @@ export default function JobsPage() {
       try {
         const res = await fetch("/api/admin/trigger-scrape", {
           body: JSON.stringify({
-            feed_type: run.feed_type === "trending" ? "trending" : "recent",
+            feed_type: ["for_you", "nearby", "recent", "trending"].includes(
+              run.feed_type
+            )
+              ? run.feed_type
+              : "recent",
             scraper_run_id: run.id,
           }),
           headers: { "Content-Type": "application/json" },
