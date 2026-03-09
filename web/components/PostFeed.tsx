@@ -1056,11 +1056,11 @@ export function PostFeed({
 
         <div
           aria-label="Feed posts"
-          className="min-h-0 flex-1 overflow-y-auto pt-4 pb-6 sm:pb-8"
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-4 pb-6 sm:pb-8"
           role="region"
           style={{ scrollbarGutter: "stable" }}
         >
-        <div className="px-6 sm:px-8">
+        <div className="min-w-0 px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
           <div className="space-y-6">
             {searchSlot.loading && searchSlot.query.trim() ? null : searchSlot.searchError && (
