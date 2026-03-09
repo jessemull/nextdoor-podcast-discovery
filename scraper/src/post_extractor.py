@@ -486,7 +486,7 @@ class PostExtractor:
                 )
                 if stuck_count >= self.STUCK_THRESHOLD:
                     logger.info(
-                        "Repeat threshold reached (same first-visible post %d times), stopping",
+                        "Stuck detection threshold met. Same post re-processed %dx. We may have reached the end of the scrollable content.",
                         stuck_count,
                     )
                     return
