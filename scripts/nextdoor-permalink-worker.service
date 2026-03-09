@@ -1,0 +1,25 @@
+# systemd unit for the Nextdoor permalink / scraper job worker.
+#
+# Processes fetch_permalink jobs (UI "queue refresh" / "add permalink").
+# Install with: sudo ./scripts/install-worker-service.sh (installs both workers).
+#
+# Check status: sudo systemctl status nextdoor-permalink-worker
+# Logs: journalctl -u nextdoor-permalink-worker -f
+
+[Unit]
+Description=Nextdoor permalink / scraper job worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nextdoor
+Group=nextdoor
+WorkingDirectory=/home/nextdoor/nextdoor/scraper
+EnvironmentFile=/home/nextdoor/nextdoor/scraper/.env
+ExecStart=/home/nextdoor/nextdoor/.venv/bin/python -m src.worker --job-type fetch_permalink
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

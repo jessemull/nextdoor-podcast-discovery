@@ -98,7 +98,7 @@ Run the scraper or worker locally. Use a `scraper/.env` that references the dev 
 
 ### Scraper and worker — Production
 
-The production host runs the scraper and worker with a `scraper/.env` that references only the prod Supabase project. To ship code changes: run `DEPLOY_HOST=<user>@<host> ./scripts/deploy-to-server.sh` from the repo root, or SSH to the host and run `git pull`. See [DEPLOYMENT.md](DEPLOYMENT.md) for host setup.
+The production host runs the scraper and two workers (recompute + permalink) with a `scraper/.env` that references only the prod Supabase project. To ship code changes: run `DEPLOY_HOST=<user>@<host> ./scripts/deploy-to-server.sh` from the repo root, or SSH to the host and run `git pull`. See [DEPLOYMENT.md](DEPLOYMENT.md) for host setup.
 
 ---
 
@@ -106,7 +106,7 @@ The production host runs the scraper and worker with a `scraper/.env` that refer
 
 - **Preview vs Production:** Create a test resource (e.g. post or weight config) in the Preview UI. Confirm it does not appear in the Production UI (distinct Supabase projects).
 - **Redis:** Using a shared Redis instance, perform an action in Preview that updates cached state. Confirm Production cached state is unchanged (key namespacing).
-- **Worker:** Enqueue a job from the Production UI. Confirm only the worker on the production host (prod Supabase) processes it.
+- **Workers:** Enqueue a job from the Production UI (recompute or permalink). Confirm only the workers on the production host (prod Supabase) process it.
 
 ---
 
@@ -121,7 +121,7 @@ Execute in order. Dependencies are implied by the sequence.
 5. **Vercel — Preview:** In Settings → Environment Variables, configure for Preview: dev Supabase (all four vars), Auth0 (domain, client ID, client secret), Preview `AUTH0_SECRET`, `APP_BASE_URL` (Preview origin), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
 6. **Vercel — Production:** Configure for Production: prod Supabase (all four vars), same Auth0 app vars, Production `AUTH0_SECRET`, `APP_BASE_URL` (Production origin), API keys, Redis vars. Add `INTERNAL_API_SECRET` when the production worker will call the cache-invalidate endpoint.
 7. **Local development:** Create `web/.env.local` and `scraper/.env` from the corresponding `.env.example` files. Populate with dev Supabase and dev credentials. Apply migrations to the dev project as needed.
-8. **Production server:** Run `scripts/setup-server.sh` on the host (see [DEPLOYMENT.md](DEPLOYMENT.md)). Edit `scraper/.env` with production credentials. Start the worker (e.g. systemd or long-lived process).
+8. **Production server:** Run `scripts/setup-server.sh` on the host (see [DEPLOYMENT.md](DEPLOYMENT.md)). Edit `scraper/.env` with production credentials. Start the workers with `sudo ./scripts/install-worker-service.sh` (recompute + permalink).
 
 ---
 

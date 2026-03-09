@@ -13,8 +13,8 @@
 #   As target user (app only): REPO_DIR=~/nextdoor ./scripts/setup-server.sh
 #     If REPO_DIR does not exist, set GIT_REPO and the script will clone.
 #
-# After running: edit scraper/.env with production credentials. Start the worker
-# (e.g. systemd or process manager). See docs/DEPLOYMENT.md.
+# After running: edit scraper/.env with production credentials. Start the workers
+# with: sudo ./scripts/install-worker-service.sh (recompute + permalink). See docs/DEPLOYMENT.md.
 
 set -e
 
@@ -165,5 +165,5 @@ fi
 echo ""
 echo "Setup complete. Next steps:"
 echo "  1. Edit scraper/.env with production Supabase URL and service key, API keys, and (if used) APP_URL and INTERNAL_API_SECRET."
-echo "  2. Start the worker (e.g. systemd or: python -m src.worker --job-type recompute_final_scores)."
+echo "  2. Start the workers: sudo ./scripts/install-worker-service.sh (recompute + permalink workers)."
 echo "See docs/DEPLOYMENT.md."

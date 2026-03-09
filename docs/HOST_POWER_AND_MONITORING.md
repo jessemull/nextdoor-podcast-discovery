@@ -4,7 +4,7 @@ Use this after the production host (laptop or server) is set up so it runs relia
 
 ## Power and sleep (laptop)
 
-- **Disable suspend on AC**: So cron and the worker keep running when the lid is closed or the machine is idle.
+- **Disable suspend on AC**: So cron and the workers keep running when the lid is closed or the machine is idle.
   - On Ubuntu/Debian (GNOME): Settings → Power → set "When plugged in" / "When on AC power" to **Never** for suspend, or use:
     ```bash
     gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
@@ -29,14 +29,20 @@ crontab -l
 
 Cron output is appended to `$LOG_DIR/cron.log` (e.g. `/home/nextdoor/nextdoor-logs/cron.log`). Check that file if a scheduled scrape does not run.
 
-## Worker (systemd)
+## Workers (systemd)
 
-If you installed the worker as a systemd unit:
+If you installed the workers with `scripts/install-worker-service.sh`, two units run:
+
+- **nextdoor-worker** — recompute_final_scores (Save & Recompute, Activate in UI)
+- **nextdoor-permalink-worker** — fetch_permalink (permalink queue from UI)
 
 ```bash
-sudo systemctl status nextdoor-worker
-sudo systemctl enable nextdoor-worker   # start on boot
-journalctl -u nextdoor-worker -f        # follow logs
+sudo systemctl status nextdoor-worker             # recompute worker
+sudo systemctl status nextdoor-permalink-worker   # permalink worker
+sudo systemctl enable nextdoor-worker            # start on boot
+sudo systemctl enable nextdoor-permalink-worker
+journalctl -u nextdoor-worker -f                 # recompute logs
+journalctl -u nextdoor-permalink-worker -f       # permalink logs
 ```
 
 ## Healthchecks
@@ -47,6 +53,6 @@ If `HEALTHCHECK_URL` (and optionally `HEALTHCHECK_EMBED_URL`) are set in `scrape
 
 - Scraper: `$SCRAPER_LOG_DIR/scraper.log` (rotating; see `scraper/src/logging_config.py`).
 - Cron: `$LOG_DIR/cron.log`.
-- Worker: `journalctl -u nextdoor-worker` or the unit’s log output.
+- Workers: `journalctl -u nextdoor-worker` or `journalctl -u nextdoor-permalink-worker` (or each unit’s log output).
 
 From another machine you can tail scraper logs via SSH: `DEPLOY_HOST=nextdoor@<host> ./scripts/tail-logs.sh` (see [DEPLOYMENT.md](DEPLOYMENT.md)).
