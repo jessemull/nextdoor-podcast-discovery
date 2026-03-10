@@ -10,6 +10,7 @@ function LoginContent() {
   const { isLoading, user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const diagCookie = searchParams.get("_diag_cookie");
   const reason = searchParams.get("reason");
 
   useEffect(() => {
@@ -84,6 +85,12 @@ function LoginContent() {
             Reset session
           </a>
         </p>
+
+        {diagCookie !== null && (
+          <p className="mt-4 text-center text-xs text-gray-400" role="status">
+            Debug: session cookie was {diagCookie === "1" ? "sent" : "not sent"} when redirected here.
+          </p>
+        )}
       </div>
     </div>
   );

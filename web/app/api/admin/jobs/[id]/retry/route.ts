@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
@@ -20,7 +20,7 @@ export async function POST(
   _request: NextRequest,
   { params }: RetryRouteParams
 ) {
-  const session = await auth0.getSession();
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

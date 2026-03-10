@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { settingsPutBodySchema } from "@/lib/validators";
@@ -15,8 +15,8 @@ import { settingsPutBodySchema } from "@/lib/validators";
  * Note: ranking_weights now comes from the active weight_config, not the legacy
  * settings.ranking_weights. This ensures consistency with the versioning system.
  */
-export async function GET() {
-  const session = await auth0.getSession();
+export async function GET(request: NextRequest) {
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -115,7 +115,7 @@ export async function GET() {
  * - search_defaults?: Record<string, unknown>
  */
 export async function PUT(request: NextRequest) {
-  const session = await auth0.getSession();
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
