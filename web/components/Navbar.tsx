@@ -125,7 +125,7 @@ export function Navbar() {
                 >
                   <Link
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                    href="/auth/logout"
+                    href="/auth/logout?returnTo=/login"
                     role="menuitem"
                     onClick={closeUserMenu}
                   >
@@ -222,7 +222,7 @@ export function Navbar() {
               {user && !isLoading && (
                 <Link
                   className="focus:bg-surface-hover flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  href="/auth/logout"
+                  href="/auth/logout?returnTo=/login"
                   onClick={closeMobileMenu}
                 >
                   <LogOut aria-hidden className="h-5 w-5" />

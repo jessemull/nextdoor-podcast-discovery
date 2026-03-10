@@ -48,6 +48,15 @@ function LoginContent() {
           </p>
         )}
 
+        {reason === "auth_error" && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p className="font-medium">Something went wrong with the login session.</p>
+            <p className="mt-1">
+              Use the link below to reset your session, then try signing in again.
+            </p>
+          </div>
+        )}
+
         <a
           aria-label="Sign in with Auth0"
           className={cn(
@@ -62,8 +71,18 @@ function LoginContent() {
           Sign in with Auth0
         </a>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="mt-6 text-center text-sm text-gray-500">
           Access is restricted to authorized users only.
+        </p>
+
+        <p className="mt-4 text-center text-sm text-gray-500">
+          Having trouble?{" "}
+          <a
+            className="font-medium text-gray-700 underline hover:text-gray-900"
+            href="/auth/logout?returnTo=/login"
+          >
+            Reset session
+          </a>
         </p>
       </div>
     </div>
