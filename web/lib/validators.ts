@@ -285,6 +285,10 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(0),
   order: z.enum(["asc", "desc"]).optional().default("desc"),
+  post_type: z
+    .enum(["classified", "standard"])
+    .optional()
+    .default("standard"),
   preview: z
     .string()
     .optional()

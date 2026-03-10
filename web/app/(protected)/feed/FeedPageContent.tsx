@@ -20,7 +20,12 @@ interface SettingsResponse {
   };
 }
 
-export function FeedPageContent() {
+export function FeedPageContent({
+  postType = "standard",
+}: {
+  postType?: "classified" | "standard";
+} = {}) {
+  const basePath = postType === "classified" ? "/classifieds" : "/feed";
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -138,11 +143,11 @@ export function FeedPageContent() {
         params.set("threshold", updates.threshold.toFixed(1));
       }
       const queryString = params.toString();
-      router.replace(`/feed${queryString ? `?${queryString}` : ""}`, {
+      router.replace(`${basePath}${queryString ? `?${queryString}` : ""}`, {
         scroll: false,
       });
     },
-    [router, searchParams]
+    [basePath, router, searchParams]
   );
 
   const handleQueryChange = useCallback((value: string) => {
@@ -183,7 +188,7 @@ export function FeedPageContent() {
   return (
     <main className="flex h-full flex-col overflow-hidden pt-0">
       <section
-        aria-label="Feed"
+        aria-label={postType === "classified" ? "Classifieds feed" : "Feed"}
         className="flex min-h-0 flex-1 flex-col min-w-0"
       >
         <PostFeed
@@ -191,6 +196,7 @@ export function FeedPageContent() {
             categoryIdsFromUrl.length > 0 ? categoryIdsFromUrl : undefined
           }
           picksDefaults={picksDefaults}
+          postType={postType}
           searchSlot={{
                 debouncedQuery: lastSearchedQuery,
                 embeddingBacklog,

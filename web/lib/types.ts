@@ -45,6 +45,7 @@ export interface Comment {
 
 export interface Post {
   author_name?: null | string;
+  classified_price?: null | string;
   comments?: Comment[];
   created_at: string;
   hash: string;
@@ -53,6 +54,7 @@ export interface Post {
   image_urls: string[];
   neighborhood_id: string;
   post_id_ext: string;
+  post_type?: "classified" | "standard";
   reaction_count?: number;
   saved?: boolean;
   text: string;

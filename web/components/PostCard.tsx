@@ -486,6 +486,14 @@ export const PostCard = memo(function PostCard({
                 <span className="text-foreground text-sm font-medium tracking-wide">
                   {formatRelativeTime(post.created_at)}
                 </span>
+                {post.post_type === "classified" && post.classified_price && (
+                  <>
+                    <span className="text-muted-foreground text-sm">•</span>
+                    <span className="text-foreground text-sm font-medium">
+                      {post.classified_price}
+                    </span>
+                  </>
+                )}
               </div>
               {actionsBlock}
             </div>

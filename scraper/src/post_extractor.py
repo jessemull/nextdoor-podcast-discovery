@@ -72,10 +72,12 @@ class RawPost:
 
     # Optional fields (alphabetized)
 
+    classified_price: str | None = None
     comment_count: int | None = None
     comments: list["RawComment"] = field(default_factory=list)
     image_urls: list[str] = field(default_factory=list)
     neighborhood: str | None = None
+    post_type: str | None = None
     post_url: str | None = None
     reaction_count: int = 0
     timestamp_relative: str | None = None
@@ -94,7 +96,7 @@ def _get_extraction_script(min_content_length: int) -> str:
     author_sel = 'a[href*="/profile/"][href*="is=feed_author"]'
     timestamp_sel = '[data-testid="post-timestamp"]'
     content_sel = '[data-testid="styled-text"]'
-    image_sel = '[data-testid="resized-image"]'
+    image_sel = '[data-testid="resized-image"], img.resized-image'
     reaction_sel = '[data-testid="reaction-button-text"]'
     reply_sel = '[data-testid="post-reply-button"]'
 
@@ -142,6 +144,14 @@ def _get_extraction_script(min_content_length: int) -> str:
             const content = contentEl?.textContent?.trim() || '';
             if (!content || content.length < MIN_LEN) return;
 
+            let postUrl = null;
+            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
+            const postLink = timestampLink || el.querySelector('a[href*="/p/"], a[href*="/for_sale_and_free/"]');
+            if (postLink) {{
+                const h = postLink.getAttribute('href');
+                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            }}
+
             const imgs = el.querySelectorAll(IMAGE_SEL);
             const imageUrls = Array.from(imgs).map(i => i.src).filter(Boolean);
 
@@ -151,17 +161,27 @@ def _get_extraction_script(min_content_length: int) -> str:
             const replyEl = el.querySelector(REPLY_SEL);
             const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
 
-            let postUrl = null;
-            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
-            const postLink = timestampLink || el.querySelector('a[href*="/p/"]');
-            if (postLink) {{
-                const h = postLink.getAttribute('href');
-                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            const isClassified =
+                (postUrl && postUrl.includes('/for_sale_and_free/')) ||
+                el.querySelector('a[href*="/for_sale_and_free/"]') ||
+                el.querySelector('[data-icon="forsale-off"]');
+            const postType = isClassified ? 'classified' : 'standard';
+
+            let price = null;
+            if (isClassified) {{
+                const thumbBlock = el.querySelector('img.resized-image')?.closest('div');
+                if (thumbBlock) {{
+                    const spans = thumbBlock.querySelectorAll('span');
+                    for (const s of spans) {{
+                        const t = (s.textContent || '').trim();
+                        if (t && (t === 'Free' || t.startsWith('$'))) {{ price = t; break; }}
+                    }}
+                }}
             }}
 
             posts.push({{
                 authorId, authorName, commentCount, content, imageUrls,
-                neighborhood, postUrl, reactionCount, timestamp,
+                neighborhood, postType, postUrl, price, reactionCount, timestamp,
                 containerIndex,
                 postIndex: posts.length
             }});
@@ -180,7 +200,7 @@ def _get_first_visible_post_script(min_content_length: int) -> str:
     author_sel = 'a[href*="/profile/"][href*="is=feed_author"]'
     timestamp_sel = '[data-testid="post-timestamp"]'
     content_sel = '[data-testid="styled-text"]'
-    image_sel = '[data-testid="resized-image"]'
+    image_sel = '[data-testid="resized-image"], img.resized-image'
     reaction_sel = '[data-testid="reaction-button-text"]'
     reply_sel = '[data-testid="post-reply-button"]'
 
@@ -228,6 +248,14 @@ def _get_first_visible_post_script(min_content_length: int) -> str:
             const content = contentEl?.textContent?.trim() || '';
             if (!content || content.length < MIN_LEN) continue;
 
+            let postUrl = null;
+            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
+            const postLink = timestampLink || el.querySelector('a[href*="/p/"], a[href*="/for_sale_and_free/"]');
+            if (postLink) {{
+                const h = postLink.getAttribute('href');
+                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            }}
+
             const imgs = el.querySelectorAll(IMAGE_SEL);
             const imageUrls = Array.from(imgs).map(i => i.src).filter(Boolean);
 
@@ -237,19 +265,29 @@ def _get_first_visible_post_script(min_content_length: int) -> str:
             const replyEl = el.querySelector(REPLY_SEL);
             const commentCount = replyEl ? (parseInt(replyEl.textContent?.trim() || '0', 10) || 0) : null;
 
-            let postUrl = null;
-            const timestampLink = el.querySelector(TIMESTAMP_SEL + ' a[href*="/p/"]');
-            const postLink = timestampLink || el.querySelector('a[href*="/p/"]');
-            if (postLink) {{
-                const h = postLink.getAttribute('href');
-                if (h) postUrl = h.startsWith('http') ? h : (window.location.origin + (h.startsWith('/') ? h : '/' + h));
+            const isClassified =
+                (postUrl && postUrl.includes('/for_sale_and_free/')) ||
+                el.querySelector('a[href*="/for_sale_and_free/"]') ||
+                el.querySelector('[data-icon="forsale-off"]');
+            const postType = isClassified ? 'classified' : 'standard';
+
+            let price = null;
+            if (isClassified) {{
+                const thumbBlock = el.querySelector('img.resized-image')?.closest('div');
+                if (thumbBlock) {{
+                    const spans = thumbBlock.querySelectorAll('span');
+                    for (const s of spans) {{
+                        const t = (s.textContent || '').trim();
+                        if (t && (t === 'Free' || t.startsWith('$'))) {{ price = t; break; }}
+                    }}
+                }}
             }}
 
             return {{
                 containerIndex,
                 raw: {{
                     authorId, authorName, commentCount, content, imageUrls,
-                    neighborhood, postUrl, reactionCount, timestamp,
+                    neighborhood, postType, postUrl, price, reactionCount, timestamp,
                     containerIndex,
                     postIndex: 0
                 }}
@@ -561,8 +599,20 @@ class PostExtractor:
         else:
             post_url = self._normalize_post_url(raw.get("postUrl"))
 
+        is_classified = bool(post_url and "/for_sale_and_free/" in post_url)
+
         comments: list[RawComment] = []
-        if extract_comments and post_url and "/p/" in post_url:
+        if (
+            extract_comments
+            and post_url
+            and (
+                (
+                    "/p/" in post_url
+                    and SCRAPER_CONFIG["scrape_classifieds_from_permalink"]
+                )
+                or is_classified
+            )
+        ):
             comment_count_ui = raw.get("commentCount")
             if comment_count_ui is None or comment_count_ui > 0:
                 comments = self._extract_comments_on_page(self.page)
@@ -570,21 +620,66 @@ class PostExtractor:
         author_id = raw.get("authorId", "")
         author_name = raw.get("authorName", "")
         content = raw.get("content", "")
+        details: dict[str, Any] = {}
+
+        if is_classified:
+            details = (
+                self.page.evaluate(
+                    """
+                () => {
+                    const titleEl = document.querySelector('span[class*="Text_sectionTitle__"]');
+                    const title = titleEl?.textContent?.trim() || null;
+                    const descEl = document.querySelector('.classified-item-content-description [data-testid="truncate-text"]');
+                    const description = descEl?.textContent?.trim() || null;
+                    const imgEls = document.querySelectorAll('.fsf-item-detail-photo-container img, .fsf-item-detail img.resized-image');
+                    const imageUrls = Array.from(imgEls).map(i => i.src).filter(Boolean);
+                    const priceEl = document.querySelector('.fsf-item-detail-price-title, .fsf-item-detail-content > .fsf-item-detail-price');
+                    const price = priceEl?.textContent?.trim() || null;
+                    return { description, imageUrls, price, title };
+                }
+                """
+                )
+                or {}
+            )
+            title = (details.get("title") or "").strip()
+            description = (details.get("description") or "").strip()
+            if title or description:
+                segments = [s for s in [title, description] if s]
+                content = " — ".join(segments)
 
         if not author_id or not content or len(content) < MIN_CONTENT_LENGTH:
             return None
 
         content_hash = self._generate_hash(author_id, content)
 
+        post_type = "classified" if is_classified else (raw.get("postType") or None)
+
+        image_urls_from_details = details.get("imageUrls", []) if is_classified else []
+        image_urls = (
+            image_urls_from_details
+            if image_urls_from_details
+            else raw.get("imageUrls", [])
+        )
+
+        classified_price = None
+        if is_classified:
+            classified_price = (details.get("price") or "").strip() or raw.get("price")
+        else:
+            classified_price = raw.get("price")
+        if classified_price == "":
+            classified_price = None
+
         post = RawPost(
             author_id=author_id,
             author_name=author_name,
+            classified_price=classified_price,
             comment_count=raw.get("commentCount"),
             comments=comments,
             content=content,
             content_hash=content_hash,
-            image_urls=raw.get("imageUrls", []),
+            image_urls=image_urls,
             neighborhood=raw.get("neighborhood") or None,
+            post_type=post_type,
             post_url=post_url,
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
@@ -799,12 +894,14 @@ class PostExtractor:
         post = RawPost(
             author_id=author_id,
             author_name=author_name,
+            classified_price=raw.get("price"),
             comment_count=raw.get("commentCount"),
             comments=comments,
             content=content,
             content_hash=content_hash,
             image_urls=raw.get("imageUrls", []),
             neighborhood=raw.get("neighborhood") or None,
+            post_type=raw.get("postType") or None,
             post_url=post_url,
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
@@ -857,12 +954,14 @@ class PostExtractor:
         post = RawPost(
             author_id=author_id,
             author_name=author_name,
+            classified_price=raw.get("price"),
             comment_count=raw.get("commentCount"),
             comments=comments,
             content=content,
             content_hash=content_hash,
             image_urls=raw.get("imageUrls", []),
             neighborhood=raw.get("neighborhood") or None,
+            post_type=raw.get("postType") or None,
             post_url=post_url,
             reaction_count=raw.get("reactionCount", 0),
             timestamp_relative=raw.get("timestamp") or None,
@@ -1012,14 +1111,20 @@ class PostExtractor:
         unchanged. Use this instead of clicking the comments button on the feed.
 
         Args:
-            post_url: Full post permalink (e.g. https://nextdoor.com/p/XXX).
+            post_url: Full post permalink (e.g. https://nextdoor.com/p/XXX or
+                https://nextdoor.com/for_sale_and_free/YYY).
 
         Returns:
             List of RawComment from the details page, or [] on failure.
         """
-        if not post_url or "/p/" not in post_url:
+        if not post_url or (
+            "/p/" not in post_url and "/for_sale_and_free/" not in post_url
+        ):
             return []
-        detail_url = get_post_details_url(post_url)
+        if "/p/" in post_url:
+            detail_url = get_post_details_url(post_url)
+        else:
+            detail_url = post_url
         comments_load_wait_ms = 12000
         timeout = SCRAPER_CONFIG["navigation_timeout_ms"]
         new_page = self.page.context.new_page()

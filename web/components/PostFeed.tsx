@@ -157,10 +157,12 @@ export function PostFeed({
   initialCategoryIds,
   picksDefaults = null,
   searchSlot = null,
+  postType = "standard",
 }: {
   initialCategoryIds?: string[];
   picksDefaults?: null | PicksDefaultsForFeed;
   searchSlot?: null | PostFeedSearchSlotProps;
+  postType?: "classified" | "standard";
 } = {}) {
   const router = useRouter();
   const appliedInitialCategoriesRef = useRef(false);
@@ -270,6 +272,7 @@ export function PostFeed({
     debouncedMinReactionCount,
     debouncedMinScore,
     filters,
+    postType,
   });
 
   const getCurrentQuery = useCallback((): BulkQuery => {

@@ -78,6 +78,8 @@ class ScraperConfig(TypedDict):
     navigation_timeout_ms: int
     repeat_threshold_recent: int
     scroll_delay_ms: tuple[int, int]
+    scrape_classifieds_from_feed: bool
+    scrape_classifieds_from_permalink: bool
     typing_delay_ms: tuple[int, int]
     user_agent: str
     viewport: ViewportSize
@@ -110,6 +112,8 @@ SCRAPER_CONFIG: ScraperConfig = {
     "navigation_timeout_ms": 10000,
     "repeat_threshold_recent": 25,
     "scroll_delay_ms": (2000, 5000),
+    "scrape_classifieds_from_feed": True,
+    "scrape_classifieds_from_permalink": True,
     "typing_delay_ms": (50, 150),
     "user_agent": (
         "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) "

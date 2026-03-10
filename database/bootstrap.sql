@@ -3299,7 +3299,7 @@ CREATE TABLE scraper_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status TEXT NOT NULL CHECK (status IN ('completed', 'error')),
-    feed_type TEXT NOT NULL CHECK (feed_type IN ('for_you', 'nearby', 'recent', 'trending')),
+    feed_type TEXT NOT NULL CHECK (feed_type IN ('for_you', 'recent', 'trending')),
     error_message TEXT
 );
 
@@ -5864,3 +5864,66 @@ ALTER FUNCTION search_posts_by_embedding(extensions.vector(1536), double precisi
   SET search_path = public, extensions;
 
 NOTIFY pgrst, 'reload schema';
+-- Migration: Allow feed_type 'for_you' in scraper_runs
+-- Run this in Supabase SQL Editor after 047_search_function_extensions_vector.sql
+--
+-- The scraper now supports the default "For you" feed; add it to the check constraint.
+
+ALTER TABLE scraper_runs
+    DROP CONSTRAINT IF EXISTS scraper_runs_feed_type_check;
+
+ALTER TABLE scraper_runs
+    ADD CONSTRAINT scraper_runs_feed_type_check
+    CHECK (feed_type IN ('for_you', 'recent', 'trending'));
+-- Migration: Allow feed_type 'nearby' in scraper_runs
+-- Run this in Supabase SQL Editor after 048_scraper_runs_feed_type_for_you.sql
+--
+-- The scraper now supports the "Nearby" feed; add it to the check constraint.
+
+ALTER TABLE scraper_runs
+    DROP CONSTRAINT IF EXISTS scraper_runs_feed_type_check;
+
+ALTER TABLE scraper_runs
+    ADD CONSTRAINT scraper_runs_feed_type_check
+    CHECK (feed_type IN ('for_you', 'nearby', 'recent', 'trending'));
+-- Migration: Fix recount_topic_frequencies() "UPDATE requires a WHERE clause"
+-- Supabase/PostgREST reject UPDATE with no WHERE. Add WHERE TRUE to the reset
+-- so the intent (update all rows) is explicit and the safety check is satisfied.
+
+CREATE OR REPLACE FUNCTION recount_topic_frequencies()
+RETURNS VOID AS $$
+BEGIN
+    -- Reset all counts (WHERE TRUE satisfies "UPDATE must have WHERE" rule)
+    UPDATE topic_frequencies SET count_30d = 0, last_updated = NOW() WHERE TRUE;
+
+    -- Recount from llm_scores within last 30 days
+    WITH recent_counts AS (
+        SELECT unnest(categories) AS cat, COUNT(*) AS cnt
+        FROM llm_scores
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY cat
+    )
+    UPDATE topic_frequencies tf
+    SET count_30d = rc.cnt::INT,
+        last_updated = NOW()
+    FROM recent_counts rc
+    WHERE tf.category = rc.cat;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION recount_topic_frequencies() SET search_path = public;
+-- Migration: Add post_type to posts for classifieds support
+-- Run this in Supabase SQL Editor after 050_recount_topic_frequencies_where_clause.sql
+--
+-- Adds a simple discriminator so the application can distinguish between
+-- standard neighborhood discussion posts and classifieds / For Sale posts.
+
+ALTER TABLE posts
+ADD COLUMN IF NOT EXISTS post_type TEXT
+    CHECK (post_type IN ('standard', 'classified'))
+    DEFAULT 'standard';
+
+-- Migration: Add classified_price to posts for classifieds
+ALTER TABLE posts
+ADD COLUMN IF NOT EXISTS classified_price TEXT;
+
