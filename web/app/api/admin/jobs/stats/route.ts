@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { calculateSuccessRate } from "@/lib/utils";
@@ -17,8 +17,8 @@ import { calculateSuccessRate } from "@/lib/utils";
  * - Success rate
  * - Jobs by type
  */
-export async function GET(_request: NextRequest) {
-  const session = await auth0.getSession();
+export async function GET(request: NextRequest) {
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -25,7 +25,8 @@ export default async function ProtectedLayout({
       sessionCookiePresent,
       userAgent: headerList.get("user-agent"),
     });
-    redirect("/auth/login?returnTo=/");
+    const diag = sessionCookiePresent ? "1" : "0";
+    redirect(`/auth/login?returnTo=/&_diag_cookie=${diag}`);
   }
 
   return <>{children}</>;

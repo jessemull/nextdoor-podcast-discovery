@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { SEARCH_SUGGESTIONS } from "@/lib/constants";
 import {
   getCachedEmbedding,
@@ -43,7 +43,7 @@ function getAnthropic(): Anthropic {
  * Requires authentication.
  */
 export async function GET(request: NextRequest) {
-  const session = await auth0.getSession();
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

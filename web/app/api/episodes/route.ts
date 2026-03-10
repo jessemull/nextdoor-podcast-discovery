@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 
 /**
  * GET /api/episodes
@@ -8,8 +8,8 @@ import { auth0 } from "@/lib/auth0";
  * Returns distinct episode dates. Episode date column was removed;
  * this endpoint now returns an empty list for backward compatibility.
  */
-export async function GET() {
-  const session = await auth0.getSession();
+export async function GET(request: NextRequest) {
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

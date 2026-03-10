@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth0 } from "@/lib/auth0";
+import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
 import { getPostIdsByQuery } from "@/lib/posts.bulk.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -15,7 +15,7 @@ import { postsBulkBodySchema } from "@/lib/validators";
  * Requires authentication.
  */
 export async function POST(request: NextRequest) {
-  const session = await auth0.getSession();
+  const session = await getSessionWithAuthLog(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

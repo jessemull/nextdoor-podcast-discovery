@@ -11,7 +11,30 @@ function isInvalidStateError(error: unknown): error is InvalidStateError {
 
 export default async function middleware(request: NextRequest) {
   try {
-    return await auth0.middleware(request);
+    const response = await auth0.middleware(request);
+    if (
+      response.status >= 300 &&
+      response.status < 400 &&
+      response.headers.get("location")?.includes("/auth/login")
+    ) {
+      const sessionCookiePresent = request.cookies
+        .getAll()
+        .some((c) => c.name.startsWith("__session"));
+      console.error("[auth-session-missing]", {
+        host: request.headers.get("host"),
+        path: request.nextUrl.pathname,
+        referer: request.headers.get("referer"),
+        sessionCookiePresent,
+        userAgent: request.headers.get("user-agent"),
+      });
+      const location = response.headers.get("location");
+      if (location) {
+        const loginUrl = new URL(location, request.url);
+        loginUrl.searchParams.set("_diag_cookie", sessionCookiePresent ? "1" : "0");
+        return NextResponse.redirect(loginUrl, response.status as 301 | 302 | 303 | 307 | 308);
+      }
+    }
+    return response;
   } catch (error) {
     if (isInvalidStateError(error)) {
       const path = request.nextUrl.pathname;
