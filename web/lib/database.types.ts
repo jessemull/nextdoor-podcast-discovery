@@ -119,6 +119,7 @@ export interface Database {
       posts: {
         Insert: {
           author_name?: null | string;
+          classified_price?: null | string;
           created_at?: string;
           hash: string;
           id?: string;
@@ -126,6 +127,7 @@ export interface Database {
           image_urls?: Json;
           neighborhood_id: string;
           post_id_ext: string;
+          post_type?: "classified" | "standard";
           reaction_count?: number;
           text: string;
           url?: null | string;
@@ -134,6 +136,7 @@ export interface Database {
         };
         Row: {
           author_name: null | string;
+          classified_price: null | string;
           created_at: string;
           hash: string;
           id: string;
@@ -141,6 +144,7 @@ export interface Database {
           image_urls: Json;
           neighborhood_id: string;
           post_id_ext: string;
+          post_type: "classified" | "standard";
           reaction_count: number;
           text: string;
           url: null | string;
@@ -149,11 +153,13 @@ export interface Database {
         };
         Update: {
           author_name?: null | string;
+          classified_price?: null | string;
           hash?: string;
           ignored?: boolean;
           image_urls?: Json;
           neighborhood_id?: string;
           post_id_ext?: string;
+          post_type?: "classified" | "standard";
           reaction_count?: number;
           text?: string;
           url?: null | string;

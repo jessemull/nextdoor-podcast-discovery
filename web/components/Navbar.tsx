@@ -20,6 +20,7 @@ const navLinkClass = cn(
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/feed", label: "Feed" },
+  { href: "/classifieds", label: "Classifieds" },
   { href: "/jobs", label: "Jobs" },
   { href: "/stats", label: "Stats" },
   { href: "/settings", label: "Settings" },

@@ -29,7 +29,8 @@ function buildPostsQueryParams(
   debouncedMaxScore: string,
   debouncedMinPodcastWorthy: string,
   debouncedMinReactionCount: string,
-  debouncedMinScore: string
+  debouncedMinScore: string,
+  postType: "classified" | "standard"
 ): URLSearchParams {
   const searchParams = new URLSearchParams();
   searchParams.set("limit", String(POSTS_PER_PAGE));
@@ -99,6 +100,12 @@ function buildPostsQueryParams(
     }
   }
 
+  if (postType === "classified") {
+    searchParams.set("post_type", "classified");
+  } else {
+    searchParams.set("post_type", "standard");
+  }
+
   return searchParams;
 }
 
@@ -111,6 +118,7 @@ export interface UsePostFeedDataParams {
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
   filters: PostFeedFilters;
+  postType?: "classified" | "standard";
 }
 
 export interface UsePostFeedDataResult {
@@ -140,6 +148,8 @@ export function usePostFeedData(
     filters,
   } = params;
 
+  const postType = params.postType ?? "standard";
+
   const queryParams = buildPostsQueryParams(
     activeConfigWeights,
     filters,
@@ -148,7 +158,8 @@ export function usePostFeedData(
     debouncedMaxScore,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
-    debouncedMinScore
+    debouncedMinScore,
+    postType
   );
 
   const [manualError, setManualError] = useState<null | string>(null);
@@ -201,6 +212,7 @@ export function usePostFeedData(
       filters.sort,
       filters.sortOrder,
       filters.unusedOnly,
+      postType,
     ],
     staleTime: STALE_TIME_MS,
   });

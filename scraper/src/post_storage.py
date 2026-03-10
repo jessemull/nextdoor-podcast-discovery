@@ -124,6 +124,7 @@ class PostStorage:
             posts_data.append(
                 {
                     "author_name": post.author_name or None,
+                    "classified_price": post.classified_price,
                     "comment_count": post.comment_count,
                     "comments": comments_payload,
                     "hash": post.content_hash,
@@ -133,6 +134,7 @@ class PostStorage:
                         post.post_url, post.content_hash
                     ),
                     "posted_at": posted_at.isoformat() if posted_at else None,
+                    "post_type": post.post_type or "standard",
                     "reaction_count": post.reaction_count,
                     "text": post.content,
                     "url": post.post_url,
@@ -300,6 +302,7 @@ class PostStorage:
         ]
         post_data: dict[str, Any] = {
             "author_name": post.author_name or None,
+            "classified_price": post.classified_price,
             "comment_count": post.comment_count,
             "comments": comments_payload,
             "hash": post.content_hash,
@@ -307,6 +310,7 @@ class PostStorage:
             "neighborhood_id": neighborhood_id,
             "post_id_ext": self._extract_post_id(post.post_url, post.content_hash),
             "posted_at": posted_at.isoformat() if posted_at else None,
+            "post_type": post.post_type or "standard",
             "reaction_count": post.reaction_count,
             "text": post.content,
             "url": post.post_url,
@@ -369,6 +373,7 @@ class PostStorage:
         ]
 
         update_data: dict[str, Any] = {
+            "classified_price": post.classified_price,
             "comment_count": post.comment_count,
             "comments": comments_payload,
             "image_urls": post.image_urls,

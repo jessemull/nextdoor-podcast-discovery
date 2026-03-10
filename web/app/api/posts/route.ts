@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
           : undefined,
     offset: searchParams.get("offset") ?? undefined,
     order: searchParams.get("order") ?? undefined,
+    post_type: searchParams.get("post_type") ?? undefined,
     preview: searchParams.get("preview") ?? undefined,
     saved_only: searchParams.get("saved_only") ?? undefined,
     sort: searchParams.get("sort") ?? undefined,
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
     neighborhood_ids: neighborhoodIds,
     offset,
     order,
+    post_type: postTypeParam,
     preview,
     saved_only: savedOnly,
     sort,
@@ -94,6 +96,7 @@ export async function GET(request: NextRequest) {
     weights: weightsParam,
   } = parsed.data;
   const orderAsc = order === "asc";
+  const postType = postTypeParam ?? "standard";
   const maxPodcastWorthy =
     maxPodcastWorthyParam != null ? maxPodcastWorthyParam : null;
   const maxReactionCount =
@@ -131,6 +134,7 @@ export async function GET(request: NextRequest) {
         neighborhoodIds: neighborhoodIds?.length ? neighborhoodIds : null,
         offset,
         orderAsc,
+        postType,
         preview: preview ?? false,
         savedOnly,
         unusedOnly,
@@ -156,6 +160,7 @@ export async function GET(request: NextRequest) {
         offset,
         orderAsc,
         orderBy,
+        postType,
         preview: preview ?? false,
         savedOnly,
         unusedOnly,
@@ -194,6 +199,7 @@ interface QueryParams {
   preview: boolean;
   savedOnly: boolean;
   unusedOnly: boolean;
+  postType: "classified" | "standard";
   weightConfigId: null | string;
   weights: null | Record<string, number>;
 }
@@ -251,6 +257,7 @@ async function getPostsByScore(
     preview,
     savedOnly,
     unusedOnly,
+    postType,
     weightConfigId: weightConfigIdParam,
     weights: weightsParam,
   } = params;
@@ -333,6 +340,7 @@ async function getPostsByScore(
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
     p_neighborhood_ids: neighborhoodIds,
+    p_post_type: postType ?? "standard",
     p_saved_only: savedOnly,
     p_unused_only: unusedOnly,
   };
@@ -408,7 +416,8 @@ async function getPostsByScore(
   const postsQuery = supabase
     .from("posts")
     .select("*, neighborhood:neighborhoods(*)")
-    .in("id", postIds);
+    .in("id", postIds)
+    .eq("post_type", postType ?? "standard");
 
   const { data: posts, error: postsError } = await postsQuery;
 
@@ -491,6 +500,7 @@ async function getPostsByDate(
     orderAsc,
     savedOnly,
     unusedOnly,
+    postType,
   } = params;
 
   const parsedMaxScore = maxScore ? parseFloat(maxScore) : null;
@@ -510,6 +520,7 @@ async function getPostsByDate(
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
     p_neighborhood_ids: neighborhoodIds,
+    p_post_type: postType ?? "standard",
     p_saved_only: savedOnly,
     p_unused_only: unusedOnly,
   };
@@ -549,7 +560,8 @@ async function getPostsByDate(
   const { data: posts, error: postsError } = await supabase
     .from("posts")
     .select("*, neighborhood:neighborhoods(*)")
-    .in("id", postIds);
+    .in("id", postIds)
+    .eq("post_type", postType ?? "standard");
 
   if (postsError) {
     logError("[posts] fetch posts for date sort", postsError);

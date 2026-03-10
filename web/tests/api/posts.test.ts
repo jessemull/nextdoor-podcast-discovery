@@ -114,16 +114,16 @@ describe("GET /api/posts", () => {
       return Promise.resolve({ data: null, error: null });
     });
 
-    // Mock posts query
+    // Mock posts query: .select().in().eq() chain
     const postsSelect = vi.fn().mockReturnThis();
-    const postsIn = vi.fn().mockResolvedValue({
+    const postsIn = vi.fn().mockReturnThis();
+    const postsEq = vi.fn().mockResolvedValue({
       data: mockPosts,
       error: null,
     });
 
-    postsSelect.mockReturnValue({
-      in: postsIn,
-    });
+    postsSelect.mockReturnValue({ in: postsIn });
+    postsIn.mockReturnValue({ eq: postsEq });
 
     mockFrom.mockImplementation((table: string) => {
       if (table === "settings") {
@@ -193,11 +193,13 @@ describe("GET /api/posts", () => {
     });
 
     const postsSelect = vi.fn().mockReturnThis();
-    const postsIn = vi.fn().mockResolvedValue({
+    const postsIn = vi.fn().mockReturnThis();
+    const postsEq = vi.fn().mockResolvedValue({
       data: mockPosts,
       error: null,
     });
     postsSelect.mockReturnValue({ in: postsIn });
+    postsIn.mockReturnValue({ eq: postsEq });
 
     mockFrom.mockImplementation((table: string) => {
       if (table === "settings") {
