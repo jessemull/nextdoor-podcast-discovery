@@ -17,7 +17,7 @@ interface RetryRouteParams {
  * Requires authentication.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: RetryRouteParams
 ) {
   const session = await getSessionWithAuthLog(request);
