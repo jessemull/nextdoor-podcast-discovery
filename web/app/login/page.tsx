@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { getSupabase } from "@/lib/supabase.client";
@@ -36,7 +36,6 @@ function isMfaFactorNameConflict(err: unknown): boolean {
 }
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
   const reason = searchParams.get("reason");
@@ -574,7 +573,7 @@ function LoginContent() {
               </button>
             </div>
 
-            {mfaMode === "verify" ? (
+            {mfaMode === "enroll" ? (
               <p className="mt-4 text-center text-sm text-muted">
                 Didn’t finish setting up?{" "}
                 <button

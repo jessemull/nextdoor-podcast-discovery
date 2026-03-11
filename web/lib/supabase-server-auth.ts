@@ -83,9 +83,13 @@ export function createSupabaseAuthClientForMiddleware(
 /**
  * Get the current session for authorization.
  * Returns a normalized shape compatible with existing API/layout code.
- * Returns null if not authenticated.
+ * Returns null if not authenticated or if auth env vars are missing (e.g. during CI build).
  */
 export async function getSession(): Promise<AppSession | null> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
   const supabase = await createSupabaseAuthClient();
   const {
     data: { user },
