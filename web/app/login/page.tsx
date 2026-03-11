@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { getSupabase } from "@/lib/supabase.client";
-import { useAuthUser } from "@/lib/useAuthUser.client";
 import { cn } from "@/lib/utils";
 
 function LoginContent() {
@@ -13,7 +12,6 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") ?? "/";
   const reason = searchParams.get("reason");
-  const { isLoading: authLoading, user } = useAuthUser();
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -49,31 +47,6 @@ function LoginContent() {
     },
     [email, password, returnTo, router]
   );
-
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.push(returnTo);
-      router.refresh();
-    }
-  }, [authLoading, returnTo, router, user]);
-
-  if (authLoading || user) {
-    return (
-      <div className="flex h-full items-center justify-center bg-surface">
-        <div className="bg-surface-elevated mx-4 flex max-w-md flex-col items-center rounded-2xl border border-border p-8 shadow-2xl">
-          <div className="mb-4 text-center">
-            <h1 className="text-2xl font-semibold text-foreground">
-              Nextdoor Discovery
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              Checking your session&hellip;
-            </p>
-          </div>
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-border/60 border-t-foreground" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full items-center justify-center bg-surface">
@@ -179,17 +152,12 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-          <div className="bg-white/95 mx-4 flex max-w-md flex-col items-center rounded-2xl p-8 shadow-2xl">
-            <div className="mb-4 text-center">
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Nextdoor Discovery
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Loading sign-in experience&hellip;
-              </p>
-            </div>
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+        <div className="flex h-full items-center justify-center bg-surface">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-border/30 border-t-white" />
+            <p className="text-sm text-muted">
+              Loading sign-in experience&hellip;
+            </p>
           </div>
         </div>
       }

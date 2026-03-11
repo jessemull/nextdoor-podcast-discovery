@@ -123,7 +123,7 @@ export function Navbar() {
 
               {userMenuOpen && (
                 <div
-                  className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
+                  className="border-border bg-surface absolute right-0 top-full z-50 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
                   role="menu"
                 >
                   <button
