@@ -12,7 +12,7 @@ export const auth0 = new Auth0Client({
   session: {
     cookie: {
       path: "/",
-      sameSite: "strict",
+      sameSite: "lax",
       secure: isProduction,
     },
     rolling: true,
