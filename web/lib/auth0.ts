@@ -11,7 +11,8 @@ export const auth0 = new Auth0Client({
   authorizationParameters: { screen_hint: "login" },
   session: {
     cookie: {
-      sameSite: "lax",
+      path: "/",
+      sameSite: "strict",
       secure: isProduction,
     },
     rolling: true,

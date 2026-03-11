@@ -36,9 +36,11 @@ export default async function middleware(request: NextRequest) {
     }
     return response;
   } catch (error) {
+    const path = request.nextUrl.pathname;
+    const userAgent = request.headers.get("user-agent") ?? "";
+    const isAuthPath = path.startsWith("/auth/");
+
     if (isInvalidStateError(error)) {
-      const path = request.nextUrl.pathname;
-      const userAgent = request.headers.get("user-agent") ?? "";
       console.error("[auth-callback]", {
         name: error.name,
         path,
@@ -48,6 +50,23 @@ export default async function middleware(request: NextRequest) {
         new URL("/login?reason=auth_error", request.url)
       );
     }
+
+    if (isAuthPath) {
+      const message = error instanceof Error ? error.message : String(error);
+      const name = error instanceof Error ? error.constructor.name : typeof error;
+      const stack = error instanceof Error ? error.stack : undefined;
+      console.error("[auth-callback]", {
+        name,
+        path,
+        stack,
+        userAgent,
+        error: message,
+      });
+      return NextResponse.redirect(
+        new URL("/login?reason=auth_error", request.url)
+      );
+    }
+
     throw error;
   }
 }
