@@ -306,15 +306,17 @@ function LoginContent() {
           throw verifyError;
         }
 
-        router.push(returnTo);
-        router.refresh();
+        // Let the client persist the new session to cookies before the next request.
+        await supabase.auth.getSession();
+        await new Promise((r) => setTimeout(r, 200));
+        window.location.href = returnTo;
       } catch (err) {
         console.error("[login] MFA verify error", err);
         setMfaError("Invalid code. Please double-check and try again.");
         setIsSubmitting(false);
       }
     },
-    [mfaCode, mfaChallengeId, mfaFactorId, returnTo, router]
+    [mfaCode, mfaChallengeId, mfaFactorId, returnTo]
   );
 
   const handleResetMfaAndShowQr = useCallback(async () => {
