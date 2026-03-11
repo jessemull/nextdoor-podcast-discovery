@@ -15,6 +15,15 @@ function getTotpFactorsFromListFactorsResponse(data: unknown): { id: string; sta
     .map((f) => ({ id: f.id, status: f.status }));
 }
 
+/** Allow only same-origin paths for post-login redirect (prevent open redirect). */
+function getSafeReturnTo(returnTo: string | null): string {
+  const path = (returnTo ?? "").trim() || "/";
+  if (!path.startsWith("/") || path.includes("//")) {
+    return "/";
+  }
+  return path;
+}
+
 /** Supabase returns { code: "mfa_factor_name_conflict", message: "A factor with the friendly name \"\" for this user already exists" } */
 function isMfaFactorNameConflict(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
@@ -29,7 +38,7 @@ function isMfaFactorNameConflict(err: unknown): boolean {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") ?? "/";
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
   const reason = searchParams.get("reason");
 
   const [email, setEmail] = useState("");

@@ -29,7 +29,7 @@ export default async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith("/api/");
   if (!user && !isApiRoute) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("returnTo", pathname);
+    loginUrl.searchParams.set("returnTo", pathname); // pathname is always same-origin
     return NextResponse.redirect(loginUrl);
   }
 
