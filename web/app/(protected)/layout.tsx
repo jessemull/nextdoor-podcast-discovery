@@ -1,7 +1,6 @@
-import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 import type { ReactNode } from "react";
 
@@ -12,21 +11,9 @@ interface ProtectedLayoutProps {
 export default async function ProtectedLayout({
   children,
 }: ProtectedLayoutProps) {
-  const session = await auth0.getSession();
+  const session = await getSession();
   if (!session) {
-    const headerList = await headers();
-    const cookieList = await cookies();
-    const sessionCookiePresent = cookieList
-      .getAll()
-      .some((c) => c.name.startsWith("__session"));
-    console.error("[auth-session-missing]", {
-      host: headerList.get("host"),
-      referer: headerList.get("referer"),
-      sessionCookiePresent,
-      userAgent: headerList.get("user-agent"),
-    });
-    const diag = sessionCookiePresent ? "1" : "0";
-    redirect(`/auth/login?returnTo=/&_diag_cookie=${diag}`);
+    redirect("/login?returnTo=/");
   }
 
   return <>{children}</>;

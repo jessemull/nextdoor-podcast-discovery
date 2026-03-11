@@ -2,13 +2,13 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/admin/jobs/route";
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 import type { MockSupabaseClient, MockSupabaseQueryBuilder } from "@/tests/mocks/types";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase
@@ -28,7 +28,7 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/jobs");
     const response = await GET(request);
@@ -39,8 +39,8 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return jobs when authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockJobs = [
@@ -75,8 +75,8 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should filter by type when provided", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockSelect = vi.fn().mockReturnThis();
@@ -106,8 +106,8 @@ describe("GET /api/admin/jobs", () => {
   });
 
   it("should return specific job when id is provided", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockJob = {

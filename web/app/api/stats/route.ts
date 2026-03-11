@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 import type { StatsResponse } from "@/lib/types";
@@ -14,7 +14,7 @@ import type { StatsResponse } from "@/lib/types";
 export async function GET(request: NextRequest) {
   // Require authentication
 
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

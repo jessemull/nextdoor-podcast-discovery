@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -35,7 +35,7 @@ const MAX_LIMIT = 100;
  * Requires authentication.
  */
 export async function GET(request: NextRequest) {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

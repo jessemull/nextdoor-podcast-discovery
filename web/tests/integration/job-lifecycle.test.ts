@@ -16,10 +16,9 @@ import { PUT } from "@/app/api/admin/jobs/[id]/cancel/route";
 import { GET } from "@/app/api/admin/jobs/route";
 import { POST } from "@/app/api/admin/recompute-scores/route";
 
-// Mock next-auth
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -48,7 +47,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("Job Lifecycle Integration", () => {
   beforeEach(() => {
@@ -56,9 +55,9 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should create job and return job ID", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-    } as never);
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
+    });
 
     const mockJobId = "123e4567-e89b-12d3-a456-426614174000";
     const mockConfigId = "config-123";
@@ -117,9 +116,9 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should cancel a running job", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-    } as never);
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
+    });
 
     const mockJobId = "123e4567-e89b-12d3-a456-426614174000";
     const mockJob = {
@@ -169,9 +168,9 @@ describe("Job Lifecycle Integration", () => {
   });
 
   it("should show job status updates", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-    } as never);
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
+    });
 
     const mockJobs = [
       {

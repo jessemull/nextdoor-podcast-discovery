@@ -1,14 +1,15 @@
 "use client";
 
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQuery } from "@tanstack/react-query";
+
+import { useAuthUser } from "@/lib/useAuthUser.client";
 
 import type { SportsFactResponse } from "@/lib/types";
 
 const SPORTS_FACT_BODY_MIN_H = "min-h-[4.5rem]";
 
 export function SportsFact() {
-  const { isLoading: userLoading, user } = useUser();
+  const { isLoading: userLoading, user } = useAuthUser();
   const isLoggedIn = !!user;
 
   const { data, error, isError, isLoading } = useQuery<SportsFactResponse>({

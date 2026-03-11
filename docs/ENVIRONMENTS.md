@@ -11,7 +11,7 @@ The system has two environments. Isolation is enforced by separate Supabase proj
 | Web | Vercel Preview (branch `main`) or local | Vercel Production (branch `release`) |
 | Database | Supabase project (dev) | Supabase project (prod) |
 | Scraper / worker | Local execution; dev Supabase | Server execution; prod Supabase only |
-| Auth | Single Auth0 app; both origins registered | Same app; distinct session secret |
+| Auth | Supabase Auth (email/password); signup disabled; users created in Dashboard | Same |
 | Cache | Upstash Redis (keys namespaced by env) | Same Redis or separate instance |
 
 **Branch convention:** `main` triggers Preview deployments. `release` triggers Production deployments. Configure Vercel Production Branch to `release`.
@@ -34,11 +34,6 @@ The system has two environments. Isolation is enforced by separate Supabase proj
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Dev anon key | Prod anon key |
 | `SUPABASE_URL` | Dev project URL | Prod project URL |
 | `SUPABASE_SERVICE_KEY` | Dev service key | Prod service key |
-| `AUTH0_DOMAIN` | Auth0 tenant | Same |
-| `AUTH0_CLIENT_ID` | Auth0 client ID | Same |
-| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Same |
-| `AUTH0_SECRET` | Secret A (Preview) | Secret B (Production; must differ) |
-| `APP_BASE_URL` | Preview origin (e.g. `https://<project>-git-main-<scope>.vercel.app`) | Production origin |
 | `ANTHROPIC_API_KEY` | API key | Same or separate |
 | `OPENAI_API_KEY` | API key | Same or separate |
 | `UPSTASH_REDIS_REST_URL` | Redis REST URL | Same or separate |
@@ -63,14 +58,11 @@ Redis keys are prefixed by `VERCEL_ENV` (production, preview, or development). A
 
 ---
 
-## Auth0 configuration
+## Supabase Auth configuration
 
-A single Auth0 application supports both environments.
-
-1. Open the application in the Auth0 Dashboard → Settings.
-2. **Allowed Callback URLs:** Add Production and Preview callback URLs, comma-separated (e.g. `https://<production-domain>/api/auth/callback`, `https://<project>-git-main-<scope>.vercel.app/api/auth/callback`).
-3. **Allowed Logout URLs:** Add the same two origins.
-4. Use the same `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET` in both Vercel environments. Set `APP_BASE_URL` per environment to the deployment origin so redirects target the correct URL.
+1. In Supabase Dashboard → Authentication → Providers → Email: disable **Enable email signups** so only manually created users can sign in.
+2. Create users in Authentication → Users → Add user (email + password) for each allowed user.
+3. No callback or logout URLs to configure; login and logout are handled in-app.
 
 ---
 
@@ -115,11 +107,11 @@ The production host runs the scraper and two workers (recompute + permalink) wit
 Execute in order. Dependencies are implied by the sequence.
 
 1. **Supabase:** Create two projects (dev, prod). For each new project, run `database/bootstrap.sql` once in the SQL Editor (see [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md)). Record project URLs and anon/service keys for both.
-2. **Auth0:** Create one application. Add Production and Preview callback URLs and logout URLs. Generate two session secrets (one for Preview, one for Production).
+2. **Supabase Auth:** Disable signups in Dashboard; create users manually.
 3. **Upstash:** Create a Redis database. Record REST URL and token. One database suffices; keys are namespaced by environment.
 4. **Vercel:** Connect the repository. Set Root Directory to `web`. Set Production Branch to `release`. Create and push branch `release` if it does not exist.
-5. **Vercel — Preview:** In Settings → Environment Variables, configure for Preview: dev Supabase (all four vars), Auth0 (domain, client ID, client secret), Preview `AUTH0_SECRET`, `APP_BASE_URL` (Preview origin), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
-6. **Vercel — Production:** Configure for Production: prod Supabase (all four vars), same Auth0 app vars, Production `AUTH0_SECRET`, `APP_BASE_URL` (Production origin), API keys, Redis vars. Add `INTERNAL_API_SECRET` when the production worker will call the cache-invalidate endpoint.
+5. **Vercel — Preview:** In Settings → Environment Variables, configure for Preview: dev Supabase (all four vars), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+6. **Vercel — Production:** Configure for Production: prod Supabase (all four vars), API keys, Redis vars. Add `INTERNAL_API_SECRET` when the production worker will call the cache-invalidate endpoint.
 7. **Local development:** Create `web/.env.local` and `scraper/.env` from the corresponding `.env.example` files. Populate with dev Supabase and dev credentials. Apply migrations to the dev project as needed.
 8. **Production server:** Run `scripts/setup-server.sh` on the host (see [DEPLOYMENT.md](DEPLOYMENT.md)). Edit `scraper/.env` with production credentials. Start the workers with `sudo ./scripts/install-worker-service.sh` (recompute + permalink).
 

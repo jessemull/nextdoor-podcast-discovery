@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/neighborhoods/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("GET /api/neighborhoods", () => {
   beforeEach(() => {
@@ -40,7 +40,7 @@ describe("GET /api/neighborhoods", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const response = await GET();
     const data = await response.json();
@@ -50,8 +50,8 @@ describe("GET /api/neighborhoods", () => {
   });
 
   it("should return neighborhoods when authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     neighborhoodsMockResolve = {
@@ -71,8 +71,8 @@ describe("GET /api/neighborhoods", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     neighborhoodsMockResolve = {

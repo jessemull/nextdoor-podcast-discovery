@@ -1,9 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { CLAUDE_MODEL } from "@/lib/env.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
 
@@ -31,7 +31,7 @@ Example format: "In 1995, the Pittsburgh Penguins mascot Iceburgh was once eject
 export async function GET(
   request: NextRequest
 ): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
 
   // Just require any authenticated user
 

@@ -7,7 +7,7 @@ This checklist applies to:
 - SQL (PostgreSQL, Supabase, pgvector, PL/pgSQL)
 - CI/CD (GitHub Actions for CI only, Vercel for web deploy)
 - Security tooling (bandit, pip-audit, ESLint, etc.)
-- Infrastructure (Docker, Redis, Auth0, Supabase)
+- Infrastructure (Docker, Redis, Supabase)
 
 ---
 
@@ -109,7 +109,7 @@ All of the following must pass before merge. Run from repo root.
 - [ ] Semantic search optimized
 
 ## Auth
-- [ ] Auth0 session validated server-side
+- [ ] Supabase Auth session validated server-side
 - [ ] Admin routes protected
 - [ ] Role checks enforced
 

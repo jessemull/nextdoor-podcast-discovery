@@ -12,9 +12,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/admin/jobs/route";
 import { DELETE } from "@/app/api/admin/weight-configs/[id]/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -43,7 +43,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 /** Valid UUIDs for weight config IDs (routes validate UUID format). */
 const CONFIG_1_UUID = "550e8400-e29b-41d4-a716-446655440001";
@@ -56,8 +56,8 @@ describe("Edge Cases", () => {
 
   describe("Config deletion with pending jobs", () => {
     it("should prevent deletion when config has pending jobs", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "test@example.com" },
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "test@example.com", id: "test-user-id" },
       } as never);
 
       const configId = CONFIG_2_UUID;
@@ -146,8 +146,8 @@ describe("Edge Cases", () => {
 
   describe("Active config deletion prevention", () => {
     it("should prevent deletion of active config", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "test@example.com" },
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "test@example.com", id: "test-user-id" },
       } as never);
 
       const activeConfigId = CONFIG_1_UUID;
@@ -189,8 +189,8 @@ describe("Edge Cases", () => {
 
   describe("Queue position calculation", () => {
     it("should calculate correct queue positions for multiple pending jobs", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "test@example.com" },
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "test@example.com", id: "test-user-id" },
       } as never);
 
       const mockJobs = [

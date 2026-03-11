@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/posts/[id]/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
  
@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 const createParams = (id: string) => ({
   params: Promise.resolve({ id }),
@@ -30,7 +30,7 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const response = await GET(
       new Request("http://localhost:3000/api/posts/123e4567-e89b-12d3-a456-426614174000"),
@@ -43,8 +43,8 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 400 for invalid UUID format", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const response = await GET(
@@ -58,8 +58,8 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return post with scores when found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const postId = "123e4567-e89b-12d3-a456-426614174000";
@@ -109,8 +109,8 @@ describe("GET /api/posts/[id]", () => {
   });
 
   it("should return 404 when post not found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const postId = "123e4567-e89b-12d3-a456-426614174000";

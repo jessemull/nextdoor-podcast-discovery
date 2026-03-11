@@ -10,6 +10,7 @@ import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
+import { useMfa } from "@/lib/useMfa.client";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
@@ -367,6 +368,20 @@ export default function SettingsPage() {
     }
   }, [searchDefaults, toast]);
 
+  // MFA (two-factor auth) state
+  const {
+    enrolledTotp,
+    enrollError: mfaError,
+    isBusy: mfaBusy,
+    isEnrolling: mfaEnrolling,
+    isLoading: mfaLoading,
+    pendingEnrollment,
+    startTotpEnrollment,
+    verifyTotpEnrollment,
+    disableTotp,
+  } = useMfa();
+  const [mfaCode, setMfaCode] = useState("");
+
   if (isLoading) {
     return (
       <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
@@ -450,6 +465,127 @@ export default function SettingsPage() {
           onSavePicks={handleSavePicksDefaults}
           onSaveSearch={handleSaveSearchDefaults}
         />
+
+        <section className="mt-8 rounded-2xl border border-border bg-surface-elevated p-6">
+          <h2 className="text-lg font-semibold text-foreground">
+            Account security
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Manage two-factor authentication for your account.
+          </p>
+
+          <div className="mt-4 space-y-3 text-sm text-muted">
+            {mfaLoading ? (
+              <p>Loading two-factor status&hellip;</p>
+            ) : enrolledTotp ? (
+              <p>Two-factor authentication is currently <span className="font-semibold text-foreground">on</span>.</p>
+            ) : (
+              <p>Two-factor authentication is currently <span className="font-semibold text-foreground">off</span>.</p>
+            )}
+          </div>
+
+          {mfaError && (
+            <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {mfaError}
+            </p>
+          )}
+
+          {pendingEnrollment ? (
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-muted">
+                Scan the QR code below with your authenticator app (or enter the secret manually), then enter the 6-digit code to confirm.
+              </p>
+
+              {pendingEnrollment.qrCode ? (
+                <div className="flex justify-center">
+                  <div
+                    className="rounded-md bg-white p-3"
+                    dangerouslySetInnerHTML={{
+                      __html: decodeURIComponent(
+                        pendingEnrollment.qrCode.split(",")[1] ?? ""
+                      ),
+                    }}
+                  />
+                </div>
+              ) : pendingEnrollment.secret ? (
+                <div className="rounded-md border border-border bg-background px-3 py-2 text-sm font-mono text-foreground">
+                  {pendingEnrollment.secret}
+                </div>
+              ) : null}
+
+              <div>
+                <label
+                  className="mb-1 block text-sm font-medium text-foreground"
+                  htmlFor="mfa-code"
+                >
+                  6-digit code
+                </label>
+                <input
+                  className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  id="mfa-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Enter code from authenticator app"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  className="rounded-lg border border-border bg-surface-hover px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={mfaBusy || mfaCode.length === 0}
+                  type="button"
+                  onClick={() => {
+                    void verifyTotpEnrollment(mfaCode);
+                  }}
+                >
+                  Confirm code
+                </button>
+                <button
+                  className="text-sm text-muted underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={mfaBusy}
+                  type="button"
+                  onClick={() => {
+                    setMfaCode("");
+                    // Cancel UI: let user restart enrollment; factors will refresh as needed.
+                    // A failed enrollment without verification should not enforce MFA.
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {enrolledTotp ? (
+                <button
+                  className="rounded-lg border border-border bg-surface-hover px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={mfaBusy}
+                  type="button"
+                  onClick={() => {
+                    void disableTotp();
+                  }}
+                >
+                  Disable two-factor authentication
+                </button>
+              ) : (
+                <button
+                  className="rounded-lg border border-border bg-surface-hover px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={mfaBusy || mfaEnrolling}
+                  type="button"
+                  onClick={() => {
+                    setMfaCode("");
+                    void startTotpEnrollment();
+                  }}
+                >
+                  {mfaEnrolling ? "Starting enrollment…" : "Enable two-factor authentication"}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+
         </div>
       </main>
     </ErrorBoundary>

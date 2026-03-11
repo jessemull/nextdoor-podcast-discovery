@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/admin/recompute-scores/route";
 
 // Mock next-auth
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("POST /api/admin/recompute-scores", () => {
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
       method: "POST",
@@ -59,8 +59,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 400 when body has neither ranking_weights nor use_active_config", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
@@ -76,8 +76,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 400 when ranking_weights is not an object", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
@@ -96,8 +96,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 400 when weight value is out of bounds", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
@@ -126,8 +126,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 400 when invalid dimension is provided", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
@@ -157,8 +157,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should return 400 when required dimension is missing", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest("http://localhost:3000/api/admin/recompute-scores", {
@@ -179,8 +179,8 @@ describe("POST /api/admin/recompute-scores", () => {
   });
 
   it("should create weight config and job when valid", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const mockWeightConfig = {

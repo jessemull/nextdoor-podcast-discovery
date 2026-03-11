@@ -2,7 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { SEARCH_SUGGESTIONS } from "@/lib/constants";
 import {
   getCachedEmbedding,
@@ -10,6 +9,7 @@ import {
 } from "@/lib/embedding-cache.server";
 import { CLAUDE_MODEL, env } from "@/lib/env.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -43,7 +43,7 @@ function getAnthropic(): Anthropic {
  * Requires authentication.
  */
 export async function GET(request: NextRequest) {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
