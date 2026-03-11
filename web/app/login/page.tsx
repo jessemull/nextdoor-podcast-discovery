@@ -273,7 +273,7 @@ function LoginContent() {
         setIsSubmitting(false);
       }
     },
-    [email, password, returnTo, router]
+    [email, password]
   );
 
   const handleVerifyMfa = useCallback(
