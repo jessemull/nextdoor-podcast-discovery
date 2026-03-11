@@ -15,6 +15,13 @@ function LoginContent() {
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaMode, setMfaMode] = useState<"none" | "enroll" | "verify">("none");
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaQrCode, setMfaQrCode] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +30,7 @@ function LoginContent() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError(null);
+      setMfaError(null);
       setIsSubmitting(true);
 
       try {
@@ -38,8 +46,112 @@ function LoginContent() {
           return;
         }
 
-        router.push(returnTo);
-        router.refresh();
+        // After successful password sign-in, enforce TOTP:
+        // 1) See if any TOTP factors exist.
+        const { data: factorsData, error: factorsError } = await (supabase.auth as any).mfa.listFactors();
+        if (factorsError) {
+          throw factorsError;
+        }
+
+        const totpFactors: { id: string; factorType?: string }[] =
+          (factorsData?.totp as any) ??
+          ((factorsData?.factors as any[])?.filter(
+            (f) => f.factorType === "totp"
+          ) ?? []);
+
+        if (!totpFactors || totpFactors.length === 0) {
+          // No TOTP enrolled yet (or Supabase isn't reporting it): start enrollment.
+          const { data: enrollData, error: enrollError } = await (supabase.auth as any).mfa.enroll({
+            factorType: "totp",
+          });
+          if (enrollError) {
+            // If a factor already exists with the default name, treat this as
+            // \"already enrolled but incomplete\" and fall through to verify mode.
+            if ((enrollError as any).code === "mfa_factor_name_conflict") {
+              const { data: retryFactors } = await (supabase.auth as any).mfa.listFactors();
+              const retryTotp: { id: string; factorType?: string }[] =
+                (retryFactors?.totp as any) ??
+                ((retryFactors?.factors as any[])?.filter(
+                  (f) => f.factorType === "totp"
+                ) ?? []);
+
+              if (retryTotp && retryTotp.length > 0) {
+                const existingFactorId = retryTotp[0].id;
+                const { data: retryChallenge, error: retryChallengeError } =
+                  await (supabase.auth as any).mfa.challenge({
+                    factorId: existingFactorId,
+                  });
+                if (retryChallengeError) {
+                  throw retryChallengeError;
+                }
+                const existingChallengeId: string | undefined = retryChallenge?.id;
+                if (!existingChallengeId) {
+                  throw new Error("Missing challenge id for MFA verification.");
+                }
+
+                setMfaMode("verify");
+                setMfaFactorId(existingFactorId);
+                setMfaChallengeId(existingChallengeId);
+                setMfaQrCode(null);
+                setMfaSecret(null);
+                setMfaCode("");
+                setIsSubmitting(false);
+                return;
+              }
+            }
+
+            throw enrollError;
+          }
+
+          const factorId: string | undefined = enrollData?.id;
+          const qrCode: string | undefined = enrollData?.totp?.qr_code;
+          const secret: string | undefined = enrollData?.totp?.secret;
+          if (!factorId) {
+            throw new Error("Missing factor id from enrollment response.");
+          }
+
+          const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa
+            .challenge({
+              factorId,
+            });
+          if (challengeError) {
+            throw challengeError;
+          }
+          const challengeId: string | undefined = challengeData?.id;
+          if (!challengeId) {
+            throw new Error("Missing challenge id for MFA enrollment.");
+          }
+
+          setMfaMode("enroll");
+          setMfaFactorId(factorId);
+          setMfaChallengeId(challengeId);
+          setMfaQrCode(qrCode ?? null);
+          setMfaSecret(secret ?? null);
+          setMfaCode("");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // TOTP already enrolled: require verification.
+        const factorId = totpFactors[0].id;
+        const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa.challenge({
+          factorId,
+        });
+        if (challengeError) {
+          throw challengeError;
+        }
+        const challengeId: string | undefined = challengeData?.id;
+        if (!challengeId) {
+          throw new Error("Missing challenge id for MFA verification.");
+        }
+
+        setMfaMode("verify");
+        setMfaFactorId(factorId);
+        setMfaChallengeId(challengeId);
+        setMfaQrCode(null);
+        setMfaSecret(null);
+        setMfaCode("");
+        setIsSubmitting(false);
       } catch {
         setError("Something went wrong. Please try again.");
         setIsSubmitting(false);
@@ -47,6 +159,40 @@ function LoginContent() {
     },
     [email, password, returnTo, router]
   );
+
+  const handleVerifyMfa = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!mfaFactorId || !mfaChallengeId || mfaCode.trim().length === 0) {
+        return;
+      }
+
+      setMfaError(null);
+      setIsSubmitting(true);
+
+      try {
+        const supabase = getSupabase();
+        const { error: verifyError } = await (supabase.auth as any).mfa.verify({
+          factorId: mfaFactorId,
+          challengeId: mfaChallengeId,
+          code: mfaCode.trim(),
+        });
+        if (verifyError) {
+          throw verifyError;
+        }
+
+        router.push(returnTo);
+        router.refresh();
+      } catch (err) {
+        console.error("[login] MFA verify error", err);
+        setMfaError("Invalid code. Please double-check and try again.");
+        setIsSubmitting(false);
+      }
+    },
+    [mfaCode, mfaChallengeId, mfaFactorId, returnTo, router]
+  );
+
+  const isInMfaFlow = mfaMode !== "none";
 
   return (
     <div className="flex h-full items-center justify-center bg-surface">
@@ -60,13 +206,14 @@ function LoginContent() {
           </p>
         </div>
 
-        {reason === "auth_error" && (
+        {!isInMfaFlow && reason === "auth_error" && (
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
             Your session may have expired. Please sign in again.
           </p>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {!isInMfaFlow && (
+          <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label
               className="mb-1 block text-sm font-medium text-white"
@@ -138,11 +285,102 @@ function LoginContent() {
           >
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>
-        </form>
+          </form>
+        )}
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Access is restricted to authorized users only.
-        </p>
+        {isInMfaFlow && (
+          <form onSubmit={handleVerifyMfa}>
+            <div className="mb-4">
+              <h2 className="mb-1 text-lg font-semibold text-foreground">
+                {mfaMode === "enroll" ? "Set up two-factor authentication" : "Two-factor authentication"}
+              </h2>
+              <p className="text-sm text-muted">
+                {mfaMode === "enroll"
+                  ? "Scan the QR code with your authenticator app, then enter the 6-digit code."
+                  : "Enter the 6-digit code from your authenticator app."}
+              </p>
+            </div>
+
+            {mfaMode === "enroll" && (mfaQrCode || mfaSecret) && (
+              <div className="mb-4 space-y-3">
+                {mfaQrCode ? (
+                  <div className="flex justify-center">
+                    <div
+                      className="rounded-md bg-white p-3"
+                      dangerouslySetInnerHTML={{
+                        __html: decodeURIComponent(
+                          mfaQrCode.split(",")[1] ?? ""
+                        ),
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {mfaSecret && (
+                  <div className="rounded-md border border-border bg-background px-3 py-2 text-sm font-mono text-foreground">
+                    {mfaSecret}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label
+                className="mb-1 block text-sm font-medium text-white"
+                htmlFor="mfa-code"
+              >
+                6-Digit Code
+              </label>
+              <input
+                className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+                id="mfa-code"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter code"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
+
+            {mfaError && (
+              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+                {mfaError}
+              </p>
+            )}
+
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                className={cn(
+                  "w-1/2 rounded-lg px-4 py-2 text-center text-sm font-medium transition-all duration-200",
+                  "bg-surface-hover text-foreground border border-border",
+                  "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
+                  "disabled:cursor-not-allowed disabled:opacity-60"
+                )}
+                disabled={isSubmitting || mfaCode.length === 0}
+                type="submit"
+              >
+                {isSubmitting ? "Verifying…" : "Verify code"}
+              </button>
+              <button
+                className="w-1/2 rounded-lg border border-border bg-transparent px-4 py-2 text-center text-sm font-medium text-muted hover:bg-surface-hover/40 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+                type="button"
+                onClick={() => {
+                  setMfaMode("none");
+                  setMfaCode("");
+                  setMfaError(null);
+                }}
+              >
+                Back
+              </button>
+            </div>
+          </form>
+        )}
+
+        {!isInMfaFlow && (
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Access is restricted to authorized users only.
+          </p>
+        )}
       </div>
     </div>
   );
