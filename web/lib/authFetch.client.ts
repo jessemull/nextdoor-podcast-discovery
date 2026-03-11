@@ -2,7 +2,7 @@
 
 /**
  * Client-only fetch wrapper for authenticated API calls.
- * On 401, redirects to /login?reason=session_expired and throws so callers don't continue.
+ * On 401, redirects to /login?reason=auth_error and throws so callers don't continue.
  * Use for all requests that require Auth0 session (posts, settings, admin, etc.).
  */
 export async function authFetch(
@@ -15,7 +15,7 @@ export async function authFetch(
   });
 
   if (response.status === 401) {
-    window.location.href = "/login?reason=session_expired";
+    window.location.href = "/login?reason=auth_error";
     throw new Error("Unauthorized");
   }
 
