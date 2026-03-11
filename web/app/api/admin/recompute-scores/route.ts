@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { recomputeScoresBodySchema } from "@/lib/validators";
 
@@ -18,7 +18,7 @@ import { recomputeScoresBodySchema } from "@/lib/validators";
  *   (e.g. after saving novelty config; no new config is created)
  */
 export async function POST(request: NextRequest) {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

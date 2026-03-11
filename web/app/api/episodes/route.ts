@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
+import { getSession } from "@/lib/supabase-server-auth";
 
 /**
  * GET /api/episodes
@@ -9,7 +9,7 @@ import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
  * this endpoint now returns an empty list for backward compatibility.
  */
 export async function GET(request: NextRequest) {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

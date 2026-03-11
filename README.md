@@ -66,14 +66,14 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 
 | Feature | Description |
 | :------ | :----------- |
-| Authentication | Auth0; access controlled by Auth0 (no server-side email whitelist) |
+| Authentication | Supabase Auth (email/password); signup disabled; users created manually in Supabase Dashboard |
 | Post feed | Paginated, filterable; sort by score or “podcast worthy”; filter by neighborhood, min reactions, episode date; “why podcast worthy” and tags |
 | Search | Keyword (full-text) + semantic (embedding) search; configurable similarity threshold; defaults from settings |
 | Post detail | Single post + related posts (semantic similarity) |
 | Saved posts | Mark saved; filter feed by saved |
 | Episode tracking | Mark “used on episode” with date; filter by episode date; avoid reuse |
 | Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults |
-| Admin access | Admin routes are protected by Auth0 only; any logged-in user can access them. A separate admin role may be added later if needed. |
+| Admin access | Admin routes are protected by Supabase Auth; any logged-in user can access them. A separate admin role may be added later if needed. |
 | Admin / jobs | List jobs, stats, cancel job, activate weight config |
 | Pittsburgh sports fact | Shown to all logged-in users on home page; Claude Haiku; error message if API fails |
 | Stats panel | Post counts, embedding backlog, etc. |
@@ -89,7 +89,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 
 **Scraper:** Python 3.11+, Playwright, Anthropic (Claude Haiku), OpenAI, Supabase Python client, Cryptography (Fernet), Tenacity.
 
-**Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), Auth0, Zod, Vitest + Testing Library.
+**Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), Supabase Auth, Zod, Vitest + Testing Library.
 
 **Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby).
 
@@ -113,7 +113,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Scraper** — Writes `posts`; optionally scoring + topic recount. Reads/writes `sessions` for cookies. Uses Supabase **service key** (same as web server-side).
 - **Embedder** (`src.embed`) — Reads `posts` and `llm_scores`; writes `post_embeddings`. No browser.
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
-- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Auth0 session; access is controlled solely by Auth0 (no server-side email whitelist).
+- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Supabase Auth session; signup is disabled and users are created manually in the Supabase Dashboard.
 - **Vercel** — Hosts Next.js only. Scraper and two workers (recompute + permalink) run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Repository structure
@@ -243,7 +243,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 ## Environment variables
 
 - **Scraper:** `scraper/.env` (copy from `scraper/.env.example`). Required: Nextdoor credentials, Supabase URL and service key, `SESSION_ENCRYPTION_KEY`, Anthropic and OpenAI keys. Optional: `APP_URL` and `INTERNAL_API_SECRET` (production worker → app cache invalidation), `SCRAPER_LOG_DIR` or `SCRAPER_LOG_FILE`, `UNSCORED_BATCH_LIMIT`. For dev use dev Supabase; on the server use **production** Supabase only. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
-- **Web:** `web/.env.local` (copy from `web/.env.example`). Required: Supabase URL/keys, Auth0 domain/client/secret, `APP_BASE_URL`. Optional: `ANTHROPIC_API_KEY` (sports fact), `INTERNAL_API_SECRET`. Recommended for Vercel: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (cache; keys are namespaced by env). Full matrix and dev vs prod: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+- **Web:** `web/.env.local` (copy from `web/.env.example`). Required: Supabase URL/keys. Optional: `ANTHROPIC_API_KEY` (sports fact), `INTERNAL_API_SECRET`. Recommended for Vercel: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (cache; keys are namespaced by env). Full matrix and dev vs prod: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ## Setup & quick start
 
@@ -266,7 +266,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
    cd scraper && python -m src.main --feed-type recent --max-posts 5
    ```
 
-5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in with Auth0.
+5. **Web** — Run `make dev-web`, open http://localhost:3000, and sign in (create users in Supabase Dashboard → Authentication; disable signups).
 
 6. **Workers (optional)** — With scraper env loaded: `cd scraper && python -m src.worker --job-type recompute_final_scores` or `fetch_permalink` (or `--once`). On the server, `sudo ./scripts/install-worker-service.sh` starts both.
 
@@ -304,7 +304,7 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 **API routes:** `GET/POST /api/posts`, `GET/POST /api/posts/[id]`, `POST /api/posts/[id]/saved`, `POST /api/posts/[id]/used`, `GET /api/search`, `GET/PUT /api/settings`, `GET /api/neighborhoods`, `GET /api/episodes`, `GET /api/stats`, `GET /api/sports-fact`, plus admin: jobs, recompute-scores, weight-configs.
 
-**Auth:** Auth0; middleware and API routes use `auth0.getSession()`; access controlled by Auth0 only.
+**Auth:** Supabase Auth; middleware and API routes use `getSession()` from `lib/supabase-server-auth`; signup disabled; users created manually.
 
 **Data:** Server components and API routes use the Supabase server client; the client uses React Query against the API. Helpers and embedding cache live in `lib/`.
 
@@ -322,14 +322,14 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 - **Lint** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats scraper code.
 - **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase and NextAuth.
-- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. Web tests mock Auth0.
+- **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. Web tests mock Supabase Auth session.
 
 ## Security
 
 - **Secrets** — Environment variables and GitHub Secrets only; never committed.
 - **Scraper** — `make security-scraper` runs bandit and pip-audit.
 - **Web** — `make security-web` runs npm audit.
-- **Auth** — Auth0; server-side session checks on all mutation and admin API routes; no server-side email whitelist.
+- **Auth** — Supabase Auth; server-side session checks on all mutation and admin API routes; signup disabled; users created manually in Dashboard.
 
 ## CI/CD & deployment
 
@@ -337,7 +337,7 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 | :------- | :----------------- | :----------- |
 | **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
 
-**Environments:** Dev (Preview + dev Supabase, local scraper) and production (Vercel Production + prod Supabase, server scraper/worker). [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) has the full variable matrix, Auth0/Redis notes, and deploy steps.
+**Environments:** Dev (Preview + dev Supabase, local scraper) and production (Vercel Production + prod Supabase, server scraper/worker). [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) has the full variable matrix, Redis notes, and deploy steps.
 
 Scraper and two workers run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PATCH } from "@/app/api/posts/[id]/used/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase
@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 // Helper to create route params
 const createParams = (id: string) => ({
@@ -35,7 +35,7 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/posts/123/used", {
       body: JSON.stringify({ used: true }),
@@ -50,9 +50,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 400 for invalid UUID format", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest("http://localhost:3000/api/posts/invalid-id/used", {
@@ -68,9 +67,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 400 when used field is missing", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest("http://localhost:3000/api/posts/123e4567-e89b-12d3-a456-426614174000/used", {
@@ -86,9 +84,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 400 when used field is not a boolean", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest("http://localhost:3000/api/posts/123e4567-e89b-12d3-a456-426614174000/used", {
@@ -104,9 +101,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should successfully mark post as used", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockPost = {
@@ -130,9 +126,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should successfully mark post as unused", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockPost = {
@@ -156,9 +151,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 404 when post not found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockSingle.mockResolvedValue({ data: null, error: null });
@@ -176,9 +170,8 @@ describe("PATCH /api/posts/[id]/used", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockSingle.mockResolvedValue({ data: null, error: { message: "Database error" } });

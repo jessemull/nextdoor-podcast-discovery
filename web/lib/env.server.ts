@@ -23,21 +23,6 @@ export const env = {
   get ANTHROPIC_API_KEY() {
     return getEnvVar("ANTHROPIC_API_KEY");
   },
-  get APP_BASE_URL() {
-    return getEnvVar("APP_BASE_URL");
-  },
-  get AUTH0_CLIENT_ID() {
-    return getEnvVar("AUTH0_CLIENT_ID");
-  },
-  get AUTH0_CLIENT_SECRET() {
-    return getEnvVar("AUTH0_CLIENT_SECRET");
-  },
-  get AUTH0_DOMAIN() {
-    return getEnvVar("AUTH0_DOMAIN");
-  },
-  get AUTH0_SECRET() {
-    return getEnvVar("AUTH0_SECRET");
-  },
   get OPENAI_API_KEY() {
     return getEnvVar("OPENAI_API_KEY");
   },

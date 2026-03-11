@@ -1,9 +1,7 @@
 "use client";
 
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { LogOut, Menu, Mic, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -11,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { getSupabase } from "@/lib/supabase.client";
+import { useAuthUser } from "@/lib/useAuthUser.client";
 import { cn } from "@/lib/utils";
 
 const navLinkClass = cn(
@@ -27,7 +27,7 @@ const NAV_LINKS = [
 ] as const;
 
 export function Navbar() {
-  const { isLoading, user } = useUser();
+  const { isLoading, user } = useAuthUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -35,6 +35,11 @@ export function Navbar() {
 
   const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  const handleSignOut = useCallback(async () => {
+    await getSupabase().auth.signOut();
+    window.location.href = "/login";
+  }, []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -63,8 +68,6 @@ export function Navbar() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [mobileMenuOpen, closeMobileMenu]);
-
-  const pathname = usePathname();
 
   const initial = user?.email?.slice(0, 1).toUpperCase() ?? "?";
 
@@ -123,15 +126,18 @@ export function Navbar() {
                   className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-card border py-1 shadow-lg"
                   role="menu"
                 >
-                  <Link
+                  <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
-                    href="/auth/logout?returnTo=/login"
                     role="menuitem"
-                    onClick={closeUserMenu}
+                    type="button"
+                    onClick={() => {
+                      closeUserMenu();
+                      void handleSignOut();
+                    }}
                   >
                     <LogOut aria-hidden className="h-4 w-4" />
                     Sign out
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>
@@ -220,14 +226,17 @@ export function Navbar() {
                 </Link>
               ))}
               {user && !isLoading && (
-                <Link
-                  className="focus:bg-surface-hover flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  href="/auth/logout?returnTo=/login"
-                  onClick={closeMobileMenu}
+                <button
+                  className="focus:bg-surface-hover flex min-h-[44px] w-full items-center gap-2 rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    void handleSignOut();
+                  }}
                 >
                   <LogOut aria-hidden className="h-5 w-5" />
                   Sign out
-                </Link>
+                </button>
               )}
             </div>
           </div>

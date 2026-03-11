@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-import { getSessionWithAuthLog } from "@/lib/auth0-api.server";
 import {
   getCachedEmbedding,
   setCachedEmbedding,
 } from "@/lib/embedding-cache.server";
 import { env } from "@/lib/env.server";
 import { logError } from "@/lib/log.server";
+import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { searchBodySchema, searchQuerySchema } from "@/lib/validators";
 
@@ -55,7 +55,7 @@ const EMBEDDING_MODEL = "text-embedding-3-small";
  * Use when you know exact terms. Falls back to semantic search via POST for meaning-based queries.
  */
 export async function GET(request: NextRequest) {
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   // Require authentication
-  const session = await getSessionWithAuthLog(request);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

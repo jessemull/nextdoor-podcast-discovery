@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/posts/bulk/route";
 
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 vi.mock("@/lib/log.server", () => ({
@@ -22,8 +22,8 @@ vi.mock("@/lib/posts.bulk.server", () => ({
   getPostIdsByQuery: vi.fn(),
 }));
 
-import { auth0 } from "@/lib/auth0";
 import { getPostIdsByQuery } from "@/lib/posts.bulk.server";
+import { getSession } from "@/lib/supabase-server-auth";
 
 const POST_ID_1 = "123e4567-e89b-12d3-a456-426614174001";
 const POST_ID_2 = "123e4567-e89b-12d3-a456-426614174002";
@@ -35,7 +35,7 @@ describe("POST /api/posts/bulk", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/posts/bulk", {
       body: JSON.stringify({
@@ -53,9 +53,8 @@ describe("POST /api/posts/bulk", () => {
   });
 
   it("should return 400 when body is invalid", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest("http://localhost:3000/api/posts/bulk", {
@@ -74,9 +73,8 @@ describe("POST /api/posts/bulk", () => {
 
   describe("action: reprocess", () => {
     it("should return jobs_queued and skipped when posts have url", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "user@example.com" },
-        expires: "2099-01-01",
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "user@example.com", id: "test-user-id" },
       });
 
       const postsWithUrl = [
@@ -123,9 +121,8 @@ describe("POST /api/posts/bulk", () => {
     });
 
     it("should skip posts without url and return skipped count", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "user@example.com" },
-        expires: "2099-01-01",
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "user@example.com", id: "test-user-id" },
       });
 
       const postsWithUrl = [
@@ -171,9 +168,8 @@ describe("POST /api/posts/bulk", () => {
     });
 
     it("should return jobs_queued 0 and skipped 0 when postIds is empty", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "user@example.com" },
-        expires: "2099-01-01",
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "user@example.com", id: "test-user-id" },
       });
 
       vi.mocked(getPostIdsByQuery).mockResolvedValue({ postIds: [] });
@@ -200,9 +196,8 @@ describe("POST /api/posts/bulk", () => {
 
   describe("action: mark_unused", () => {
     it("should update posts with used_on_episode false", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "user@example.com" },
-        expires: "2099-01-01",
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "user@example.com", id: "test-user-id" },
       });
 
       const mockIn = vi.fn().mockResolvedValue({ error: null });
@@ -230,9 +225,8 @@ describe("POST /api/posts/bulk", () => {
 
   describe("action: unsave", () => {
     it("should update posts with saved false", async () => {
-      vi.mocked(auth0.getSession).mockResolvedValue({
-        user: { email: "user@example.com" },
-        expires: "2099-01-01",
+      vi.mocked(getSession).mockResolvedValue({
+        user: { email: "user@example.com", id: "test-user-id" },
       });
 
       const mockIn = vi.fn().mockResolvedValue({ error: null });

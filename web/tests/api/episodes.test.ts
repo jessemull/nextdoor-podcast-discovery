@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/episodes/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("GET /api/episodes", () => {
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const response = await GET();
     const data = await response.json();
@@ -21,8 +21,8 @@ describe("GET /api/episodes", () => {
   });
 
   it("should return empty data when authenticated (episode_date removed)", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const response = await GET();

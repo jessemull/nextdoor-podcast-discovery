@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vites
 import { GET } from "@/app/api/posts/route";
 
 // Mock next-auth
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -29,7 +29,7 @@ vi.mock("@/lib/active-config-cache.server", () => ({
 }));
 
 import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("GET /api/posts", () => {
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/posts");
     const response = await GET(request);
@@ -49,9 +49,8 @@ describe("GET /api/posts", () => {
 
   it("should return posts when authenticated using RPC", async () => {
     vi.mocked(getActiveWeightConfigId).mockResolvedValue("config-1");
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockScoresData = [
@@ -151,9 +150,8 @@ describe("GET /api/posts", () => {
 
   it("should pass p_ignored_only to RPC when ignored_only=true", async () => {
     vi.mocked(getActiveWeightConfigId).mockResolvedValue("config-1");
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const mockScoresData = [
@@ -230,9 +228,8 @@ describe("GET /api/posts", () => {
   });
 
   it("should return error when no active config found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
     vi.mocked(getActiveWeightConfigId).mockResolvedValue(null);
 
@@ -260,9 +257,8 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 400 for invalid query params", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest(
@@ -276,9 +272,8 @@ describe("GET /api/posts", () => {
   });
 
   it("should cap limit at 100", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     // Date sort uses get_posts_by_date RPC, not from().select().order().range()
@@ -305,9 +300,8 @@ describe("GET /api/posts", () => {
   });
 
   it("should return empty array when no posts found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockRpc.mockImplementation((fnName: string) => {
@@ -330,9 +324,8 @@ describe("GET /api/posts", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
-      expires: "2099-01-01",
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockRpc.mockImplementation((fnName: string) => {

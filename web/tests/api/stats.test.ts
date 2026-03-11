@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/stats/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase
@@ -17,7 +17,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 describe("GET /api/stats", () => {
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe("GET /api/stats", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const response = await GET();
     const data = await response.json();
@@ -35,8 +35,8 @@ describe("GET /api/stats", () => {
   });
 
   it("should return stats when authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
       expires: "2099-01-01",
     });
 
@@ -133,8 +133,8 @@ describe("GET /api/stats", () => {
   });
 
   it("should return 500 when posts query fails", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
       expires: "2099-01-01",
     });
 
@@ -193,8 +193,8 @@ describe("GET /api/stats", () => {
   });
 
   it("should return 500 when scores query fails", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
       expires: "2099-01-01",
     });
 
@@ -254,8 +254,8 @@ describe("GET /api/stats", () => {
   });
 
   it("should calculate unscored correctly", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
       expires: "2099-01-01",
     });
 

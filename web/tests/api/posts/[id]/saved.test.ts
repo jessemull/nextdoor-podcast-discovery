@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PATCH } from "@/app/api/posts/[id]/saved/route";
 
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
  
@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 const createParams = (id: string) => ({
   params: Promise.resolve({ id }),
@@ -45,7 +45,7 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest(`http://localhost:3000/api/posts/${VALID_ID}/saved`, {
       body: JSON.stringify({ saved: true }),
@@ -59,8 +59,8 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 for invalid UUID format", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest("http://localhost:3000/api/posts/invalid/saved", {
@@ -75,8 +75,8 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 when saved field is missing", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest(`http://localhost:3000/api/posts/${VALID_ID}/saved`, {
@@ -91,8 +91,8 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 400 when saved is not a boolean", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     const request = new NextRequest(`http://localhost:3000/api/posts/${VALID_ID}/saved`, {
@@ -107,8 +107,8 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should update saved state and return post when valid", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockSingle.mockResolvedValue({
@@ -128,8 +128,8 @@ describe("PATCH /api/posts/[id]/saved", () => {
   });
 
   it("should return 500 on database error", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     });
 
     mockSingle.mockResolvedValue({

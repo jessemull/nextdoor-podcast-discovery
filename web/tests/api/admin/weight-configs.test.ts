@@ -9,9 +9,9 @@ import {
 import { GET } from "@/app/api/admin/weight-configs/route";
 
 // Mock next-auth
-// Mock Auth0
-vi.mock("@/lib/auth0", () => ({
-  auth0: { getSession: vi.fn() },
+// Mock auth
+vi.mock("@/lib/supabase-server-auth", () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock Supabase — client chain is dynamic; mocks use "as any" for fluent test setup.
@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
-import { auth0 } from "@/lib/auth0";
+import { getSession } from "@/lib/supabase-server-auth";
 
 /** Valid UUIDs for weight config IDs (routes validate UUID format). */
 const CONFIG_1_UUID = "550e8400-e29b-41d4-a716-446655440001";
@@ -56,7 +56,7 @@ describe("GET /api/admin/weight-configs", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest("http://localhost:3000/api/admin/weight-configs");
     const response = await GET(request);
@@ -67,8 +67,8 @@ describe("GET /api/admin/weight-configs", () => {
   });
 
   it("should return weight configs when authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const mockConfigs = [
@@ -152,7 +152,7 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`, {
       method: "DELETE",
@@ -167,8 +167,8 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 400 when trying to delete active config", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const settingsSelect = vi.fn().mockReturnThis();
@@ -202,8 +202,8 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
   });
 
   it("should delete config when not active", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const mockConfig = {
@@ -285,8 +285,8 @@ describe("DELETE /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 400 when trying to delete config with pending jobs", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     // Mock settings query (returns different active config)
@@ -378,7 +378,7 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest(
       `http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}`,
@@ -395,8 +395,8 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 400 for invalid config ID format", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest(
@@ -414,8 +414,8 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 400 when body has neither name nor description", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest(
@@ -433,8 +433,8 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 400 when at least one of name or description is required", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const request = new NextRequest(
@@ -452,8 +452,8 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should return 404 when config not found", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const updateSingle = vi.fn().mockResolvedValue({
@@ -482,8 +482,8 @@ describe("PATCH /api/admin/weight-configs/:id", () => {
   });
 
   it("should update name and return config when valid", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const updatedConfig = {
@@ -525,7 +525,7 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
   });
 
   it("should return 401 when not authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue(null);
+    vi.mocked(getSession).mockResolvedValue(null);
 
     const request = new NextRequest(`http://localhost:3000/api/admin/weight-configs/${CONFIG_1_UUID}/activate`, {
       method: "PUT",
@@ -540,8 +540,8 @@ describe("PUT /api/admin/weight-configs/:id/activate", () => {
   });
 
   it("should activate config when authenticated", async () => {
-    vi.mocked(auth0.getSession).mockResolvedValue({
-      user: { email: "test@example.com" },
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
     } as never);
 
     const mockConfig = {

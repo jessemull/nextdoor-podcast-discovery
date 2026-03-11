@@ -1,25 +1,61 @@
 "use client";
 
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
+import { getSupabase } from "@/lib/supabase.client";
+import { useAuthUser } from "@/lib/useAuthUser.client";
 import { cn } from "@/lib/utils";
 
 function LoginContent() {
-  const { isLoading, user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const diagCookie = searchParams.get("_diag_cookie");
+  const returnTo = searchParams.get("returnTo") ?? "/";
   const reason = searchParams.get("reason");
+  const { isLoading: authLoading, user } = useAuthUser();
+
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setIsSubmitting(true);
+
+      try {
+        const supabase = getSupabase();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (signInError) {
+          setError(signInError.message);
+          setIsSubmitting(false);
+          return;
+        }
+
+        router.push(returnTo);
+        router.refresh();
+      } catch {
+        setError("Something went wrong. Please try again.");
+        setIsSubmitting(false);
+      }
+    },
+    [email, password, returnTo, router]
+  );
 
   useEffect(() => {
-    if (!isLoading && user) {
-      router.push("/");
+    if (!authLoading && user) {
+      router.push(returnTo);
+      router.refresh();
     }
-  }, [isLoading, user, router]);
+  }, [authLoading, returnTo, router, user]);
 
-  if (isLoading) {
+  if (authLoading || user) {
     return (
       <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="animate-pulse text-gray-400">Loading...</div>
@@ -27,15 +63,11 @@ function LoginContent() {
     );
   }
 
-  if (user) {
-    return null;
-  }
-
   return (
     <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="bg-white mx-4 w-full max-w-md rounded-2xl p-8 shadow-2xl">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">
             Nextdoor Discovery
           </h1>
           <p className="text-gray-600">
@@ -43,54 +75,74 @@ function LoginContent() {
           </p>
         </div>
 
-        {reason === "session_expired" && (
-          <p className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-2 text-sm mb-4">
-            You were signed out. Please sign in again.
+        {reason === "auth_error" && (
+          <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            Your session may have expired. Please sign in again.
           </p>
         )}
 
-        {reason === "auth_error" && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <p className="font-medium">Something went wrong with the login session.</p>
-            <p className="mt-1">
-              Use the link below to reset your session, then try signing in again.
-            </p>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700"
+              htmlFor="login-email"
+            >
+              Email
+            </label>
+            <input
+              autoComplete="email"
+              className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+              id="login-email"
+              name="email"
+              placeholder="you@example.com"
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
-        )}
+          <div className="mb-6">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700"
+              htmlFor="login-password"
+            >
+              Password
+            </label>
+            <input
+              autoComplete="current-password"
+              className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+              id="login-password"
+              name="password"
+              required
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <a
-          aria-label="Sign in with Auth0"
-          className={cn(
-            "block w-full text-center",
-            "bg-white border-2 border-gray-200 rounded-lg px-6 py-3",
-            "text-gray-700 font-medium",
-            "hover:bg-gray-50 hover:border-gray-300",
-            "transition-all duration-200"
+          {error && (
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+              {error}
+            </p>
           )}
-          href="/auth/login"
-        >
-          Sign in with Auth0
-        </a>
+
+          <button
+            className={cn(
+              "block w-full rounded-lg px-6 py-3 text-center font-medium transition-all duration-200",
+              "bg-foreground text-background",
+              "hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
+              "disabled:cursor-not-allowed disabled:opacity-60"
+            )}
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Access is restricted to authorized users only.
         </p>
-
-        <p className="mt-4 text-center text-sm text-gray-500">
-          Having trouble?{" "}
-          <a
-            className="font-medium text-gray-700 underline hover:text-gray-900"
-            href="/auth/logout?returnTo=/login"
-          >
-            Reset session
-          </a>
-        </p>
-
-        {diagCookie !== null && (
-          <p className="mt-4 text-center text-xs text-gray-400" role="status">
-            Debug: session cookie was {diagCookie === "1" ? "sent" : "not sent"} when redirected here.
-          </p>
-        )}
       </div>
     </div>
   );
