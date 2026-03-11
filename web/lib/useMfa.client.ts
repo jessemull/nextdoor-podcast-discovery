@@ -43,18 +43,16 @@ export function useMfa(): UseMfaResult {
     setEnrollError(null);
     try {
       const supabase = getSupabase();
-      // Shape: { data: { totp: Factor[] | undefined, phone: Factor[] | undefined } }
+      // Supabase returns factors in data.all with factor_type (e.g. "totp"), not data.totp.
       const { data, error } = await (supabase.auth as any).mfa.listFactors();
       if (error) {
         throw error;
       }
 
-      const totpFactors: TotpFactor[] =
-        (data?.totp as TotpFactor[] | undefined) ??
-        // Fallback if API shape changes to a flat list.
-        ((data?.factors as TotpFactor[] | undefined)?.filter(
-          (f) => f.factorType === "totp"
-        ) ?? []);
+      const all = (data as { all?: { id: string; factor_type?: string }[] })?.all ?? [];
+      const totpFactors: TotpFactor[] = all
+        .filter((f) => f.factor_type === "totp")
+        .map((f) => ({ factorType: "totp", id: f.id }));
 
       setEnrolledTotp(totpFactors[0] ?? null);
     } catch (error) {

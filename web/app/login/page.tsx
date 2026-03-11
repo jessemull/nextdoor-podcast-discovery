@@ -7,6 +7,25 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 
+/** Supabase listFactors returns factors in data.all with factor_type and status (e.g. "verified" | "unverified"). */
+function getTotpFactorsFromListFactorsResponse(data: unknown): { id: string; status?: string }[] {
+  const all = (data as { all?: { id: string; factor_type?: string; status?: string }[] })?.all ?? [];
+  return all
+    .filter((f) => f.factor_type === "totp")
+    .map((f) => ({ id: f.id, status: f.status }));
+}
+
+/** Supabase returns { code: "mfa_factor_name_conflict", message: "A factor with the friendly name \"\" for this user already exists" } */
+function isMfaFactorNameConflict(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  return (
+    e.code === "mfa_factor_name_conflict" ||
+    (typeof e.message === "string" &&
+      e.message.includes("mfa_factor_name_conflict"))
+  );
+}
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,11 +72,8 @@ function LoginContent() {
           throw factorsError;
         }
 
-        const totpFactors: { id: string; factorType?: string }[] =
-          (factorsData?.totp as any) ??
-          ((factorsData?.factors as any[])?.filter(
-            (f) => f.factorType === "totp"
-          ) ?? []);
+        const totpFactors = getTotpFactorsFromListFactorsResponse(factorsData);
+        const hasVerifiedTotp = totpFactors.some((f) => f.status === "verified");
 
         if (!totpFactors || totpFactors.length === 0) {
           // No TOTP enrolled yet (or Supabase isn't reporting it): start enrollment.
@@ -65,35 +81,48 @@ function LoginContent() {
             factorType: "totp",
           });
           if (enrollError) {
-            // If a factor already exists with the default name, treat this as
-            // \"already enrolled but incomplete\" and fall through to verify mode.
-            if ((enrollError as any).code === "mfa_factor_name_conflict") {
+            // Stale incomplete factor (e.g. user left enrollment page and came back later).
+            // Remove it and show a fresh QR instead of leaving them stuck on verify.
+            if (isMfaFactorNameConflict(enrollError)) {
               const { data: retryFactors } = await (supabase.auth as any).mfa.listFactors();
-              const retryTotp: { id: string; factorType?: string }[] =
-                (retryFactors?.totp as any) ??
-                ((retryFactors?.factors as any[])?.filter(
-                  (f) => f.factorType === "totp"
-                ) ?? []);
+              const retryTotp = getTotpFactorsFromListFactorsResponse(retryFactors);
 
               if (retryTotp && retryTotp.length > 0) {
                 const existingFactorId = retryTotp[0].id;
-                const { data: retryChallenge, error: retryChallengeError } =
+                const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+                  factorId: existingFactorId,
+                });
+                if (unenrollErr) {
+                  throw unenrollErr;
+                }
+                const { data: retryEnrollData, error: retryEnrollErr } = await (supabase.auth as any).mfa.enroll({
+                  factorType: "totp",
+                });
+                if (retryEnrollErr) {
+                  throw retryEnrollErr;
+                }
+                const retryFactorId = retryEnrollData?.id;
+                const retryQrCode = retryEnrollData?.totp?.qr_code;
+                const retrySecret = retryEnrollData?.totp?.secret;
+                if (!retryFactorId) {
+                  throw new Error("Missing factor id from enrollment response.");
+                }
+                const { data: retryChallengeData, error: retryChallengeError } =
                   await (supabase.auth as any).mfa.challenge({
-                    factorId: existingFactorId,
+                    factorId: retryFactorId,
                   });
                 if (retryChallengeError) {
                   throw retryChallengeError;
                 }
-                const existingChallengeId: string | undefined = retryChallenge?.id;
-                if (!existingChallengeId) {
-                  throw new Error("Missing challenge id for MFA verification.");
+                const retryChallengeId = retryChallengeData?.id;
+                if (!retryChallengeId) {
+                  throw new Error("Missing challenge id for MFA enrollment.");
                 }
-
-                setMfaMode("verify");
-                setMfaFactorId(existingFactorId);
-                setMfaChallengeId(existingChallengeId);
-                setMfaQrCode(null);
-                setMfaSecret(null);
+                setMfaMode("enroll");
+                setMfaFactorId(retryFactorId);
+                setMfaChallengeId(retryChallengeId);
+                setMfaQrCode(retryQrCode ?? null);
+                setMfaSecret(retrySecret ?? null);
                 setMfaCode("");
                 setIsSubmitting(false);
                 return;
@@ -132,7 +161,49 @@ function LoginContent() {
           return;
         }
 
-        // TOTP already enrolled: require verification.
+        if (totpFactors.length > 0 && !hasVerifiedTotp) {
+          // Incomplete enrollment (all TOTP factors are unverified). Remove and show QR again.
+          const existingFactorId = totpFactors[0].id;
+          const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+            factorId: existingFactorId,
+          });
+          if (unenrollErr) {
+            throw unenrollErr;
+          }
+          const { data: enrollData, error: enrollError } = await (supabase.auth as any).mfa.enroll({
+            factorType: "totp",
+          });
+          if (enrollError) {
+            throw enrollError;
+          }
+          const factorId = enrollData?.id;
+          const qrCode = enrollData?.totp?.qr_code;
+          const secret = enrollData?.totp?.secret;
+          if (!factorId) {
+            throw new Error("Missing factor id from enrollment response.");
+          }
+          const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa
+            .challenge({
+              factorId,
+            });
+          if (challengeError) {
+            throw challengeError;
+          }
+          const challengeId = challengeData?.id;
+          if (!challengeId) {
+            throw new Error("Missing challenge id for MFA enrollment.");
+          }
+          setMfaMode("enroll");
+          setMfaFactorId(factorId);
+          setMfaChallengeId(challengeId);
+          setMfaQrCode(qrCode ?? null);
+          setMfaSecret(secret ?? null);
+          setMfaCode("");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // TOTP already enrolled and verified: require verification.
         const factorId = totpFactors[0].id;
         const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa.challenge({
           factorId,
@@ -152,8 +223,53 @@ function LoginContent() {
         setMfaSecret(null);
         setMfaCode("");
         setIsSubmitting(false);
-      } catch {
-        setError("Something went wrong. Please try again.");
+      } catch (err) {
+        if (isMfaFactorNameConflict(err)) {
+          try {
+            const supabase = getSupabase();
+            const { data: retryFactors } = await (supabase.auth as any).mfa.listFactors();
+            const retryTotp = getTotpFactorsFromListFactorsResponse(retryFactors);
+
+            if (retryTotp.length > 0) {
+              const existingFactorId = retryTotp[0].id;
+              const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+                factorId: existingFactorId,
+              });
+              if (unenrollErr) throw unenrollErr;
+
+              const { data: retryEnrollData, error: retryEnrollErr } = await (supabase.auth as any).mfa.enroll({
+                factorType: "totp",
+              });
+              if (retryEnrollErr) throw retryEnrollErr;
+
+              const retryFactorId = retryEnrollData?.id;
+              const retryQrCode = retryEnrollData?.totp?.qr_code;
+              const retrySecret = retryEnrollData?.totp?.secret;
+              if (!retryFactorId) throw new Error("Missing factor id from enrollment response.");
+
+              const { data: retryChallengeData, error: retryChallengeError } =
+                await (supabase.auth as any).mfa.challenge({
+                  factorId: retryFactorId,
+                });
+              if (retryChallengeError) throw retryChallengeError;
+              const retryChallengeId = retryChallengeData?.id;
+              if (!retryChallengeId) throw new Error("Missing challenge id for MFA enrollment.");
+
+              setMfaMode("enroll");
+              setMfaFactorId(retryFactorId);
+              setMfaChallengeId(retryChallengeId);
+              setMfaQrCode(retryQrCode ?? null);
+              setMfaSecret(retrySecret ?? null);
+              setMfaCode("");
+            } else {
+              setError("Something went wrong. Please try again.");
+            }
+          } catch {
+            setError("Something went wrong. Please try again.");
+          }
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
         setIsSubmitting(false);
       }
     },
@@ -173,9 +289,9 @@ function LoginContent() {
       try {
         const supabase = getSupabase();
         const { error: verifyError } = await (supabase.auth as any).mfa.verify({
-          factorId: mfaFactorId,
           challengeId: mfaChallengeId,
           code: mfaCode.trim(),
+          factorId: mfaFactorId,
         });
         if (verifyError) {
           throw verifyError;
@@ -191,6 +307,79 @@ function LoginContent() {
     },
     [mfaCode, mfaChallengeId, mfaFactorId, returnTo, router]
   );
+
+  const handleResetMfaAndShowQr = useCallback(async () => {
+    if (!mfaFactorId) {
+      return;
+    }
+
+    setMfaError(null);
+    setIsSubmitting(true);
+
+    try {
+      const supabase = getSupabase();
+
+      const { error: unenrollError } = await (supabase.auth as any).mfa.unenroll({
+        factorId: mfaFactorId,
+      });
+      if (unenrollError) {
+        throw unenrollError;
+      }
+
+      const { data: factorsData, error: factorsError } = await (supabase.auth as any).mfa.listFactors();
+      if (factorsError) {
+        throw factorsError;
+      }
+
+      const totpFactors = getTotpFactorsFromListFactorsResponse(factorsData);
+
+      if (totpFactors.length > 0) {
+        setMfaError("Could not remove previous setup. Please try again or contact support.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: enrollData, error: enrollError } = await (supabase.auth as any).mfa.enroll({
+        factorType: "totp",
+      });
+      if (enrollError) {
+        throw enrollError;
+      }
+
+      const factorId: string | undefined = enrollData?.id;
+      const qrCode: string | undefined = enrollData?.totp?.qr_code;
+      const secret: string | undefined = enrollData?.totp?.secret;
+      if (!factorId) {
+        throw new Error("Missing factor id from enrollment response.");
+      }
+
+      const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa
+        .challenge({
+          factorId,
+        });
+      if (challengeError) {
+        throw challengeError;
+      }
+      const challengeId: string | undefined = challengeData?.id;
+      if (!challengeId) {
+        throw new Error("Missing challenge id for MFA enrollment.");
+      }
+
+      setMfaMode("enroll");
+      setMfaFactorId(factorId);
+      setMfaChallengeId(challengeId);
+      setMfaQrCode(qrCode ?? null);
+      setMfaSecret(secret ?? null);
+      setMfaCode("");
+    } catch (err) {
+      console.error("[login] reset MFA error", err);
+      setMfaError(
+        err instanceof Error ? err.message : "Could not start over. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [mfaFactorId]);
 
   const isInMfaFlow = mfaMode !== "none";
 
@@ -373,6 +562,20 @@ function LoginContent() {
                 Back
               </button>
             </div>
+
+            {mfaMode === "verify" ? (
+              <p className="mt-4 text-center text-sm text-muted">
+                Didn’t finish setting up?{" "}
+                <button
+                  className="text-foreground underline hover:no-underline"
+                  disabled={isSubmitting}
+                  type="button"
+                  onClick={handleResetMfaAndShowQr}
+                >
+                  Start over and show QR code again
+                </button>
+              </p>
+            ) : null}
           </form>
         )}
 
