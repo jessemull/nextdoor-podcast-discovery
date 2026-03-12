@@ -10,11 +10,17 @@ import { cn } from "@/lib/utils";
 
 type Status = "loading" | "invalid" | "verified" | "error";
 
-function parseHashParams(): { token_hash: string | null; type: string | null } {
-  if (typeof window === "undefined") return { token_hash: null, type: null };
+function parseHashParams(): {
+  access_token: string | null;
+  token_hash: string | null;
+  type: string | null;
+} {
+  if (typeof window === "undefined")
+    return { access_token: null, token_hash: null, type: null };
   const hash = window.location.hash?.slice(1) || "";
   const params = new URLSearchParams(hash);
   return {
+    access_token: params.get("access_token"),
     token_hash: params.get("token_hash"),
     type: params.get("type"),
   };
@@ -32,10 +38,7 @@ function ResetPasswordContent() {
 
   const hashParams = parseHashParams();
   const tokenHash = searchParams.get("token_hash") ?? hashParams.token_hash;
-  const typeFromSearch = searchParams.get("type");
-  const typeFromHash = hashParams.type;
-  const hasRecoveryType =
-    typeFromSearch === "recovery" || typeFromHash === "recovery";
+  const hasSessionFromHash = Boolean(hashParams.access_token);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,8 +57,8 @@ function ResetPasswordContent() {
         }
         setStatus("verified");
       })();
-    } else if (hasRecoveryType) {
-      // Supabase already created a session and redirected here with type=recovery
+    } else if (hasSessionFromHash) {
+      // Supabase already created a session and redirected here with tokens
       // in the URL fragment. Treat the link as verified and let updateUser enforce auth.
       setStatus("verified");
     } else {
@@ -65,7 +68,7 @@ function ResetPasswordContent() {
     return () => {
       cancelled = true;
     };
-  }, [hasRecoveryType, tokenHash]);
+  }, [hasSessionFromHash, tokenHash]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
