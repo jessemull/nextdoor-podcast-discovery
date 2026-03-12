@@ -7,6 +7,7 @@ import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
+import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
@@ -466,15 +467,22 @@ export default function SettingsPage() {
           onSaveSearch={handleSaveSearchDefaults}
         />
 
-        <section className="mt-8 rounded-2xl border border-border bg-surface-elevated p-6">
-          <h2 className="text-lg font-semibold text-foreground">
+        <Card className="mb-8 p-6">
+          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
             Account security
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p
+            className="text-foreground mb-6 text-sm"
+            style={{ opacity: 0.85 }}
+          >
             Manage two-factor authentication for your account.
           </p>
 
-          <div className="mt-4 space-y-3 text-sm text-muted">
+          <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+            Status
+          </h3>
+
+          <div className="space-y-3 text-sm text-muted">
             {mfaLoading ? (
               <p>Loading two-factor status&hellip;</p>
             ) : enrolledTotp ? (
@@ -567,7 +575,7 @@ export default function SettingsPage() {
                     void disableTotp();
                   }}
                 >
-                  Disable two-factor authentication
+                  Reset
                 </button>
               ) : (
                 <button
@@ -584,7 +592,7 @@ export default function SettingsPage() {
               )}
             </div>
           )}
-        </section>
+        </Card>
 
         </div>
       </main>

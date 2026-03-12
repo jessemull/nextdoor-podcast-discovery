@@ -4,7 +4,7 @@ import { createSupabaseAuthClientForMiddleware } from "./lib/supabase-server-aut
 
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/reset-password"];
 const STATIC_PATTERN =
   /^\/(_next|_next\/static|_next\/image|favicon\.ico|icon\.svg|.*\.(?:svg|png|jpg|jpeg|gif|webp)$)/;
 
