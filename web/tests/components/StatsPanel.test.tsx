@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StatsPanel } from "@/components/StatsPanel";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/constants";
 
 import type { StatsResponse } from "@/lib/types";
 
@@ -88,7 +89,7 @@ describe("StatsPanel", () => {
     render(<StatsPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to fetch stats/i)).toBeInTheDocument();
+      expect(screen.getByText(GENERIC_ERROR_MESSAGE)).toBeInTheDocument();
     });
   });
 
@@ -100,7 +101,7 @@ describe("StatsPanel", () => {
     render(<StatsPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/network error/i)).toBeInTheDocument();
+      expect(screen.getByText(GENERIC_ERROR_MESSAGE)).toBeInTheDocument();
     });
   });
 

@@ -10,6 +10,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PostFeed } from "@/components/PostFeed";
+import { GENERIC_ERROR_MESSAGE_LINE_1 } from "@/lib/constants";
 import { ToastProvider } from "@/lib/ToastContext";
 
 import type { PostWithScores } from "@/lib/types";
@@ -196,7 +197,7 @@ describe("PostFeed", () => {
     expect(screen.getByText("Showing 2 of 2 Posts")).toBeInTheDocument();
   });
 
-  it("should display error message when fetch fails", async () => {
+  it("should display a generic error message when feed fetch fails", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url) => {
       const u = typeof url === "string" ? url : url.toString();
       if (u.includes("/api/posts")) {
@@ -211,46 +212,14 @@ describe("PostFeed", () => {
     renderWithProviders(<PostFeed />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(GENERIC_ERROR_MESSAGE_LINE_1)
+      ).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
-  });
-
-  it("should retry fetch when retry button is clicked", async () => {
-    const user = userEvent.setup();
-    let postsCallCount = 0;
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url) => {
-      const u = typeof url === "string" ? url : url.toString();
-      if (u.includes("/api/posts")) {
-        postsCallCount++;
-        if (postsCallCount === 1) {
-          return Promise.resolve({
-            json: async () => ({ error: "Failed to fetch" }),
-            ok: false,
-          } as Response);
-        }
-        return Promise.resolve({
-          json: async () => ({ data: mockPosts, total: 2 }),
-          ok: true,
-        } as Response);
-      }
-      return createFetchMock()(url);
-    });
-
-    renderWithProviders(<PostFeed />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch/i)).toBeInTheDocument();
-    });
-
-    const retryButton = screen.getByRole("button", { name: /retry/i });
-    await user.click(retryButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("First post")).toBeInTheDocument();
-    });
+    expect(
+      screen.queryByRole("button", { name: /retry/i })
+    ).not.toBeInTheDocument();
   });
 
   it("should filter by category when category is selected", async () => {

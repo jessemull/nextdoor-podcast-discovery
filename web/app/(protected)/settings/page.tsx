@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -7,7 +8,12 @@ import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
+import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import {
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
+} from "@/lib/constants";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
 import { useMfa } from "@/lib/useMfa.client";
@@ -419,62 +425,88 @@ export default function SettingsPage() {
             Configure ranking weights and search preferences.
           </p>
 
-        <SettingsAlerts error={error} successMessage={successMessage} />
+          <SettingsAlerts
+            error={error}
+            successMessage={successMessage}
+          />
 
-        <ConfirmModal
-          cancelLabel="Cancel"
-          confirmLabel="Delete"
-          message="This will also delete all associated scores and cannot be undone."
-          open={deleteConfirmConfigId != null}
-          title="Delete weight configuration?"
-          onCancel={() => setDeleteConfirmConfigId(null)}
-          onConfirm={() => {
-            if (deleteConfirmConfigId != null) {
-              void handleDeleteConfig(deleteConfirmConfigId);
-              setDeleteConfirmConfigId(null);
-            }
-          }}
-        />
+          {error ? (
+            <div className="mb-8 mt-16 flex justify-center">
+              <div className="rounded-lg border border-destructive px-6 py-4 text-center text-destructive">
+                <div className="mb-2 flex justify-center">
+                  <AlertTriangle aria-hidden className="h-12 w-12" />
+                </div>
+                <p className="text-base font-medium">
+                  {GENERIC_ERROR_MESSAGE_LINE_1}
+                </p>
+                <p className="text-base font-medium">
+                  {GENERIC_ERROR_MESSAGE_LINE_2}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+          <ConfirmModal
+            cancelLabel="Cancel"
+            confirmLabel="Delete"
+            message="This will also delete all associated scores and cannot be undone."
+            open={deleteConfirmConfigId != null}
+            title="Delete weight configuration?"
+            onCancel={() => setDeleteConfirmConfigId(null)}
+            onConfirm={() => {
+              if (deleteConfirmConfigId != null) {
+                void handleDeleteConfig(deleteConfirmConfigId);
+                setDeleteConfirmConfigId(null);
+              }
+            }}
+          />
 
-        <SettingsWeightSection
-          activeConfigId={activeConfigId}
-          configs={weightConfigs}
-          deletingConfigId={deletingConfigId}
-          isActivating={isActivating}
-          jobs={jobs}
-          rankingWeights={rankingWeights}
-          setActiveConfigId={setActiveConfigId}
-          setRankingWeights={setRankingWeights}
-          onActivate={handleActivateConfig}
-          onDelete={async (configId) => {
-            setDeleteConfirmConfigId(configId);
-          }}
-          onRenameSuccess={refetchWeightConfigs}
-          onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
-          onSave={handleSaveWeights}
-        />
+          <SettingsWeightSection
+            activeConfigId={activeConfigId}
+            configs={weightConfigs}
+            deletingConfigId={deletingConfigId}
+            isActivating={isActivating}
+            jobs={jobs}
+            rankingWeights={rankingWeights}
+            setActiveConfigId={setActiveConfigId}
+            setRankingWeights={setRankingWeights}
+            onActivate={handleActivateConfig}
+            onDelete={async (configId) => {
+              setDeleteConfirmConfigId(configId);
+            }}
+            onRenameSuccess={refetchWeightConfigs}
+            onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
+            onSave={handleSaveWeights}
+          />
 
-        <SettingsDefaultsSection
-          noveltyConfig={noveltyConfig}
-          picksDefaults={picksDefaults}
-          searchDefaults={searchDefaults}
-          setNoveltyConfig={setNoveltyConfig}
-          setPicksDefaults={setPicksDefaults}
-          setSearchDefaults={setSearchDefaults}
-          onSaveNovelty={handleSaveNoveltyConfig}
-          onSavePicks={handleSavePicksDefaults}
-          onSaveSearch={handleSaveSearchDefaults}
-        />
+          <SettingsDefaultsSection
+            noveltyConfig={noveltyConfig}
+            picksDefaults={picksDefaults}
+            searchDefaults={searchDefaults}
+            setNoveltyConfig={setNoveltyConfig}
+            setPicksDefaults={setPicksDefaults}
+            setSearchDefaults={setSearchDefaults}
+            onSaveNovelty={handleSaveNoveltyConfig}
+            onSavePicks={handleSavePicksDefaults}
+            onSaveSearch={handleSaveSearchDefaults}
+          />
 
-        <section className="mt-8 rounded-2xl border border-border bg-surface-elevated p-6">
-          <h2 className="text-lg font-semibold text-foreground">
+          <Card className="mb-8 p-6">
+          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
             Account security
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p
+            className="text-foreground mb-6 text-sm"
+            style={{ opacity: 0.85 }}
+          >
             Manage two-factor authentication for your account.
           </p>
 
-          <div className="mt-4 space-y-3 text-sm text-muted">
+          <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+            Status
+          </h3>
+
+          <div className="space-y-3 text-sm text-muted">
             {mfaLoading ? (
               <p>Loading two-factor status&hellip;</p>
             ) : enrolledTotp ? (
@@ -567,7 +599,7 @@ export default function SettingsPage() {
                     void disableTotp();
                   }}
                 >
-                  Disable two-factor authentication
+                  Reset
                 </button>
               ) : (
                 <button
@@ -584,8 +616,9 @@ export default function SettingsPage() {
               )}
             </div>
           )}
-        </section>
-
+        </Card>
+            </>
+          )}
         </div>
       </main>
     </ErrorBoundary>

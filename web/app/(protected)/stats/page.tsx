@@ -1,11 +1,16 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { JobStats } from "@/components/JobStats";
 import { ScoreDistributionSection } from "@/components/ScoreDistributionSection";
 import { StatsPanel } from "@/components/StatsPanel";
 import { Card } from "@/components/ui/Card";
+import {
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
+} from "@/lib/constants";
 
 import type { Job, StatsResponse } from "@/lib/types";
 
@@ -158,13 +163,22 @@ export default function StatsPage() {
           Overview of posts, scores, and jobs.
         </p>
 
-        {error && (
-          <Card className="border-destructive bg-destructive/10 mb-6 text-destructive text-sm">
-            {error}
-          </Card>
-        )}
-
-        {!error && stats && (
+        {error ? (
+          <div className="mb-8 mt-16 flex justify-center">
+            <div className="rounded-lg border border-destructive px-6 py-4 text-center text-destructive">
+              <div className="mb-2 flex justify-center">
+                <AlertTriangle aria-hidden className="h-12 w-12" />
+              </div>
+              <p className="text-base font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_1}
+              </p>
+              <p className="text-base font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_2}
+              </p>
+            </div>
+          </div>
+        ) : (
+          stats && (
           <>
             <Card className="mb-8 p-6">
               <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
@@ -231,6 +245,7 @@ export default function StatsPage() {
               <JobStats jobs={jobs} />
             </Card>
           </>
+          )
         )}
       </div>
     </main>

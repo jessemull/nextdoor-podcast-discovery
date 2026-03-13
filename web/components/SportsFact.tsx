@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { GENERIC_ERROR_MESSAGE } from "@/lib/constants";
 import { useAuthUser } from "@/lib/useAuthUser.client";
 
 import type { SportsFactResponse } from "@/lib/types";
@@ -38,6 +39,8 @@ export function SportsFact() {
 
   const wrapperClass =
     "border-pittsburgh-gold-muted mb-0 w-fit mx-auto rounded-lg border p-5 text-center";
+  const errorWrapperClass =
+    "border-destructive mb-0 w-fit mx-auto rounded-lg border p-5 text-center";
 
   if (showSkeleton) {
     return (
@@ -54,11 +57,13 @@ export function SportsFact() {
 
   if (isError && error) {
     return (
-      <div className={wrapperClass}>
-        <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-pittsburgh-gold-muted">
+      <div className={errorWrapperClass}>
+        <h2 className="mb-5 text-center text-2xl font-bold tracking-tight text-destructive">
           Pittsburgh Sports Fact
         </h2>
-        <p className="text-muted mx-auto max-w-xl text-base">{error.message}</p>
+        <p className="text-destructive mx-auto max-w-xl text-base">
+          {GENERIC_ERROR_MESSAGE}
+        </p>
       </div>
     );
   }

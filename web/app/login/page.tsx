@@ -52,6 +52,46 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+
+  const handleForgotSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setForgotError(null);
+      setForgotSubmitting(true);
+      try {
+        const supabase = getSupabase();
+        // Must be an absolute URL including path so the reset email sends users to /reset-password
+        const redirectTo =
+          typeof window !== "undefined"
+            ? new URL("/reset-password", window.location.origin).href
+            : "";
+        if (!redirectTo) {
+          setForgotError("Could not determine reset URL. Please try again.");
+          setForgotSubmitting(false);
+          return;
+        }
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          email.trim(),
+          { redirectTo }
+        );
+        if (resetError) {
+          setForgotError(resetError.message);
+          setForgotSubmitting(false);
+          return;
+        }
+        setForgotSuccess(true);
+      } catch {
+        setForgotError("Something went wrong. Please try again.");
+      } finally {
+        setForgotSubmitting(false);
+      }
+    },
+    [email]
+  );
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -405,13 +445,75 @@ function LoginContent() {
           </p>
         </div>
 
+        {!isInMfaFlow && searchParams.get("message") === "password_reset" && (
+          <p className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+            Your password has been updated. Sign in with your new password.
+          </p>
+        )}
+
         {!isInMfaFlow && reason === "auth_error" && (
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
             Your session may have expired. Please sign in again.
           </p>
         )}
 
-        {!isInMfaFlow && (
+        {!isInMfaFlow && showForgotPassword ? (
+          <form onSubmit={handleForgotSubmit}>
+            <div className="mb-4">
+              <label
+                className="mb-1 block text-sm font-medium text-white"
+                htmlFor="forgot-email"
+              >
+                Email
+              </label>
+              <input
+                autoComplete="email"
+                className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+                id="forgot-email"
+                placeholder="Enter e-mail..."
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            {forgotError && (
+              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+                {forgotError}
+              </p>
+            )}
+            {forgotSuccess ? (
+              <p className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+                If an account exists, we&apos;ve sent a reset link to that email.
+              </p>
+            ) : null}
+            <button
+              className={cn(
+                "block w-full rounded-lg px-6 py-3 text-center font-medium transition-all duration-200",
+                "bg-surface-hover text-foreground border border-border",
+                "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
+                "disabled:cursor-not-allowed disabled:opacity-60"
+              )}
+              disabled={forgotSubmitting}
+              type="submit"
+            >
+              {forgotSubmitting ? "Sending…" : "Send Reset Link"}
+            </button>
+            <p className="mt-4 text-center text-sm text-muted">
+              <button
+                className="text-foreground underline hover:no-underline"
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setForgotError(null);
+                  setForgotSuccess(false);
+                }}
+              >
+                Back To Sign In
+              </button>
+            </p>
+          </form>
+        ) : !isInMfaFlow ? (
           <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label
@@ -482,10 +584,19 @@ function LoginContent() {
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? "Signing in…" : "Sign in"}
+            {isSubmitting ? "Signing In…" : "Sign In"}
           </button>
+          <p className="mt-4 text-center text-sm text-muted">
+            <button
+              className="text-foreground underline hover:no-underline"
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+            >
+              Forgot Password?
+            </button>
+          </p>
           </form>
-        )}
+        ) : null}
 
         {isInMfaFlow && (
           <form onSubmit={handleVerifyMfa}>
@@ -557,7 +668,7 @@ function LoginContent() {
                 disabled={isSubmitting || mfaCode.length === 0}
                 type="submit"
               >
-                {isSubmitting ? "Verifying…" : "Verify code"}
+                {isSubmitting ? "Verifying…" : "Verify Code"}
               </button>
               <button
                 className="w-1/2 rounded-lg border border-border bg-transparent px-4 py-2 text-center text-sm font-medium text-muted hover:bg-surface-hover/40 disabled:cursor-not-allowed disabled:opacity-60"

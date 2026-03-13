@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/constants";
 import { formatCategoryLabel } from "@/lib/utils";
 
 import type { StatsResponse, TopicFrequency } from "@/lib/types";
@@ -277,6 +278,28 @@ export function StatsPanel({
   const [loading, setLoading] = useState(statsProp == null);
   const [stats, setStats] = useState<null | StatsResponse>(statsProp ?? null);
 
+  const renderErrorCell = () => (
+    <section className="min-w-0">
+      {!hideStatsHeading && (
+        <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
+          Stats
+        </h2>
+      )}
+      <div className="min-w-0">
+        <div className="mt-4 flex justify-center">
+          <div className="border-destructive bg-destructive/10 mb-0 w-fit rounded-lg border px-6 py-5 text-center">
+            <div className="mb-3 flex justify-center text-destructive">
+              <AlertTriangle aria-hidden className="h-9 w-9" strokeWidth={1.5} />
+            </div>
+            <p className="text-destructive text-sm font-medium">
+              {GENERIC_ERROR_MESSAGE}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   useEffect(() => {
     if (statsProp != null) {
       setStats(statsProp);
@@ -332,9 +355,7 @@ export function StatsPanel({
 
   if (error) {
     return (
-      <Card className="border-destructive bg-destructive/10 text-destructive text-sm">
-        {error}
-      </Card>
+      <div className={variant === "full" ? "space-y-16" : ""}>{renderErrorCell()}</div>
     );
   }
 

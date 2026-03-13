@@ -247,13 +247,13 @@ export function FeedSearchBar({
   }
 
   return (
-    <div className={cn("w-full min-w-0 space-y-4", !compact && "mb-6")}>
-      {loadDefaultsError && (
-        <Card className="border-border-focus">
-          <p className="text-muted text-sm">{loadDefaultsError}</p>
-        </Card>
-      )}
+    <div className={cn("w-full min-w-0", !compact && "mb-6")}>
       {inputBox}
+      {loadDefaultsError && (
+        <p className="mt-2 text-destructive text-xs" role="alert">
+          Defaults failed to load.
+        </p>
+      )}
     </div>
   );
 }

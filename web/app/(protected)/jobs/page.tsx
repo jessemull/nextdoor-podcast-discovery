@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { AlertTriangle, MoreHorizontal } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { JobsList } from "@/components/JobsList";
@@ -10,6 +10,10 @@ import { PermalinkQueueSection } from "@/components/PermalinkQueueSection";
 import { ScraperRunsSection } from "@/components/ScraperRunsSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import {
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
+} from "@/lib/constants";
 import { useToast } from "@/lib/ToastContext";
 
 import type { Job, ScraperRun } from "@/lib/types";
@@ -345,109 +349,118 @@ export default function JobsPage() {
     <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-4 text-3xl font-semibold text-foreground">Jobs</h1>
-        <p
-          className="text-foreground mb-8 text-sm"
-          style={{ opacity: 0.85 }}
-        >
+        <p className="text-foreground mb-8 text-sm" style={{ opacity: 0.85 }}>
           View stats and manage jobs.
         </p>
 
-        {error && (
-          <Card className="border-destructive bg-destructive/10 mb-6 text-destructive text-sm">
-            {error}
-          </Card>
+        {error ? (
+          <div className="flex justify-center mt-16 mb-8">
+            <div className="border border-destructive rounded-lg px-6 py-4 text-center text-destructive">
+              <div className="mb-2 flex justify-center">
+                <AlertTriangle aria-hidden className="h-12 w-12" />
+              </div>
+              <p className="text-base font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_1}
+              </p>
+              <p className="text-base font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_2}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Card className="mb-8 p-6">
+              <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+                Stats
+              </h2>
+              <p
+                className="text-foreground mb-6 text-sm"
+                style={{ opacity: 0.85 }}
+              >
+                Summary of all compute jobs.
+              </p>
+              <JobStats jobs={jobs} />
+            </Card>
+
+            <ScraperRunsSection
+              queuedRetryRunIds={queuedRetryRunIds}
+              runs={scraperRuns}
+              onRetry={handleRequestScraperRetry}
+            />
+
+            <section className="mb-8">
+              <PermalinkQueueSection
+                permalinkJobs={permalinkJobs}
+                setPermalinkJobs={setPermalinkJobs}
+                onCancel={handleRequestCancel}
+              />
+            </section>
+
+            <JobsList
+              description="Pending and running jobs, in queue order. One job runs at a time."
+              emptyMessage="No jobs in queue."
+              jobs={queueJobs}
+              showManageLink={false}
+              showStats={false}
+              title="Job Queue"
+              variant="queue"
+              onCancel={handleRequestCancel}
+            />
+
+            <JobsList
+              description="Jobs that are done—completed, failed, or cancelled. The badge on each card shows what happened."
+              emptyMessage="No finished jobs."
+              headerRightContent={finishedFilterControl}
+              jobs={finishedJobs}
+              showManageLink={false}
+              showStats={false}
+              title="Finished Jobs"
+              variant="finished"
+              onCancel={handleRequestCancel}
+              onRetry={handleRequestRetry}
+            />
+
+            <ConfirmModal
+              cancelLabel="Cancel"
+              confirmLabel="Submit"
+              message="Are you sure you want to cancel this job?"
+              open={cancelConfirmJobId != null}
+              title="Cancel Job"
+              onCancel={() => setCancelConfirmJobId(null)}
+              onConfirm={handleConfirmCancel}
+            />
+
+            <ConfirmModal
+              cancelLabel="Cancel"
+              confirmLabel="Retry"
+              message="Are you sure you want to re-queue the job again?"
+              open={retryConfirmJobId != null}
+              title="Retry Job"
+              onCancel={() => setRetryConfirmJobId(null)}
+              onConfirm={() => {
+                if (retryConfirmJobId != null) {
+                  handleRetry(retryConfirmJobId);
+                  setRetryConfirmJobId(null);
+                }
+              }}
+            />
+
+            <ConfirmModal
+              cancelLabel="Cancel"
+              confirmLabel="Retry"
+              message="Re-run this scrape? The worker will process it shortly."
+              open={scraperRetryConfirmRun != null}
+              title="Retry scrape?"
+              onCancel={() => setScraperRetryConfirmRun(null)}
+              onConfirm={() => {
+                if (scraperRetryConfirmRun != null) {
+                  void handleScraperRetry(scraperRetryConfirmRun);
+                  setScraperRetryConfirmRun(null);
+                }
+              }}
+            />
+          </>
         )}
-
-        <Card className="mb-8 p-6">
-          <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-            Stats
-          </h2>
-          <p
-            className="text-foreground mb-6 text-sm"
-            style={{ opacity: 0.85 }}
-          >
-            Summary of all compute jobs.
-          </p>
-          <JobStats jobs={jobs} />
-        </Card>
-
-        <ScraperRunsSection
-          queuedRetryRunIds={queuedRetryRunIds}
-          runs={scraperRuns}
-          onRetry={handleRequestScraperRetry}
-        />
-
-        <section className="mb-8">
-          <PermalinkQueueSection
-            permalinkJobs={permalinkJobs}
-            setPermalinkJobs={setPermalinkJobs}
-            onCancel={handleRequestCancel}
-          />
-        </section>
-
-        <JobsList
-          description="Pending and running jobs, in queue order. One job runs at a time."
-          emptyMessage="No jobs in queue."
-          jobs={queueJobs}
-          showManageLink={false}
-          showStats={false}
-          title="Job Queue"
-          variant="queue"
-          onCancel={handleRequestCancel}
-        />
-
-        <JobsList
-          description="Jobs that are done—completed, failed, or cancelled. The badge on each card shows what happened."
-          emptyMessage="No finished jobs."
-          headerRightContent={finishedFilterControl}
-          jobs={finishedJobs}
-          showManageLink={false}
-          showStats={false}
-          title="Finished Jobs"
-          variant="finished"
-          onCancel={handleRequestCancel}
-          onRetry={handleRequestRetry}
-        />
-
-        <ConfirmModal
-          cancelLabel="Cancel"
-          confirmLabel="Submit"
-          message="Are you sure you want to cancel this job?"
-          open={cancelConfirmJobId != null}
-          title="Cancel Job"
-          onCancel={() => setCancelConfirmJobId(null)}
-          onConfirm={handleConfirmCancel}
-        />
-
-        <ConfirmModal
-          cancelLabel="Cancel"
-          confirmLabel="Retry"
-          message="Are you sure you want to re-queue the job again?"
-          open={retryConfirmJobId != null}
-          title="Retry Job"
-          onCancel={() => setRetryConfirmJobId(null)}
-          onConfirm={() => {
-            if (retryConfirmJobId != null) {
-              handleRetry(retryConfirmJobId);
-              setRetryConfirmJobId(null);
-            }
-          }}
-        />
-
-        <ConfirmModal
-          cancelLabel="Cancel"
-          confirmLabel="Retry"
-          message="Re-run this scrape? The worker will process it shortly."
-          open={scraperRetryConfirmRun != null}
-          title="Retry scrape?"
-          onCancel={() => setScraperRetryConfirmRun(null)}
-          onConfirm={() => {
-            if (scraperRetryConfirmRun != null) {
-              void handleScraperRetry(scraperRetryConfirmRun);
-              setScraperRetryConfirmRun(null);
-            }
-          }}
-        />
       </div>
     </main>
   );

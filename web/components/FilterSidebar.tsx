@@ -1,9 +1,12 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
 import {
   DEFAULT_PREVIEW_WEIGHTS,
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
   TOPIC_CATEGORIES,
 } from "@/lib/constants";
 import { cn, formatCategoryLabel } from "@/lib/utils";
@@ -138,11 +141,6 @@ export function FilterSidebar({
               Filters
             </h2>
           )}
-        {filterLoadError && (
-          <p className="mb-4 text-destructive text-sm" role="alert">
-            {filterLoadError}
-          </p>
-        )}
 
         <h2 className={sectionHeadingClass}>Category</h2>
         <input
@@ -451,48 +449,64 @@ export function FilterSidebar({
           )}
 
         <h2 className={sectionHeadingClass}>Neighborhood</h2>
-        <div className="flex flex-col gap-2">
-          <input
-            aria-label="Search neighborhoods"
-            className={cn(searchInputClass, "filter-search-input mb-1")}
-            placeholder="Search neighborhoods"
-            type="search"
-            value={neighborhoodSearch}
-            onChange={(e) => setNeighborhoodSearch(e.target.value)}
-          />
-          <label className={checkboxLabelClass}>
+        {filterLoadError ? (
+          <div className="mt-4 mb-8 flex justify-center">
+            <div className="py-6 text-center text-destructive">
+              <div className="mb-3 flex justify-center">
+                <AlertTriangle aria-hidden className="h-6 w-6" />
+              </div>
+              <p className="text-xs font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_1}
+              </p>
+              <p className="text-xs font-medium">
+                {GENERIC_ERROR_MESSAGE_LINE_2}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
             <input
-              checked={filters.neighborhoodIds.length === 0}
-              className="rounded border-border bg-surface-hover focus:ring-border-focus"
-              type="checkbox"
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  neighborhoodIds: e.target.checked ? [] : prev.neighborhoodIds,
-                }))
-              }
+              aria-label="Search neighborhoods"
+              className={cn(searchInputClass, "filter-search-input mb-1")}
+              placeholder="Search neighborhoods"
+              type="search"
+              value={neighborhoodSearch}
+              onChange={(e) => setNeighborhoodSearch(e.target.value)}
             />
-            All
-          </label>
-          {filteredNeighborhoods.map((n) => (
-            <label key={n.id} className={cn(checkboxLabelClass, "truncate")}>
+            <label className={checkboxLabelClass}>
               <input
-                checked={filters.neighborhoodIds.includes(n.id)}
+                checked={filters.neighborhoodIds.length === 0}
                 className="rounded border-border bg-surface-hover focus:ring-border-focus"
                 type="checkbox"
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    neighborhoodIds: e.target.checked
-                      ? [...prev.neighborhoodIds, n.id]
-                      : prev.neighborhoodIds.filter((id) => id !== n.id),
+                    neighborhoodIds: e.target.checked ? [] : prev.neighborhoodIds,
                   }))
                 }
               />
-              {n.name}
+              All
             </label>
-          ))}
-        </div>
+            {filteredNeighborhoods.map((n) => (
+              <label key={n.id} className={cn(checkboxLabelClass, "truncate")}>
+                <input
+                  checked={filters.neighborhoodIds.includes(n.id)}
+                  className="rounded border-border bg-surface-hover focus:ring-border-focus"
+                  type="checkbox"
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      neighborhoodIds: e.target.checked
+                        ? [...prev.neighborhoodIds, n.id]
+                        : prev.neighborhoodIds.filter((id) => id !== n.id),
+                    }))
+                  }
+                />
+                {n.name}
+              </label>
+            ))}
+          </div>
+        )}
         </div>
       </div>
 
