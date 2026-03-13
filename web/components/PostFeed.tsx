@@ -590,7 +590,7 @@ export function PostFeed({
           <>
             {/* Compact: below md – two rows, search type in "..." next to input */}
             <div className="mb-2 flex w-full flex-col gap-2.5 lg:hidden">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-start gap-2">
                 <div className="min-w-0 flex-1 shrink-0">
                   <FeedSearchBar
                     compact
