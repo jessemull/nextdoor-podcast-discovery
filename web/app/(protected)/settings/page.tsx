@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -12,6 +13,10 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
 import { useToast } from "@/lib/ToastContext";
 import { useMfa } from "@/lib/useMfa.client";
+import {
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
+} from "@/lib/constants";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 
@@ -420,54 +425,73 @@ export default function SettingsPage() {
             Configure ranking weights and search preferences.
           </p>
 
-        <SettingsAlerts error={error} successMessage={successMessage} />
+          <SettingsAlerts
+            error={error}
+            successMessage={successMessage}
+          />
 
-        <ConfirmModal
-          cancelLabel="Cancel"
-          confirmLabel="Delete"
-          message="This will also delete all associated scores and cannot be undone."
-          open={deleteConfirmConfigId != null}
-          title="Delete weight configuration?"
-          onCancel={() => setDeleteConfirmConfigId(null)}
-          onConfirm={() => {
-            if (deleteConfirmConfigId != null) {
-              void handleDeleteConfig(deleteConfirmConfigId);
-              setDeleteConfirmConfigId(null);
-            }
-          }}
-        />
+          {error ? (
+            <div className="mb-8 mt-16 flex justify-center">
+              <div className="rounded-lg border border-destructive px-6 py-4 text-center text-destructive">
+                <div className="mb-2 flex justify-center">
+                  <AlertTriangle aria-hidden className="h-12 w-12" />
+                </div>
+                <p className="text-base font-medium">
+                  {GENERIC_ERROR_MESSAGE_LINE_1}
+                </p>
+                <p className="text-base font-medium">
+                  {GENERIC_ERROR_MESSAGE_LINE_2}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+          <ConfirmModal
+            cancelLabel="Cancel"
+            confirmLabel="Delete"
+            message="This will also delete all associated scores and cannot be undone."
+            open={deleteConfirmConfigId != null}
+            title="Delete weight configuration?"
+            onCancel={() => setDeleteConfirmConfigId(null)}
+            onConfirm={() => {
+              if (deleteConfirmConfigId != null) {
+                void handleDeleteConfig(deleteConfirmConfigId);
+                setDeleteConfirmConfigId(null);
+              }
+            }}
+          />
 
-        <SettingsWeightSection
-          activeConfigId={activeConfigId}
-          configs={weightConfigs}
-          deletingConfigId={deletingConfigId}
-          isActivating={isActivating}
-          jobs={jobs}
-          rankingWeights={rankingWeights}
-          setActiveConfigId={setActiveConfigId}
-          setRankingWeights={setRankingWeights}
-          onActivate={handleActivateConfig}
-          onDelete={async (configId) => {
-            setDeleteConfirmConfigId(configId);
-          }}
-          onRenameSuccess={refetchWeightConfigs}
-          onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
-          onSave={handleSaveWeights}
-        />
+          <SettingsWeightSection
+            activeConfigId={activeConfigId}
+            configs={weightConfigs}
+            deletingConfigId={deletingConfigId}
+            isActivating={isActivating}
+            jobs={jobs}
+            rankingWeights={rankingWeights}
+            setActiveConfigId={setActiveConfigId}
+            setRankingWeights={setRankingWeights}
+            onActivate={handleActivateConfig}
+            onDelete={async (configId) => {
+              setDeleteConfirmConfigId(configId);
+            }}
+            onRenameSuccess={refetchWeightConfigs}
+            onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
+            onSave={handleSaveWeights}
+          />
 
-        <SettingsDefaultsSection
-          noveltyConfig={noveltyConfig}
-          picksDefaults={picksDefaults}
-          searchDefaults={searchDefaults}
-          setNoveltyConfig={setNoveltyConfig}
-          setPicksDefaults={setPicksDefaults}
-          setSearchDefaults={setSearchDefaults}
-          onSaveNovelty={handleSaveNoveltyConfig}
-          onSavePicks={handleSavePicksDefaults}
-          onSaveSearch={handleSaveSearchDefaults}
-        />
+          <SettingsDefaultsSection
+            noveltyConfig={noveltyConfig}
+            picksDefaults={picksDefaults}
+            searchDefaults={searchDefaults}
+            setNoveltyConfig={setNoveltyConfig}
+            setPicksDefaults={setPicksDefaults}
+            setSearchDefaults={setSearchDefaults}
+            onSaveNovelty={handleSaveNoveltyConfig}
+            onSavePicks={handleSavePicksDefaults}
+            onSaveSearch={handleSaveSearchDefaults}
+          />
 
-        <Card className="mb-8 p-6">
+          <Card className="mb-8 p-6">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
             Account security
           </h2>
@@ -593,7 +617,8 @@ export default function SettingsPage() {
             </div>
           )}
         </Card>
-
+            </>
+          )}
         </div>
       </main>
     </ErrorBoundary>
