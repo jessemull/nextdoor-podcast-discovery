@@ -16,21 +16,11 @@ export const DEFAULT_PREVIEW_WEIGHTS: RankingWeights = {
 };
 
 /**
- * Valid topic categories for post filtering.
- * These must match the categories used in the LLM scorer.
+ * Generic user-facing error message for non-critical failures.
+ * Avoids leaking backend details while giving the user guidance.
  */
-export const TOPIC_CATEGORIES = [
-  "crime",
-  "drama",
-  "humor",
-  "local_news",
-  "lost_pet",
-  "noise",
-  "suspicious",
-  "wildlife",
-] as const;
-
-export type TopicCategory = (typeof TOPIC_CATEGORIES)[number];
+export const GENERIC_ERROR_MESSAGE =
+  "Uh oh, somethin’ went haywire n’at. Gimme another try.";
 
 /**
  * Default debounce delay for filter inputs (in milliseconds).
@@ -51,3 +41,20 @@ export const SEARCH_SUGGESTIONS = [
   "suspicious",
   "wildlife",
 ] as const;
+
+/**
+ * Valid topic categories for post filtering.
+ * These must match the categories used in the LLM scorer.
+ */
+export const TOPIC_CATEGORIES = [
+  "crime",
+  "drama",
+  "humor",
+  "local_news",
+  "lost_pet",
+  "noise",
+  "suspicious",
+  "wildlife",
+] as const;
+
+export type TopicCategory = (typeof TOPIC_CATEGORIES)[number];

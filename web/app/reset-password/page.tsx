@@ -41,6 +41,21 @@ function ResetPasswordContent() {
   const hasSessionFromHash = Boolean(hashParams.access_token);
 
   useEffect(() => {
+    // Debug logging to help diagnose Supabase recovery redirects in different environments.
+    // Only logs in the browser.
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.debug("[reset-password] location", {
+        hash: window.location.hash,
+        search: window.location.search,
+      });
+      // eslint-disable-next-line no-console
+      console.debug("[reset-password] parsed params", {
+        accessTokenPresent: Boolean(hashParams.access_token),
+        hasTokenHash: Boolean(tokenHash),
+      });
+    }
+
     let cancelled = false;
     if (tokenHash) {
       (async () => {
