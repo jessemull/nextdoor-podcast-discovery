@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowUpDown,
   Bookmark,
   BookmarkX,
@@ -19,7 +20,12 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { DEBOUNCE_DELAY_MS } from "@/lib/constants";
+import {
+  DEBOUNCE_DELAY_MS,
+  GENERIC_ERROR_MESSAGE,
+  GENERIC_ERROR_MESSAGE_LINE_1,
+  GENERIC_ERROR_MESSAGE_LINE_2,
+} from "@/lib/constants";
 import {
   type BulkActionType,
   type BulkQuery,
@@ -255,7 +261,6 @@ export function PostFeed({
   const {
     error,
     fetchPosts,
-    handleRetry,
     hasMore,
     initialLoading,
     loadingMore,
@@ -488,11 +493,11 @@ export function PostFeed({
     <div className="flex min-h-0 flex-1 gap-4 sm:gap-6">
       {/* Desktop sidebar */}
       <div className="hidden h-full w-64 shrink-0 md:block">
-        <FilterSidebar
-          activeConfigWeights={
-            activeConfigWeights as null | Record<string, number>
-          }
-          filterLoadError={filterLoadError}
+          <FilterSidebar
+            activeConfigWeights={
+              activeConfigWeights as null | Record<string, number>
+            }
+            filterLoadError={filterLoadError}
           filters={filters}
           neighborhoods={neighborhoods}
           picksDefaults={picksDefaults}
@@ -1066,12 +1071,25 @@ export function PostFeed({
         <div className="min-w-0 px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
           <div className="space-y-6">
-            {searchSlot.loading && searchSlot.query.trim() ? null : searchSlot.searchError && (
-              <Card className="border-destructive bg-destructive/10 text-destructive text-sm">
-                {searchSlot.searchError}
-              </Card>
-            )}
+            {searchSlot.loading && searchSlot.query.trim()
+              ? null
+              : searchSlot.searchError && (
+                <div className="flex justify-center mt-24">
+                  <div className="border border-destructive rounded-lg px-6 py-4 text-center text-destructive">
+                    <div className="mb-2 flex justify-center">
+                      <AlertTriangle aria-hidden className="h-12 w-12" />
+                    </div>
+                    <p className="text-base font-medium">
+                      {GENERIC_ERROR_MESSAGE_LINE_1}
+                    </p>
+                    <p className="text-base font-medium">
+                      {GENERIC_ERROR_MESSAGE_LINE_2}
+                    </p>
+                  </div>
+                </div>
+              )}
             {!searchSlot.loading &&
+              !searchSlot.searchError &&
               searchSlot.debouncedQuery === searchSlot.query &&
               searchSlot.query.trim() &&
               searchSlot.searchTotal > 0 && (
@@ -1113,6 +1131,7 @@ export function PostFeed({
               </div>
             )}
             {!searchSlot.loading &&
+              !searchSlot.searchError &&
               searchSlot.results.length > 0 && (
               <div className="space-y-4">
                 {searchSlot.results.map((post) => {
@@ -1141,7 +1160,7 @@ export function PostFeed({
           </div>
         ) : (
           <>
-        {(!searchSlot || !searchSlot.query.trim()) && (
+            {(!searchSlot || !searchSlot.query.trim()) && (
           <>
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
               <span className="text-muted-foreground shrink-0 text-sm">
@@ -1171,24 +1190,25 @@ export function PostFeed({
                 </label>
               )}
             </div>
-            {error && (
-              <div className="rounded-card border border-destructive bg-destructive/10 p-4 text-destructive">
-                <div className="flex items-center justify-between">
-                  <span>{error}</span>
-                  <button
-                    className="border-border bg-surface hover:bg-surface-hover ml-4 rounded border px-3 py-1 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={handleRetry}
-                  >
-                    Retry
-                  </button>
+            {error ? (
+              <div className="flex justify-center mt-24">
+                <div className="border border-destructive rounded-lg px-6 py-4 text-center text-destructive">
+                  <div className="mb-2 flex justify-center">
+                    <AlertTriangle aria-hidden className="h-12 w-12" />
+                  </div>
+                  <p className="text-base font-medium">
+                    {GENERIC_ERROR_MESSAGE_LINE_1}
+                  </p>
+                  <p className="text-base font-medium">
+                    {GENERIC_ERROR_MESSAGE_LINE_2}
+                  </p>
                 </div>
               </div>
-            )}
+            ) : null}
           </>
         )}
 
-        {initialLoading && (
+        {!error && initialLoading && (
           <div aria-busy="true" aria-label="Loading feed" className="space-y-4">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
               <PostCardSkeleton key={i} />
@@ -1196,7 +1216,7 @@ export function PostFeed({
           </div>
         )}
 
-        {!initialLoading && posts.length === 0 && (
+        {!error && !initialLoading && posts.length === 0 && (
           <div className="py-10 text-center">
             <span className="text-muted-foreground text-sm">
               <Inbox
@@ -1213,7 +1233,7 @@ export function PostFeed({
           </div>
         )}
 
-        {!initialLoading && posts.length > 0 && (
+        {!error && !initialLoading && posts.length > 0 && (
           <>
             <div className="space-y-4">
               {posts.map((post, index) => (

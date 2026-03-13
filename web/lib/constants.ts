@@ -19,8 +19,10 @@ export const DEFAULT_PREVIEW_WEIGHTS: RankingWeights = {
  * Generic user-facing error message for non-critical failures.
  * Avoids leaking backend details while giving the user guidance.
  */
-export const GENERIC_ERROR_MESSAGE =
-  "Uh oh, somethin’ went haywire n’at. Gimme another try.";
+export const GENERIC_ERROR_MESSAGE_LINE_1 =
+  "Uh oh, somethin’ went haywire n’at.";
+export const GENERIC_ERROR_MESSAGE_LINE_2 = "Gimme another try.";
+export const GENERIC_ERROR_MESSAGE = `${GENERIC_ERROR_MESSAGE_LINE_1} ${GENERIC_ERROR_MESSAGE_LINE_2}`;
 
 /**
  * Default debounce delay for filter inputs (in milliseconds).
