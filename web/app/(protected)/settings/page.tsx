@@ -10,13 +10,13 @@ import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
-import { useToast } from "@/lib/ToastContext";
-import { useMfa } from "@/lib/useMfa.client";
 import {
   GENERIC_ERROR_MESSAGE_LINE_1,
   GENERIC_ERROR_MESSAGE_LINE_2,
 } from "@/lib/constants";
+import { useSettingsPolling } from "@/lib/hooks/useSettingsPolling";
+import { useToast } from "@/lib/ToastContext";
+import { useMfa } from "@/lib/useMfa.client";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
 

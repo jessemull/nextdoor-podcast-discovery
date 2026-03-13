@@ -10,11 +10,11 @@ import { PermalinkQueueSection } from "@/components/PermalinkQueueSection";
 import { ScraperRunsSection } from "@/components/ScraperRunsSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { useToast } from "@/lib/ToastContext";
 import {
   GENERIC_ERROR_MESSAGE_LINE_1,
   GENERIC_ERROR_MESSAGE_LINE_2,
 } from "@/lib/constants";
+import { useToast } from "@/lib/ToastContext";
 
 import type { Job, ScraperRun } from "@/lib/types";
 

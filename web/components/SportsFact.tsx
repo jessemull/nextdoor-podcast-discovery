@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { useAuthUser } from "@/lib/useAuthUser.client";
 import { GENERIC_ERROR_MESSAGE } from "@/lib/constants";
+import { useAuthUser } from "@/lib/useAuthUser.client";
 
 import type { SportsFactResponse } from "@/lib/types";
 

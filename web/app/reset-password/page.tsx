@@ -3,7 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useReducer, useState } from "react";
 
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,10 @@ function parseHashParams(): {
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<Status>("loading");
+  const [status, dispatchStatus] = useReducer(
+    (_state: Status, action: Status) => action,
+    "loading" as Status
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,18 +47,18 @@ function ResetPasswordContent() {
     // Debug logging to help diagnose Supabase recovery redirects in different environments.
     // Only logs in the browser.
     if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
       console.debug("[reset-password] location", {
         hash: window.location.hash,
         search: window.location.search,
       });
-      // eslint-disable-next-line no-console
       console.debug("[reset-password] parsed params", {
-        accessTokenPresent: Boolean(hashParams.access_token),
+        hasSessionFromHash,
         hasTokenHash: Boolean(tokenHash),
       });
     }
+  }, [hasSessionFromHash, tokenHash]);
 
+  useEffect(() => {
     let cancelled = false;
     if (tokenHash) {
       (async () => {
@@ -67,17 +70,17 @@ function ResetPasswordContent() {
         if (cancelled) return;
         if (error) {
           setErrorMessage(error.message);
-          setStatus("error");
+          dispatchStatus("error");
           return;
         }
-        setStatus("verified");
+        dispatchStatus("verified");
       })();
     } else if (hasSessionFromHash) {
       // Supabase already created a session and redirected here with tokens
       // in the URL fragment. Treat the link as verified and let updateUser enforce auth.
-      setStatus("verified");
+      dispatchStatus("verified");
     } else {
-      setStatus("invalid");
+      dispatchStatus("invalid");
     }
 
     return () => {
