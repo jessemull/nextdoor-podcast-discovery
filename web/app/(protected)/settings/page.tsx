@@ -493,7 +493,7 @@ export default function SettingsPage() {
 
           <Card className="mb-8 p-6">
           <h2 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
-            Account security
+            Account Security
           </h2>
           <p
             className="text-foreground mb-6 text-sm"
