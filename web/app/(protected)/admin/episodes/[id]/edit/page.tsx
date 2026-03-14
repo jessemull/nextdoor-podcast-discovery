@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -268,21 +269,13 @@ export default function EditEpisodePage() {
   return (
     <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-6">
           <Link
             className="text-muted hover:text-foreground text-sm"
             href="/admin/episodes"
           >
             ← Episodes
           </Link>
-          <a
-            className="text-muted hover:text-foreground text-sm underline"
-            href={`/episodes/${episode.slug}`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View on site
-          </a>
         </div>
         <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
           {episode.title}
@@ -302,11 +295,13 @@ export default function EditEpisodePage() {
               Episode details
             </h2>
             <Button
+              aria-label="Delete"
+              className="cursor-pointer p-2 hover:bg-transparent"
               type="button"
-              variant="danger"
+              variant="ghost"
               onClick={() => setDeleteModalOpen(true)}
             >
-              Delete
+              <Trash2 aria-hidden className="h-4 w-4" />
             </Button>
           </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
