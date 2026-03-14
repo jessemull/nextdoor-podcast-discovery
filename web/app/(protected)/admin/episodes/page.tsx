@@ -192,13 +192,15 @@ export default function AdminEpisodesPage() {
                         <div className="bg-surface-hover mb-1 h-3 w-10 animate-pulse rounded" />
                         <div className="bg-surface-hover h-3 w-24 animate-pulse rounded font-mono" />
                       </div>
-                      <div>
-                        <div className="bg-surface-hover mb-1 h-3 w-14 animate-pulse rounded" />
-                        <div className="bg-surface-hover h-3 w-16 animate-pulse rounded" />
-                      </div>
-                      <div>
-                        <div className="bg-surface-hover mb-1 h-3 w-20 animate-pulse rounded" />
-                        <div className="bg-surface-hover h-3 w-20 animate-pulse rounded" />
+                      <div className="flex w-full gap-4">
+                        <div className="min-w-0 flex-1 basis-0">
+                          <div className="bg-surface-hover mb-1 h-3 w-14 animate-pulse rounded" />
+                          <div className="bg-surface-hover h-3 w-16 animate-pulse rounded" />
+                        </div>
+                        <div className="min-w-0 flex-1 basis-0">
+                          <div className="bg-surface-hover mb-1 h-3 w-20 animate-pulse rounded" />
+                          <div className="bg-surface-hover h-3 w-20 animate-pulse rounded" />
+                        </div>
                       </div>
                     </div>
                     <div className="bg-surface-hover h-8 w-8 shrink-0 animate-pulse rounded" />
@@ -219,7 +221,7 @@ export default function AdminEpisodesPage() {
                         <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
-                        <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border w-28 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Published
                         </th>
                         <th className="border-border w-12 border px-1 py-3 text-center">
@@ -239,7 +241,7 @@ export default function AdminEpisodesPage() {
                           <td className="border-border w-24 border px-4 py-3">
                             <div className="bg-surface-hover h-4 w-14 animate-pulse rounded" />
                           </td>
-                          <td className="border-border w-24 border px-4 py-3">
+                          <td className="border-border w-28 border px-4 py-3">
                             <div className="bg-surface-hover h-4 w-16 animate-pulse rounded" />
                           </td>
                           <td className="border-border w-12 border px-1 py-3 text-center">
@@ -285,29 +287,31 @@ export default function AdminEpisodesPage() {
                           {truncateCell(ep.slug)}
                         </div>
                       </div>
-                      <div>
-                        <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
-                          Status
-                        </h4>
-                        <p
-                          className="text-muted text-sm"
-                          style={labelStyle}
-                        >
-                          {formatStatus(ep.status)}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
-                          Published
-                        </h4>
-                        <p
-                          className="text-muted text-sm"
-                          style={labelStyle}
-                        >
-                          {ep.published_at
-                            ? new Date(ep.published_at).toLocaleDateString()
-                            : "—"}
-                        </p>
+                      <div className="flex w-full gap-4">
+                        <div className="min-w-0 flex-1 basis-0">
+                          <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
+                            Status
+                          </h4>
+                          <p
+                            className="text-muted text-sm"
+                            style={labelStyle}
+                          >
+                            {formatStatus(ep.status)}
+                          </p>
+                        </div>
+                        <div className="min-w-0 flex-1 basis-0">
+                          <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
+                            Published
+                          </h4>
+                          <p
+                            className="text-muted text-sm"
+                            style={labelStyle}
+                          >
+                            {ep.published_at
+                              ? new Date(ep.published_at).toLocaleDateString()
+                              : "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div
@@ -354,7 +358,7 @@ export default function AdminEpisodesPage() {
                         <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
-                        <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border w-28 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Published
                         </th>
                         <th className="border-border w-12 border px-1 py-3 text-center">
@@ -384,7 +388,7 @@ export default function AdminEpisodesPage() {
                             {formatStatus(ep.status)}
                           </td>
                           <td
-                            className="text-muted border-border w-24 border px-4 py-3"
+                            className="text-muted border-border w-28 border px-4 py-3"
                             style={labelStyle}
                           >
                             {ep.published_at

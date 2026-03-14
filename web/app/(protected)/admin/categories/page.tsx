@@ -435,7 +435,7 @@ export default function AdminCategoriesPage() {
                   Edit
                 </Link>
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover"
                   role="menuitem"
                   type="button"
                   onClick={() => {
