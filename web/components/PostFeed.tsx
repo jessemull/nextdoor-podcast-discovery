@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   RefreshCw,
   RotateCcw,
+  Search,
   SearchX,
   X,
 } from "lucide-react";
@@ -583,231 +584,34 @@ export function PostFeed({
       {/* Main content: fixed header + scrollable cards (scrollbar at viewport edge) */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden py-6 sm:py-8">
         <div className="flex shrink-0 flex-col gap-3 px-6 sm:px-8">
-          <h1 className="text-foreground mb-4 text-2xl font-semibold text-left sm:text-3xl">
+          <h1 className="text-foreground mb-4 text-left text-2xl font-semibold sm:text-3xl">
             Nextdoor Discovery
           </h1>
+
           {searchSlot && (
           <>
-            {/* Compact: below md – two rows, search type in "..." next to input */}
+            {/* Compact: search bar only (count + icons row is below, outside scroll) */}
             <div className="mb-2 flex w-full flex-col gap-2.5 lg:hidden">
-            <div className="flex min-w-0 items-start gap-2">
-                <div className="min-w-0 flex-1 shrink-0">
-                  <FeedSearchBar
-                    compact
-                    embeddingBacklog={searchSlot.embeddingBacklog}
-                    loadDefaultsError={searchSlot.loadDefaultsError}
-                    loading={searchSlot.loading}
-                    query={searchSlot.query}
-                    useKeywordSearch={searchSlot.useKeywordSearch}
-                    onQueryChange={searchSlot.onQueryChange}
-                    onSearch={searchSlot.onSearch}
-                    onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
-                  />
-                </div>
-                <div className="relative shrink-0" ref={searchTypeMenuRef}>
-                  <button
-                    aria-expanded={searchTypeMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="Search type"
-                    className="border-border bg-surface-hover text-foreground flex h-10 min-h-[44px] min-w-10 items-center justify-center rounded border transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setSearchTypeMenuOpen((o) => !o)}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                  {searchTypeMenuOpen && (
-                    <div
-                      className="border-border bg-surface absolute right-0 top-full z-10 mt-1 min-w-[8rem] rounded-card border py-1 shadow-lg"
-                      role="menu"
-                    >
-                      <button
-                        className={cn(
-                          "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                          !searchSlot.useKeywordSearch && "bg-surface-hover font-medium"
-                        )}
-                        role="menuitem"
-                        type="button"
-                        onClick={() => {
-                          searchSlot.onUseKeywordSearchChange(false);
-                          setSearchTypeMenuOpen(false);
-                        }}
-                      >
-                        AI Powered
-                      </button>
-                      <button
-                        className={cn(
-                          "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                          searchSlot.useKeywordSearch && "bg-surface-hover font-medium"
-                        )}
-                        role="menuitem"
-                        type="button"
-                        onClick={() => {
-                          searchSlot.onUseKeywordSearchChange(true);
-                          setSearchTypeMenuOpen(false);
-                        }}
-                      >
-                        Keyword
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <button
-                  aria-label="Filters"
-                  className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                  type="button"
-                  onClick={() => setOpenFilterDrawer(true)}
-                >
-                  <Filter className="h-4 w-4" />
-                  {activeFilterCount > 0 && (
-                    <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-                <div className="relative" ref={sortMenuRef}>
-                  <button
-                    aria-expanded={sortMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="Sort"
-                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setSortMenuOpen((o) => !o)}
-                  >
-                    <ArrowUpDown className="h-4 w-4" />
-                  </button>
-                  {sortMenuOpen && (
-                    <div
-                      className="border-border bg-surface absolute left-0 top-full z-10 mt-1 min-w-[12rem] rounded-card border py-1 shadow-lg"
-                      role="menu"
-                    >
-                      {SORT_OPTIONS.map((o, i) => (
-                        <button
-                          key={o.label}
-                          className={cn(
-                            "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                            currentSortOption.sort === o.sort &&
-                              currentSortOption.sortOrder === o.sortOrder &&
-                              "bg-surface-hover font-medium"
-                          )}
-                          role="menuitem"
-                          type="button"
-                          onClick={() => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              sort: o.sort,
-                              sortOrder: o.sortOrder,
-                            }));
-                            setSortMenuOpen(false);
-                          }}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {bulkMode ? (
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <CustomSelect
-                      ariaLabel="Bulk action"
-                      className="h-10 min-h-[44px] min-w-0 shrink sm:min-w-[11rem]"
-                      disabled={!selectAllChecked && selectedIds.size === 0}
-                      options={BULK_ACTION_OPTIONS}
-                      placeholder="Actions"
-                      value=""
-                      onChange={async (val) => {
-                        if (!val) return;
-                        const action = val as BulkActionType;
-                        if (!selectAllChecked && selectedIds.size === 0) return;
-                        if (selectAllChecked) {
-                          setConfirmModal({ action });
-                          setCountLoading(true);
-                          try {
-                            const response = await fetch(
-                              "/api/posts/bulk/count",
-                              {
-                                body: JSON.stringify({
-                                  query: getCurrentQuery(),
-                                }),
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                method: "POST",
-                              }
-                            );
-                            if (!response.ok) {
-                              const data = await response.json();
-                              setError(
-                                (data.error as string) ?? "Failed to get count"
-                              );
-                              setConfirmModal(null);
-                              return;
-                            }
-                            const {
-                              data: { count },
-                            } = await response.json();
-                            if (count === 0) {
-                              setError(
-                                "No posts match the current filters."
-                              );
-                              setConfirmModal(null);
-                              return;
-                            }
-                            setConfirmModal((prev) =>
-                              prev && prev.count === undefined
-                                ? { action: prev.action, count }
-                                : prev
-                            );
-                          } finally {
-                            setCountLoading(false);
-                          }
-                        } else {
-                          setConfirmModal({
-                            action,
-                            count: selectedIds.size,
-                          });
-                        }
-                      }}
-                    />
-                    <button
-                      className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] shrink-0 items-center justify-center rounded-card border border-border bg-transparent px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                      type="button"
-                      onClick={() => {
-                        setBulkMode(false);
-                        setSelectAllChecked(false);
-                        setSelectedIds(new Set());
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    aria-label="Bulk Actions"
-                    className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => setBulkMode(true)}
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                  </button>
-                )}
-                {(searchSlot.query.trim() || activeFilterCount > 0) && (
-                  <button
-                    aria-label="Reset filters"
-                    className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                    type="button"
-                    onClick={() => {
-                      handleResetFilters();
-                      searchSlot.onResetAll?.();
-                    }}
-                  >
-                    <RotateCcw className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
+              <FeedSearchBar
+                compact
+                embeddingBacklog={searchSlot.embeddingBacklog}
+                loadDefaultsError={searchSlot.loadDefaultsError}
+                loading={searchSlot.loading}
+                query={searchSlot.query}
+                useKeywordSearch={searchSlot.useKeywordSearch}
+                onQueryChange={searchSlot.onQueryChange}
+                onSearch={searchSlot.onSearch}
+                onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
+              />
             </div>
+            {searchSlot.loadDefaultsError && (
+              <p
+                className="hidden text-destructive text-xs lg:block"
+                role="alert"
+              >
+                Defaults failed to load.
+              </p>
+            )}
 
             {/* Desktop: from lg – single row, all controls exactly 40px tall */}
             <div className="mb-2 hidden h-[40px] w-full items-center gap-3 lg:flex">
@@ -960,60 +764,6 @@ export function PostFeed({
 
         {!searchSlot && (
           <>
-            <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
-              <button
-                aria-label="Filters"
-                className="border-border bg-surface-hover text-foreground hover:bg-surface relative flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                type="button"
-                onClick={() => setOpenFilterDrawer(true)}
-              >
-                <Filter className="h-4 w-4" />
-                {activeFilterCount > 0 && (
-                  <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1.5 py-0.5 text-xs">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-              <div className="relative" ref={sortMenuRef}>
-                <button
-                  aria-label="Sort"
-                  className="border-border bg-surface-hover text-foreground hover:bg-surface flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  type="button"
-                  onClick={() => setSortMenuOpen((open) => !open)}
-                >
-                  <ArrowUpDown className="h-4 w-4" />
-                </button>
-                {sortMenuOpen && (
-                  <div className="border-border bg-surface absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
-                    {SORT_OPTIONS.map((opt, i) => (
-                      <button
-                        key={opt.label}
-                        className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
-                        type="button"
-                        onClick={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            sort: opt.sort,
-                            sortOrder: opt.sortOrder,
-                          }));
-                          setSortMenuOpen(false);
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button
-                aria-label="Reset filters"
-                className="text-foreground hover:opacity-80 flex h-10 min-h-[44px] min-w-10 shrink-0 items-center justify-center rounded bg-transparent px-2 transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus"
-                type="button"
-                onClick={handleResetFilters}
-              >
-                <RotateCcw className="h-5 w-5" />
-              </button>
-            </div>
             <div className="hidden min-w-0 flex-wrap items-center gap-2 lg:flex">
               <button
                 aria-label="Filters"
@@ -1059,6 +809,307 @@ export function PostFeed({
             </div>
           </>
         )}
+
+          {/* Count + actions row: outside scroll so it stays visible (feed view only) */}
+          {(!searchSlot || !searchSlot.query.trim()) && (
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
+              <span className="text-muted-foreground shrink-0 text-sm">
+                Showing {posts.length} of {total} Posts
+              </span>
+              <div className="flex min-w-0 shrink-0 items-center gap-0 lg:hidden">
+                {searchSlot ? (
+                  <>
+                    {bulkMode ? (
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <CustomSelect
+                          ariaLabel="Bulk action"
+                          className="h-8 min-w-0 shrink text-sm sm:min-w-[11rem]"
+                          disabled={!selectAllChecked && selectedIds.size === 0}
+                          options={BULK_ACTION_OPTIONS}
+                          placeholder="Actions"
+                          value=""
+                          onChange={async (val) => {
+                            if (!val) return;
+                            const action = val as BulkActionType;
+                            if (!selectAllChecked && selectedIds.size === 0) return;
+                            if (selectAllChecked) {
+                              setConfirmModal({ action });
+                              setCountLoading(true);
+                              try {
+                                const response = await fetch(
+                                  "/api/posts/bulk/count",
+                                  {
+                                    body: JSON.stringify({
+                                      query: getCurrentQuery(),
+                                    }),
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    method: "POST",
+                                  }
+                                );
+                                if (!response.ok) {
+                                  const data = await response.json();
+                                  setError(
+                                    (data.error as string) ?? "Failed to get count"
+                                  );
+                                  setConfirmModal(null);
+                                  return;
+                                }
+                                const {
+                                  data: { count },
+                                } = await response.json();
+                                if (count === 0) {
+                                  setError(
+                                    "No posts match the current filters."
+                                  );
+                                  setConfirmModal(null);
+                                  return;
+                                }
+                                setConfirmModal((prev) =>
+                                  prev && prev.count === undefined
+                                    ? { action: prev.action, count }
+                                    : prev
+                                );
+                              } finally {
+                                setCountLoading(false);
+                              }
+                            } else {
+                              setConfirmModal({
+                                action,
+                                count: selectedIds.size,
+                              });
+                            }
+                          }}
+                        />
+                        <button
+                          className="text-foreground hover:opacity-80 flex h-8 shrink-0 items-center justify-center rounded px-2 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() => {
+                            setBulkMode(false);
+                            setSelectAllChecked(false);
+                            setSelectedIds(new Set());
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        aria-label="Bulk Actions"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => setBulkMode(true)}
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      aria-label="Filters"
+                      className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                      type="button"
+                      onClick={() => setOpenFilterDrawer(true)}
+                    >
+                      <Filter className="h-4 w-4" />
+                      {activeFilterCount > 0 && (
+                        <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </button>
+                    <div className="relative" ref={sortMenuRef}>
+                      <button
+                        aria-expanded={sortMenuOpen}
+                        aria-haspopup="menu"
+                        aria-label="Sort"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => setSortMenuOpen((o) => !o)}
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                      {sortMenuOpen && (
+                        <div
+                          className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[12rem] rounded-card border py-1 shadow-lg"
+                          role="menu"
+                        >
+                          {SORT_OPTIONS.map((o, i) => (
+                            <button
+                              key={o.label}
+                              className={cn(
+                                "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                                currentSortOption.sort === o.sort &&
+                                  currentSortOption.sortOrder === o.sortOrder &&
+                                  "bg-surface-hover font-medium"
+                              )}
+                              role="menuitem"
+                              type="button"
+                              onClick={() => {
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  sort: o.sort,
+                                  sortOrder: o.sortOrder,
+                                }));
+                                setSortMenuOpen(false);
+                              }}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                      <button
+                        aria-label="Reset filters"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => {
+                          handleResetFilters();
+                          searchSlot.onResetAll?.();
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
+                    )}
+                    <div className="relative" ref={searchTypeMenuRef}>
+                      <button
+                        aria-expanded={searchTypeMenuOpen}
+                        aria-haspopup="menu"
+                        aria-label="Search type"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => setSearchTypeMenuOpen((o) => !o)}
+                      >
+                        <Search className="h-4 w-4" />
+                      </button>
+                      {searchTypeMenuOpen && (
+                        <div
+                          className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[8rem] rounded-card border py-1 shadow-lg"
+                          role="menu"
+                        >
+                          <button
+                            className={cn(
+                              "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                              !searchSlot.useKeywordSearch &&
+                                "bg-surface-hover font-medium"
+                            )}
+                            role="menuitem"
+                            type="button"
+                            onClick={() => {
+                              searchSlot.onUseKeywordSearchChange(false);
+                              setSearchTypeMenuOpen(false);
+                            }}
+                          >
+                            AI Powered
+                          </button>
+                          <button
+                            className={cn(
+                              "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                              searchSlot.useKeywordSearch &&
+                                "bg-surface-hover font-medium"
+                            )}
+                            role="menuitem"
+                            type="button"
+                            onClick={() => {
+                              searchSlot.onUseKeywordSearchChange(true);
+                              setSearchTypeMenuOpen(false);
+                            }}
+                          >
+                            Keyword
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      aria-label="Filters"
+                      className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                      type="button"
+                      onClick={() => setOpenFilterDrawer(true)}
+                    >
+                      <Filter className="h-4 w-4" />
+                      {activeFilterCount > 0 && (
+                        <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </button>
+                    <div className="relative" ref={sortMenuRef}>
+                      <button
+                        aria-expanded={sortMenuOpen}
+                        aria-haspopup="menu"
+                        aria-label="Sort"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => setSortMenuOpen((open) => !open)}
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                      {sortMenuOpen && (
+                        <div className="border-border bg-surface absolute right-0 left-auto top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
+                          {SORT_OPTIONS.map((opt, i) => (
+                            <button
+                              key={opt.label}
+                              className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
+                              type="button"
+                              onClick={() => {
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  sort: opt.sort,
+                                  sortOrder: opt.sortOrder,
+                                }));
+                                setSortMenuOpen(false);
+                              }}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      aria-label="Reset filters"
+                      className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                      type="button"
+                      onClick={handleResetFilters}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {bulkMode && (
+                <label
+                  className="hidden min-h-[44px] cursor-pointer items-center gap-2 lg:flex"
+                  htmlFor="select-all-feed"
+                >
+                  <span className="text-muted-foreground text-sm">
+                    Select All
+                  </span>
+                  <input
+                    aria-label="Select All"
+                    checked={selectedIds.size === posts.length && posts.length > 0}
+                    className="rounded border-border bg-surface-hover"
+                    id="select-all-feed"
+                    ref={selectAllCheckboxRef}
+                    type="checkbox"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(posts.map((p) => p.id)));
+                        setSelectAllChecked(true);
+                      } else {
+                        setSelectedIds(new Set());
+                        setSelectAllChecked(false);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -1162,34 +1213,6 @@ export function PostFeed({
           <>
             {(!searchSlot || !searchSlot.query.trim()) && (
           <>
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
-              <span className="text-muted-foreground shrink-0 text-sm">
-                Showing {posts.length} of {total} Posts
-              </span>
-              {bulkMode && (
-                <label className="flex min-h-[44px] cursor-pointer items-center gap-2 mr-4">
-                  <span className="text-muted-foreground text-sm">
-                    Select All
-                  </span>
-                  <input
-                    aria-label="Select All"
-                    checked={selectedIds.size === posts.length && posts.length > 0}
-                    className="rounded border-border bg-surface-hover"
-                    ref={selectAllCheckboxRef}
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(new Set(posts.map((p) => p.id)));
-                        setSelectAllChecked(true);
-                      } else {
-                        setSelectedIds(new Set());
-                        setSelectAllChecked(false);
-                      }
-                    }}
-                  />
-                </label>
-              )}
-            </div>
             {error ? (
               <div className="flex justify-center mt-24">
                 <div className="border border-destructive rounded-lg px-6 py-4 text-center text-destructive">
