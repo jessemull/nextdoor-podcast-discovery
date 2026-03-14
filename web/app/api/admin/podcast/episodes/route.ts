@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { computeAndUpsertEpisodeEmbedding } from "@/lib/episode-embedding.server";
 import { copyPrivateToPublic } from "@/lib/podcast-storage.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -139,6 +140,17 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  try {
+    await computeAndUpsertEpisodeEmbedding(data.id);
+  } catch (embedErr) {
+    const msg =
+      embedErr instanceof Error ? embedErr.message : "Failed to update related episodes";
+    return NextResponse.json(
+      { error: `Episode created but ${msg.toLowerCase()}. Please try again.` },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ data });
 }

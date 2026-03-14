@@ -48,8 +48,6 @@ export default function EditEpisodePage() {
   const { toast } = useToast();
   const id = typeof params.id === "string" ? params.id : "";
   const [episode, setEpisode] = useState<Episode | null>(null);
-  const [embedError, setEmbedError] = useState<string | null>(null);
-  const [embedding, setEmbedding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -223,27 +221,6 @@ export default function EditEpisodePage() {
     }
   }, [id, router, toast]);
 
-  const handleRecomputeRelated = useCallback(async () => {
-    if (!id) return;
-    setEmbedError(null);
-    setEmbedding(true);
-    try {
-      const res = await fetch(`/api/admin/podcast/episodes/${id}/embed`, {
-        method: "POST",
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setEmbedError(j.error ?? "Failed to compute embedding");
-        return;
-      }
-      setEmbedError(null);
-    } catch (e) {
-      setEmbedError(e instanceof Error ? e.message : "Failed to compute embedding");
-    } finally {
-      setEmbedding(false);
-    }
-  }, [id]);
-
   if (loading) {
     return (
       <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
@@ -285,9 +262,6 @@ export default function EditEpisodePage() {
         </p>
         {error && (
           <p className="text-destructive mb-4 text-sm">{error}</p>
-        )}
-        {embedError && (
-          <p className="text-destructive mb-4 text-sm">{embedError}</p>
         )}
         <Card className="mb-8 p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -503,15 +477,6 @@ export default function EditEpisodePage() {
                 Cancel
               </Button>
             </Link>
-            <Button
-              disabled={embedding}
-              loading={embedding}
-              type="button"
-              variant="secondary"
-              onClick={handleRecomputeRelated}
-            >
-              Recompute related episodes
-            </Button>
             <Button
               disabled={!dirty || submitting}
               loading={submitting}
