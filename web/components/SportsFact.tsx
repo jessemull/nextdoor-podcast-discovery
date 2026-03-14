@@ -39,17 +39,19 @@ export function SportsFact() {
 
   const wrapperClass =
     "border-pittsburgh-gold-muted mb-0 w-fit mx-auto rounded-lg border p-5 text-center";
+  const skeletonWrapperClass =
+    "border-pittsburgh-gold-muted mb-0 mx-auto w-full max-w-xl rounded-lg border p-5 text-center";
   const errorWrapperClass =
     "border-destructive mb-0 w-fit mx-auto rounded-lg border p-5 text-center";
 
   if (showSkeleton) {
     return (
-      <div className={wrapperClass}>
-        <div className="bg-surface-hover mx-auto mb-5 h-7 w-[36rem] animate-pulse rounded" />
+      <div className={skeletonWrapperClass}>
+        <div className="bg-surface-hover mb-5 h-7 w-full animate-pulse rounded" />
         <div className={SPORTS_FACT_BODY_MIN_H + " space-y-2"}>
-          <div className="mx-auto h-4 w-[36rem] rounded bg-surface-hover animate-pulse" />
-          <div className="mx-auto h-4 w-[36rem] rounded bg-surface-hover animate-pulse" />
-          <div className="mx-auto h-4 w-[36rem] max-w-full rounded bg-surface-hover animate-pulse" />
+          <div className="h-4 w-full rounded bg-surface-hover animate-pulse" />
+          <div className="h-4 w-full rounded bg-surface-hover animate-pulse" />
+          <div className="h-4 w-full rounded bg-surface-hover animate-pulse" />
         </div>
       </div>
     );
