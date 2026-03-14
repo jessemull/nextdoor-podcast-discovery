@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, MoreVertical, Pencil, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -25,6 +25,9 @@ interface EpisodeRow {
   title: string;
 }
 
+const EPISODES_PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
+
 function formatStatus(status: string): string {
   if (status === "published") return "Published";
   if (status === "draft") return "Draft";
@@ -47,8 +50,13 @@ export default function AdminEpisodesPage() {
     left: number;
     right: number;
   } | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [searchParam, setSearchParam] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [total, setTotal] = useState(0);
   const [isMd, setIsMd] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 768px)");
@@ -88,6 +96,70 @@ export default function AdminEpisodesPage() {
     return () => document.removeEventListener("click", handleClick, true);
   }, [menuOpenEpisodeId]);
 
+  const load = useCallback(
+    async (search: string, pageOffset: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(EPISODES_PAGE_SIZE));
+        params.set("offset", String(pageOffset));
+        if (search.trim()) params.set("search", search.trim());
+        const res = await fetch(
+          `/api/admin/podcast/episodes?${params.toString()}`
+        );
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          setError(j.error ?? res.statusText);
+          setEpisodes([]);
+          setTotal(0);
+          return;
+        }
+        const j = await res.json();
+        const list = j.data ?? [];
+        setEpisodes(list);
+        setTotal(typeof j.total === "number" ? j.total : list.length);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load");
+        setEpisodes([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    void load(searchParam, offset);
+  }, [load, offset, searchParam]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    const q = searchQuery.trim();
+    if (q === "") {
+      setSearchParam("");
+      setOffset(0);
+      return;
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      searchDebounceRef.current = null;
+      setSearchParam(q);
+      setOffset(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+  }, []);
+
+  const goToPage = useCallback((newOffset: number) => {
+    setOffset((prev) => Math.max(0, newOffset));
+  }, []);
+
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteModalEpisodeId) return;
     try {
@@ -96,11 +168,9 @@ export default function AdminEpisodesPage() {
         { method: "DELETE" }
       );
       if (res.ok) {
-        setEpisodes((prev) =>
-          prev.filter((e) => e.id !== deleteModalEpisodeId)
-        );
         setDeleteModalEpisodeId(null);
         toast.success("Episode deleted.");
+        void load(searchParam, offset);
       } else {
         const j = await res.json().catch(() => ({}));
         toast.error(j.error ?? "Delete failed");
@@ -110,32 +180,7 @@ export default function AdminEpisodesPage() {
       toast.error(e instanceof Error ? e.message : "Delete failed");
       setDeleteModalEpisodeId(null);
     }
-  }, [deleteModalEpisodeId, toast]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/podcast/episodes");
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(j.error ?? res.statusText);
-        setEpisodes([]);
-        return;
-      }
-      const { data } = await res.json();
-      setEpisodes(data ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-      setEpisodes([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [deleteModalEpisodeId, load, offset, searchParam, toast]);
 
   const labelStyle = { opacity: 0.85 };
 
@@ -167,13 +212,27 @@ export default function AdminEpisodesPage() {
           <p className="text-destructive mb-4 text-sm">{error}</p>
         )}
         <Card className="mb-8 p-6">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-foreground text-xl font-semibold tracking-wide">
               Episode list
             </h2>
             <Link href="/admin/episodes/new">
               <Button variant="primary">New Episode</Button>
             </Link>
+          </div>
+          <div className="border-border text-foreground mb-6 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-border-focus">
+            <Search
+              aria-hidden
+              className="text-muted h-4 w-4 shrink-0"
+            />
+            <input
+              aria-label="Search episodes"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+              placeholder="Search by title, slug, or description..."
+              type="search"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
           </div>
           {loading ? (
             <>
@@ -255,7 +314,11 @@ export default function AdminEpisodesPage() {
               </div>
             </>
           ) : episodes.length === 0 ? (
-            <p className="text-muted text-sm">No episodes yet.</p>
+            <p className="text-muted text-sm">
+              {searchParam
+                ? "No episodes found. Try a different search."
+                : "No episodes yet."}
+            </p>
           ) : (
             <>
               <div className="flex flex-col gap-3 md:hidden">
@@ -430,6 +493,38 @@ export default function AdminEpisodesPage() {
                   </table>
                 </div>
               </div>
+              {total > 0 && (
+                <div className="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                  <p className="text-muted text-sm">
+                    Showing {offset + 1}–
+                    {offset + episodes.length}
+                    of {total}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      disabled={offset === 0}
+                      type="button"
+                      variant="secondary"
+                      onClick={() => goToPage(offset - EPISODES_PAGE_SIZE)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      disabled={
+                        offset + episodes.length >= total ||
+                        episodes.length < EPISODES_PAGE_SIZE
+                      }
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        goToPage(offset + EPISODES_PAGE_SIZE)
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </Card>

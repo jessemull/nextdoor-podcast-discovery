@@ -5,9 +5,22 @@ import { copyPrivateToPublic } from "@/lib/podcast-storage.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+function escapeIlikeTerm(term: string): string {
+  return term
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .replace(/,/g, " ");
+}
+
 /**
  * GET /api/admin/podcast/episodes
- * List all episodes (any status). Auth required.
+ * List episodes (any status). Auth required.
+ * Query params: search|q (filter title/slug/description), limit (default 20, max 100), offset (default 0).
+ * Returns { data, total } when pagination params are used.
  */
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -15,17 +28,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const searchParams = request.nextUrl.searchParams;
+  const searchRaw =
+    (searchParams.get("search") ?? searchParams.get("q") ?? "").trim();
+  const limitParam = searchParams.get("limit");
+  const offsetParam = searchParams.get("offset");
+
+  const limit = Math.min(
+    Math.max(1, parseInt(limitParam ?? "", 10) || DEFAULT_LIMIT),
+    MAX_LIMIT
+  );
+  const offset = Math.max(0, parseInt(offsetParam ?? "", 10) || 0);
+
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  let query = supabase
     .from("podcast_episodes")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
+
+  if (searchRaw) {
+    const escaped = escapeIlikeTerm(searchRaw);
+    const pattern = `%${escaped}%`;
+    query = query.or(
+      `title.ilike.${pattern},slug.ilike.${pattern},description.ilike.${pattern}`
+    );
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ data: data ?? [] });
+
+  return NextResponse.json({
+    data: data ?? [],
+    total: count ?? (data?.length ?? 0),
+  });
 }
 
 /**
