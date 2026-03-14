@@ -486,14 +486,6 @@ export const PostCard = memo(function PostCard({
                 <span className="text-foreground text-sm font-medium tracking-wide">
                   {formatRelativeTime(post.created_at)}
                 </span>
-                {post.post_type === "classified" && post.classified_price && (
-                  <>
-                    <span className="text-muted-foreground text-sm">•</span>
-                    <span className="text-foreground text-sm font-medium">
-                      {post.classified_price}
-                    </span>
-                  </>
-                )}
               </div>
               {actionsBlock}
             </div>
@@ -574,24 +566,40 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
-      {/* Details: neighborhood and any other details (similarity is in header row 2) */}
-      {neighborhoodName && (
+      {/* Details: neighborhood and price (classifieds); two columns */}
+      {(neighborhoodName ||
+        (post.post_type === "classified" && post.classified_price)) && (
         <div className="mb-6">
           <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
             Details
           </h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                Neighborhood
-              </span>
-              <span
-                className="text-foreground min-w-0 break-words text-xs"
-                style={{ opacity: 0.85 }}
-              >
-                {neighborhoodName}
-              </span>
-            </div>
+            {neighborhoodName && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Neighborhood
+                </span>
+                <span
+                  className="text-foreground min-w-0 break-words text-xs"
+                  style={{ opacity: 0.85 }}
+                >
+                  {neighborhoodName}
+                </span>
+              </div>
+            )}
+            {post.post_type === "classified" && post.classified_price && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Price
+                </span>
+                <span
+                  className="text-foreground min-w-0 break-words text-xs"
+                  style={{ opacity: 0.85 }}
+                >
+                  {post.classified_price}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

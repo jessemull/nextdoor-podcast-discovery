@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 /**
- * Format a date for relative display (e.g., "2 days ago").
+ * Format a date for relative display with short labels (e.g., "4d ago", "2w ago").
  * Handles both past and future dates.
  */
 export function formatRelativeTime(date: null | string): string {
@@ -26,19 +26,19 @@ export function formatRelativeTime(date: null | string): string {
   if (diffDays < 0) {
     const futureDays = Math.abs(diffDays);
     if (futureDays === 1) return "Tomorrow";
-    if (futureDays < 7) return `In ${futureDays} days`;
-    if (futureDays < 30) return `In ${Math.floor(futureDays / 7)} weeks`;
-    return `In ${Math.floor(futureDays / 30)} months`;
+    if (futureDays < 7) return `In ${futureDays}d`;
+    if (futureDays < 30) return `In ${Math.floor(futureDays / 7)}w`;
+    return `In ${Math.floor(futureDays / 30)}m`;
   }
 
   // Handle past dates
 
   if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  return `${Math.floor(diffDays / 365)} years ago`;
+  if (diffDays === 1) return "1d ago";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}m ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
 }
 
 /**

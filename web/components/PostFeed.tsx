@@ -17,6 +17,7 @@ import {
   Search,
   SearchX,
   X,
+  XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -812,78 +813,38 @@ export function PostFeed({
 
           {/* Count + actions row: outside scroll so it stays visible (feed view only) */}
           {(!searchSlot || !searchSlot.query.trim()) && (
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pb-4">
-              <span className="text-muted-foreground shrink-0 text-sm">
-                Showing {posts.length} of {total} Posts
-              </span>
-              <div className="flex min-w-0 shrink-0 items-center gap-0 lg:hidden">
-                {searchSlot ? (
-                  <>
-                    {bulkMode ? (
-                      <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <CustomSelect
-                          ariaLabel="Bulk action"
-                          className="h-8 min-w-0 shrink text-sm sm:min-w-[11rem]"
-                          disabled={!selectAllChecked && selectedIds.size === 0}
-                          options={BULK_ACTION_OPTIONS}
-                          placeholder="Actions"
-                          value=""
-                          onChange={async (val) => {
-                            if (!val) return;
-                            const action = val as BulkActionType;
-                            if (!selectAllChecked && selectedIds.size === 0) return;
-                            if (selectAllChecked) {
-                              setConfirmModal({ action });
-                              setCountLoading(true);
-                              try {
-                                const response = await fetch(
-                                  "/api/posts/bulk/count",
-                                  {
-                                    body: JSON.stringify({
-                                      query: getCurrentQuery(),
-                                    }),
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    method: "POST",
-                                  }
-                                );
-                                if (!response.ok) {
-                                  const data = await response.json();
-                                  setError(
-                                    (data.error as string) ?? "Failed to get count"
-                                  );
-                                  setConfirmModal(null);
-                                  return;
-                                }
-                                const {
-                                  data: { count },
-                                } = await response.json();
-                                if (count === 0) {
-                                  setError(
-                                    "No posts match the current filters."
-                                  );
-                                  setConfirmModal(null);
-                                  return;
-                                }
-                                setConfirmModal((prev) =>
-                                  prev && prev.count === undefined
-                                    ? { action: prev.action, count }
-                                    : prev
-                                );
-                              } finally {
-                                setCountLoading(false);
-                              }
-                            } else {
-                              setConfirmModal({
-                                action,
-                                count: selectedIds.size,
-                              });
-                            }
-                          }}
-                        />
+            <>
+              <div
+                className={cn(
+                  "flex min-w-0 flex-wrap items-center justify-between gap-2",
+                  bulkMode ? "pb-1" : "pb-4"
+                )}
+              >
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    aria-label="Filters"
+                    className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                    type="button"
+                    onClick={() => setOpenFilterDrawer(true)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    {activeFilterCount > 0 && (
+                      <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                  <span className="text-muted-foreground shrink-0 text-sm">
+                    Showing {posts.length} of {total} Posts
+                  </span>
+                </div>
+                <div className="flex min-w-0 shrink-0 items-center gap-0 lg:hidden">
+                  {searchSlot ? (
+                    <>
+                      {bulkMode ? (
                         <button
-                          className="text-foreground hover:opacity-80 flex h-8 shrink-0 items-center justify-center rounded px-2 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          aria-label="Cancel bulk actions"
+                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                           type="button"
                           onClick={() => {
                             setBulkMode(false);
@@ -891,32 +852,18 @@ export function PostFeed({
                             setSelectedIds(new Set());
                           }}
                         >
-                          Cancel
+                          <XCircle className="h-4 w-4" />
                         </button>
-                      </div>
-                    ) : (
-                      <button
-                        aria-label="Bulk Actions"
-                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                        type="button"
-                        onClick={() => setBulkMode(true)}
-                      >
-                        <CheckSquare className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button
-                      aria-label="Filters"
-                      className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                      type="button"
-                      onClick={() => setOpenFilterDrawer(true)}
-                    >
-                      <Filter className="h-4 w-4" />
-                      {activeFilterCount > 0 && (
-                        <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
-                          {activeFilterCount}
-                        </span>
+                      ) : (
+                        <button
+                          aria-label="Bulk Actions"
+                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() => setBulkMode(true)}
+                        >
+                          <CheckSquare className="h-4 w-4" />
+                        </button>
                       )}
-                    </button>
                     <div className="relative" ref={sortMenuRef}>
                       <button
                         aria-expanded={sortMenuOpen}
@@ -1024,19 +971,6 @@ export function PostFeed({
                   </>
                 ) : (
                   <>
-                    <button
-                      aria-label="Filters"
-                      className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                      type="button"
-                      onClick={() => setOpenFilterDrawer(true)}
-                    >
-                      <Filter className="h-4 w-4" />
-                      {activeFilterCount > 0 && (
-                        <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
-                          {activeFilterCount}
-                        </span>
-                      )}
-                    </button>
                     <div className="relative" ref={sortMenuRef}>
                       <button
                         aria-expanded={sortMenuOpen}
@@ -1109,6 +1043,85 @@ export function PostFeed({
                 </label>
               )}
             </div>
+            {bulkMode && searchSlot && (
+              <div className="flex w-full items-center gap-2 pb-4 lg:hidden">
+                <div className="min-w-0 flex-1">
+                  <CustomSelect
+                    ariaLabel="Bulk action"
+                    className="h-8 w-full text-sm"
+                  disabled={!selectAllChecked && selectedIds.size === 0}
+                  options={BULK_ACTION_OPTIONS}
+                  placeholder="Actions"
+                  value=""
+                  onChange={async (val) => {
+                    if (!val) return;
+                    const action = val as BulkActionType;
+                    if (!selectAllChecked && selectedIds.size === 0) return;
+                    if (selectAllChecked) {
+                      setConfirmModal({ action });
+                      setCountLoading(true);
+                      try {
+                        const response = await fetch(
+                          "/api/posts/bulk/count",
+                          {
+                            body: JSON.stringify({
+                              query: getCurrentQuery(),
+                            }),
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            method: "POST",
+                          }
+                        );
+                        if (!response.ok) {
+                          const data = await response.json();
+                          setError(
+                            (data.error as string) ?? "Failed to get count"
+                          );
+                          setConfirmModal(null);
+                          return;
+                        }
+                        const {
+                          data: { count },
+                        } = await response.json();
+                        if (count === 0) {
+                          setError(
+                            "No posts match the current filters."
+                          );
+                          setConfirmModal(null);
+                          return;
+                        }
+                        setConfirmModal((prev) =>
+                          prev && prev.count === undefined
+                            ? { action: prev.action, count }
+                            : prev
+                        );
+                      } finally {
+                        setCountLoading(false);
+                      }
+                    } else {
+                      setConfirmModal({
+                        action,
+                        count: selectedIds.size,
+                      });
+                    }
+                  }}
+                  />
+                </div>
+                <button
+                  className="text-foreground hover:opacity-80 flex h-8 w-16 shrink-0 items-center justify-center rounded px-2 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  type="button"
+                  onClick={() => {
+                    setBulkMode(false);
+                    setSelectAllChecked(false);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </>
           )}
 
         </div>
