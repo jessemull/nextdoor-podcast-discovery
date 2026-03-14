@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { Navbar } from "@/components/Navbar";
 import { getSession } from "@/lib/supabase-server-auth";
 
 import type { ReactNode } from "react";
@@ -13,8 +14,13 @@ export default async function ProtectedLayout({
 }: ProtectedLayoutProps) {
   const session = await getSession();
   if (!session) {
-    redirect("/login?returnTo=/");
+    redirect("/login?returnTo=/dashboard");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex h-screen flex-col overflow-hidden">
+      <Navbar />
+      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+    </div>
+  );
 }

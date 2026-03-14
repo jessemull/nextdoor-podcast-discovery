@@ -10,6 +10,7 @@ import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Spinner } from "@/components/ui/Spinner";
 import {
   GENERIC_ERROR_MESSAGE_LINE_1,
   GENERIC_ERROR_MESSAGE_LINE_2,
@@ -603,7 +604,7 @@ export default function SettingsPage() {
                 </button>
               ) : (
                 <button
-                  className="rounded-lg border border-border bg-surface-hover px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface-hover px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover/80 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={mfaBusy || mfaEnrolling}
                   type="button"
                   onClick={() => {
@@ -611,7 +612,8 @@ export default function SettingsPage() {
                     void startTotpEnrollment();
                   }}
                 >
-                  {mfaEnrolling ? "Starting enrollment…" : "Enable two-factor authentication"}
+                  {mfaEnrolling && <Spinner size="sm" />}
+                  Enable two-factor authentication
                 </button>
               )}
             </div>

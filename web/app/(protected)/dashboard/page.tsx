@@ -1,7 +1,7 @@
 import { SportsFact } from "@/components/SportsFact";
 import { StatsPanel } from "@/components/StatsPanel";
 
-export default function Home() {
+export default function Dashboard() {
   return (
     <main className="relative h-full overflow-auto">
       {/* Full-bleed banner: only behind main content (not navbar), grayscale + dark overlay */}

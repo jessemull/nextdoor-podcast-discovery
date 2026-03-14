@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useReducer, useState } from "react";
 
+import { Spinner } from "@/components/ui/Spinner";
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 
@@ -229,12 +230,14 @@ function ResetPasswordContent() {
                 "block w-full rounded-lg px-6 py-3 text-center font-medium transition-all duration-200",
                 "bg-surface-hover text-foreground border border-border",
                 "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
-                "disabled:cursor-not-allowed disabled:opacity-60"
+                "disabled:cursor-not-allowed disabled:opacity-60",
+                "inline-flex items-center justify-center gap-2"
               )}
               disabled={isSubmitting}
               type="submit"
             >
-              {isSubmitting ? "Updating…" : "Set New Password"}
+              {isSubmitting && <Spinner size="sm" />}
+              Set New Password
             </button>
           </form>
         )}

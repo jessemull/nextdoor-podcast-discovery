@@ -232,10 +232,11 @@ export function PermalinkQueueSection({
           <Button
             className="shrink-0 w-full sm:w-auto"
             disabled={isAdding || !inputUrl.trim()}
+            loading={isAdding}
             variant="primary"
             onClick={handleAdd}
           >
-            {isAdding ? "Submitting…" : "Submit"}
+            Submit
           </Button>
         </div>
       </Card>

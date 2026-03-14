@@ -18,12 +18,14 @@ const navLinkClass = cn(
 );
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
+  { href: "/dashboard", label: "Home" },
   { href: "/feed", label: "Feed" },
   { href: "/classifieds", label: "Classifieds" },
   { href: "/jobs", label: "Jobs" },
-  { href: "/stats", label: "Stats" },
+  { href: "/admin/episodes", label: "Episodes" },
+  { href: "/admin/categories", label: "Categories" },
   { href: "/settings", label: "Settings" },
+  { href: "/stats", label: "Stats" },
 ] as const;
 
 export function Navbar() {
@@ -75,9 +77,9 @@ export function Navbar() {
     <nav className="border-border bg-surface border-b">
       <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6">
         <Link
-          aria-label="Go to home page"
+          aria-label="Go to dashboard"
           className="flex items-center gap-2 text-lg font-semibold text-foreground"
-          href="/"
+          href="/dashboard"
         >
           <Mic aria-hidden className="h-5 w-5" />
           Nextdoor Discovery

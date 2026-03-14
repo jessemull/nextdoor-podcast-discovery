@@ -17,7 +17,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
         <div className="mx-auto max-w-3xl">
           <div className="rounded-lg border border-red-800 bg-red-900/20 p-6">
             <p className="text-red-400">Invalid post ID format</p>
-            <Link className="mt-4 inline-block text-blue-400 hover:text-blue-300" href="/">
+            <Link className="mt-4 inline-block text-blue-400 hover:text-blue-300" href="/feed">
               Back to Feed
             </Link>
           </div>
@@ -34,7 +34,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
         <div className="mx-auto max-w-3xl">
           <div className="rounded-lg border border-red-800 bg-red-900/20 p-6">
             <p className="text-red-400">Post not found</p>
-            <Link className="mt-4 inline-block text-blue-400 hover:text-blue-300" href="/">
+            <Link className="mt-4 inline-block text-blue-400 hover:text-blue-300" href="/feed">
               Back to Feed
             </Link>
           </div>

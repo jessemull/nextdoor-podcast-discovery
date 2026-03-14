@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
+import { Spinner } from "@/components/ui/Spinner";
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,10 @@ function getTotpFactorsFromListFactorsResponse(data: unknown): { id: string; sta
 function getSafeReturnTo(returnTo: string | null): string {
   const path = (returnTo ?? "").trim() || "/";
   if (!path.startsWith("/") || path.includes("//")) {
-    return "/";
+    return "/dashboard";
+  }
+  if (path === "/") {
+    return "/dashboard";
   }
   return path;
 }
@@ -492,12 +496,14 @@ function LoginContent() {
                 "block w-full rounded-lg px-6 py-3 text-center font-medium transition-all duration-200",
                 "bg-surface-hover text-foreground border border-border",
                 "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
-                "disabled:cursor-not-allowed disabled:opacity-60"
+                "disabled:cursor-not-allowed disabled:opacity-60",
+                "inline-flex items-center justify-center gap-2"
               )}
               disabled={forgotSubmitting}
               type="submit"
             >
-              {forgotSubmitting ? "Sending…" : "Send Reset Link"}
+              {forgotSubmitting && <Spinner size="sm" />}
+              Send Reset Link
             </button>
             <p className="mt-4 text-center text-sm text-muted">
               <button
@@ -579,12 +585,14 @@ function LoginContent() {
               "block w-full rounded-lg px-6 py-3 text-center font-medium transition-all duration-200",
               "bg-surface-hover text-foreground border border-border",
               "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
-              "disabled:cursor-not-allowed disabled:opacity-60"
+              "disabled:cursor-not-allowed disabled:opacity-60",
+              "inline-flex items-center justify-center gap-2"
             )}
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? "Signing In…" : "Sign In"}
+            {isSubmitting && <Spinner size="sm" />}
+            Sign In
           </button>
           <p className="mt-4 text-center text-sm text-muted">
             <button
@@ -663,12 +671,14 @@ function LoginContent() {
                   "w-1/2 rounded-lg px-4 py-2 text-center text-sm font-medium transition-all duration-200",
                   "bg-surface-hover text-foreground border border-border",
                   "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
-                  "disabled:cursor-not-allowed disabled:opacity-60"
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                  "inline-flex items-center justify-center gap-2"
                 )}
                 disabled={isSubmitting || mfaCode.length === 0}
                 type="submit"
               >
-                {isSubmitting ? "Verifying…" : "Verify Code"}
+                {isSubmitting && <Spinner size="sm" />}
+                Verify Code
               </button>
               <button
                 className="w-1/2 rounded-lg border border-border bg-transparent px-4 py-2 text-center text-sm font-medium text-muted hover:bg-surface-hover/40 disabled:cursor-not-allowed disabled:opacity-60"

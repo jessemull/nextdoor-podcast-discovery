@@ -22,6 +22,7 @@ import Link from "next/link";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { Spinner } from "@/components/ui/Spinner";
 import { PostWithScores } from "@/lib/types";
 import {
   cn,
@@ -332,11 +333,7 @@ export const PostCard = memo(function PostCard({
                 });
               }
               if (onMarkIgnored) {
-                const ignoreLabel = isMarkingIgnored
-                  ? "..."
-                  : post.ignored
-                    ? "Unignore"
-                    : "Ignore";
+                const ignoreLabel = post.ignored ? "Unignore" : "Ignore";
                 menuItems.push({
                   label: ignoreLabel,
                   node: (
@@ -351,18 +348,20 @@ export const PostCard = memo(function PostCard({
                         onMarkIgnored(post.id, !post.ignored);
                       }}
                     >
-                      <EyeOff aria-hidden className="h-4 w-4" />
+                      {isMarkingIgnored ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <EyeOff aria-hidden className="h-4 w-4" />
+                      )}
                       {ignoreLabel}
                     </button>
                   ),
                 });
               }
               if (onMarkUsedChange) {
-                const usedLabel = isMarkingUsed
-                  ? "..."
-                  : post.used_on_episode
-                    ? "Mark as unused"
-                    : "Mark as used";
+                const usedLabel = post.used_on_episode
+                  ? "Mark as unused"
+                  : "Mark as used";
                 menuItems.push({
                   label: usedLabel,
                   node: (
@@ -377,7 +376,11 @@ export const PostCard = memo(function PostCard({
                         onMarkUsedChange(post.id, !post.used_on_episode);
                       }}
                     >
-                      <Check aria-hidden className="h-4 w-4" />
+                      {isMarkingUsed ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Check aria-hidden className="h-4 w-4" />
+                      )}
                       {usedLabel}
                     </button>
                   ),
@@ -385,9 +388,8 @@ export const PostCard = memo(function PostCard({
               }
               if (post.url) {
                 if (queueStatus && activeJobId && onCancelRefresh) {
-                  const cancelLabel = isCancellingRefresh ? "Cancelling…" : "Cancel Refresh";
                   menuItems.push({
-                    label: cancelLabel,
+                    label: "Cancel Refresh",
                     node: (
                       <button
                         key="cancel-refresh"
@@ -400,21 +402,18 @@ export const PostCard = memo(function PostCard({
                           onCancelRefresh(activeJobId);
                         }}
                       >
-                        <X
-                          aria-hidden
-                          className={cn(
-                            "h-4 w-4",
-                            isCancellingRefresh && "animate-pulse"
-                          )}
-                        />
-                        {cancelLabel}
+                        {isCancellingRefresh ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <X aria-hidden className="h-4 w-4" />
+                        )}
+                        Cancel Refresh
                       </button>
                     ),
                   });
                 } else if (onQueueRefresh) {
-                  const refreshLabel = isQueuingRefresh ? "Queuing…" : "Refresh Post";
                   menuItems.push({
-                    label: refreshLabel,
+                    label: "Refresh Post",
                     node: (
                       <button
                         key="refresh-post"
@@ -427,14 +426,12 @@ export const PostCard = memo(function PostCard({
                           onQueueRefresh(post.id);
                         }}
                       >
-                        <RefreshCw
-                          aria-hidden
-                          className={cn(
-                            "h-4 w-4",
-                            isQueuingRefresh && "animate-pulse"
-                          )}
-                        />
-                        {refreshLabel}
+                        {isQueuingRefresh ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <RefreshCw aria-hidden className="h-4 w-4" />
+                        )}
+                        Refresh Post
                       </button>
                     ),
                   });

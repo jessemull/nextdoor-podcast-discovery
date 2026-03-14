@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/Navbar";
-
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -18,14 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-background text-foreground antialiased">
-        <Providers>
-          <div className="flex h-screen flex-col overflow-hidden">
-            <Navbar />
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {children}
-            </div>
-          </div>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

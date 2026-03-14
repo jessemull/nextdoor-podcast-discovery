@@ -85,11 +85,12 @@ export function ConfirmModal({
                 {cancelLabel}
               </Button>
               <Button
-                disabled={confirmDisabled || confirmLoading}
+                disabled={confirmDisabled}
+                loading={confirmLoading}
                 variant="primary"
                 onClick={onConfirm}
               >
-                {confirmLoading ? "..." : confirmLabel}
+                {confirmLabel}
               </Button>
             </div>
           </>

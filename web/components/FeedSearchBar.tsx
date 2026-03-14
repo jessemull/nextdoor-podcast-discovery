@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { Spinner } from "@/components/ui/Spinner";
 import { SEARCH_SUGGESTIONS } from "@/lib/constants";
 import { useDebounce } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
@@ -207,7 +208,8 @@ export function FeedSearchBar({
           role="listbox"
         >
           {suggestionsLoading ? (
-            <li className="px-4 py-3 text-muted-foreground text-sm">
+            <li className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+              <Spinner size="sm" />
               Loading suggestions…
             </li>
           ) : (
