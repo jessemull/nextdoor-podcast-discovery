@@ -60,10 +60,9 @@ input:-webkit-autofill:active {
   background: var(--border-focus);
 }
 
-/* Main content scroll (below navbar): single scroll container, scrollbar at viewport edge, visible in Chrome */
+/* Main content scroll (below navbar): single scroll container */
 .content-scroll {
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  overflow-y: auto;
 }
 .content-scroll::-webkit-scrollbar {
   width: 14px;
