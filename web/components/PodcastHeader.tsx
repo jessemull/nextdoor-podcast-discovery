@@ -26,9 +26,11 @@ export function PodcastHeader() {
 
   const qFromUrl = searchParams.get("q") ?? "";
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [searchWidth, setSearchWidth] = useState<string>(SEARCH_WIDTH_CLOSED);
   const [inputValue, setInputValue] = useState(qFromUrl);
   const inputRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const expandRafRef = useRef<number | null>(null);
 
@@ -43,7 +45,7 @@ export function PodcastHeader() {
   }, [isHome, qFromUrl]);
 
   useEffect(() => {
-    if (isSearchOpen) {
+    if (isSearchOpen && !isClosing) {
       if (expandRafRef.current != null) cancelAnimationFrame(expandRafRef.current);
       setSearchWidth(SEARCH_WIDTH_CLOSED);
       expandRafRef.current = requestAnimationFrame(() => {
@@ -59,10 +61,26 @@ export function PodcastHeader() {
         clearTimeout(t);
         if (expandRafRef.current != null) cancelAnimationFrame(expandRafRef.current);
       };
-    } else {
+    }
+    if (!isSearchOpen && !isClosing) {
       setSearchWidth(SEARCH_WIDTH_CLOSED);
     }
-  }, [isSearchOpen]);
+  }, [isClosing, isSearchOpen]);
+
+  useEffect(() => {
+    if (!isClosing || searchWidth !== SEARCH_WIDTH_CLOSED) return;
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName === "width") {
+        setIsClosing(false);
+        setIsSearchOpen(false);
+        el.removeEventListener("transitionend", onTransitionEnd);
+      }
+    };
+    el.addEventListener("transitionend", onTransitionEnd);
+    return () => el.removeEventListener("transitionend", onTransitionEnd);
+  }, [isClosing, searchWidth]);
 
   const updateUrl = useCallback(
     (value: string) => {
@@ -95,12 +113,13 @@ export function PodcastHeader() {
     if (!isHome) {
       router.push("/podcast");
     }
+    setIsClosing(false);
     setIsSearchOpen(true);
   }, [isHome, router]);
 
   const handleSearchBlur = useCallback(() => {
     if (!inputValue.trim()) {
-      setIsSearchOpen(false);
+      setIsClosing(true);
       setSearchWidth(SEARCH_WIDTH_CLOSED);
     }
   }, [inputValue]);
@@ -137,42 +156,53 @@ export function PodcastHeader() {
           Subscribe
         </Link>
         <div className="flex items-center gap-1">
-          {isSearchOpen ? (
+          {/* Wrapper first so input expands left from the icon (CodePen: icon fixed on right) */}
+          <div
+            className="podcast-search-wrapper relative overflow-hidden"
+            ref={wrapperRef}
+            style={{
+              maxWidth: SEARCH_WIDTH_OPEN,
+              transition: SEARCH_TRANSITION,
+              width: searchWidth,
+            }}
+          >
+            <input
+              aria-label="Search for episodes"
+              className={`bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 overflow-hidden rounded-lg border py-0.5 pl-3 pr-8 text-base focus:outline-none ${
+                isSearchOpen || isClosing
+                  ? "border-2 border-podcast-accent"
+                  : "border border-border"
+              }`}
+              data-podcast-search-input
+              placeholder="Search for episodes..."
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onBlur={handleSearchBlur}
+              onChange={handleSearchChange}
+            />
+            {inputValue ? (
+              <button
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-surface"
+                type="button"
+                onClick={handleClearSearch}
+              >
+                <X aria-hidden className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+          {(isSearchOpen || isClosing) ? (
             <>
               <Search
                 aria-hidden
                 className="text-podcast-accent h-4 w-4 shrink-0"
               />
-              <div
-                className="podcast-search-wrapper relative overflow-hidden"
-                style={{
-                  maxWidth: SEARCH_WIDTH_OPEN,
-                  transition: SEARCH_TRANSITION,
-                  width: searchWidth,
-                }}
-              >
-                <input
-                  aria-label="Search for episodes"
-                  className="border-border bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 overflow-hidden rounded-lg border py-0.5 pl-3 pr-8 text-base focus:border-podcast-accent focus:outline-none focus:ring-1 focus:ring-podcast-accent"
-                  data-podcast-search-input
-                  placeholder="Search for episodes..."
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onBlur={handleSearchBlur}
-                  onChange={handleSearchChange}
-                />
-                {inputValue ? (
-                  <button
-                    aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-white transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-surface"
-                    type="button"
-                    onClick={handleClearSearch}
-                  >
-                    <X aria-hidden className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </div>
+              {isClosing && (
+                <span className="text-podcast-foreground hidden text-lg sm:inline">
+                  Search
+                </span>
+              )}
             </>
           ) : (
             <button
