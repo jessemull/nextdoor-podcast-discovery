@@ -11,6 +11,24 @@ import { cn } from "@/lib/utils";
 
 type Status = "loading" | "invalid" | "verified" | "error";
 
+/** Visible on-page debug info so we can see state after redirects without console. */
+interface PageDebug {
+  cookieNames: string[];
+  codeParamPresent: boolean;
+  codeParamLength: number;
+  exchangeError: string | null;
+  status: Status;
+  urlSearch: string;
+}
+
+function getCookieNames(): string[] {
+  if (typeof document === "undefined") return [];
+  return document.cookie
+    .split(";")
+    .map((s) => s.trim().split("=")[0] ?? "")
+    .filter(Boolean);
+}
+
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,16 +42,27 @@ function ResetPasswordContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [debug, setDebug] = useState<PageDebug>({
+    cookieNames: [],
+    codeParamPresent: false,
+    codeParamLength: 0,
+    exchangeError: null,
+    status: "loading",
+    urlSearch: "",
+  });
 
+  // Keep debug in sync with status/error and capture URL + cookies on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const hasCode = Boolean(code?.trim());
-    console.log("[reset-password] mount", {
-      codeLength: code?.length ?? 0,
-      hasCode,
-      search: window.location.search,
-    });
-  }, [code]);
+    setDebug((prev) => ({
+      ...prev,
+      codeParamLength: code?.length ?? 0,
+      codeParamPresent: Boolean(code?.trim()),
+      cookieNames: getCookieNames(),
+      status,
+      urlSearch: window.location.search,
+    }));
+  }, [code, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,22 +71,18 @@ function ResetPasswordContent() {
       return () => {};
     }
     (async () => {
-      if (typeof window !== "undefined") {
-        console.log("[reset-password] Exchanging code for session...");
-      }
       const supabase = getSupabase();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (cancelled) return;
       if (error) {
-        if (typeof window !== "undefined") {
-          console.log("[reset-password] Code exchange failed", error.message, error);
-        }
         setErrorMessage(error.message);
+        setDebug((prev) => ({
+          ...prev,
+          cookieNames: getCookieNames(),
+          exchangeError: error.message,
+        }));
         dispatchStatus("error");
         return;
-      }
-      if (typeof window !== "undefined") {
-        console.log("[reset-password] Code exchange succeeded");
       }
       dispatchStatus("verified");
     })();
@@ -218,6 +243,31 @@ function ResetPasswordContent() {
             </button>
           </form>
         )}
+
+        {/* Visible debug: survives redirects and works without console */}
+        <details className="border-border bg-background/80 mt-6 rounded-lg border p-3">
+          <summary className="cursor-pointer text-xs font-medium text-muted">
+            Debug (reset flow)
+          </summary>
+          <pre className="text-muted mt-2 whitespace-pre-wrap break-all text-xs">
+            {JSON.stringify(
+              {
+                codeParamLength: debug.codeParamLength,
+                codeParamPresent: debug.codeParamPresent,
+                cookieNames: debug.cookieNames,
+                exchangeError: debug.exchangeError ?? "(none)",
+                hasVerifierLikeCookie: debug.cookieNames.some(
+                  (n) =>
+                    n.includes("auth-token") || n.includes("code-verifier")
+                ),
+                status: debug.status,
+                urlSearch: debug.urlSearch || "(empty)",
+              },
+              null,
+              2
+            )}
+          </pre>
+        </details>
       </div>
     </div>
   );
