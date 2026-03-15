@@ -97,7 +97,7 @@ function ResetPasswordContent() {
   );
 
   return (
-    <div className="flex h-full items-center justify-center bg-surface">
+    <div className="flex min-h-screen items-center justify-center bg-surface">
       <div className="bg-surface-elevated mx-4 w-full max-w-md rounded-2xl border border-border p-8 shadow-2xl">
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-bold text-foreground">
@@ -227,7 +227,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-full items-center justify-center bg-surface">
+        <div className="flex min-h-screen items-center justify-center bg-surface">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-border/30 border-t-white" />
             <p className="text-sm text-muted">Loading…</p>
