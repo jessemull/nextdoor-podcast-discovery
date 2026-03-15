@@ -15,6 +15,7 @@ const SEARCH_DEBOUNCE_MS = 200;
 const SEARCH_WIDTH_CLOSED = "0px";
 const SEARCH_WIDTH_OPEN = "clamp(10rem, 40vw, 20rem)";
 const SEARCH_TRANSITION = "width 0.75s cubic-bezier(0, 0.11, 0.35, 2)";
+const SEARCH_TRANSITION_MS = 750;
 
 export function PodcastHeader() {
   const pathname = usePathname();
@@ -30,7 +31,7 @@ export function PodcastHeader() {
   const [searchWidth, setSearchWidth] = useState<string>(SEARCH_WIDTH_CLOSED);
   const [inputValue, setInputValue] = useState(qFromUrl);
   const inputRef = useRef<HTMLInputElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const expandRafRef = useRef<number | null>(null);
 
@@ -68,19 +69,17 @@ export function PodcastHeader() {
   }, [isClosing, isSearchOpen]);
 
   useEffect(() => {
-    if (!isClosing || searchWidth !== SEARCH_WIDTH_CLOSED) return;
-    const el = wrapperRef.current;
-    if (!el) return;
-    const onTransitionEnd = (e: TransitionEvent) => {
-      if (e.propertyName === "width") {
-        setIsClosing(false);
-        setIsSearchOpen(false);
-        el.removeEventListener("transitionend", onTransitionEnd);
-      }
+    if (!isClosing) return;
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsClosing(false);
+      setIsSearchOpen(false);
+      closeTimeoutRef.current = null;
+    }, SEARCH_TRANSITION_MS);
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     };
-    el.addEventListener("transitionend", onTransitionEnd);
-    return () => el.removeEventListener("transitionend", onTransitionEnd);
-  }, [isClosing, searchWidth]);
+  }, [isClosing]);
 
   const updateUrl = useCallback(
     (value: string) => {
@@ -157,14 +156,21 @@ export function PodcastHeader() {
         </Link>
         <div className="flex items-center gap-1">
           {(isSearchOpen || isClosing) ? (
-            <Search
-              aria-hidden
-              className="text-podcast-accent h-4 w-4 shrink-0"
-            />
+            <>
+              <Search
+                aria-hidden
+                className="text-podcast-accent h-4 w-4 shrink-0"
+              />
+              {isClosing && (
+                <span className="text-podcast-foreground hidden text-lg sm:inline">
+                  Search
+                </span>
+              )}
+            </>
           ) : (
             <button
               aria-label="Search for episodes"
-              className={`flex items-center gap-1 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
+              className={`inline-flex items-center gap-1 border-0 bg-transparent p-0 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
               type="button"
               onClick={openSearch}
             >
@@ -174,7 +180,6 @@ export function PodcastHeader() {
           )}
           <div
             className="podcast-search-wrapper relative overflow-hidden"
-            ref={wrapperRef}
             style={{
               maxWidth: SEARCH_WIDTH_OPEN,
               transition: SEARCH_TRANSITION,
@@ -207,11 +212,6 @@ export function PodcastHeader() {
               </button>
             ) : null}
           </div>
-          {isClosing && (
-            <span className="text-podcast-foreground hidden text-lg sm:inline">
-              Search
-            </span>
-          )}
         </div>
       </nav>
     </header>
