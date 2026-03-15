@@ -223,7 +223,7 @@ export default function EditEpisodePage() {
 
   if (loading) {
     return (
-      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
+      <main className="px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-3xl">
           <div className="mb-6">
             <div className="bg-surface-hover h-4 w-24 animate-pulse rounded" />
@@ -282,7 +282,7 @@ export default function EditEpisodePage() {
   }
   if (!episode) {
     return (
-      <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
+      <main className="px-6 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto max-w-3xl">
           <p className="text-muted text-sm">Episode not found.</p>
           <Link className="text-foreground mt-2 inline-block text-sm underline" href="/admin/episodes">
@@ -294,7 +294,7 @@ export default function EditEpisodePage() {
   }
 
   return (
-    <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
+    <main className="px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
           <Link
@@ -400,43 +400,45 @@ export default function EditEpisodePage() {
                 <audio className="w-full max-w-md" controls src={audioDisplayUrl} />
               </div>
             )}
-            <div className="mt-4 flex items-center gap-3 text-sm">
+            <div className="mt-4 flex flex-col gap-2 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-foreground min-w-0 flex-1 truncate">
+                  {audioStoragePath ? audioStoragePath : "No file chosen."}
+                </span>
+                {(audioStoragePath || audioDisplayUrl) && (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    {audioDisplayUrl && (
+                      <a
+                        aria-label="Preview audio in new tab"
+                        className="text-muted hover:text-foreground"
+                        href={audioDisplayUrl}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </a>
+                    )}
+                    <button
+                      aria-label="Remove audio file"
+                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                      type="button"
+                      onClick={() => {
+                        setAudioStoragePath("");
+                        setAudioDisplayUrl(null);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </span>
+                )}
+              </div>
               <label
-                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="edit-ep-audio"
               >
                 {uploadingAudio && <Spinner size="sm" />}
                 Choose File
               </label>
-              <span className="text-foreground">
-                {audioStoragePath ? audioStoragePath : "No file chosen."}
-              </span>
-              {(audioStoragePath || audioDisplayUrl) && (
-                <span className="inline-flex items-center gap-1">
-                  {audioDisplayUrl && (
-                    <a
-                      aria-label="Preview audio in new tab"
-                      className="text-muted hover:text-foreground"
-                      href={audioDisplayUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </a>
-                  )}
-                  <button
-                    aria-label="Remove audio file"
-                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                    type="button"
-                    onClick={() => {
-                      setAudioStoragePath("");
-                      setAudioDisplayUrl(null);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </span>
-              )}
               <input
                 accept="audio/*"
                 className="sr-only"
@@ -485,43 +487,45 @@ export default function EditEpisodePage() {
                 />
               </div>
             )}
-            <div className="mt-4 flex items-center gap-3 text-sm">
+            <div className="mt-4 flex flex-col gap-2 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-foreground min-w-0 flex-1 truncate">
+                  {imageStoragePath ? imageStoragePath : "No file chosen."}
+                </span>
+                {(imageStoragePath || imageDisplayUrl) && (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    {imageDisplayUrl && (
+                      <a
+                        aria-label="Preview image in new tab"
+                        className="text-muted hover:text-foreground"
+                        href={imageDisplayUrl}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </a>
+                    )}
+                    <button
+                      aria-label="Remove image file"
+                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                      type="button"
+                      onClick={() => {
+                        setImageStoragePath("");
+                        setImageDisplayUrl(null);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </span>
+                )}
+              </div>
               <label
-                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="edit-ep-image"
               >
                 {uploadingImage && <Spinner size="sm" />}
                 Choose File
               </label>
-              <span className="text-foreground">
-                {imageStoragePath ? imageStoragePath : "No file chosen."}
-              </span>
-              {(imageStoragePath || imageDisplayUrl) && (
-                <span className="inline-flex items-center gap-1">
-                  {imageDisplayUrl && (
-                    <a
-                      aria-label="Preview image in new tab"
-                      className="text-muted hover:text-foreground"
-                      href={imageDisplayUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </a>
-                  )}
-                  <button
-                    aria-label="Remove image file"
-                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                    type="button"
-                    onClick={() => {
-                      setImageStoragePath("");
-                      setImageDisplayUrl(null);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </span>
-              )}
               <input
                 accept="image/*"
                 className="sr-only"

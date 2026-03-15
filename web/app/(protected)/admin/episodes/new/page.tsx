@@ -182,43 +182,45 @@ export default function NewEpisodePage() {
             <label className={labelClass} htmlFor="new-ep-audio" style={labelStyle}>
               Audio File
             </label>
-            <div className="mt-2 flex items-center gap-3 text-sm">
+            <div className="mt-2 flex flex-col gap-2 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-foreground min-w-0 flex-1 truncate">
+                  {audioStoragePath ? audioStoragePath : "No file chosen."}
+                </span>
+                {(audioStoragePath || audioPreviewUrl) && (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    {audioPreviewUrl && (
+                      <a
+                        aria-label="Preview audio in new tab"
+                        className="text-muted hover:text-foreground"
+                        href={audioPreviewUrl}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </a>
+                    )}
+                    <button
+                      aria-label="Remove audio file"
+                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                      type="button"
+                      onClick={() => {
+                        setAudioStoragePath("");
+                        setAudioPreviewUrl(null);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </span>
+                )}
+              </div>
               <label
-                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="new-ep-audio"
               >
                 {uploadingAudio && <Spinner size="sm" />}
                 Choose File
               </label>
-              <span className="text-foreground">
-                {audioStoragePath ? audioStoragePath : "No file chosen."}
-              </span>
-              {(audioStoragePath || audioPreviewUrl) && (
-                <span className="inline-flex items-center gap-1">
-                  {audioPreviewUrl && (
-                    <a
-                      aria-label="Preview audio in new tab"
-                      className="text-muted hover:text-foreground"
-                      href={audioPreviewUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </a>
-                  )}
-                  <button
-                    aria-label="Remove audio file"
-                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                    type="button"
-                    onClick={() => {
-                      setAudioStoragePath("");
-                      setAudioPreviewUrl(null);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </span>
-              )}
               <input
                 accept="audio/*"
                 className="sr-only"
@@ -256,32 +258,26 @@ export default function NewEpisodePage() {
             <label className={labelClass} htmlFor="new-ep-image" style={labelStyle}>
               Image File
             </label>
-            <div className="mt-2 flex items-center gap-3 text-sm">
-              <label
-                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
-                htmlFor="new-ep-image"
-              >
-                {uploadingImage && <Spinner size="sm" />}
-                Choose File
-              </label>
-              <span className="text-foreground">
-                {imageStoragePath ? imageStoragePath : "No file chosen."}
-              </span>
-              {(imageStoragePath || imagePreviewUrl) && (
-                <span className="inline-flex items-center gap-1">
-                  {imagePreviewUrl && (
-                    <a
-                      aria-label="Preview image in new tab"
-                      className="text-muted hover:text-foreground"
-                      href={imagePreviewUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </a>
-                  )}
-                  <button
-                    aria-label="Remove image file"
+            <div className="mt-2 flex flex-col gap-2 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-foreground min-w-0 flex-1 truncate">
+                  {imageStoragePath ? imageStoragePath : "No file chosen."}
+                </span>
+                {(imageStoragePath || imagePreviewUrl) && (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    {imagePreviewUrl && (
+                      <a
+                        aria-label="Preview image in new tab"
+                        className="text-muted hover:text-foreground"
+                        href={imagePreviewUrl}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </a>
+                    )}
+                    <button
+                      aria-label="Remove image file"
                     className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
                     type="button"
                     onClick={() => {
@@ -293,6 +289,14 @@ export default function NewEpisodePage() {
                   </button>
                 </span>
               )}
+              </div>
+              <label
+                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                htmlFor="new-ep-image"
+              >
+                {uploadingImage && <Spinner size="sm" />}
+                Choose File
+              </label>
               <input
                 accept="image/*"
                 className="sr-only"
