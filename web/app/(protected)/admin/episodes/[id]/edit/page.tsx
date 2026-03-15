@@ -400,9 +400,9 @@ export default function EditEpisodePage() {
                 <audio className="w-full max-w-md" controls src={audioDisplayUrl} />
               </div>
             )}
-            <div className="mt-4 flex flex-col gap-2 text-sm">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="text-foreground min-w-0 flex-1 truncate">
+            <div className="mt-4 flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-3">
+              <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:flex-initial">
+                <span className="text-foreground min-w-0 flex-1 truncate md:max-w-md md:flex-none">
                   {audioStoragePath ? audioStoragePath : "No file chosen."}
                 </span>
                 {(audioStoragePath || audioDisplayUrl) && (
@@ -433,7 +433,7 @@ export default function EditEpisodePage() {
                 )}
               </div>
               <label
-                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground order-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80 md:order-1 md:w-auto"
                 htmlFor="edit-ep-audio"
               >
                 {uploadingAudio && <Spinner size="sm" />}
@@ -487,9 +487,9 @@ export default function EditEpisodePage() {
                 />
               </div>
             )}
-            <div className="mt-4 flex flex-col gap-2 text-sm">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="text-foreground min-w-0 flex-1 truncate">
+            <div className="mt-4 flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-3">
+              <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:flex-initial">
+                <span className="text-foreground min-w-0 flex-1 truncate md:max-w-md md:flex-none">
                   {imageStoragePath ? imageStoragePath : "No file chosen."}
                 </span>
                 {(imageStoragePath || imageDisplayUrl) && (
@@ -520,7 +520,7 @@ export default function EditEpisodePage() {
                 )}
               </div>
               <label
-                className="border-border bg-surface-hover text-foreground flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground order-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80 md:order-1 md:w-auto"
                 htmlFor="edit-ep-image"
               >
                 {uploadingImage && <Spinner size="sm" />}
