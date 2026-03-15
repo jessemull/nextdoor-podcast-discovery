@@ -5,7 +5,7 @@ import { copyPrivateToPublic } from "@/lib/podcast-storage.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
-const DEFAULT_LIMIT = 20;
+const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
 function escapeIlikeTerm(term: string): string {

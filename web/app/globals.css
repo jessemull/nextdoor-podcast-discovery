@@ -60,6 +60,25 @@ input:-webkit-autofill:active {
   background: var(--border-focus);
 }
 
+/* Main content scroll (below navbar): single scroll container, scrollbar at viewport edge, visible in Chrome */
+.content-scroll {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+.content-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+.content-scroll::-webkit-scrollbar-track {
+  background: var(--surface-hover);
+}
+.content-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 7px;
+}
+.content-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
 /* Native select: remove default arrow, custom caret centered vertically */
 .select-caret {
   appearance: none;

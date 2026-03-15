@@ -20,7 +20,9 @@ export default async function ProtectedLayout({
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <Navbar />
-      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      <div className="content-scroll min-h-0 flex-1">
+        {children}
+      </div>
     </div>
   );
 }

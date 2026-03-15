@@ -25,8 +25,11 @@ interface EpisodeRow {
   title: string;
 }
 
-const EPISODES_PAGE_SIZE = 20;
+const EPISODES_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
+
+/** Set to true to show 10 mock episodes for layout preview. Remove when done. */
+const MOCK_EPISODES_FOR_LAYOUT = true;
 
 function formatStatus(status: string): string {
   if (status === "published") return "Published";
@@ -55,6 +58,9 @@ export default function AdminEpisodesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [total, setTotal] = useState(0);
   const [isMd, setIsMd] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const episodesLengthRef = useRef(0);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,10 +103,37 @@ export default function AdminEpisodesPage() {
   }, [menuOpenEpisodeId]);
 
   const load = useCallback(
-    async (search: string, pageOffset: number) => {
-      setLoading(true);
-      setError(null);
+    async (search: string, pageOffset: number, append: boolean = false) => {
+      if (!append) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
       try {
+        if (MOCK_EPISODES_FOR_LAYOUT) {
+          const mockEpisodes: EpisodeRow[] = Array.from(
+            { length: 10 },
+            (_, i) => ({
+              created_at: new Date().toISOString(),
+              id: `mock-episode-${pageOffset + i + 1}`,
+              published_at:
+                (pageOffset + i) % 3 === 0 ? new Date().toISOString() : null,
+              slug: `mock-episode-slug-${pageOffset + i + 1}`,
+              status: (pageOffset + i) % 2 === 0 ? "published" : "draft",
+              title: `Mock Episode ${pageOffset + i + 1}: Sample title for layout preview`,
+            })
+          );
+          if (append) {
+            setEpisodes((prev) => [...prev, ...mockEpisodes]);
+            setLoadingMore(false);
+          } else {
+            setEpisodes(mockEpisodes);
+            setTotal(10);
+            setLoading(false);
+          }
+          return;
+        }
         const params = new URLSearchParams();
         params.set("limit", String(EPISODES_PAGE_SIZE));
         params.set("offset", String(pageOffset));
@@ -111,28 +144,43 @@ export default function AdminEpisodesPage() {
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           setError(j.error ?? res.statusText);
-          setEpisodes([]);
-          setTotal(0);
+          if (!append) {
+            setEpisodes([]);
+            setTotal(0);
+            setLoading(false);
+          } else {
+            setLoadingMore(false);
+          }
           return;
         }
         const j = await res.json();
         const list = j.data ?? [];
-        setEpisodes(list);
-        setTotal(typeof j.total === "number" ? j.total : list.length);
+        const totalFromApi = typeof j.total === "number" ? j.total : 0;
+        if (append) {
+          setEpisodes((prev) => [...prev, ...list]);
+          setLoadingMore(false);
+        } else {
+          setEpisodes(list);
+          setTotal(totalFromApi);
+          setLoading(false);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
-        setEpisodes([]);
-        setTotal(0);
-      } finally {
-        setLoading(false);
+        if (!append) {
+          setEpisodes([]);
+          setTotal(0);
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
       }
     },
     []
   );
 
   useEffect(() => {
-    void load(searchParam, offset);
-  }, [load, offset, searchParam]);
+    void load(searchParam, isMd ? offset : 0, false);
+  }, [load, searchParam, isMd, offset]);
 
   useEffect(() => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
@@ -160,6 +208,32 @@ export default function AdminEpisodesPage() {
     setOffset((prev) => Math.max(0, newOffset));
   }, []);
 
+  useEffect(() => {
+    episodesLengthRef.current = episodes.length;
+  }, [episodes.length]);
+
+  const loadMore = useCallback(() => {
+    if (isMd || loading || loadingMore) return;
+    const nextOffset = episodesLengthRef.current;
+    if (nextOffset >= total) return;
+    void load(searchParam, nextOffset, true);
+  }, [isMd, load, loading, loadingMore, searchParam, total]);
+
+  useEffect(() => {
+    if (isMd || total === 0 || episodes.length >= total) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loading && !loadingMore)
+          loadMore();
+      },
+      { rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isMd, episodes.length, total, loading, loadingMore, loadMore]);
+
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteModalEpisodeId) return;
     try {
@@ -170,7 +244,7 @@ export default function AdminEpisodesPage() {
       if (res.ok) {
         setDeleteModalEpisodeId(null);
         toast.success("Episode deleted.");
-        void load(searchParam, offset);
+        void load(searchParam, isMd ? offset : 0, false);
       } else {
         const j = await res.json().catch(() => ({}));
         toast.error(j.error ?? "Delete failed");
@@ -180,7 +254,7 @@ export default function AdminEpisodesPage() {
       toast.error(e instanceof Error ? e.message : "Delete failed");
       setDeleteModalEpisodeId(null);
     }
-  }, [deleteModalEpisodeId, load, offset, searchParam, toast]);
+  }, [deleteModalEpisodeId, isMd, load, offset, searchParam, toast]);
 
   const labelStyle = { opacity: 0.85 };
 
@@ -200,7 +274,7 @@ export default function AdminEpisodesPage() {
   );
 
   return (
-    <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
+    <main className="px-6 py-6 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
           Episodes
@@ -214,26 +288,29 @@ export default function AdminEpisodesPage() {
         <Card className="mb-8 p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-foreground text-xl font-semibold tracking-wide">
-              Episode list
+              Episode List
             </h2>
             <Link href="/admin/episodes/new">
               <Button variant="primary">New Episode</Button>
             </Link>
           </div>
-          <div className="border-border text-foreground mb-6 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-border-focus">
-            <Search
-              aria-hidden
-              className="text-muted h-4 w-4 shrink-0"
-            />
-            <input
-              aria-label="Search episodes"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-              placeholder="Search by title, slug, or description..."
-              type="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
+          <div className="border-border mb-4 -mx-6 px-6 md:mx-0 md:mb-2 md:px-0">
+            <div className="border-border text-foreground flex items-center gap-2 rounded-lg border border-b-0 bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-border-focus md:border-b">
+              <Search
+                aria-hidden
+                className="text-muted h-4 w-4 shrink-0"
+              />
+              <input
+                aria-label="Search episodes"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+                placeholder="Search by title, slug, or description..."
+                type="search"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
           </div>
+          <div className="min-h-0 max-h-[calc(100dvh-260px)] overflow-y-auto pb-6 md:max-h-none md:overflow-visible md:pb-0">
           {loading ? (
             <>
               <div className="flex flex-col gap-3 md:hidden">
@@ -267,23 +344,23 @@ export default function AdminEpisodesPage() {
                 ))}
               </div>
               <div className="hidden md:block">
-                <div className="border-border overflow-x-auto rounded-lg border">
-                  <table className="border-border w-full table-fixed border-collapse border text-sm">
+                <div className="border-border max-h-[27rem] overflow-y-auto rounded-lg border">
+                  <table className="border-border w-full table-fixed border-separate border-spacing-0 border text-sm">
                     <thead>
-                      <tr className="bg-surface-hover">
-                        <th className="text-foreground border-border border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                      <tr>
+                        <th className="text-foreground border-border sticky top-0 z-10 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Title
                         </th>
-                        <th className="text-foreground border-border w-32 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-32 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Slug
                         </th>
-                        <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
-                        <th className="text-foreground border-border w-28 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-28 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Published
                         </th>
-                        <th className="border-border w-12 border px-1 py-3 text-center">
+                        <th className="border-border sticky top-0 z-10 w-12 border bg-surface-hover px-1 py-3 text-center">
                           <span className="sr-only">Actions</span>
                         </th>
                       </tr>
@@ -407,24 +484,34 @@ export default function AdminEpisodesPage() {
                   </div>
                 ))}
               </div>
+              <div
+                ref={loadMoreSentinelRef}
+                className="h-4 md:hidden"
+                aria-hidden
+              />
+              {!isMd && loadingMore && (
+                <p className="text-muted py-3 text-center text-sm md:hidden">
+                  Loading more…
+                </p>
+              )}
               <div className="hidden md:block">
-                <div className="border-border overflow-x-auto rounded-lg border">
-                  <table className="border-border w-full table-fixed border-collapse border text-sm">
+                <div className="border-border max-h-[27rem] overflow-y-auto rounded-lg border">
+                  <table className="border-border w-full table-fixed border-separate border-spacing-0 border text-sm">
                     <thead>
-                      <tr className="bg-surface-hover">
-                        <th className="text-foreground border-border border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                      <tr>
+                        <th className="text-foreground border-border sticky top-0 z-10 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Title
                         </th>
-                        <th className="text-foreground border-border w-32 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-32 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Slug
                         </th>
-                        <th className="text-foreground border-border w-24 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
-                        <th className="text-foreground border-border w-28 border px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-28 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Published
                         </th>
-                        <th className="border-border w-12 border px-1 py-3 text-center">
+                        <th className="border-border sticky top-0 z-10 w-12 border bg-surface-hover px-1 py-3 text-center">
                           <span className="sr-only">Actions</span>
                         </th>
                       </tr>
@@ -494,11 +581,9 @@ export default function AdminEpisodesPage() {
                 </div>
               </div>
               {total > 0 && (
-                <div className="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                <div className="border-border mt-4 hidden flex-wrap items-center justify-between gap-3 border-t pt-4 md:flex">
                   <p className="text-muted text-sm">
-                    Showing {offset + 1}–
-                    {offset + episodes.length}
-                    of {total}
+                    Showing {offset + 1}–{offset + episodes.length} of {total}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -527,6 +612,7 @@ export default function AdminEpisodesPage() {
               )}
             </>
           )}
+          </div>
         </Card>
         {typeof document !== "undefined" &&
           menuOpenEpisodeId !== null &&
