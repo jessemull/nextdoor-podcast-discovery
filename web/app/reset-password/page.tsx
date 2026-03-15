@@ -3,7 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useReducer, useState } from "react";
+import { Suspense, useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { Spinner } from "@/components/ui/Spinner";
 import { getSupabase } from "@/lib/supabase.client";
@@ -17,8 +17,10 @@ interface PageDebug {
   codeParamPresent: boolean;
   codeParamLength: number;
   exchangeError: string | null;
+  localStorageKeysWithVerifier: string[];
   status: Status;
   urlSearch: string;
+  verifierCookieNames: string[];
 }
 
 function getCookieNames(): string[] {
@@ -27,6 +29,16 @@ function getCookieNames(): string[] {
     .split(";")
     .map((s) => s.trim().split("=")[0] ?? "")
     .filter(Boolean);
+}
+
+function getLocalStorageKeysContaining(substring: string): string[] {
+  if (typeof localStorage === "undefined") return [];
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.toLowerCase().includes(substring)) keys.push(key);
+  }
+  return keys;
 }
 
 function ResetPasswordContent() {
@@ -42,25 +54,43 @@ function ResetPasswordContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const initialSearchRef = useRef<string | null>(null);
   const [debug, setDebug] = useState<PageDebug>({
     cookieNames: [],
     codeParamPresent: false,
     codeParamLength: 0,
     exchangeError: null,
+    localStorageKeysWithVerifier: [],
     status: "loading",
     urlSearch: "",
+    verifierCookieNames: [],
   });
 
-  // Keep debug in sync with status/error and capture URL + cookies on mount
+  // Capture URL search once on first mount so we don't lose it after client nav
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (initialSearchRef.current === null) {
+      initialSearchRef.current = window.location.search;
+    }
+  }, []);
+
+  // Keep debug in sync with status/error and capture URL + cookies + localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cookies = getCookieNames();
+    const verifierCookies = cookies.filter(
+      (n) =>
+        n.includes("code-verifier") || n.includes("verifier")
+    );
     setDebug((prev) => ({
       ...prev,
       codeParamLength: code?.length ?? 0,
       codeParamPresent: Boolean(code?.trim()),
-      cookieNames: getCookieNames(),
+      cookieNames: cookies,
+      localStorageKeysWithVerifier: getLocalStorageKeysContaining("verifier"),
       status,
-      urlSearch: window.location.search,
+      urlSearch: initialSearchRef.current ?? window.location.search,
+      verifierCookieNames: verifierCookies,
     }));
   }, [code, status]);
 
@@ -75,11 +105,17 @@ function ResetPasswordContent() {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (cancelled) return;
       if (error) {
+        const cookies = getCookieNames();
         setErrorMessage(error.message);
         setDebug((prev) => ({
           ...prev,
-          cookieNames: getCookieNames(),
+          cookieNames: cookies,
           exchangeError: error.message,
+          localStorageKeysWithVerifier: getLocalStorageKeysContaining("verifier"),
+          verifierCookieNames: cookies.filter(
+            (n) =>
+              n.includes("code-verifier") || n.includes("verifier")
+          ),
         }));
         dispatchStatus("error");
         return;
@@ -249,6 +285,11 @@ function ResetPasswordContent() {
           <summary className="cursor-pointer text-xs font-medium text-muted">
             Debug (reset flow)
           </summary>
+          <p className="text-muted mt-2 text-xs">
+            In DevTools → Application: check Cookies and Local Storage for keys
+            containing &quot;code-verifier&quot;. Verifier must exist when you
+            open the reset link (set when you clicked Send Reset Link).
+          </p>
           <pre className="text-muted mt-2 whitespace-pre-wrap break-all text-xs">
             {JSON.stringify(
               {
@@ -256,12 +297,11 @@ function ResetPasswordContent() {
                 codeParamPresent: debug.codeParamPresent,
                 cookieNames: debug.cookieNames,
                 exchangeError: debug.exchangeError ?? "(none)",
-                hasVerifierLikeCookie: debug.cookieNames.some(
-                  (n) =>
-                    n.includes("auth-token") || n.includes("code-verifier")
-                ),
                 status: debug.status,
-                urlSearch: debug.urlSearch || "(empty)",
+                urlSearchFirstCapture: debug.urlSearch || "(empty)",
+                verifierCookieNames: debug.verifierCookieNames,
+                localStorageKeysWithVerifier:
+                  debug.localStorageKeysWithVerifier,
               },
               null,
               2
