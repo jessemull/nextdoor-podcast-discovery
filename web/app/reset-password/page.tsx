@@ -11,25 +11,10 @@ import { cn } from "@/lib/utils";
 
 type Status = "loading" | "invalid" | "verified" | "error";
 
-function parseHashParams(): {
-  access_token: string | null;
-  token_hash: string | null;
-  type: string | null;
-} {
-  if (typeof window === "undefined")
-    return { access_token: null, token_hash: null, type: null };
-  const hash = window.location.hash?.slice(1) || "";
-  const params = new URLSearchParams(hash);
-  return {
-    access_token: params.get("access_token"),
-    token_hash: params.get("token_hash"),
-    type: params.get("type"),
-  };
-}
-
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const code = searchParams.get("code");
   const [status, dispatchStatus] = useReducer(
     (_state: Status, action: Status) => action,
     "loading" as Status
@@ -40,54 +25,46 @@ function ResetPasswordContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const hashParams = parseHashParams();
-  const tokenHash = searchParams.get("token_hash") ?? hashParams.token_hash;
-  const hasSessionFromHash = Boolean(hashParams.access_token);
-
   useEffect(() => {
-    // Debug logging to help diagnose Supabase recovery redirects in different environments.
-    // Only logs in the browser.
-    if (typeof window !== "undefined") {
-      console.debug("[reset-password] location", {
-        hash: window.location.hash,
-        search: window.location.search,
-      });
-      console.debug("[reset-password] parsed params", {
-        hasSessionFromHash,
-        hasTokenHash: Boolean(tokenHash),
-      });
-    }
-  }, [hasSessionFromHash, tokenHash]);
+    if (typeof window === "undefined") return;
+    const hasCode = Boolean(code?.trim());
+    console.log("[reset-password] mount", {
+      codeLength: code?.length ?? 0,
+      hasCode,
+      search: window.location.search,
+    });
+  }, [code]);
 
   useEffect(() => {
     let cancelled = false;
-    if (tokenHash) {
-      (async () => {
-        const supabase = getSupabase();
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: "recovery",
-        });
-        if (cancelled) return;
-        if (error) {
-          setErrorMessage(error.message);
-          dispatchStatus("error");
-          return;
-        }
-        dispatchStatus("verified");
-      })();
-    } else if (hasSessionFromHash) {
-      // Supabase already created a session and redirected here with tokens
-      // in the URL fragment. Treat the link as verified and let updateUser enforce auth.
-      dispatchStatus("verified");
-    } else {
+    if (!code?.trim()) {
       dispatchStatus("invalid");
+      return () => {};
     }
-
+    (async () => {
+      if (typeof window !== "undefined") {
+        console.log("[reset-password] Exchanging code for session...");
+      }
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (cancelled) return;
+      if (error) {
+        if (typeof window !== "undefined") {
+          console.log("[reset-password] Code exchange failed", error.message, error);
+        }
+        setErrorMessage(error.message);
+        dispatchStatus("error");
+        return;
+      }
+      if (typeof window !== "undefined") {
+        console.log("[reset-password] Code exchange succeeded");
+      }
+      dispatchStatus("verified");
+    })();
     return () => {
       cancelled = true;
     };
-  }, [hasSessionFromHash, tokenHash]);
+  }, [code]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
