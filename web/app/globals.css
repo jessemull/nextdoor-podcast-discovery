@@ -19,6 +19,24 @@
   --pittsburgh-gold-muted: #c9a01f;
 }
 
+/* Podcast public site: logo-derived palette (yellow accent, dark teal, etc.) */
+.podcast-site {
+  --podcast-accent: #eecf3e;
+  --podcast-foreground: #e4ebeb;
+  --podcast-muted: #8c9197;
+  --podcast-cta: #e2574e;
+}
+.podcast-site audio {
+  accent-color: var(--podcast-accent);
+}
+/* Allow header search to collapse to zero width (override browser/form defaults) */
+.podcast-site .podcast-search-wrapper {
+  min-width: 0 !important;
+}
+.podcast-site [data-podcast-search-input] {
+  min-width: 0 !important;
+}
+
 /* Lock viewport so only .content-scroll scrolls (no window/body scrollbar) */
 html {
   height: 100%;
