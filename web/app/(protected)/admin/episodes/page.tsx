@@ -28,9 +28,6 @@ interface EpisodeRow {
 const EPISODES_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Set to true to show 10 mock episodes for layout preview. Remove when done. */
-const MOCK_EPISODES_FOR_LAYOUT = true;
-
 function formatStatus(status: string): string {
   if (status === "published") return "Published";
   if (status === "draft") return "Draft";
@@ -111,29 +108,6 @@ export default function AdminEpisodesPage() {
         setLoadingMore(true);
       }
       try {
-        if (MOCK_EPISODES_FOR_LAYOUT) {
-          const mockEpisodes: EpisodeRow[] = Array.from(
-            { length: 10 },
-            (_, i) => ({
-              created_at: new Date().toISOString(),
-              id: `mock-episode-${pageOffset + i + 1}`,
-              published_at:
-                (pageOffset + i) % 3 === 0 ? new Date().toISOString() : null,
-              slug: `mock-episode-slug-${pageOffset + i + 1}`,
-              status: (pageOffset + i) % 2 === 0 ? "published" : "draft",
-              title: `Mock Episode ${pageOffset + i + 1}: Sample title for layout preview`,
-            })
-          );
-          if (append) {
-            setEpisodes((prev) => [...prev, ...mockEpisodes]);
-            setLoadingMore(false);
-          } else {
-            setEpisodes(mockEpisodes);
-            setTotal(10);
-            setLoading(false);
-          }
-          return;
-        }
         const params = new URLSearchParams();
         params.set("limit", String(EPISODES_PAGE_SIZE));
         params.set("offset", String(pageOffset));
