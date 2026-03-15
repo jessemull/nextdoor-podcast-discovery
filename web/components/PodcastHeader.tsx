@@ -159,7 +159,9 @@ export function PodcastHeader() {
             <>
               <Search
                 aria-hidden
-                className="text-podcast-accent h-4 w-4 shrink-0"
+                className={`h-4 w-4 shrink-0 ${
+                  isClosing ? "text-podcast-foreground" : "text-podcast-accent"
+                }`}
               />
               {isClosing && (
                 <span className="text-podcast-foreground hidden text-lg sm:inline">
