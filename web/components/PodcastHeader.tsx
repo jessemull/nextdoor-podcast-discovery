@@ -156,7 +156,22 @@ export function PodcastHeader() {
           Subscribe
         </Link>
         <div className="flex items-center gap-1">
-          {/* Wrapper first so input expands left from the icon (CodePen: icon fixed on right) */}
+          {(isSearchOpen || isClosing) ? (
+            <Search
+              aria-hidden
+              className="text-podcast-accent h-4 w-4 shrink-0"
+            />
+          ) : (
+            <button
+              aria-label="Search for episodes"
+              className={`flex items-center gap-1 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
+              type="button"
+              onClick={openSearch}
+            >
+              <Search aria-hidden className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          )}
           <div
             className="podcast-search-wrapper relative overflow-hidden"
             ref={wrapperRef}
@@ -192,28 +207,10 @@ export function PodcastHeader() {
               </button>
             ) : null}
           </div>
-          {(isSearchOpen || isClosing) ? (
-            <>
-              <Search
-                aria-hidden
-                className="text-podcast-accent h-4 w-4 shrink-0"
-              />
-              {isClosing && (
-                <span className="text-podcast-foreground hidden text-lg sm:inline">
-                  Search
-                </span>
-              )}
-            </>
-          ) : (
-            <button
-              aria-label="Search for episodes"
-              className={`flex items-center gap-1 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
-              type="button"
-              onClick={openSearch}
-            >
-              <Search aria-hidden className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Search</span>
-            </button>
+          {isClosing && (
+            <span className="text-podcast-foreground hidden text-lg sm:inline">
+              Search
+            </span>
           )}
         </div>
       </nav>
