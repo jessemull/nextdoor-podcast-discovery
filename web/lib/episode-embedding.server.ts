@@ -1,6 +1,5 @@
-import "server-only";
-
 import OpenAI from "openai";
+import "server-only";
 
 import { env } from "@/lib/env.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Trash2 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";

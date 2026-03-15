@@ -172,8 +172,8 @@ export default function AdminCategoriesPage() {
               <div className="flex flex-col gap-3 md:hidden">
                 {[1, 2, 3, 4].map((i) => (
                   <div
-                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                     key={i}
+                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                   >
                     <div className="min-w-0 flex-1 space-y-3">
                       <div>
@@ -214,7 +214,7 @@ export default function AdminCategoriesPage() {
                     </thead>
                     <tbody>
                       {[1, 2, 3, 4].map((i) => (
-                        <tr className="border-border border-t h-12" key={i}>
+                        <tr key={i} className="border-border border-t h-12">
                           <td className="border-border border px-4 py-3">
                             <div className="bg-surface-hover h-4 w-24 animate-pulse rounded" />
                           </td>
@@ -241,8 +241,8 @@ export default function AdminCategoriesPage() {
               <div className="flex flex-col gap-3 md:hidden">
                 {categories.map((cat) => (
                   <div
-                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                     key={cat.id}
+                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                   >
                     <div className="min-w-0 flex-1 space-y-3">
                       <div>
@@ -334,7 +334,7 @@ export default function AdminCategoriesPage() {
                     </thead>
                     <tbody>
                       {categories.map((cat) => (
-                        <tr className="border-border border-t h-12" key={cat.id}>
+                        <tr key={cat.id} className="border-border border-t h-12">
                           <td
                             className="text-foreground border-border border px-4 py-3"
                             style={labelStyle}

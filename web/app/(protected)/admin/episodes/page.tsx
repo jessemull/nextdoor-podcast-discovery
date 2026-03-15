@@ -73,10 +73,12 @@ export default function AdminEpisodesPage() {
     if (menuOpenEpisodeId == null) return;
     const rect = menuRef.current?.getBoundingClientRect();
     if (rect) {
-      setMenuPosition({
-        bottom: rect.bottom,
-        left: rect.left,
-        right: rect.right,
+      queueMicrotask(() => {
+        setMenuPosition({
+          bottom: rect.bottom,
+          left: rect.left,
+          right: rect.right,
+        });
       });
     }
   }, [menuOpenEpisodeId]);
@@ -153,15 +155,19 @@ export default function AdminEpisodesPage() {
   );
 
   useEffect(() => {
-    void load(searchParam, isMd ? offset : 0, false);
+    queueMicrotask(() => {
+      void load(searchParam, isMd ? offset : 0, false);
+    });
   }, [load, searchParam, isMd, offset]);
 
   useEffect(() => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     const q = searchQuery.trim();
     if (q === "") {
-      setSearchParam("");
-      setOffset(0);
+      queueMicrotask(() => {
+        setSearchParam("");
+        setOffset(0);
+      });
       return;
     }
     searchDebounceRef.current = setTimeout(() => {
@@ -290,8 +296,8 @@ export default function AdminEpisodesPage() {
               <div className="flex flex-col gap-3 md:hidden">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div
-                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                     key={i}
+                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                   >
                     <div className="min-w-0 flex-1 space-y-3">
                       <div>
@@ -341,7 +347,7 @@ export default function AdminEpisodesPage() {
                     </thead>
                     <tbody>
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <tr className="border-border border-t h-12" key={i}>
+                        <tr key={i} className="border-border border-t h-12">
                           <td className="border-border border px-4 py-3">
                             <div className="bg-surface-hover h-4 w-32 animate-pulse rounded" />
                           </td>
@@ -375,8 +381,8 @@ export default function AdminEpisodesPage() {
               <div className="flex flex-col gap-3 md:hidden">
                 {episodes.map((ep) => (
                   <div
-                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                     key={ep.id}
+                    className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
                   >
                     <div className="min-w-0 flex-1 space-y-3">
                       <div>
@@ -459,9 +465,9 @@ export default function AdminEpisodesPage() {
                 ))}
               </div>
               <div
-                ref={loadMoreSentinelRef}
-                className="h-4 md:hidden"
                 aria-hidden
+                className="h-4 md:hidden"
+                ref={loadMoreSentinelRef}
               />
               {!isMd && loadingMore && (
                 <p className="text-muted py-3 text-center text-sm md:hidden">
@@ -492,7 +498,7 @@ export default function AdminEpisodesPage() {
                     </thead>
                     <tbody>
                       {episodes.map((ep) => (
-                        <tr className="border-border border-t h-12" key={ep.id}>
+                        <tr key={ep.id} className="border-border border-t h-12">
                           <td
                             className="text-foreground border-border border px-4 py-3"
                             style={labelStyle}
