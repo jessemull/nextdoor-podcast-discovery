@@ -94,11 +94,22 @@ function ResetPasswordContent() {
     }));
   }, [code, status]);
 
+  // When we have a code: try client-side exchange. When we have no code: check for
+  // existing session (e.g. server did the exchange and redirected here).
   useEffect(() => {
     let cancelled = false;
     if (!code?.trim()) {
-      dispatchStatus("invalid");
-      return () => {};
+      (async () => {
+        const supabase = getSupabase();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (cancelled) return;
+        dispatchStatus(user ? "verified" : "invalid");
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
     (async () => {
       const supabase = getSupabase();
@@ -192,6 +203,10 @@ function ResetPasswordContent() {
           <>
             <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
               {errorMessage ?? "Verification failed."}
+            </p>
+            <p className="text-muted mb-4 text-xs">
+              If you opened this link in a new tab, try copying the link and
+              pasting it into the tab where you requested the reset.
             </p>
             <p className="text-center text-sm text-muted">
               <Link

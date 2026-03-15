@@ -20,10 +20,24 @@ const STATIC_PATTERN =
   /^\/(_next|_next\/static|_next\/image|favicon\.ico|icon\.svg|.*\.(?:svg|png|jpg|jpeg|gif|webp)$)/;
 
 export default async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   if (STATIC_PATTERN.test(pathname)) {
     return NextResponse.next();
+  }
+
+  // Try server-side PKCE exchange for password reset so it works when the link
+  // is opened in a new tab (same browser sends cookies with the request).
+  const code = searchParams.get("code");
+  if (pathname === "/reset-password" && code?.trim()) {
+    const redirectUrl = new URL("/reset-password", request.url);
+    const response = NextResponse.redirect(redirectUrl);
+    const supabase = createSupabaseAuthClientForMiddleware(request, response);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return response;
+    }
+    // Exchange failed (e.g. no verifier cookie in request); let the page load and show client error.
   }
 
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
