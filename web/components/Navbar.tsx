@@ -21,11 +21,11 @@ const NAV_LINKS = [
   { href: "/dashboard", label: "Home" },
   { href: "/feed", label: "Feed" },
   { href: "/classifieds", label: "Classifieds" },
-  { href: "/jobs", label: "Jobs" },
   { href: "/admin/episodes", label: "Episodes" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/settings", label: "Settings" },
+  { href: "/jobs", label: "Jobs" },
   { href: "/stats", label: "Stats" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 export function Navbar() {
