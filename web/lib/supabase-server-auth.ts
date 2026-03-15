@@ -7,6 +7,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import "server-only";
 
+import { isInvalidRefreshTokenError } from "./auth-errors";
+
 import type { NextRequest, NextResponse } from "next/server";
 
 export interface AppSession {
@@ -83,27 +85,35 @@ export function createSupabaseAuthClientForMiddleware(
 /**
  * Get the current session for authorization.
  * Returns a normalized shape compatible with existing API/layout code.
- * Returns null if not authenticated or if auth env vars are missing (e.g. during CI build).
+ * Returns null if not authenticated, if auth env vars are missing, or if the
+ * session has an invalid/missing refresh token (e.g. stale cookies).
  */
 export async function getSession(): Promise<AppSession | null> {
   if (!supabaseUrl || !supabaseAnonKey) {
     return null;
   }
 
-  const supabase = await createSupabaseAuthClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createSupabaseAuthClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    return null;
+    if (error || !user) {
+      return null;
+    }
+
+    return {
+      user: {
+        email: user.email ?? "",
+        id: user.id,
+      },
+    };
+  } catch (err) {
+    if (isInvalidRefreshTokenError(err)) {
+      return null;
+    }
+    throw err;
   }
-
-  return {
-    user: {
-      email: user.email ?? "",
-      id: user.id,
-    },
-  };
 }

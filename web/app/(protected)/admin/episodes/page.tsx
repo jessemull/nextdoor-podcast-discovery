@@ -389,12 +389,13 @@ export default function AdminEpisodesPage() {
                         <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
                           Title
                         </h4>
-                        <div
-                          className="text-foreground text-sm"
+                        <Link
+                          className="text-foreground text-sm hover:underline"
+                          href={`/admin/episodes/${ep.id}/edit`}
                           style={labelStyle}
                         >
                           {truncateCell(ep.title)}
-                        </div>
+                        </Link>
                       </div>
                       <div>
                         <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
@@ -503,7 +504,12 @@ export default function AdminEpisodesPage() {
                             className="text-foreground border-border border px-4 py-3"
                             style={labelStyle}
                           >
-                            {truncateCell(ep.title)}
+                            <Link
+                              className="hover:underline"
+                              href={`/admin/episodes/${ep.id}/edit`}
+                            >
+                              {truncateCell(ep.title)}
+                            </Link>
                           </td>
                           <td
                             className="text-muted border-border w-32 border px-4 py-3 font-mono"

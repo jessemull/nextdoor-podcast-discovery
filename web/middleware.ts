@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isInvalidRefreshTokenError } from "./lib/auth-errors";
 import { createSupabaseAuthClientForMiddleware } from "./lib/supabase-server-auth";
 
 import type { NextRequest } from "next/server";
@@ -47,9 +48,17 @@ export default async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
   const supabase = createSupabaseAuthClientForMiddleware(request, response);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: { id: string } | null = null;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+  } catch (err) {
+    if (isInvalidRefreshTokenError(err)) {
+      user = null;
+    } else {
+      throw err;
+    }
+  }
 
   const isApiRoute = pathname.startsWith("/api/");
   if (!user && !isApiRoute) {

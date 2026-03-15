@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -183,7 +184,7 @@ export default function NewEpisodePage() {
             </label>
             <div className="mt-2 flex items-center gap-3 text-sm">
               <label
-                className="border-border bg-muted text-foreground flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 font-medium"
+                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="new-ep-audio"
               >
                 {uploadingAudio && <Spinner size="sm" />}
@@ -192,6 +193,32 @@ export default function NewEpisodePage() {
               <span className="text-foreground">
                 {audioStoragePath ? audioStoragePath : "No file chosen."}
               </span>
+              {(audioStoragePath || audioPreviewUrl) && (
+                <span className="inline-flex items-center gap-1">
+                  {audioPreviewUrl && (
+                    <a
+                      aria-label="Preview audio in new tab"
+                      className="text-muted hover:text-foreground"
+                      href={audioPreviewUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    aria-label="Remove audio file"
+                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                    type="button"
+                    onClick={() => {
+                      setAudioStoragePath("");
+                      setAudioPreviewUrl(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </span>
+              )}
               <input
                 accept="audio/*"
                 className="sr-only"
@@ -224,16 +251,6 @@ export default function NewEpisodePage() {
               }}
               />
             </div>
-            {audioStoragePath && (
-              <p className="text-muted mt-1 text-xs">
-                Uploaded: {audioStoragePath}
-                {audioPreviewUrl && (
-                  <span className="ml-2">
-                    — <a href={audioPreviewUrl} rel="noopener noreferrer" target="_blank">Preview</a>
-                  </span>
-                )}
-              </p>
-            )}
           </div>
           <div>
             <label className={labelClass} htmlFor="new-ep-image" style={labelStyle}>
@@ -241,7 +258,7 @@ export default function NewEpisodePage() {
             </label>
             <div className="mt-2 flex items-center gap-3 text-sm">
               <label
-                className="border-border bg-muted text-foreground flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 font-medium"
+                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="new-ep-image"
               >
                 {uploadingImage && <Spinner size="sm" />}
@@ -250,6 +267,32 @@ export default function NewEpisodePage() {
               <span className="text-foreground">
                 {imageStoragePath ? imageStoragePath : "No file chosen."}
               </span>
+              {(imageStoragePath || imagePreviewUrl) && (
+                <span className="inline-flex items-center gap-1">
+                  {imagePreviewUrl && (
+                    <a
+                      aria-label="Preview image in new tab"
+                      className="text-muted hover:text-foreground"
+                      href={imagePreviewUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    aria-label="Remove image file"
+                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                    type="button"
+                    onClick={() => {
+                      setImageStoragePath("");
+                      setImagePreviewUrl(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </span>
+              )}
               <input
                 accept="image/*"
                 className="sr-only"
@@ -282,16 +325,6 @@ export default function NewEpisodePage() {
               }}
               />
             </div>
-            {imageStoragePath && (
-              <p className="text-muted mt-1 text-xs">
-                Uploaded: {imageStoragePath}
-                {imagePreviewUrl && (
-                  <span className="ml-2">
-                    — <a href={imagePreviewUrl} rel="noopener noreferrer" target="_blank">Preview</a>
-                  </span>
-                )}
-              </p>
-            )}
           </div>
           <div>
             <label className={labelClass} htmlFor="new-ep-duration" style={labelStyle}>

@@ -249,12 +249,13 @@ export default function AdminCategoriesPage() {
                         <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
                           Name
                         </h4>
-                        <div
-                          className="text-foreground text-sm"
+                        <Link
+                          className="text-foreground text-sm hover:underline"
+                          href={`/admin/categories/${cat.id}/edit`}
                           style={labelStyle}
                         >
                           {truncateCell(cat.name)}
-                        </div>
+                        </Link>
                       </div>
                       <div>
                         <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
@@ -339,7 +340,12 @@ export default function AdminCategoriesPage() {
                             className="text-foreground border-border border px-4 py-3"
                             style={labelStyle}
                           >
-                            {truncateCell(cat.name)}
+                            <Link
+                              className="hover:underline"
+                              href={`/admin/categories/${cat.id}/edit`}
+                            >
+                              {truncateCell(cat.name)}
+                            </Link>
                           </td>
                           <td
                             className="text-muted border-border border px-4 py-3"

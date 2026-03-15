@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { Spinner } from "@/components/ui/Spinner";
+import { isInvalidRefreshTokenError } from "@/lib/auth-errors";
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 
@@ -354,8 +355,15 @@ function LoginContent() {
         await new Promise((r) => setTimeout(r, 200));
         window.location.href = returnTo;
       } catch (err) {
-        console.error("[login] MFA verify error", err);
-        setMfaError("Invalid code. Please double-check and try again.");
+        if (isInvalidRefreshTokenError(err)) {
+          await getSupabase().auth.signOut();
+          setMfaError(
+            "Session could not be established. Please sign in again."
+          );
+        } else {
+          console.error("[login] MFA verify error", err);
+          setMfaError("Invalid code. Please double-check and try again.");
+        }
         setIsSubmitting(false);
       }
     },

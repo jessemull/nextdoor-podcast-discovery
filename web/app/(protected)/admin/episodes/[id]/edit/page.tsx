@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -224,8 +224,58 @@ export default function EditEpisodePage() {
   if (loading) {
     return (
       <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
-        <div className="mx-auto flex max-w-3xl justify-center py-12">
-          <Spinner size="md" />
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-6">
+            <div className="bg-surface-hover h-4 w-24 animate-pulse rounded" />
+          </div>
+          <div className="text-foreground mb-2 h-8 w-48 animate-pulse rounded bg-surface-hover" />
+          <div className="text-foreground mb-6 h-4 w-64 animate-pulse rounded bg-surface-hover" />
+          <Card className="mb-8 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="bg-surface-hover h-5 w-40 animate-pulse rounded" />
+              <div className="bg-surface-hover h-9 w-9 animate-pulse rounded" />
+            </div>
+            <div className="space-y-4">
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
+                <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-10 animate-pulse rounded" />
+                <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg font-mono" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
+                <div className="bg-surface-hover h-10 w-32 animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                <div className="bg-surface-hover mb-4 mt-3 h-12 w-full max-w-md animate-pulse rounded" />
+                <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                <div className="bg-surface-hover mb-4 mt-3 h-48 w-full animate-pulse rounded" />
+                <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
+              </div>
+              <div>
+                <div className="bg-surface-hover mb-2 h-3 w-24 animate-pulse rounded" />
+                <div className="bg-surface-hover h-10 w-24 animate-pulse rounded-lg" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <div className="bg-surface-hover h-9 w-16 animate-pulse rounded-md" />
+                <div className="bg-surface-hover h-9 w-14 animate-pulse rounded-md" />
+              </div>
+            </div>
+          </Card>
         </div>
       </main>
     );
@@ -346,13 +396,13 @@ export default function EditEpisodePage() {
               Audio File
             </label>
             {audioDisplayUrl && (
-              <div className="mb-2">
+              <div className="mb-4 mt-3">
                 <audio className="w-full max-w-md" controls src={audioDisplayUrl} />
               </div>
             )}
-            <div className="mt-2 flex items-center gap-3 text-sm">
+            <div className="mt-4 flex items-center gap-3 text-sm">
               <label
-                className="border-border bg-muted text-foreground flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 font-medium"
+                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="edit-ep-audio"
               >
                 {uploadingAudio && <Spinner size="sm" />}
@@ -361,6 +411,32 @@ export default function EditEpisodePage() {
               <span className="text-foreground">
                 {audioStoragePath ? audioStoragePath : "No file chosen."}
               </span>
+              {(audioStoragePath || audioDisplayUrl) && (
+                <span className="inline-flex items-center gap-1">
+                  {audioDisplayUrl && (
+                    <a
+                      aria-label="Preview audio in new tab"
+                      className="text-muted hover:text-foreground"
+                      href={audioDisplayUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    aria-label="Remove audio file"
+                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                    type="button"
+                    onClick={() => {
+                      setAudioStoragePath("");
+                      setAudioDisplayUrl(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </span>
+              )}
               <input
                 accept="audio/*"
                 className="sr-only"
@@ -393,28 +469,25 @@ export default function EditEpisodePage() {
               }}
               />
             </div>
-            {audioStoragePath && (
-              <p className="text-muted mt-1 text-xs">Stored: {audioStoragePath}</p>
-            )}
           </div>
           <div>
             <label className={labelClass} style={labelStyle}>
               Image File
             </label>
             {imageDisplayUrl && (
-              <div className="relative mb-2 h-40 w-full max-w-xs">
+              <div className="relative mb-4 mt-3 h-48 w-full">
                 <Image
                   alt="Episode"
-                  className="rounded object-contain"
+                  className="rounded object-left object-contain"
                   fill
                   src={imageDisplayUrl}
                   unoptimized
                 />
               </div>
             )}
-            <div className="mt-2 flex items-center gap-3 text-sm">
+            <div className="mt-4 flex items-center gap-3 text-sm">
               <label
-                className="border-border bg-muted text-foreground flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 font-medium"
+                className="border-border bg-surface-hover text-foreground flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80"
                 htmlFor="edit-ep-image"
               >
                 {uploadingImage && <Spinner size="sm" />}
@@ -423,6 +496,32 @@ export default function EditEpisodePage() {
               <span className="text-foreground">
                 {imageStoragePath ? imageStoragePath : "No file chosen."}
               </span>
+              {(imageStoragePath || imageDisplayUrl) && (
+                <span className="inline-flex items-center gap-1">
+                  {imageDisplayUrl && (
+                    <a
+                      aria-label="Preview image in new tab"
+                      className="text-muted hover:text-foreground"
+                      href={imageDisplayUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    aria-label="Remove image file"
+                    className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                    type="button"
+                    onClick={() => {
+                      setImageStoragePath("");
+                      setImageDisplayUrl(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </span>
+              )}
               <input
                 accept="image/*"
                 className="sr-only"
@@ -455,9 +554,6 @@ export default function EditEpisodePage() {
               }}
               />
             </div>
-            {imageStoragePath && (
-              <p className="text-muted mt-1 text-xs">Stored: {imageStoragePath}</p>
-            )}
           </div>
           <div>
             <label className={labelClass} style={labelStyle}>
