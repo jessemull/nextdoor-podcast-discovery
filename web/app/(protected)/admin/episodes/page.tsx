@@ -303,14 +303,14 @@ export default function AdminEpisodesPage() {
               <input
                 aria-label="Search episodes"
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-                placeholder="Search by title, slug, or description..."
+                placeholder="Search by anything..."
                 type="search"
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
           </div>
-          <div className="min-h-0 max-h-[calc(100dvh-260px)] overflow-y-auto pb-6 md:max-h-none md:overflow-visible md:pb-0">
+          <div className="min-h-0 max-h-[calc(100dvh-260px)] overflow-y-auto md:max-h-none md:overflow-visible">
           {loading ? (
             <>
               <div className="flex flex-col gap-3 md:hidden">
