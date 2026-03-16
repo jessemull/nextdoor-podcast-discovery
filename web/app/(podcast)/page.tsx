@@ -65,28 +65,28 @@ export default async function PodcastHomePage() {
           </div>
         </aside>
 
-        {/* Right column: hero + episode list */}
-        <div className="min-w-0 flex-1">
+        {/* Right column: hero + copy */}
+        <div className="min-w-0 flex-1 md:max-w-2xl">
           {/* Hero */}
           <section aria-label="Introduction" className="mb-10">
             <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
-            <p className="text-podcast-muted mb-4 mt-1 text-xl text-white">
+            <p className="text-podcast-muted mb-5 mt-1 text-xl text-white">
               Breaking down the internet&apos;s weirdest neighborhood drama with{" "}
               <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
             </p>
-            <p className="text-podcast-muted mb-6 text-lg text-white/90">
-              {DESCRIPTION}
-            </p>
             <Link
-              className="border-border bg-white text-black inline-flex rounded-full border px-6 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+              className="border-border bg-podcast-accent text-black inline-flex items-center rounded-full border px-10 py-3 text-base font-medium transition-colors hover:bg-[#f4d54a] focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
               href="/subscribe"
             >
               Subscribe
             </Link>
+            <p className="text-podcast-muted mb-6 mt-6 text-lg leading-relaxed text-white/90">
+              {DESCRIPTION}
+            </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-lg">
-              <p className="text-podcast-muted">
+              <p className="text-[#9fb7c4]">
                 E-mail{" "}
                 <a
                   className="text-podcast-accent hover:underline"
