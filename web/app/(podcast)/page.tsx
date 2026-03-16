@@ -75,20 +75,20 @@ export default async function PodcastHomePage() {
             <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
-            <p className="text-podcast-muted mb-5 mt-1 text-xl text-white">
+            <p className="text-podcast-muted mb-3 mt-1 text-xl text-white">
               Breaking down the internet&apos;s weirdest neighborhood drama with{" "}
               <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
             </p>
+            <p className="text-podcast-muted mb-4 mt-3 text-lg leading-relaxed text-white/90">
+              {DESCRIPTION}
+            </p>
             <Link
-              className="inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+              className="inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent mb-8 transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
               href="/subscribe"
             >
               Subscribe
             </Link>
-            <p className="text-podcast-muted mb-6 mt-6 text-lg leading-relaxed text-white/90">
-              {DESCRIPTION}
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-lg md:mt-auto">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-lg md:mt-auto">
               <p className="text-[#9fb7c4]">
                 E-mail{" "}
                 <a
