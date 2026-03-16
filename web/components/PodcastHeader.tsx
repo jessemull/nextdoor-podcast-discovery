@@ -154,7 +154,7 @@ export function PodcastHeader() {
         >
           Subscribe
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex min-h-7 items-center gap-1">
           {(isSearchOpen || isClosing) ? (
             <>
               <Search
@@ -164,7 +164,7 @@ export function PodcastHeader() {
                 }`}
               />
               {isClosing && (
-                <span className="text-podcast-foreground hidden text-lg sm:inline">
+                <span className="text-podcast-foreground hidden text-lg leading-7 sm:inline">
                   Search
                 </span>
               )}
@@ -172,12 +172,12 @@ export function PodcastHeader() {
           ) : (
             <button
               aria-label="Search for episodes"
-              className={`inline-flex items-center gap-1 border-0 bg-transparent p-0 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
+              className={`inline-flex min-h-7 items-center gap-1 border-0 bg-transparent p-0 leading-7 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
               type="button"
               onClick={openSearch}
             >
               <Search aria-hidden className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Search</span>
+              <span className="hidden leading-7 sm:inline">Search</span>
             </button>
           )}
           <div
