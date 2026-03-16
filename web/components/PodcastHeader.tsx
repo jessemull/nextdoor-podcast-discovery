@@ -130,7 +130,7 @@ export function PodcastHeader() {
   }, [updateUrl]);
 
   return (
-    <header className="w-full py-4">
+    <header className="w-full pt-6 pb-4">
       <nav
         aria-label="Main"
         className="flex flex-wrap items-center justify-center gap-8 px-4 text-lg sm:gap-10"
