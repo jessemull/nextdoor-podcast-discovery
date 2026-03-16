@@ -6,6 +6,7 @@ import { getEpisodesPublishedSafe } from "@/lib/podcast.server";
 import { siteBaseUrl } from "@/lib/site-url.server";
 
 import type { Metadata } from "next";
+import { playfair } from "../layout";
 
 const PODCAST_NAME = "Was that a gunshot?";
 const TAGLINE =
@@ -72,7 +73,9 @@ export default async function PodcastHomePage() {
             aria-label="Introduction"
             className="mb-10 md:mb-0 md:flex md:h-full md:flex-col"
           >
-            <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
+            <h1
+              className={`text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl ${playfair.className}`}
+            >
               {PODCAST_NAME}
             </h1>
             <p className="text-podcast-muted mb-4 text-xl text-[#9fb7c4]">
