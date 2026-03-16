@@ -8,9 +8,8 @@ import { siteBaseUrl } from "@/lib/site-url.server";
 import type { Metadata } from "next";
 
 const PODCAST_NAME = "Was that a gunshot?";
-const HOSTS = "Matt Auflick and Maketa Auflick";
 const TAGLINE =
-  "Breaking down the internet’s weirdest neighborhood drama.";
+  "Breaking down the internet's weirdest neighborhood drama with Matt and Maketa Auflick.";
 const DESCRIPTION = "In neighborhoods across the country, one question echoes through the night: Was that a gunshot? Each week, Matt and Maketa take a humorous dive into the strange, suspicious, and unintentionally hilarious posts that fill Nextdoor feeds everywhere. From blurry security camera photos to debates over fireworks versus crime, they unpack the peculiar dynamics of neighborhood vigilance and the surprisingly dramatic ways we interact with the people living just down the street."
 
 export const metadata: Metadata = {
@@ -43,7 +42,7 @@ export default async function PodcastHomePage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto mt-8 max-w-6xl px-4 py-8 sm:px-6">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesJsonLd) }}
         type="application/ld+json"
@@ -52,9 +51,9 @@ export default async function PodcastHomePage() {
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
-          className="flex shrink-0 justify-center md:min-h-[360px] md:w-72 md:justify-start"
+          className="flex shrink-0 justify-center md:min-h-[468px] md:w-[22rem] md:justify-start"
         >
-          <div className="relative h-60 w-60 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:h-[420px] md:w-72">
+          <div className="relative h-80 w-80 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:h-[540px] md:w-[22rem]">
             <Image
               alt={PODCAST_NAME}
               className="object-cover object-left"
@@ -70,25 +69,23 @@ export default async function PodcastHomePage() {
         <div className="min-w-0 flex-1">
           {/* Hero */}
           <section aria-label="Introduction" className="mb-10">
-            <h1 className="text-podcast-foreground mb-2 text-4xl font-bold tracking-tight sm:text-6xl">
+            <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
-            <p className="text-podcast-muted mb-3 text-base">
-              {HOSTS}
+            <p className="text-podcast-muted mb-4 mt-1 text-xl text-white">
+              Breaking down the internet&apos;s weirdest neighborhood drama with{" "}
+              <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
             </p>
-            <p className="text-podcast-muted mb-2 text-sm">
-              {TAGLINE}
-            </p>
-            <p className="text-podcast-muted mb-6 text-sm">
+            <p className="text-podcast-muted mb-6 text-lg text-white/90">
               {DESCRIPTION}
             </p>
             <Link
-              className="border-border bg-white text-black inline-flex rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+              className="border-border bg-white text-black inline-flex rounded-full border px-6 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
               href="/subscribe"
             >
-              Subscribe to Podcast or Substack newsletter
+              Subscribe
             </Link>
-            <div className="mt-6 flex flex-wrap items-center gap-1.5 text-lg">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-lg">
               <p className="text-podcast-muted">
                 E-mail{" "}
                 <a
@@ -96,10 +93,10 @@ export default async function PodcastHomePage() {
                   href="mailto:info@wasthatagunshot.com"
                 >
                   info@wasthatagunshot.com
-                </a>{" "}
-                or follow us on
+                </a>
               </p>
-              <a
+              <div className="flex items-center gap-1.5">
+                <a
                 aria-label="LinkedIn"
                 className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
                 href="https://linkedin.com"
@@ -163,6 +160,7 @@ export default async function PodcastHomePage() {
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
               </a>
+            </div>
             </div>
           </section>
         </div>
