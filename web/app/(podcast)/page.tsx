@@ -80,7 +80,7 @@ export default async function PodcastHomePage() {
               <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
             </p>
             <Link
-              className="border-border bg-podcast-accent text-black inline-flex w-full items-center justify-center rounded-full border px-10 py-3 text-base font-medium transition-colors hover:bg-[#f4d54a] focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+              className="inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
               href="/subscribe"
             >
               Subscribe
