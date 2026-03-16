@@ -10,10 +10,11 @@ import type { Metadata } from "next";
 const PODCAST_NAME = "Was that a gunshot?";
 const HOSTS = "Matt Auflick and Maketa Auflick";
 const TAGLINE =
-  "Stories and conversations from the neighborhood.";
+  "Breaking down the internet’s weirdest neighborhood drama.";
+const DESCRIPTION = "In neighborhoods across the country, one question echoes through the night: Was that a gunshot? Each week, Matt and Maketa take a humorous dive into the strange, suspicious, and unintentionally hilarious posts that fill Nextdoor feeds everywhere. From blurry security camera photos to debates over fireworks versus crime, they unpack the peculiar dynamics of neighborhood vigilance and the surprisingly dramatic ways we interact with the people living just down the street."
 
 export const metadata: Metadata = {
-  description: TAGLINE,
+  description: DESCRIPTION,
   openGraph: {
     description: TAGLINE,
     title: PODCAST_NAME,
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   title: PODCAST_NAME,
   twitter: {
     card: "summary_large_image",
-    description: TAGLINE,
+    description: DESCRIPTION,
     title: PODCAST_NAME,
   },
 };
@@ -69,14 +70,17 @@ export default async function PodcastHomePage() {
         <div className="min-w-0 flex-1">
           {/* Hero */}
           <section aria-label="Introduction" className="mb-10">
-            <h1 className="text-podcast-foreground mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-podcast-foreground mb-2 text-4xl font-bold tracking-tight sm:text-6xl">
               {PODCAST_NAME}
             </h1>
             <p className="text-podcast-muted mb-3 text-base">
               {HOSTS}
             </p>
-            <p className="text-podcast-muted mb-6 text-sm">
+            <p className="text-podcast-muted mb-2 text-sm">
               {TAGLINE}
+            </p>
+            <p className="text-podcast-muted mb-6 text-sm">
+              {DESCRIPTION}
             </p>
             <Link
               className="border-border bg-white text-black inline-flex rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
@@ -84,27 +88,27 @@ export default async function PodcastHomePage() {
             >
               Subscribe to Podcast or Substack newsletter
             </Link>
-            <p className="text-podcast-muted mt-6 text-sm">
-              E-mail{" "}
-              <a
-                className="text-podcast-accent hover:underline"
-                href="mailto:info@wasthatagun.com"
-              >
-                info@wasthatagun.com
-              </a>{" "}
-              or follow us on
-            </p>
-            <div className="mt-2 flex gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-1.5 text-lg">
+              <p className="text-podcast-muted">
+                E-mail{" "}
+                <a
+                  className="text-podcast-accent hover:underline"
+                  href="mailto:info@wasthatagunshot.com"
+                >
+                  info@wasthatagunshot.com
+                </a>{" "}
+                or follow us on
+              </p>
               <a
                 aria-label="LinkedIn"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-podcast-accent text-[#31484E] transition-opacity hover:opacity-90"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
                 href="https://linkedin.com"
                 rel="noopener noreferrer"
                 target="_blank"
               >
                 <svg
                   aria-hidden
-                  className="h-4 w-4"
+                  className="h-8 w-8"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -113,14 +117,14 @@ export default async function PodcastHomePage() {
               </a>
               <a
                 aria-label="Twitter"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-podcast-accent text-[#31484E] transition-opacity hover:opacity-90"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
                 href="https://twitter.com"
                 rel="noopener noreferrer"
                 target="_blank"
               >
                 <svg
                   aria-hidden
-                  className="h-4 w-4"
+                  className="h-8 w-8"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -129,14 +133,14 @@ export default async function PodcastHomePage() {
               </a>
               <a
                 aria-label="Instagram"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-podcast-accent text-[#31484E] transition-opacity hover:opacity-90"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
                 href="https://instagram.com"
                 rel="noopener noreferrer"
                 target="_blank"
               >
                 <svg
                   aria-hidden
-                  className="h-4 w-4"
+                  className="h-8 w-8"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -145,14 +149,14 @@ export default async function PodcastHomePage() {
               </a>
               <a
                 aria-label="Facebook"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-podcast-accent text-[#31484E] transition-opacity hover:opacity-90"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
                 href="https://facebook.com"
                 rel="noopener noreferrer"
                 target="_blank"
               >
                 <svg
                   aria-hidden
-                  className="h-4 w-4"
+                  className="h-8 w-8"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
