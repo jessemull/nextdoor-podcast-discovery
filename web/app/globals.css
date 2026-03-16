@@ -19,11 +19,11 @@
   --pittsburgh-gold-muted: #c9a01f;
 }
 
-/* Podcast public site: logo-derived palette (yellow accent, dark teal, etc.) */
+/* Podcast public site: logo-derived palette (yellow accent, blue-grey text, etc.) */
 .podcast-site {
   --podcast-accent: #eecf3e;
   --podcast-foreground: #e4ebeb;
-  --podcast-muted: #8c9197;
+  --podcast-muted: #9fb7c4;
   --podcast-cta: #e2574e;
 }
 .podcast-site audio {
