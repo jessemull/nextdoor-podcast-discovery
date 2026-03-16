@@ -47,13 +47,13 @@ export default async function PodcastHomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesJsonLd) }}
         type="application/ld+json"
       />
-      <div className="flex flex-col gap-8 md:flex-row md:gap-12">
+      <div className="flex flex-col gap-8 md:flex-row md:items-stretch md:gap-10">
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
-          className="flex shrink-0 justify-center md:min-h-[468px] md:w-[22rem] md:justify-start"
+          className="flex shrink-0 justify-center md:min-h-[420px] md:w-[20rem] md:justify-start"
         >
-          <div className="relative h-80 w-80 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:h-[540px] md:w-[22rem]">
+          <div className="relative h-72 w-72 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:h-full md:w-[20rem]">
             <Image
               alt={PODCAST_NAME}
               className="object-cover object-left"
@@ -68,7 +68,10 @@ export default async function PodcastHomePage() {
         {/* Right column: hero + copy */}
         <div className="min-w-0 flex-1 md:max-w-2xl">
           {/* Hero */}
-          <section aria-label="Introduction" className="mb-10">
+          <section
+            aria-label="Introduction"
+            className="mb-10 md:mb-0 md:flex md:h-full md:flex-col"
+          >
             <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
@@ -77,7 +80,7 @@ export default async function PodcastHomePage() {
               <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
             </p>
             <Link
-              className="border-border bg-podcast-accent text-black inline-flex items-center rounded-full border px-10 py-3 text-base font-medium transition-colors hover:bg-[#f4d54a] focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+              className="border-border bg-podcast-accent text-black inline-flex w-full items-center justify-center rounded-full border px-10 py-3 text-base font-medium transition-colors hover:bg-[#f4d54a] focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
               href="/subscribe"
             >
               Subscribe
@@ -85,7 +88,7 @@ export default async function PodcastHomePage() {
             <p className="text-podcast-muted mb-6 mt-6 text-lg leading-relaxed text-white/90">
               {DESCRIPTION}
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-lg">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-lg md:mt-auto">
               <p className="text-[#9fb7c4]">
                 E-mail{" "}
                 <a
