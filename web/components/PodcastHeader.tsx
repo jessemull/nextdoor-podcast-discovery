@@ -155,31 +155,32 @@ export function PodcastHeader() {
           Subscribe
         </Link>
         <div className="flex min-h-7 items-center gap-1">
-          {(isSearchOpen || isClosing) ? (
-            <>
-              <Search
-                aria-hidden
-                className={`h-4 w-4 shrink-0 ${
-                  isClosing ? "text-podcast-foreground" : "text-podcast-accent"
-                }`}
-              />
-              {isClosing && (
-                <span className="text-podcast-foreground hidden text-lg leading-7 sm:inline">
-                  Search
-                </span>
-              )}
-            </>
-          ) : (
-            <button
-              aria-label="Search for episodes"
-              className={`inline-flex min-h-7 items-center gap-1 border-0 bg-transparent p-0 leading-7 ${linkFocusClass} text-podcast-foreground transition-colors hover:text-podcast-accent`}
-              type="button"
-              onClick={openSearch}
+          <button
+            aria-label="Search for episodes"
+            className={`inline-flex min-h-7 items-center border-0 bg-transparent p-0 leading-7 ${linkFocusClass} text-podcast-foreground ${
+              isSearchOpen && !isClosing ? "gap-0" : "gap-1"
+            } ${
+              isSearchOpen || isClosing ? "" : "transition-colors hover:text-podcast-accent"
+            }`}
+            type="button"
+            onClick={isSearchOpen || isClosing ? undefined : openSearch}
+          >
+            <Search
+              aria-hidden
+              className={`h-4 w-4 shrink-0 ${
+                isSearchOpen && !isClosing ? "text-podcast-accent" : ""
+              }`}
+            />
+            <span
+              className={`hidden leading-7 sm:inline ${
+                isSearchOpen && !isClosing
+                  ? "w-0 overflow-hidden opacity-0"
+                  : "w-auto opacity-100"
+              }`}
             >
-              <Search aria-hidden className="h-4 w-4 shrink-0" />
-              <span className="hidden leading-7 sm:inline">Search</span>
-            </button>
-          )}
+              Search
+            </span>
+          </button>
           <div
             className="podcast-search-wrapper relative overflow-hidden"
             style={{
@@ -190,10 +191,8 @@ export function PodcastHeader() {
           >
             <input
               aria-label="Search for episodes"
-              className={`bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 overflow-hidden rounded-lg border py-0.5 pl-3 pr-8 text-base focus:outline-none ${
-                isSearchOpen || isClosing
-                  ? "border-2 border-podcast-accent"
-                  : "border border-border"
+              className={`bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 overflow-hidden rounded-lg border-2 py-0.5 pl-3 pr-8 text-base focus:outline-none ${
+                isSearchOpen || isClosing ? "border-podcast-accent" : "border-border"
               }`}
               data-podcast-search-input
               placeholder="Search for episodes..."
