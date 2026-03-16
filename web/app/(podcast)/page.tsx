@@ -75,11 +75,12 @@ export default async function PodcastHomePage() {
             <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
-            <p className="text-podcast-muted mb-4 text-xl text-white">
+            <p className="text-podcast-muted mb-4 text-xl text-white/80">
               Breaking down the internet&apos;s weirdest neighborhood drama with{" "}
-              <strong>Matt</strong> and <strong>Maketa Auflick</strong>.
+              <strong className="text-white">Matt</strong> and{" "}
+              <strong className="text-white">Maketa Auflick</strong>.
             </p>
-            <p className="text-podcast-muted mb-6 text-lg leading-relaxed text-white/90">
+            <p className="text-podcast-muted mb-6 text-lg leading-relaxed text-white/80">
               {DESCRIPTION}
             </p>
             <Link

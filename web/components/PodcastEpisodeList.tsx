@@ -107,7 +107,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
             {ep.title}
           </Link>
           {ep.description && (
-            <p className="text-podcast-muted mt-1 line-clamp-2 text-sm">
+            <p className="mt-2 line-clamp-2 text-base text-white/80">
               {ep.description}
             </p>
           )}
