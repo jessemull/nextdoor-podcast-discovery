@@ -75,12 +75,12 @@ export default async function PodcastHomePage() {
             <h1 className="text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-7xl">
               {PODCAST_NAME}
             </h1>
-            <p className="text-podcast-muted mb-4 text-xl text-white/80">
+            <p className="text-podcast-muted mb-4 text-xl text-[#9fb7c4]">
               Breaking down the internet&apos;s weirdest neighborhood drama with{" "}
               <strong className="text-white">Matt</strong> and{" "}
               <strong className="text-white">Maketa Auflick</strong>.
             </p>
-            <p className="text-podcast-muted mb-6 text-lg leading-relaxed text-white/80">
+            <p className="text-podcast-muted mb-6 text-lg leading-relaxed text-[#9fb7c4]">
               {DESCRIPTION}
             </p>
             <Link
@@ -101,12 +101,12 @@ export default async function PodcastHomePage() {
               </p>
               <div className="flex items-center gap-1.5">
                 <a
-                aria-label="LinkedIn"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
-                href="https://linkedin.com"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
+                  aria-label="LinkedIn"
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
+                  href="https://linkedin.com"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
                 <svg
                   aria-hidden
                   className="h-8 w-8"

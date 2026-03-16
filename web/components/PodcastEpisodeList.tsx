@@ -54,7 +54,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
     <ul className="space-y-8">
       {filtered.map((ep, index) => (
         <li key={ep.id}>
-          <div className="text-podcast-foreground mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
             {ep.published_at && (
               <span className="flex items-center gap-1.5">
                 <svg
@@ -107,7 +107,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
             {ep.title}
           </Link>
           {ep.description && (
-            <p className="mt-2 line-clamp-2 text-base text-white/80">
+            <p className="mt-2 line-clamp-2 text-base text-[#9fb7c4]">
               {ep.description}
             </p>
           )}
