@@ -51,12 +51,12 @@ export default async function PodcastHomePage() {
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
-          className="flex shrink-0 justify-center md:min-h-[280px] md:w-48 md:justify-start"
+          className="flex shrink-0 justify-center md:min-h-[360px] md:w-72 md:justify-start"
         >
-          <div className="relative h-40 w-40 shrink-0 overflow-hidden md:h-[280px] md:w-48">
+          <div className="relative h-60 w-60 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:h-[420px] md:w-72">
             <Image
               alt={PODCAST_NAME}
-              className="object-contain object-left"
+              className="object-cover object-left"
               fill
               priority
               sizes="(max-width: 768px) 160px, 192px"
@@ -161,13 +161,12 @@ export default async function PodcastHomePage() {
               </a>
             </div>
           </section>
-
-          {/* Episode list (filtered by header search) */}
-          <section aria-label="Episodes">
-            <PodcastEpisodeList episodes={episodes} />
-          </section>
         </div>
       </div>
+      {/* Episode list (filtered by header search) spans full width under hero + logo */}
+      <section aria-label="Episodes" className="mt-10">
+        <PodcastEpisodeList episodes={episodes} />
+      </section>
     </div>
   );
 }
