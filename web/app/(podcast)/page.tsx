@@ -169,7 +169,7 @@ export default async function PodcastHomePage() {
         </div>
       </div>
       {/* Episode list (filtered by header search) spans full width under hero + logo */}
-      <section aria-label="Episodes" className="mt-10">
+      <section aria-label="Episodes" className="mt-[4.5rem]">
         <PodcastEpisodeList episodes={episodes} />
       </section>
     </div>
