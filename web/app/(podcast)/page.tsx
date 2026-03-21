@@ -3,10 +3,9 @@ import Link from "next/link";
 
 import { PodcastEpisodeList } from "@/components/PodcastEpisodeList";
 import { PodcastMobileEpisodeSearch } from "@/components/PodcastMobileEpisodeSearch";
+import { playfair } from "@/lib/fonts";
 import { getEpisodesPublishedSafe } from "@/lib/podcast.server";
 import { siteBaseUrl } from "@/lib/site-url.server";
-
-import { playfair } from "../layout";
 
 import type { Metadata } from "next";
 
@@ -56,7 +55,7 @@ export default async function PodcastHomePage() {
           aria-hidden
           className="flex shrink-0 flex-col items-center md:h-full md:min-h-[420px] md:w-[22rem] md:items-start md:justify-end"
         >
-          <div className="relative aspect-[792/1224] w-80 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[22rem]">
+          <div className="relative aspect-[792/1224] w-full max-w-[22rem] shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[22rem]">
             <Image
               alt={PODCAST_NAME}
               className="object-contain"
@@ -77,11 +76,10 @@ export default async function PodcastHomePage() {
           >
             <div className="inline-block max-w-full md:self-start">
               <h1
-                className={`text-podcast-foreground mb-4 text-5xl font-bold tracking-tight sm:text-6xl ${playfair.className}`}
+                className={`text-podcast-foreground mb-4 hidden text-5xl font-bold tracking-tight sm:text-6xl md:block ${playfair.className}`}
               >
                 {PODCAST_NAME}
               </h1>
-              <div className="min-w-full break-words" style={{ width: 0 }}>
               <p className="mb-4 text-xl text-[#9fb7c4]">
                 Breaking down the internet&apos;s weirdest neighborhood drama
                 with <strong className="text-white">Matt</strong> and{" "}
@@ -173,7 +171,6 @@ export default async function PodcastHomePage() {
                   </a>
                 </div>
               </div>
-            </div>
             </div>
           </section>
         </div>

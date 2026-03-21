@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { usePodcastSearch } from "@/components/PodcastSearchProvider";
+import { playfair } from "@/lib/fonts";
 
 const activeLinkClass =
   "text-podcast-accent underline decoration-2 decoration-podcast-accent underline-offset-[0.4em]";
@@ -17,6 +18,7 @@ const SEARCH_WIDTH_CLOSED = "0px";
 const SEARCH_WIDTH_OPEN = "clamp(10rem, 40vw, 20rem)";
 const SEARCH_TRANSITION = "width 0.75s cubic-bezier(0, 0.11, 0.35, 2)";
 const SEARCH_TRANSITION_MS = 750;
+const PODCAST_NAME = "Was that a gunshot?";
 
 export function PodcastHeader() {
   const pathname = usePathname();
@@ -151,21 +153,26 @@ export function PodcastHeader() {
   );
 
   return (
-    <header className="w-full shrink-0 pt-6 pb-4">
+    <header className="w-full shrink-0 pb-4 pt-3 md:pt-6">
       {/* Mobile: hamburger (overlay covers this while menu is open) */}
       <div
         aria-hidden={mobileMenuOpen}
-        className="flex items-center justify-start px-4 md:hidden"
+        className="flex min-h-12 items-center justify-between gap-3 px-4 md:hidden"
       >
+        <span
+          className={`text-podcast-foreground min-w-0 flex-1 truncate pl-1.5 text-3xl leading-tight ${playfair.className}`}
+        >
+          {PODCAST_NAME}
+        </span>
         <button
           aria-controls="podcast-mobile-menu"
           aria-expanded={mobileMenuOpen}
           aria-label="Open menu"
-          className={`text-podcast-foreground inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg transition-colors hover:text-podcast-accent ${linkFocusClass} focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]`}
+          className={`text-podcast-foreground inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:text-podcast-accent ${linkFocusClass} focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]`}
           type="button"
           onClick={() => setMobileMenuOpen(true)}
         >
-          <Menu aria-hidden className="h-6 w-6" />
+          <Menu aria-hidden className="h-7 w-7 translate-y-0.5" />
         </button>
       </div>
 
