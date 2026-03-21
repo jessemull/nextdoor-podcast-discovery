@@ -151,10 +151,11 @@ export function PodcastHeader() {
 
   return (
     <header className="w-full shrink-0 pb-3 pt-3 md:pb-5 md:pt-6">
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-7">
       {/* Mobile: hamburger (overlay covers this while menu is open) */}
       <div
         aria-hidden={mobileMenuOpen}
-        className="flex min-h-12 items-center justify-between gap-3 px-5 sm:px-7 md:hidden"
+        className="flex min-h-12 items-center justify-between gap-3 md:hidden"
       >
         <span
           className={`text-podcast-foreground min-w-0 flex-1 truncate text-3xl leading-tight ${playfair.className}`}
@@ -203,7 +204,7 @@ export function PodcastHeader() {
       {/* Desktop: inline nav + expandable search */}
       <nav
         aria-label="Main"
-        className="hidden flex-wrap items-center justify-center gap-8 px-5 text-lg sm:gap-10 sm:px-7 md:flex"
+        className="hidden flex-wrap items-center justify-center gap-8 text-lg sm:gap-10 md:flex"
       >
         {navLinks}
         <div className="flex min-h-7 items-center gap-1">
@@ -272,6 +273,7 @@ export function PodcastHeader() {
           </div>
         </div>
       </nav>
+      </div>
     </header>
   );
 }
