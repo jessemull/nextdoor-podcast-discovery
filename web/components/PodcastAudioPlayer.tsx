@@ -162,9 +162,12 @@ export function PodcastAudioPlayer({
         Your browser does not support the audio element.
       </audio>
 
-      {/* Top row: icon (left) and volume (right) */}
-      <div className="grid min-w-0 grid-cols-3 items-center gap-1 sm:gap-2">
-        <div className="flex min-w-0 items-center justify-start gap-0">
+      {/* Top row: waveform left; mute + volume slider right */}
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div aria-hidden className="opacity-90 shrink-0 text-podcast-accent">
+          <AudioLines className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} />
+        </div>
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-1">
           <button
             aria-label={muted ? "Unmute" : "Mute"}
             className="text-podcast-foreground/90 inline-flex min-h-8 min-w-6 shrink-0 items-center justify-start rounded-[8px] px-0 transition-colors hover:text-podcast-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#121212]"
@@ -194,16 +197,10 @@ export function PodcastAudioPlayer({
             onChange={onVolumeChange}
           />
         </div>
-        <div />
-        <div className="flex min-w-0 justify-end">
-          <div aria-hidden className="text-podcast-accent opacity-90">
-            <AudioLines className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} />
-          </div>
-        </div>
       </div>
 
       {/* Seek bar */}
-      <div className="mt-2">
+      <div className="mt-3">
         <div className="relative h-2 w-full">
           <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#3a3a3a]" />
           <div
