@@ -18,7 +18,7 @@ export function PodcastMobileEpisodeSearch() {
         />
         <input
           aria-label="Search for episodes"
-          className="bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 rounded-lg border-2 border-podcast-accent py-2.5 pl-10 pr-10 text-base focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+          className="bg-surface text-podcast-foreground placeholder:text-podcast-muted w-full min-w-0 rounded-lg border-2 border-podcast-accent py-2.5 pl-8 pr-10 text-base focus:outline-none"
           data-podcast-search-input
           placeholder="Search for episodes..."
           ref={inputRef}
