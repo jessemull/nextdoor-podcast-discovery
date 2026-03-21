@@ -153,7 +153,7 @@ export function PodcastHeader() {
   );
 
   return (
-    <header className="w-full shrink-0 pb-2 pt-3 md:pb-4 md:pt-6">
+    <header className="w-full shrink-0 pb-3 pt-3 md:pb-5 md:pt-6">
       {/* Mobile: hamburger (overlay covers this while menu is open) */}
       <div
         aria-hidden={mobileMenuOpen}

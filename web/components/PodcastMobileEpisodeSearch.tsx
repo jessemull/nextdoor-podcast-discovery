@@ -4,6 +4,7 @@ import { Search, X } from "lucide-react";
 import { useRef } from "react";
 
 import { usePodcastSearch } from "@/components/PodcastSearchProvider";
+import { playfair } from "@/lib/fonts";
 
 export function PodcastMobileEpisodeSearch() {
   const { handleClear, handleSearchChange, inputValue } = usePodcastSearch();
@@ -11,6 +12,11 @@ export function PodcastMobileEpisodeSearch() {
 
   return (
     <div className="mb-8 md:hidden">
+      <h2
+        className={`font-semibold leading-tight mb-7 text-4xl text-white ${playfair.className}`}
+      >
+        Episodes
+      </h2>
       <div className="relative">
         <Search
           aria-hidden
