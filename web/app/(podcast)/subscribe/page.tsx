@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "Subscribe | Podcast",
 };
 
+const subscribeInputClassName =
+  "w-full rounded-[5px] border border-podcast-accent bg-transparent px-3 py-3 text-podcast-foreground placeholder:text-podcast-muted focus:outline-none focus:ring-2 focus:ring-podcast-accent";
+
 export default function SubscribePage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 sm:px-7 md:py-14">
@@ -19,38 +22,38 @@ export default function SubscribePage() {
           Get new episodes delivered to your inbox every Friday.
         </p>
         <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.6fr] lg:gap-3">
-            <label className="sr-only" htmlFor="subscribe-first-name">
-              First name
-            </label>
-              <input
-                className="w-full border-0 bg-white px-3 py-3 text-black placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
-                id="subscribe-first-name"
-                name="firstName"
-                placeholder="First name"
-                type="text"
-              />
-            <label className="sr-only" htmlFor="subscribe-last-name">
-              Last name
-            </label>
-              <input
-                className="w-full border-0 bg-white px-3 py-3 text-black placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
-                id="subscribe-last-name"
-                name="lastName"
-                placeholder="Last name"
-                type="text"
-              />
-            <label className="sr-only" htmlFor="subscribe-email">
-              Email
-            </label>
-              <input
-                className="w-full border-0 bg-white px-3 py-3 text-black placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
-                id="subscribe-email"
-                name="email"
-                placeholder="Email address"
-                type="email"
-              />
+          <label className="sr-only" htmlFor="subscribe-first-name">
+            First name
+          </label>
+          <input
+            className={subscribeInputClassName}
+            id="subscribe-first-name"
+            name="firstName"
+            placeholder="First name"
+            type="text"
+          />
+          <label className="sr-only" htmlFor="subscribe-last-name">
+            Last name
+          </label>
+          <input
+            className={subscribeInputClassName}
+            id="subscribe-last-name"
+            name="lastName"
+            placeholder="Last name"
+            type="text"
+          />
+          <label className="sr-only" htmlFor="subscribe-email">
+            Email
+          </label>
+          <input
+            className={subscribeInputClassName}
+            id="subscribe-email"
+            name="email"
+            placeholder="Email address"
+            type="email"
+          />
           <button
-            className="inline-flex w-full items-center justify-center bg-podcast-accent px-8 py-3 text-base font-semibold text-black transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
+            className="inline-flex w-full items-center justify-center rounded-[5px] bg-podcast-accent px-8 py-3 text-base font-semibold text-black transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
             type="button"
           >
             Subscribe
