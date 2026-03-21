@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PodcastEpisodeList } from "@/components/PodcastEpisodeList";
 import { PodcastMobileEpisodeSearch } from "@/components/PodcastMobileEpisodeSearch";
 import { playfair } from "@/lib/fonts";
+import { filterPodcastEpisodesByQuery } from "@/lib/podcast-filter";
 import { getEpisodesPublishedSafe } from "@/lib/podcast.server";
 import { siteBaseUrl } from "@/lib/site-url.server";
 
@@ -32,8 +33,25 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-export default async function PodcastHomePage() {
+interface PodcastHomePageProps {
+  searchParams: Promise<{ q?: string }>;
+}
+
+export default async function PodcastHomePage({
+  searchParams,
+}: PodcastHomePageProps) {
+  const { q } = await searchParams;
+  const searchQuery = (q ?? "").trim();
+  const hasDesktopSearch = Boolean(searchQuery);
+
   const episodes = await getEpisodesPublishedSafe(50, 0);
+  const desktopSearchMatches = hasDesktopSearch
+    ? filterPodcastEpisodesByQuery(episodes, searchQuery)
+    : [];
+  const desktopSearchHasMatches =
+    hasDesktopSearch && desktopSearchMatches.length > 0;
+  const desktopSearchNoMatches =
+    hasDesktopSearch && desktopSearchMatches.length === 0;
   const base = siteBaseUrl;
   const seriesJsonLd = {
     "@context": "https://schema.org",
@@ -44,12 +62,26 @@ export default async function PodcastHomePage() {
   };
 
   return (
-    <div className="mx-auto mt-2 max-w-6xl px-5 pb-8 pt-3 sm:px-7 md:mt-8 md:py-8">
+    <div
+      className={`mx-auto mt-2 max-w-6xl px-5 pb-8 pt-3 sm:px-7 ${
+        desktopSearchHasMatches
+          ? "md:mt-7 md:pt-6 md:pb-8"
+          : desktopSearchNoMatches
+            ? "md:mt-2 md:pt-1 md:pb-8"
+            : "md:mt-8 md:py-8"
+      }`}
+    >
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesJsonLd) }}
         type="application/ld+json"
       />
-      <div className="flex flex-col gap-8 md:flex-row md:items-stretch md:gap-10">
+      <div
+        className={
+          hasDesktopSearch
+            ? "flex flex-col gap-8 md:hidden"
+            : "flex flex-col gap-8 md:flex-row md:items-stretch md:gap-10"
+        }
+      >
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
@@ -176,7 +208,16 @@ export default async function PodcastHomePage() {
         </div>
       </div>
       {/* Episode list (filtered by search) spans full width under hero + logo */}
-      <section aria-label="Episodes" className="mt-8 md:mt-[5rem]">
+      <section
+        aria-label="Episodes"
+        className={`mt-8 pb-14 md:pb-20 ${
+          desktopSearchHasMatches
+            ? "md:mt-8"
+            : desktopSearchNoMatches
+              ? "md:mt-2"
+              : "md:mt-[5rem]"
+        }`}
+      >
         <PodcastMobileEpisodeSearch />
         <PodcastEpisodeList episodes={episodes} />
       </section>

@@ -7,6 +7,7 @@ import { useMemo } from "react";
 
 import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
 import { formatDuration } from "@/lib/format-duration";
+import { filterPodcastEpisodesByQuery } from "@/lib/podcast-filter";
 
 import type { PodcastEpisodeSummary } from "@/lib/podcast.types";
 
@@ -14,25 +15,12 @@ interface PodcastEpisodeListProps {
   episodes: PodcastEpisodeSummary[];
 }
 
-function filterEpisodes(
-  episodes: PodcastEpisodeSummary[],
-  query: string
-): PodcastEpisodeSummary[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return episodes;
-  return episodes.filter((ep) => {
-    const title = (ep.title ?? "").toLowerCase();
-    const desc = (ep.description ?? "").toLowerCase();
-    return title.includes(q) || desc.includes(q);
-  });
-}
-
 export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
   const filtered = useMemo(
-    () => filterEpisodes(episodes, q),
+    () => filterPodcastEpisodesByQuery(episodes, q),
     [episodes, q]
   );
 
@@ -48,7 +36,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
     return (
       <div
         aria-live="polite"
-        className="flex flex-col items-center justify-center gap-4 px-4 pb-4 pt-10 text-center md:min-h-[50vh] md:gap-6 md:py-10"
+        className="flex flex-col items-center justify-center gap-4 px-4 pb-4 pt-10 text-center md:justify-start md:min-h-0 md:gap-6 md:pb-8 md:pt-2"
         role="status"
       >
         <Mic
