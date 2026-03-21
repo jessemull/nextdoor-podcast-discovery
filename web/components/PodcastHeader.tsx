@@ -150,11 +150,11 @@ export function PodcastHeader() {
   );
 
   return (
-    <header className="w-full min-w-0 shrink-0 pb-3 pt-3 lg:pb-5 lg:pt-6">
+    <header className="w-full shrink-0 pb-3 pt-3 md:pb-5 md:pt-6">
       {/* Mobile: hamburger (overlay covers this while menu is open) */}
       <div
         aria-hidden={mobileMenuOpen}
-        className="flex min-h-12 items-center justify-between gap-3 px-5 sm:px-7 lg:hidden"
+        className="flex min-h-12 items-center justify-between gap-3 px-5 sm:px-7 md:hidden"
       >
         <span
           className={`text-podcast-foreground min-w-0 flex-1 truncate text-3xl leading-tight ${playfair.className}`}
@@ -177,7 +177,7 @@ export function PodcastHeader() {
       {mobileMenuOpen ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-[100] flex flex-col bg-[#0a0a0a] lg:hidden"
+          className="fixed inset-0 z-[100] flex flex-col bg-[#0a0a0a] md:hidden"
           id="podcast-mobile-menu"
           role="dialog"
         >
@@ -203,10 +203,10 @@ export function PodcastHeader() {
       {/* Desktop: inline nav + expandable search */}
       <nav
         aria-label="Main"
-        className="hidden min-w-0 max-w-full flex-wrap items-center justify-center gap-8 px-5 text-lg sm:gap-10 sm:px-7 lg:flex"
+        className="hidden flex-wrap items-center justify-center gap-8 px-5 text-lg sm:gap-10 sm:px-7 md:flex"
       >
         {navLinks}
-        <div className="flex min-h-7 min-w-0 max-w-full shrink items-center gap-1">
+        <div className="flex min-h-7 items-center gap-1">
           <button
             aria-label="Search for episodes"
             className={`inline-flex min-h-7 items-center border-0 bg-transparent p-0 leading-7 ${linkFocusClass} text-podcast-foreground ${

@@ -19,7 +19,7 @@ export default function PodcastLayout({ children }: PodcastLayoutProps) {
           fallback={
             <main className="podcast-main-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
               <header className="w-full shrink-0 py-4" />
-              <div className="min-w-0 w-full flex-1" />
+              <div className="w-full flex-1" />
               <PodcastFooter />
             </main>
           }
@@ -27,7 +27,7 @@ export default function PodcastLayout({ children }: PodcastLayoutProps) {
           <PodcastSearchProvider>
             <main className="podcast-main-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
               <PodcastHeader />
-              <div className="min-w-0 w-full">{children}</div>
+              <div className="w-full">{children}</div>
               <PodcastFooter />
             </main>
           </PodcastSearchProvider>
