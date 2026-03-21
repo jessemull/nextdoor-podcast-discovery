@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { PodcastEpisodeList } from "@/components/PodcastEpisodeList";
+import { PodcastMobileEpisodeSearch } from "@/components/PodcastMobileEpisodeSearch";
 import { getEpisodesPublishedSafe } from "@/lib/podcast.server";
 import { siteBaseUrl } from "@/lib/site-url.server";
 
-import type { Metadata } from "next";
 import { playfair } from "../layout";
+
+import type { Metadata } from "next";
 
 const PODCAST_NAME = "Was that a gunshot?";
 const TAGLINE =
@@ -176,8 +178,9 @@ export default async function PodcastHomePage() {
           </section>
         </div>
       </div>
-      {/* Episode list (filtered by header search) spans full width under hero + logo */}
+      {/* Episode list (filtered by search) spans full width under hero + logo */}
       <section aria-label="Episodes" className="mt-[5rem]">
+        <PodcastMobileEpisodeSearch />
         <PodcastEpisodeList episodes={episodes} />
       </section>
     </div>

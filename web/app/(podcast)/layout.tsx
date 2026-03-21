@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { PodcastFooter } from "@/components/PodcastFooter";
 import { PodcastHeader } from "@/components/PodcastHeader";
+import { PodcastSearchProvider } from "@/components/PodcastSearchProvider";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 interface PodcastLayoutProps {
@@ -14,9 +15,11 @@ export default function PodcastLayout({ children }: PodcastLayoutProps) {
     <div className="podcast-site flex h-dvh flex-col overflow-y-auto overscroll-y-contain">
       <GoogleAnalytics />
       <Suspense fallback={<header className="w-full shrink-0 py-4" />}>
-        <PodcastHeader />
+        <PodcastSearchProvider>
+          <PodcastHeader />
+          <main className="shrink-0">{children}</main>
+        </PodcastSearchProvider>
       </Suspense>
-      <main className="shrink-0">{children}</main>
       <PodcastFooter />
       <ScrollToTop />
     </div>

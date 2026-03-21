@@ -1,9 +1,11 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { usePodcastSearch } from "@/components/PodcastSearchProvider";
 
 const activeLinkClass =
   "text-podcast-accent underline decoration-2 decoration-podcast-accent underline-offset-[0.4em]";
@@ -11,7 +13,6 @@ const inactiveLinkClass =
   "text-podcast-foreground hover:text-podcast-accent transition-colors";
 const linkFocusClass = "focus:outline-none";
 
-const SEARCH_DEBOUNCE_MS = 200;
 const SEARCH_WIDTH_CLOSED = "0px";
 const SEARCH_WIDTH_OPEN = "clamp(10rem, 40vw, 20rem)";
 const SEARCH_TRANSITION = "width 0.75s cubic-bezier(0, 0.11, 0.35, 2)";
@@ -21,6 +22,8 @@ export function PodcastHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { handleClear, handleSearchChange, inputValue } = usePodcastSearch();
+
   const isHome = pathname === "/podcast" || pathname === "/";
   const isAbout = pathname === "/about";
   const isSubscribe = pathname === "/subscribe";
@@ -28,23 +31,21 @@ export function PodcastHeader() {
   const qFromUrl = searchParams.get("q") ?? "";
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchWidth, setSearchWidth] = useState<string>(SEARCH_WIDTH_CLOSED);
-  const [inputValue, setInputValue] = useState(qFromUrl);
-  const inputRef = useRef<HTMLInputElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const expandRafRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setInputValue(qFromUrl);
-  }, [qFromUrl]);
-
-  useEffect(() => {
-    if (isHome && qFromUrl) {
+    if (!isHome || !qFromUrl) return;
+    const id = requestAnimationFrame(() => {
       setIsSearchOpen(true);
-    }
+    });
+    return () => cancelAnimationFrame(id);
   }, [isHome, qFromUrl]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- desktop search width animation (expand/collapse) */
   useEffect(() => {
     if (isSearchOpen && !isClosing) {
       if (expandRafRef.current != null) cancelAnimationFrame(expandRafRef.current);
@@ -67,6 +68,7 @@ export function PodcastHeader() {
       setSearchWidth(SEARCH_WIDTH_CLOSED);
     }
   }, [isClosing, isSearchOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isClosing) return;
@@ -81,32 +83,23 @@ export function PodcastHeader() {
     };
   }, [isClosing]);
 
-  const updateUrl = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value.trim()) {
-        params.set("q", value.trim());
-      } else {
-        params.delete("q");
-      }
-      const query = params.toString();
-      router.replace(query ? `/podcast?${query}` : "/podcast", { scroll: false });
-    },
-    [router, searchParams]
-  );
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileMenuOpen]);
 
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setInputValue(value);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        updateUrl(value);
-        debounceRef.current = null;
-      }, SEARCH_DEBOUNCE_MS);
-    },
-    [updateUrl]
-  );
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileMenuOpen]);
 
   const openSearch = useCallback(() => {
     if (!isHome) {
@@ -124,36 +117,91 @@ export function PodcastHeader() {
   }, [inputValue]);
 
   const handleClearSearch = useCallback(() => {
-    setInputValue("");
-    updateUrl("");
+    handleClear();
     inputRef.current?.focus();
-  }, [updateUrl]);
+  }, [handleClear]);
+
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  const navLinks = (
+    <>
+      <Link
+        aria-label="Home"
+        className={`${isHome ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
+        href="/podcast"
+        onClick={closeMobileMenu}
+      >
+        Home
+      </Link>
+      <Link
+        className={`${isAbout ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
+        href="/about"
+        onClick={closeMobileMenu}
+      >
+        About
+      </Link>
+      <Link
+        className={`${isSubscribe ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
+        href="/subscribe"
+        onClick={closeMobileMenu}
+      >
+        Subscribe
+      </Link>
+    </>
+  );
 
   return (
     <header className="w-full shrink-0 pt-6 pb-4">
+      {/* Mobile: hamburger (overlay covers this while menu is open) */}
+      <div
+        aria-hidden={mobileMenuOpen}
+        className="flex items-center justify-start px-4 md:hidden"
+      >
+        <button
+          aria-controls="podcast-mobile-menu"
+          aria-expanded={mobileMenuOpen}
+          aria-label="Open menu"
+          className={`text-podcast-foreground inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg transition-colors hover:text-podcast-accent ${linkFocusClass} focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]`}
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <Menu aria-hidden className="h-6 w-6" />
+        </button>
+      </div>
+
+      {/* Mobile: full-screen menu */}
+      {mobileMenuOpen ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-[100] flex flex-col bg-[#0a0a0a] md:hidden"
+          id="podcast-mobile-menu"
+          role="dialog"
+        >
+          <div className="flex shrink-0 justify-end px-4 pt-6">
+            <button
+              aria-label="Close menu"
+              className={`text-podcast-foreground inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg transition-colors hover:text-podcast-accent ${linkFocusClass} focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]`}
+              type="button"
+              onClick={closeMobileMenu}
+            >
+              <X aria-hidden className="h-7 w-7" />
+            </button>
+          </div>
+          <nav
+            aria-label="Main"
+            className="flex flex-1 flex-col items-center justify-center gap-10 px-6 pb-16 text-center font-serif text-2xl sm:text-3xl"
+          >
+            {navLinks}
+          </nav>
+        </div>
+      ) : null}
+
+      {/* Desktop: inline nav + expandable search */}
       <nav
         aria-label="Main"
-        className="flex flex-wrap items-center justify-center gap-8 px-4 text-lg sm:gap-10"
+        className="hidden flex-wrap items-center justify-center gap-8 px-4 text-lg md:flex sm:gap-10"
       >
-        <Link
-          aria-label="Home"
-          className={`${isHome ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
-          href="/podcast"
-        >
-          Home
-        </Link>
-        <Link
-          className={`${isAbout ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
-          href="/about"
-        >
-          About
-        </Link>
-        <Link
-          className={`${isSubscribe ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
-          href="/subscribe"
-        >
-          Subscribe
-        </Link>
+        {navLinks}
         <div className="flex min-h-7 items-center gap-1">
           <button
             aria-label="Search for episodes"
