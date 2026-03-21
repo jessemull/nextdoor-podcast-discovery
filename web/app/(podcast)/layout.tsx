@@ -12,15 +12,25 @@ interface PodcastLayoutProps {
 
 export default function PodcastLayout({ children }: PodcastLayoutProps) {
   return (
-    <div className="podcast-site flex h-dvh flex-col overflow-y-auto overscroll-y-contain">
+    <div className="podcast-site flex h-dvh flex-col overflow-hidden">
       <GoogleAnalytics />
-      <Suspense fallback={<header className="w-full shrink-0 py-4" />}>
-        <PodcastSearchProvider>
-          <PodcastHeader />
-          <main className="shrink-0">{children}</main>
-        </PodcastSearchProvider>
-      </Suspense>
-      <PodcastFooter />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Suspense
+          fallback={
+            <main className="podcast-main-scroll min-h-0 flex-1 overflow-y-auto">
+              <header className="w-full shrink-0 py-4" />
+            </main>
+          }
+        >
+          <PodcastSearchProvider>
+            <main className="podcast-main-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+              <PodcastHeader />
+              {children}
+              <PodcastFooter />
+            </main>
+          </PodcastSearchProvider>
+        </Suspense>
+      </div>
       <ScrollToTop />
     </div>
   );

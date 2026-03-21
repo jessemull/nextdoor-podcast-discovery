@@ -11,7 +11,7 @@ export function PodcastMobileEpisodeSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="mb-8 md:hidden">
+    <div className="mb-10 md:hidden">
       <h2
         className={`font-semibold leading-tight mb-7 text-3xl text-white ${playfair.className}`}
       >

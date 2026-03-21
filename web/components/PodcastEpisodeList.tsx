@@ -1,5 +1,6 @@
 "use client";
 
+import { Mic } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
@@ -45,15 +46,31 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
 
   if (filtered.length === 0) {
     return (
-      <p className="text-podcast-muted">
-        No episodes match your search. Try different keywords.
-      </p>
+      <div
+        aria-live="polite"
+        className="flex flex-col items-center justify-center gap-4 px-4 pb-4 pt-10 text-center md:min-h-[50vh] md:gap-6 md:py-10"
+        role="status"
+      >
+        <Mic
+          aria-hidden
+          className="text-podcast-accent/80 h-12 w-12 shrink-0 sm:h-14 sm:w-14"
+          strokeWidth={1.25}
+        />
+        <div className="max-w-md space-y-2">
+          <p className="text-podcast-foreground text-lg font-medium">
+            No episodes match your search.
+          </p>
+          <p className="text-podcast-muted text-sm">
+            Try different keywords or clear your search.
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
     <ul className="space-y-8">
-      {filtered.map((ep, index) => (
+      {filtered.map((ep) => (
         <li key={ep.id}>
           <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
             {ep.published_at && (
@@ -112,16 +129,16 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
               {ep.description}
             </p>
           )}
-          {index === 0 && ep.audio_url && (
+          {ep.audio_url ? (
             <div className="mt-4">
               <PodcastAudioPlayer
-                key={ep.audio_url}
+                key={ep.id}
                 className="w-full"
                 durationSeconds={ep.duration_seconds}
                 src={ep.audio_url}
               />
             </div>
-          )}
+          ) : null}
         </li>
       ))}
     </ul>

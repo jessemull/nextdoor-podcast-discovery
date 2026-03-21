@@ -3,10 +3,13 @@
 import { ChevronUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-const SCROLL_THRESHOLD = 400;
+/** Show after scrolling past the header area (main scroll container; header is inside main). */
+const SCROLL_THRESHOLD = 140;
 
 function getScrollContainer(): Element | null {
   if (typeof document === "undefined") return null;
+  const mainScroll = document.querySelector(".podcast-main-scroll");
+  if (mainScroll) return mainScroll;
   const podcastSite = document.querySelector(".podcast-site");
   if (podcastSite) return podcastSite;
   return document.documentElement;
