@@ -2,7 +2,7 @@
 
 import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { usePodcastSearch } from "@/components/PodcastSearchProvider";
@@ -22,9 +22,9 @@ const PODCAST_NAME = "Was that a gunshot?";
 
 export function PodcastHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { handleClear, handleSearchChange, inputValue } = usePodcastSearch();
+  const { commitSearch, handleClear, handleSearchChange, inputValue } =
+    usePodcastSearch();
 
   const isHome = pathname === "/podcast" || pathname === "/";
   const isAbout = pathname === "/about";
@@ -104,12 +104,9 @@ export function PodcastHeader() {
   }, [mobileMenuOpen]);
 
   const openSearch = useCallback(() => {
-    if (!isHome) {
-      router.push("/podcast");
-    }
     setIsClosing(false);
     setIsSearchOpen(true);
-  }, [isHome, router]);
+  }, []);
 
   const handleSearchBlur = useCallback(() => {
     if (!inputValue.trim()) {
@@ -256,6 +253,11 @@ export function PodcastHeader() {
               value={inputValue}
               onBlur={handleSearchBlur}
               onChange={handleSearchChange}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                commitSearch(event.currentTarget.value);
+              }}
             />
             {inputValue ? (
               <button

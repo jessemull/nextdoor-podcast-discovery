@@ -7,7 +7,8 @@ import { usePodcastSearch } from "@/components/PodcastSearchProvider";
 import { playfair } from "@/lib/fonts";
 
 export function PodcastMobileEpisodeSearch() {
-  const { handleClear, handleSearchChange, inputValue } = usePodcastSearch();
+  const { commitSearch, handleClear, handleSearchChange, inputValue } =
+    usePodcastSearch();
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -31,6 +32,11 @@ export function PodcastMobileEpisodeSearch() {
           type="search"
           value={inputValue}
           onChange={handleSearchChange}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            commitSearch(event.currentTarget.value);
+          }}
         />
         {inputValue ? (
           <button
