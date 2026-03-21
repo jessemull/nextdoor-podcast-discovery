@@ -13,8 +13,6 @@ import {
   type SimpleIcon,
 } from "simple-icons";
 
-import { playfair } from "@/lib/fonts";
-
 interface PodcastProvider {
   href: string;
   icon: SimpleIcon;
@@ -43,7 +41,7 @@ function ProviderIcon({
   return (
     <svg
       aria-hidden
-      className="text-podcast-accent h-10 w-10 sm:h-12 sm:w-12"
+      className="text-podcast-accent h-9 w-9 scale-125 sm:h-10 sm:w-10"
       fill="currentColor"
       role="img"
       viewBox="0 0 24 24"
@@ -56,21 +54,16 @@ function ProviderIcon({
 
 export function PodcastSubscribeGrid() {
   return (
-    <div className="mx-auto grid justify-center gap-4 [grid-template-columns:repeat(3,6rem)] sm:[grid-template-columns:repeat(5,6rem)] lg:[grid-template-columns:repeat(9,6rem)]">
+    <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-x-1 gap-y-4">
       {PROVIDERS.map((provider) => (
         <a
           key={provider.name}
           aria-label={`Open ${provider.name}`}
-          className="text-white focus-visible:ring-podcast-accent flex w-full flex-col items-center justify-start gap-2 p-1 transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2"
+          className="text-white focus-visible:ring-podcast-accent flex w-[4rem] items-center justify-center transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 sm:w-[4.25rem]"
           href={provider.href}
           onClick={(event) => event.preventDefault()}
         >
           <ProviderIcon icon={provider.icon} label={provider.name} />
-          <span
-            className={`text-podcast-foreground text-center text-xs font-medium leading-tight ${playfair.className}`}
-          >
-            {provider.name}
-          </span>
         </a>
       ))}
     </div>

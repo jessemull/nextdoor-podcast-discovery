@@ -12,13 +12,16 @@ export default function SubscribePage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 sm:px-7 md:py-14">
       <h1
-        className={`text-podcast-foreground mb-3 text-center text-4xl font-bold sm:text-5xl ${playfair.className}`}
+        className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
       >
         Subscribe
       </h1>
-      <p className="text-podcast-muted mx-auto mb-8 max-w-2xl text-center text-base sm:text-lg">
+      <p className="text-podcast-muted mx-auto mb-6 max-w-2xl text-center text-base">
         Pick your favorite podcast app.
       </p>
+      <div className="mb-8">
+        <PodcastSubscribeGrid />
+      </div>
 
       <section className="mx-auto mb-8 w-full max-w-5xl px-1 sm:px-2">
         <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
@@ -66,8 +69,6 @@ export default function SubscribePage() {
           </button>
         </form>
       </section>
-
-      <PodcastSubscribeGrid />
     </div>
   );
 }
