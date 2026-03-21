@@ -67,7 +67,7 @@ export default async function PodcastHomePage({
         desktopSearchHasMatches
           ? "md:mt-7 md:pt-6 md:pb-8"
           : desktopSearchNoMatches
-            ? "md:mt-2 md:pt-1 md:pb-8"
+            ? "md:mt-3.5 md:pt-7 md:pb-8"
             : "md:mt-8 md:py-8"
       }`}
     >
@@ -214,7 +214,7 @@ export default async function PodcastHomePage({
           desktopSearchHasMatches
             ? "md:mt-8"
             : desktopSearchNoMatches
-              ? "md:mt-2"
+              ? "md:mt-7"
               : "md:mt-[5rem]"
         }`}
       >

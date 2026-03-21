@@ -36,7 +36,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
     return (
       <div
         aria-live="polite"
-        className="flex flex-col items-center justify-center gap-4 px-4 pb-4 pt-10 text-center md:justify-start md:min-h-0 md:gap-6 md:pb-8 md:pt-2"
+        className="flex flex-col items-center justify-center gap-4 px-4 pb-4 pt-10 text-center md:justify-start md:min-h-0 md:gap-6 md:pb-8 md:pt-16"
         role="status"
       >
         <Mic
