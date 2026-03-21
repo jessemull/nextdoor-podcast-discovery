@@ -72,7 +72,7 @@ export default async function PodcastHomePage() {
           {/* Hero */}
           <section
             aria-label="Introduction"
-            className="mb-10 md:mb-0 md:flex md:h-full md:flex-col md:items-start"
+            className="mb-4 md:mb-0 md:flex md:h-full md:flex-col md:items-start"
           >
             <div className="inline-block max-w-full md:self-start">
               <h1
@@ -176,7 +176,7 @@ export default async function PodcastHomePage() {
         </div>
       </div>
       {/* Episode list (filtered by search) spans full width under hero + logo */}
-      <section aria-label="Episodes" className="mt-[5rem]">
+      <section aria-label="Episodes" className="mt-8 md:mt-[5rem]">
         <PodcastMobileEpisodeSearch />
         <PodcastEpisodeList episodes={episodes} />
       </section>
