@@ -85,9 +85,9 @@ export default async function PodcastHomePage({
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
-          className="flex w-full shrink-0 flex-col items-stretch md:h-full md:min-h-[420px] md:w-[22rem] md:items-start md:justify-end"
+          className="flex w-full shrink-0 flex-col items-stretch md:h-full md:min-h-[420px] md:w-[20.5rem] md:items-start md:justify-end"
         >
-          <div className="relative aspect-[792/1224] w-full shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[22rem]">
+          <div className="relative aspect-[792/1224] w-full shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[20.5rem]">
             <Image
               alt={PODCAST_NAME}
               className="object-contain"
@@ -112,31 +112,32 @@ export default async function PodcastHomePage({
               >
                 {PODCAST_NAME}
               </h1>
-              <p className="mb-4 text-xl text-[#9fb7c4]">
-                Breaking down the internet&apos;s weirdest neighborhood drama
-                with <strong className="text-white">Matt</strong> and{" "}
-                <strong className="text-white">Maketa Auflick</strong>.
-              </p>
-              <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4]">
-                {DESCRIPTION}
-              </p>
-              <Link
-                className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
-                href="/subscribe"
-              >
-                Subscribe
-              </Link>
-              <div className="flex flex-wrap items-center justify-between gap-4 text-lg md:mt-auto">
-                <p className="text-[#9fb7c4]">
-                  E-mail{" "}
-                  <a
-                    className="text-podcast-accent hover:underline"
-                    href="mailto:info@wasthatagunshot.com"
-                  >
-                    info@wasthatagunshot.com
-                  </a>
+              <div className="md:max-w-[34rem] md:w-full">
+                <p className="mb-4 text-xl text-[#9fb7c4]">
+                  Breaking down the internet&apos;s weirdest neighborhood drama
+                  with <strong className="text-white">Matt</strong> and{" "}
+                  <strong className="text-white">Maketa Auflick</strong>.
                 </p>
-                <div className="flex items-center gap-1.5">
+                <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4]">
+                  {DESCRIPTION}
+                </p>
+                <Link
+                  className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                  href="/subscribe"
+                >
+                  Subscribe
+                </Link>
+                <div className="flex flex-wrap items-center justify-between gap-4 text-lg md:mt-auto">
+                  <p className="text-[#9fb7c4]">
+                    E-mail{" "}
+                    <a
+                      className="text-podcast-accent hover:underline"
+                      href="mailto:info@wasthatagunshot.com"
+                    >
+                      info@wasthatagunshot.com
+                    </a>
+                  </p>
+                  <div className="flex items-center gap-1.5">
                   <a
                     aria-label="LinkedIn"
                     className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
@@ -201,6 +202,7 @@ export default async function PodcastHomePage({
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                     </svg>
                   </a>
+                  </div>
                 </div>
               </div>
             </div>
