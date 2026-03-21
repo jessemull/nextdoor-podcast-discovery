@@ -44,7 +44,7 @@ export default async function PodcastHomePage() {
   };
 
   return (
-    <div className="mx-auto mt-8 max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto mt-2 max-w-6xl px-4 pb-8 pt-3 sm:px-6 md:mt-8 md:py-8">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesJsonLd) }}
         type="application/ld+json"
