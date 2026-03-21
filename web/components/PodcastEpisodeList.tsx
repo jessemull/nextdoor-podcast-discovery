@@ -57,7 +57,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
   }
 
   return (
-    <ul className="space-y-8">
+    <ul className="space-y-9">
       {filtered.map((ep) => (
         <li key={ep.id}>
           <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
