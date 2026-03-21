@@ -11,12 +11,12 @@ interface PodcastLayoutProps {
 
 export default function PodcastLayout({ children }: PodcastLayoutProps) {
   return (
-    <div className="podcast-site flex min-h-screen flex-col overflow-y-auto">
+    <div className="podcast-site flex h-dvh flex-col overflow-y-auto overscroll-y-contain">
       <GoogleAnalytics />
-      <Suspense fallback={<header className="w-full py-4" />}>
+      <Suspense fallback={<header className="w-full shrink-0 py-4" />}>
         <PodcastHeader />
       </Suspense>
-      <main className="min-h-0 flex-1">{children}</main>
+      <main className="shrink-0">{children}</main>
       <PodcastFooter />
       <ScrollToTop />
     </div>

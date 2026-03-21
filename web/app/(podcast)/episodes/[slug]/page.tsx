@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
 import {
   getEpisodeBySlugSafe,
   getSimilarEpisodesSafe,
@@ -110,14 +111,12 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
         {/* Audio player */}
         {episode.audio_url && (
           <div className="mb-8">
-            <audio
+            <PodcastAudioPlayer
+              key={episode.audio_url}
               className="w-full"
-              controls
-              preload="metadata"
+              durationSeconds={episode.duration_seconds}
               src={episode.audio_url}
-            >
-              Your browser does not support the audio element.
-            </audio>
+            />
           </div>
         )}
 

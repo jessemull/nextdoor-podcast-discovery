@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
+import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
 import { formatDuration } from "@/lib/format-duration";
 
 import type { PodcastEpisodeSummary } from "@/lib/podcast.types";
@@ -112,15 +113,13 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
             </p>
           )}
           {index === 0 && ep.audio_url && (
-            <div className="mt-4 [accent-color:var(--podcast-accent)]">
-              <audio
+            <div className="mt-4">
+              <PodcastAudioPlayer
+                key={ep.audio_url}
                 className="w-full"
-                controls
-                preload="metadata"
+                durationSeconds={ep.duration_seconds}
                 src={ep.audio_url}
-              >
-                Your browser does not support the audio element.
-              </audio>
+              />
             </div>
           )}
         </li>
