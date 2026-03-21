@@ -167,7 +167,7 @@ export function PodcastAudioPlayer({
         <div aria-hidden className="opacity-90 shrink-0 text-podcast-accent">
           <AudioLines className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} />
         </div>
-        <div className="flex min-w-0 shrink-0 items-center justify-end gap-1">
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5">
           <button
             aria-label={muted ? "Unmute" : "Mute"}
             className="text-podcast-foreground/90 inline-flex min-h-8 min-w-6 shrink-0 items-center justify-start rounded-[8px] px-0 transition-colors hover:text-podcast-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-podcast-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#121212]"
