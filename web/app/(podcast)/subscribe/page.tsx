@@ -11,23 +11,11 @@ export const metadata: Metadata = {
 export default function SubscribePage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 sm:px-7 md:py-14">
-      <h1
-        className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
-      >
-        Subscribe
-      </h1>
-      <p className="text-podcast-muted mx-auto mb-6 max-w-2xl text-center text-base">
-        Pick your favorite podcast app.
-      </p>
-      <div className="mb-8">
-        <PodcastSubscribeGrid />
-      </div>
-
-      <section className="mx-auto mb-8 w-full max-w-5xl px-1 sm:px-2">
+      <section className="mx-auto mb-14 w-full max-w-5xl px-1 sm:px-2">
         <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
           Join Our Email List
         </h2>
-        <p className="text-podcast-muted mb-5 text-center text-base">
+        <p className="text-podcast-muted mb-8 text-center text-base">
           Get new episodes delivered to your inbox every Friday.
         </p>
         <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.6fr] lg:gap-3">
@@ -69,6 +57,18 @@ export default function SubscribePage() {
           </button>
         </form>
       </section>
+
+      <h1
+        className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
+      >
+        Subscribe
+      </h1>
+      <p className="text-podcast-muted mx-auto mb-9 max-w-2xl text-center text-base">
+        Pick your favorite podcast app.
+      </p>
+      <div className="mb-12">
+        <PodcastSubscribeGrid />
+      </div>
     </div>
   );
 }

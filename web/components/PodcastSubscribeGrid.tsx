@@ -54,12 +54,12 @@ function ProviderIcon({
 
 export function PodcastSubscribeGrid() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-x-1 gap-y-4">
+    <div className="mx-auto flex w-fit max-w-full flex-nowrap justify-center gap-x-2 overflow-x-auto pb-1">
       {PROVIDERS.map((provider) => (
         <a
           key={provider.name}
           aria-label={`Open ${provider.name}`}
-          className="text-white focus-visible:ring-podcast-accent flex w-[4rem] items-center justify-center transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 sm:w-[4.25rem]"
+          className="text-white focus-visible:ring-podcast-accent flex w-[4rem] shrink-0 items-center justify-center transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 sm:w-[4.25rem]"
           href={provider.href}
           onClick={(event) => event.preventDefault()}
         >
