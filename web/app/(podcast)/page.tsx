@@ -52,15 +52,15 @@ export default async function PodcastHomePage() {
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
-          className="flex shrink-0 flex-col items-center md:h-full md:min-h-[420px] md:w-[20rem] md:items-start md:justify-end"
+          className="flex shrink-0 flex-col items-center md:h-full md:min-h-[420px] md:w-[22rem] md:items-start md:justify-end"
         >
-          <div className="relative aspect-[792/1224] w-72 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent bg-podcast-accent md:w-[20rem]">
+          <div className="relative aspect-[792/1224] w-80 shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[22rem]">
             <Image
               alt={PODCAST_NAME}
               className="object-contain"
               fill
               priority
-              sizes="(max-width: 768px) 288px, 320px"
+              sizes="(max-width: 768px) 320px, 352px"
               src="/logo.png"
             />
           </div>
