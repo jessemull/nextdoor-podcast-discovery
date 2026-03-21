@@ -15,7 +15,7 @@ export default async function CategoriesPage() {
   const categories = await getPodcastCategoriesSafe();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
       <h1 className="text-foreground mb-6 text-2xl font-bold">Categories</h1>
       {categories.length > 0 ? (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -28,7 +28,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const categoryName = slug.replace(/-/g, " ");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
       <nav aria-label="Breadcrumb" className="text-muted mb-4 text-sm">
         <Link className="hover:text-foreground" href="/categories">
           Categories

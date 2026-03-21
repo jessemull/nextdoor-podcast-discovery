@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function SubscribePage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-2xl px-5 py-12 sm:px-7">
       <h1 className="text-foreground mb-6 text-2xl font-bold">Subscribe</h1>
       <p className="text-muted mb-6">
         Subscribe on your favorite platform. Links to Apple Podcasts, Spotify,

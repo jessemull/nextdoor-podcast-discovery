@@ -5,7 +5,7 @@ export function PodcastFooter() {
 
   return (
     <footer className="border-border bg-surface mt-auto shrink-0 border-t">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-6 sm:flex-row sm:px-7">
         <p className="text-podcast-muted text-sm">
           &copy; {currentYear} Was that a gunshot?
         </p>

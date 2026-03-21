@@ -24,7 +24,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     : [];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
       <h1 className="text-foreground mb-6 text-2xl font-bold">Search</h1>
       <p className="text-muted mb-6 text-sm">
         Use the search box in the header, or add <code className="rounded bg-surface-hover px-1 py-0.5">?q=...</code> to

@@ -73,7 +73,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(episodeJsonLd) }}
         type="application/ld+json"
