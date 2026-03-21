@@ -79,9 +79,16 @@ export default async function PodcastHomePage({
         className={
           hasDesktopSearch
             ? "flex flex-col gap-8 md:hidden"
-            : "flex flex-col gap-8 md:flex-row md:items-stretch md:gap-10"
+            : "w-full"
         }
       >
+        <div
+          className={
+            hasDesktopSearch
+              ? "contents"
+              : "flex w-full flex-col gap-8 md:mx-auto md:w-fit md:max-w-full md:flex-row md:items-stretch md:gap-10"
+          }
+        >
         {/* Left column: logo — rectangle, no clipping, height spans hero */}
         <aside
           aria-hidden
@@ -100,7 +107,7 @@ export default async function PodcastHomePage({
         </aside>
 
         {/* Right column: hero + copy */}
-        <div className="min-w-0 flex-1 md:max-w-2xl">
+        <div className="min-w-0 w-full md:w-auto md:max-w-2xl">
           {/* Hero */}
           <section
             aria-label="Introduction"
@@ -207,6 +214,7 @@ export default async function PodcastHomePage({
               </div>
             </div>
           </section>
+        </div>
         </div>
       </div>
       {/* Episode list (filtered by search) spans full width under hero + logo */}
