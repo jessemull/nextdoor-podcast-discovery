@@ -56,23 +56,21 @@ function ProviderIcon({
 
 export function PodcastSubscribeGrid() {
   return (
-    <div className="mx-auto grid justify-center gap-4 [grid-template-columns:repeat(2,9.5rem)] sm:[grid-template-columns:repeat(3,10rem)] lg:[grid-template-columns:repeat(4,10rem)]">
+    <div className="mx-auto grid justify-center gap-4 [grid-template-columns:repeat(3,6rem)] sm:[grid-template-columns:repeat(5,6rem)] lg:[grid-template-columns:repeat(9,6rem)]">
       {PROVIDERS.map((provider) => (
         <a
           key={provider.name}
           aria-label={`Open ${provider.name}`}
-          className="bg-surface/30 text-white hover:bg-surface/50 focus-visible:ring-podcast-accent flex aspect-square w-full items-center justify-center rounded-2xl border border-white p-3 transition-colors focus:outline-none focus-visible:ring-2"
+          className="text-white focus-visible:ring-podcast-accent flex w-full flex-col items-center justify-start gap-2 p-1 transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2"
           href={provider.href}
           onClick={(event) => event.preventDefault()}
         >
-          <div className="flex flex-col items-center gap-3 text-center">
-            <ProviderIcon icon={provider.icon} label={provider.name} />
-            <span
-              className={`text-podcast-foreground text-sm font-medium sm:text-base ${playfair.className}`}
-            >
-              {provider.name}
-            </span>
-          </div>
+          <ProviderIcon icon={provider.icon} label={provider.name} />
+          <span
+            className={`text-podcast-foreground text-center text-xs font-medium leading-tight ${playfair.className}`}
+          >
+            {provider.name}
+          </span>
         </a>
       ))}
     </div>
