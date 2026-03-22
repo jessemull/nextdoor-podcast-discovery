@@ -46,14 +46,14 @@ export default function SubscribePage() {
             Email
           </label>
           <input
-            className={subscribeInputClassName}
+            className={`${subscribeInputClassName} sm:col-span-2 lg:col-span-1`}
             id="subscribe-email"
             name="email"
             placeholder="Email address"
             type="email"
           />
           <button
-            className="inline-flex w-full items-center justify-center rounded-[5px] bg-podcast-accent px-8 py-3 text-base font-semibold text-black transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-podcast-accent"
+            className="inline-flex w-full items-center justify-center rounded-[5px] bg-podcast-accent px-8 py-3 text-base font-semibold text-black transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-podcast-accent sm:col-span-2 lg:col-span-1"
             type="button"
           >
             Subscribe
