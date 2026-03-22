@@ -34,7 +34,7 @@ export default function AboutPage() {
     <div className="mx-auto max-w-6xl px-5 pt-10 pb-16 sm:px-7 md:pt-14 md:pb-24">
       <div className="mx-auto flex w-full max-w-full flex-col md:w-max">
         <header className="mb-12 md:mb-16">
-          <p className="text-podcast-accent mb-3 text-base font-semibold uppercase tracking-widest">
+          <p className="text-podcast-accent mb-2 text-base font-semibold uppercase tracking-widest md:mb-3">
             The hosts
           </p>
           <h1
