@@ -168,7 +168,7 @@ export default async function PodcastHomePage({
       ? "contents"
       : [
           "flex w-full flex-col gap-8",
-          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-start md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-8",
+          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-start md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-4",
           "min-[990px]:mx-auto min-[990px]:flex min-[990px]:w-fit min-[990px]:max-w-full min-[990px]:flex-row min-[990px]:items-stretch min-[990px]:gap-10",
         ].join(" ");
 
@@ -195,7 +195,7 @@ export default async function PodcastHomePage({
       >
         <div className={heroInnerClass}>
           <h1
-            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-8 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[990px]:hidden ${playfair.className}`}
+            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-5 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[990px]:hidden ${playfair.className}`}
           >
             {PODCAST_NAME}
           </h1>
@@ -230,21 +230,21 @@ export default async function PodcastHomePage({
                   {PODCAST_NAME}
                 </h1>
                 <div className="min-[990px]:max-w-[34rem] min-[990px]:w-full">
-                  <p className="mb-4 text-xl text-[#9fb7c4]">
+                  <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3">
                     Breaking down the internet&apos;s weirdest neighborhood drama
                     with <strong className="text-white">Matt</strong> and{" "}
                     <strong className="text-white">Maketa Auflick</strong>.
                   </p>
-                  <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4]">
+                  <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4">
                     {DESCRIPTION}
                   </p>
                   <Link
-                    className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                    className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)] md:max-[989px]:mb-3"
                     href="/subscribe"
                   >
                     Subscribe
                   </Link>
-                  <div className="hidden min-[905px]:max-[989px]:mt-3 min-[905px]:max-[989px]:flex min-[905px]:max-[989px]:justify-start min-[990px]:hidden">
+                  <div className="hidden min-[905px]:max-[989px]:mt-2 min-[905px]:max-[989px]:flex min-[905px]:max-[989px]:justify-start min-[990px]:hidden">
                     <HeroSocialLinks />
                   </div>
                   <div className="md:max-[989px]:hidden min-[990px]:mt-auto">
