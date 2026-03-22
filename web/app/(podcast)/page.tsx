@@ -148,7 +148,7 @@ export default async function PodcastHomePage({
       ? "contents"
       : [
           "flex w-full flex-col gap-8",
-          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-stretch md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-8",
+          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-start md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-8",
           "min-[990px]:mx-auto min-[990px]:flex min-[990px]:w-fit min-[990px]:max-w-full min-[990px]:flex-row min-[990px]:items-stretch min-[990px]:gap-10",
         ].join(" ");
 
@@ -183,7 +183,7 @@ export default async function PodcastHomePage({
           {/* Left column: logo — rectangle, no clipping; desktop height spans hero */}
           <aside
             aria-hidden
-            className="flex w-full shrink-0 flex-col items-stretch md:w-[20.5rem] md:max-[989px]:col-start-1 md:max-[989px]:h-full md:max-[989px]:min-h-0 md:max-[989px]:row-start-2 min-[990px]:h-full min-[990px]:min-h-[420px] min-[990px]:items-start min-[990px]:justify-end"
+            className="flex w-full shrink-0 flex-col items-stretch md:w-[20.5rem] md:max-[989px]:col-start-1 md:max-[989px]:row-start-2 min-[990px]:h-full min-[990px]:min-h-[420px] min-[990px]:items-start min-[990px]:justify-end"
           >
             <div className="relative aspect-[792/1224] w-full shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[20.5rem]">
               <Image
@@ -198,18 +198,18 @@ export default async function PodcastHomePage({
           </aside>
 
           {/* Right column: copy (+ desktop title + desktop contact) */}
-          <div className="min-w-0 w-full md:max-[989px]:col-start-2 md:max-[989px]:row-start-2 md:max-[989px]:h-full md:max-[989px]:min-h-0 min-[990px]:w-auto min-[990px]:max-w-2xl">
+          <div className="min-w-0 w-full md:max-[989px]:col-start-2 md:max-[989px]:row-start-2 min-[990px]:w-auto min-[990px]:max-w-2xl">
             <section
               aria-label="Introduction"
-              className="mb-4 md:mb-0 md:max-[989px]:flex md:max-[989px]:h-full md:max-[989px]:min-h-0 md:max-[989px]:flex-col min-[990px]:flex min-[990px]:h-full min-[990px]:flex-col min-[990px]:items-start"
+              className="mb-4 md:mb-0 md:max-[989px]:block min-[990px]:flex min-[990px]:h-full min-[990px]:flex-col min-[990px]:items-start"
             >
-              <div className="inline-block max-w-full md:max-[989px]:flex md:max-[989px]:h-full md:max-[989px]:min-h-0 md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:flex-col min-[990px]:self-start">
+              <div className="inline-block max-w-full min-[990px]:self-start">
                 <h1
                   className={`text-podcast-foreground mb-4 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl min-[990px]:block ${playfair.className}`}
                 >
                   {PODCAST_NAME}
                 </h1>
-                <div className="min-[990px]:max-w-[34rem] min-[990px]:w-full md:max-[989px]:flex md:max-[989px]:min-h-0 md:max-[989px]:flex-1 md:max-[989px]:flex-col">
+                <div className="min-[990px]:max-w-[34rem] min-[990px]:w-full">
                   <p className="mb-4 text-xl text-[#9fb7c4]">
                     Breaking down the internet&apos;s weirdest neighborhood drama
                     with <strong className="text-white">Matt</strong> and{" "}
@@ -218,14 +218,12 @@ export default async function PodcastHomePage({
                   <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4]">
                     {DESCRIPTION}
                   </p>
-                  <div className="md:max-[989px]:mt-auto">
-                    <Link
-                      className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)] md:max-[989px]:mb-0"
-                      href="/subscribe"
-                    >
-                      Subscribe
-                    </Link>
-                  </div>
+                  <Link
+                    className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                    href="/subscribe"
+                  >
+                    Subscribe
+                  </Link>
                   <div className="md:max-[989px]:hidden min-[990px]:mt-auto">
                     <HeroContactRow />
                   </div>
