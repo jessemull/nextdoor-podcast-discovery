@@ -38,16 +38,19 @@ export default function AboutPage() {
             The hosts
           </p>
           <h1
-            className={`text-podcast-foreground max-w-5xl text-3xl font-semibold leading-tight sm:text-4xl ${playfair.className}`}
+            className={`text-podcast-foreground max-w-5xl text-2xl font-semibold leading-tight md:text-3xl md:leading-tight lg:text-4xl ${playfair.className}`}
           >
-            <span className="block sm:whitespace-nowrap">
-              Meet the voices behind the neighborhood
+            <span className="md:hidden">Meet the hosts</span>
+            <span className="hidden md:block">
+              <span className="block md:whitespace-nowrap">
+                Meet the voices behind the neighborhood
+              </span>
+              <span className="block">stories</span>
             </span>
-            <span className="block">stories</span>
           </h1>
         </header>
 
-        <div className="flex flex-col items-center gap-10 md:flex-row md:items-start md:justify-start md:gap-5">
+        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-start md:gap-5">
         {HOSTS.map((host) => {
           const headingId = `host-${host.name.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -55,14 +58,14 @@ export default function AboutPage() {
             <article
               key={host.name}
               aria-labelledby={headingId}
-              className="mx-auto w-[64%] max-w-[19.2rem] shrink-0 sm:max-w-[22.4rem] md:mx-0"
+              className="w-full shrink-0 md:max-w-[19.2rem] lg:max-w-[22.4rem]"
             >
               <div className="relative mb-3 aspect-[3/4] w-full overflow-hidden rounded-3xl border border-podcast-accent">
                 <Image
                   alt={`Portrait of ${host.name}`}
                   className="object-cover"
                   fill
-                  sizes="(max-width: 768px) 56vw, 30vw"
+                  sizes="(max-width: 768px) 100vw, 30vw"
                   src={host.imageSrc}
                 />
               </div>
