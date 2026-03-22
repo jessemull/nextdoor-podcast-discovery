@@ -24,14 +24,6 @@ function HeroContactRow() {
   );
 }
 
-function HeroContactRowEmailOnly() {
-  return (
-    <div className="flex flex-wrap items-center gap-4 text-lg">
-      <HeroEmailLine />
-    </div>
-  );
-}
-
 function HeroEmailLine() {
   return (
     <p className="text-[#9fb7c4]">
@@ -168,7 +160,7 @@ export default async function PodcastHomePage({
       ? "contents"
       : [
           "flex w-full flex-col gap-8",
-          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-start md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-4",
+          "md:max-[989px]:grid md:max-[989px]:w-full md:max-[989px]:max-w-full md:max-[989px]:grid-cols-[minmax(0,20.5rem)_minmax(0,1fr)] md:max-[989px]:items-start md:max-[989px]:gap-x-10 md:max-[989px]:gap-y-4 min-[852px]:max-[989px]:gap-y-2",
           "min-[990px]:mx-auto min-[990px]:flex min-[990px]:w-fit min-[990px]:max-w-full min-[990px]:flex-row min-[990px]:items-stretch min-[990px]:gap-10",
         ].join(" ");
 
@@ -176,10 +168,10 @@ export default async function PodcastHomePage({
     <div
       className={`mx-auto mt-2 max-w-6xl px-5 pb-8 pt-3 sm:px-7 ${
         desktopSearchHasMatches
-          ? "md:mt-7 md:pt-6 md:pb-8"
+          ? "md:mt-7 md:pt-6 md:pb-8 min-[852px]:max-[989px]:mt-5 min-[852px]:max-[989px]:pt-5"
           : desktopSearchNoMatches
-            ? "md:mt-3.5 md:pt-7 md:pb-8"
-            : "md:mt-8 md:py-8"
+            ? "md:mt-3.5 md:pt-7 md:pb-8 min-[852px]:max-[989px]:mt-3 min-[852px]:max-[989px]:pt-6"
+            : "md:mt-8 md:py-8 min-[852px]:max-[989px]:mt-6 min-[852px]:max-[989px]:pt-6"
       }`}
     >
       <script
@@ -195,7 +187,7 @@ export default async function PodcastHomePage({
       >
         <div className={heroInnerClass}>
           <h1
-            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-5 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[990px]:hidden ${playfair.className}`}
+            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-5 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[852px]:max-[989px]:mb-3 min-[990px]:hidden ${playfair.className}`}
           >
             {PODCAST_NAME}
           </h1>
@@ -223,19 +215,19 @@ export default async function PodcastHomePage({
               aria-label="Introduction"
               className="mb-4 md:mb-0 md:max-[989px]:block min-[990px]:flex min-[990px]:h-full min-[990px]:flex-col min-[990px]:items-start"
             >
-              <div className="inline-block max-w-full min-[990px]:self-start">
+              <div className="inline-block max-w-full md:max-[989px]:block md:max-[989px]:w-full min-[990px]:self-start">
                 <h1
                   className={`text-podcast-foreground mb-4 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl min-[990px]:block ${playfair.className}`}
                 >
                   {PODCAST_NAME}
                 </h1>
-                <div className="min-[990px]:max-w-[34rem] min-[990px]:w-full">
-                  <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3">
+                <div className="md:max-[989px]:w-full min-[990px]:max-w-[34rem] min-[990px]:w-full">
+                  <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3 min-[852px]:max-[989px]:mb-4">
                     Breaking down the internet&apos;s weirdest neighborhood drama
                     with <strong className="text-white">Matt</strong> and{" "}
                     <strong className="text-white">Maketa Auflick</strong>.
                   </p>
-                  <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4">
+                  <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4 min-[852px]:max-[989px]:mb-6">
                     {DESCRIPTION}
                   </p>
                   <Link
@@ -244,8 +236,9 @@ export default async function PodcastHomePage({
                   >
                     Subscribe
                   </Link>
-                  <div className="hidden min-[905px]:max-[989px]:mt-2 min-[905px]:max-[989px]:flex min-[905px]:max-[989px]:justify-start min-[990px]:hidden">
+                  <div className="hidden min-[852px]:max-[989px]:mt-2 min-[852px]:max-[989px]:flex min-[852px]:max-[989px]:flex-col min-[852px]:max-[989px]:items-center min-[852px]:max-[989px]:gap-3 min-[852px]:max-[989px]:text-center min-[852px]:max-[989px]:w-full min-[990px]:hidden">
                     <HeroSocialLinks />
+                    <HeroEmailLine />
                   </div>
                   <div className="md:max-[989px]:hidden min-[990px]:mt-auto">
                     <HeroContactRow />
@@ -255,13 +248,8 @@ export default async function PodcastHomePage({
             </section>
           </div>
 
-          <div className="max-md:hidden w-full md:max-[989px]:col-span-2 md:max-[989px]:row-start-3 md:max-[989px]:block min-[990px]:hidden">
-            <div className="hidden md:max-[989px]:max-[904px]:block">
-              <HeroContactRow />
-            </div>
-            <div className="hidden md:max-[989px]:min-[905px]:block">
-              <HeroContactRowEmailOnly />
-            </div>
+          <div className="hidden w-full md:max-[989px]:col-span-2 md:max-[989px]:row-start-3 md:max-[989px]:max-[851px]:block min-[990px]:hidden">
+            <HeroContactRow />
           </div>
         </div>
       </div>
