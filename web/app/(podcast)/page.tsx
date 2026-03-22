@@ -168,10 +168,10 @@ export default async function PodcastHomePage({
     <div
       className={`mx-auto mt-2 max-w-6xl px-5 pb-8 pt-3 sm:px-7 ${
         desktopSearchHasMatches
-          ? "md:mt-7 md:pt-6 md:pb-8 min-[852px]:max-[989px]:mt-4 min-[852px]:max-[989px]:pt-4"
+          ? "md:mt-7 md:pt-6 md:pb-8 md:max-[989px]:mt-4 md:max-[989px]:pt-4"
           : desktopSearchNoMatches
-            ? "md:mt-3.5 md:pt-7 md:pb-8 min-[852px]:max-[989px]:mt-2 min-[852px]:max-[989px]:pt-5"
-            : "md:mt-8 md:py-8 min-[852px]:max-[989px]:mt-5 min-[852px]:max-[989px]:pt-5"
+            ? "md:mt-3.5 md:pt-7 md:pb-8 md:max-[989px]:mt-2 md:max-[989px]:pt-5"
+            : "md:mt-8 md:py-8 md:max-[989px]:mt-5 md:max-[989px]:pt-5"
       }`}
     >
       <script
@@ -187,7 +187,7 @@ export default async function PodcastHomePage({
       >
         <div className={heroInnerClass}>
           <h1
-            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-5 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[852px]:max-[989px]:mb-11 min-[990px]:hidden ${playfair.className}`}
+            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-11 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[990px]:hidden ${playfair.className}`}
           >
             {PODCAST_NAME}
           </h1>
