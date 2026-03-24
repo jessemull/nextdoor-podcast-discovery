@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
+import { formatDuration } from "@/lib/format-duration";
 import {
   getEpisodeBySlugSafe,
   getSimilarEpisodesSafe,
@@ -73,44 +74,74 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
+    <div className="mx-auto max-w-6xl px-5 pb-12 pt-8 sm:px-7 sm:pt-12">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(episodeJsonLd) }}
         type="application/ld+json"
       />
       <article>
         {/* Hero */}
-        <header className="mb-8">
-          {episode.image_url && (
-            <div className="relative mb-4 aspect-video overflow-hidden rounded-lg">
-              <Image
-                alt=""
-                className="object-cover"
-                fill
-                sizes="(max-width: 768px) 100vw, 800px"
-                src={episode.image_url}
-                unoptimized
-              />
-            </div>
-          )}
-          <h1 className="text-foreground mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
+        <header>
+          <h1 className="text-podcast-foreground block pb-3 text-4xl font-bold">
             {episode.title}
           </h1>
-          <div className="text-muted flex flex-wrap gap-3 text-sm">
+          <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
             {episode.published_at && (
-              <time dateTime={episode.published_at}>
-                {new Date(episode.published_at).toLocaleDateString()}
-              </time>
+              <span className="flex items-center gap-1.5">
+                <svg
+                  aria-hidden
+                  className="text-podcast-accent h-4 w-4 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <time dateTime={episode.published_at}>
+                  {new Date(episode.published_at).toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </time>
+              </span>
             )}
             {episode.duration_seconds != null && (
-              <span>{Math.floor(episode.duration_seconds / 60)} min</span>
+              <span className="flex items-center gap-1.5">
+                <svg
+                  aria-hidden
+                  className="text-podcast-accent h-4 w-4 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {formatDuration(episode.duration_seconds)}
+              </span>
             )}
           </div>
         </header>
 
+        {episode.description && (
+          <p className="mt-2 whitespace-pre-wrap text-base text-[#9fb7c4]">
+            {episode.description}
+          </p>
+        )}
+
         {/* Audio player */}
         {episode.audio_url && (
-          <div className="mb-8">
+          <div className="mt-4">
             <PodcastAudioPlayer
               key={episode.audio_url}
               className="w-full"
@@ -120,29 +151,24 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           </div>
         )}
 
-        {/* Description */}
-        {episode.description && (
-          <div className="text-foreground mb-8 whitespace-pre-wrap text-base">
-            {episode.description}
+        {episode.image_url && (
+          <div className="relative mb-8 mt-8 sm:mt-12 aspect-video overflow-hidden rounded-lg">
+            <Image
+              alt=""
+              className="object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 800px"
+              src={episode.image_url}
+              unoptimized
+            />
           </div>
         )}
 
-        {/* Show notes */}
-        {episode.show_notes && (
-          <div className="mb-8">
-            <h2 className="text-foreground mb-2 text-lg font-semibold">
-              Show Notes
-            </h2>
-            <div className="text-foreground whitespace-pre-wrap text-base">
-              {episode.show_notes}
-            </div>
-          </div>
-        )}
       </article>
 
       {/* Related episodes */}
       {similar.length > 0 && (
-        <aside aria-label="Related episodes" className="mt-12 border-t border-border pt-8">
+        <aside aria-label="Related episodes" className="mt-4 sm:mt-12 border-t border-border pt-4 sm:pt-8">
           <h2 className="text-foreground mb-4 text-xl font-semibold">
             Related Episodes
           </h2>
@@ -150,7 +176,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
             {similar.map((ep) => (
               <li key={ep.id}>
                 <Link
-                  className="border-border bg-surface-hover/30 flex gap-3 rounded-lg border p-3 transition-colors hover:border-border-focus"
+                  className="bg-surface-hover/30 flex gap-3 rounded-lg border border-podcast-accent p-3 transition-colors hover:bg-surface-hover/50 hover:border-podcast-accent"
                   href={`/episodes/${ep.slug}`}
                 >
                   {ep.image_url ? (
@@ -166,16 +192,33 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
                     <div className="bg-surface-hover h-16 w-16 shrink-0 rounded" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-foreground line-clamp-2 text-sm font-medium">
+                    <h3 className="text-podcast-foreground line-clamp-2 text-base font-bold leading-snug">
                       {ep.title}
                     </h3>
                     {ep.published_at && (
-                      <time
-                        className="text-muted text-xs"
-                        dateTime={ep.published_at}
-                      >
-                        {new Date(ep.published_at).toLocaleDateString()}
-                      </time>
+                      <div className="mt-1 flex items-center gap-1.5 text-sm text-white">
+                        <svg
+                          aria-hidden
+                          className="text-podcast-accent h-4 w-4 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <time dateTime={ep.published_at}>
+                          {new Date(ep.published_at).toLocaleDateString("en-US", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </time>
+                      </div>
                     )}
                   </div>
                 </Link>
