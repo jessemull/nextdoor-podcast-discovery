@@ -141,6 +141,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     update.audio_url = typeof body.audio_url === "string" ? body.audio_url : null;
   if (body.image_url !== undefined)
     update.image_url = typeof body.image_url === "string" ? body.image_url : null;
+  if (body.image_description !== undefined)
+    update.image_description =
+      typeof body.image_description === "string"
+        ? body.image_description.trim() || null
+        : null;
   if (copyAudioUrl !== undefined) update.audio_url = copyAudioUrl;
   if (copyImageUrl !== undefined) update.image_url = copyImageUrl;
   if (audioStoragePath !== undefined) update.audio_storage_path = audioStoragePath;

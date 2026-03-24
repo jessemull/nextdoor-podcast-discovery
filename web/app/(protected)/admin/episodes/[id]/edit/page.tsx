@@ -32,6 +32,7 @@ interface Episode {
   audio_storage_path: string | null;
   image_storage_path: string | null;
   duration_seconds: number | null;
+  image_description: string | null;
   order_index: number;
 }
 
@@ -61,6 +62,7 @@ export default function EditEpisodePage() {
   const [audioDisplayUrl, setAudioDisplayUrl] = useState<string | null>(null);
   const [imageStoragePath, setImageStoragePath] = useState("");
   const [imageDisplayUrl, setImageDisplayUrl] = useState<string | null>(null);
+  const [imageDescription, setImageDescription] = useState("");
   const [durationSeconds, setDurationSeconds] = useState("");
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -90,6 +92,7 @@ export default function EditEpisodePage() {
           setPublishedAt(toDatetimeLocal(data.published_at));
           setAudioStoragePath(data.audio_storage_path ?? "");
           setImageStoragePath(data.image_storage_path ?? "");
+          setImageDescription(data.image_description ?? "");
           setDurationSeconds(
             data.duration_seconds != null ? String(data.duration_seconds) : ""
           );
@@ -133,6 +136,7 @@ export default function EditEpisodePage() {
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
             : null,
+          image_description: imageDescription || null,
           image_storage_path: imageStoragePath || null,
           show_notes: showNotes || null,
           slug: slug || title.toLowerCase().replace(/\s+/g, "-"),
@@ -166,6 +170,7 @@ export default function EditEpisodePage() {
     audioStoragePath,
     description,
     durationSeconds,
+    imageDescription,
     imageStoragePath,
     showNotes,
     slug,
@@ -184,6 +189,7 @@ export default function EditEpisodePage() {
       (slug || title.toLowerCase().replace(/\s+/g, "-")) !==
         (episode.slug ?? "").toLowerCase().replace(/\s+/g, "-") ||
       (description || null) !== (episode.description ?? null) ||
+      (imageDescription || null) !== (episode.image_description ?? null) ||
       (showNotes || null) !== (episode.show_notes ?? null) ||
       status !== (episode.status === "published" ? "published" : "draft") ||
       (audioStoragePath || null) !== (episode.audio_storage_path ?? null) ||
@@ -558,6 +564,18 @@ export default function EditEpisodePage() {
               }}
               />
             </div>
+          </div>
+          <div>
+            <label className={labelClass} style={labelStyle}>
+              Image Description
+            </label>
+            <textarea
+              className={inputClass}
+              placeholder="Please enter an image description..."
+              rows={2}
+              value={imageDescription}
+              onChange={(e) => setImageDescription(e.target.value)}
+            />
           </div>
           <div>
             <label className={labelClass} style={labelStyle}>

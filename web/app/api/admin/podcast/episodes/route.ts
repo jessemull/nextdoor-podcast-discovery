@@ -106,6 +106,10 @@ export async function POST(request: NextRequest) {
     typeof body.image_storage_path === "string"
       ? body.image_storage_path.trim() || null
       : null;
+  const imageDescription =
+    typeof body.image_description === "string"
+      ? body.image_description.trim() || null
+      : null;
 
   let audioUrl: string | null = null;
   let imageUrl: string | null = null;
@@ -155,6 +159,7 @@ export async function POST(request: NextRequest) {
     duration_seconds:
       typeof body.duration_seconds === "number" ? body.duration_seconds : null,
     image_storage_path: imageStoragePath,
+    image_description: imageDescription,
     image_url: imageUrl,
     order_index: typeof body.order_index === "number" ? body.order_index : 0,
     published_at: publishedAt,

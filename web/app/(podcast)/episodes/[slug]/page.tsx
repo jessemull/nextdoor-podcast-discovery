@@ -28,7 +28,14 @@ export async function generateMetadata({
     description: episode.description ?? undefined,
     openGraph: {
       description: episode.description ?? undefined,
-      images: episode.image_url ? [episode.image_url] : undefined,
+      images: episode.image_url
+        ? [
+            {
+              alt: episode.image_description ?? undefined,
+              url: episode.image_url,
+            },
+          ]
+        : undefined,
       title: episode.title,
       type: "article",
     },
@@ -154,7 +161,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
         {episode.image_url && (
           <div className="relative mb-8 mt-8 sm:mt-12 aspect-video overflow-hidden rounded-lg">
             <Image
-              alt=""
+              alt={episode.image_description ?? ""}
               className="object-cover"
               fill
               sizes="(max-width: 768px) 100vw, 800px"
@@ -162,6 +169,11 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
               unoptimized
             />
           </div>
+        )}
+        {episode.image_description && (
+          <p className="text-podcast-muted mb-8 -mt-4 text-sm">
+            {episode.image_description}
+          </p>
         )}
 
       </article>

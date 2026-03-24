@@ -9,6 +9,7 @@ export interface PodcastEpisode {
   description: string | null;
   duration_seconds: number | null;
   id: string;
+  image_description: string | null;
   image_storage_path: string | null;
   image_url: string | null;
   published_at: string | null;

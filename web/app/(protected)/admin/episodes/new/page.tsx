@@ -29,6 +29,7 @@ export default function NewEpisodePage() {
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [imageStoragePath, setImageStoragePath] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageDescription, setImageDescription] = useState("");
   const [durationSeconds, setDurationSeconds] = useState("");
   const [showNotes, setShowNotes] = useState("");
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -46,6 +47,7 @@ export default function NewEpisodePage() {
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
             : null,
+          image_description: imageDescription || null,
           image_storage_path: imageStoragePath || null,
           show_notes: showNotes || null,
           slug: title.trim().toLowerCase().replace(/\s+/g, "-"),
@@ -77,6 +79,7 @@ export default function NewEpisodePage() {
     audioStoragePath,
     description,
     durationSeconds,
+    imageDescription,
     imageStoragePath,
     showNotes,
     status,
@@ -92,6 +95,7 @@ export default function NewEpisodePage() {
     status !== "draft" ||
     audioStoragePath !== "" ||
     imageStoragePath !== "" ||
+    imageDescription.trim() !== "" ||
     durationSeconds.trim() !== "";
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -329,6 +333,19 @@ export default function NewEpisodePage() {
               }}
               />
             </div>
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="new-ep-image-description" style={labelStyle}>
+              Image Description
+            </label>
+            <textarea
+              className={inputClass}
+              id="new-ep-image-description"
+              placeholder="Please enter an image description..."
+              rows={2}
+              value={imageDescription}
+              onChange={(e) => setImageDescription(e.target.value)}
+            />
           </div>
           <div>
             <label className={labelClass} htmlFor="new-ep-duration" style={labelStyle}>
