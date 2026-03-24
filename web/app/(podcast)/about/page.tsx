@@ -33,14 +33,14 @@ export default function AboutPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 pt-10 pb-16 sm:px-7 md:pt-14 md:pb-24">
       <div className="mx-auto flex w-full max-w-full flex-col md:w-max">
-        <header className="mb-12 md:mb-16">
-          <p className="text-podcast-accent mb-2 text-base font-semibold uppercase tracking-widest md:mb-3">
+        <header className="mb-10 md:mb-16">
+          <p className="text-podcast-accent mb-1 text-base font-semibold uppercase tracking-widest md:mb-3">
             The hosts
           </p>
           <h1
             className={`text-podcast-foreground max-w-5xl text-2xl font-semibold leading-tight md:text-3xl md:leading-tight lg:text-4xl ${playfair.className}`}
           >
-            <span className="md:hidden">Meet the hosts</span>
+            <span className="md:hidden">From the neighborhood</span>
             <span className="hidden md:block">
               <span className="block md:whitespace-nowrap">
                 Meet the voices behind the neighborhood
