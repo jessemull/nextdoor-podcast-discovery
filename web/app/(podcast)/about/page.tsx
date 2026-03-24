@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   description:
-    "Meet Matt and Maketa Auflick, co-hosts of Was that a gunshot? — the podcast about neighborhood drama and Nextdoor culture.",
+    "Meet Matt and Dr. Makeda Agonafer, co-hosts of Was that a gunshot? — the podcast about neighborhood drama and Nextdoor culture.",
   title: "About | Podcast",
 };
 
@@ -24,8 +24,8 @@ const HOSTS = [
       "Vestibulum lacinia arcu eget nulla class aptent taciti sociosqu ad litora torquent per conubia nostra inceptos himenaeos curabitur sodales ligula in libero sed dignissim lacinia.",
       "Nam nec ante sed lacinia urna non tincidunt mattis tortor neque. Praesent blandit dolor sed non quam in vel mi sit amet augue fringilla euismod donec tempus vulputate magna.",
     ],
-    imageSrc: "/bio-maketa.jpg",
-    name: "Maketa Auflick",
+    imageSrc: "/bio-makeda.jpg",
+    name: "Dr. Makeda Agonafer",
   },
 ];
 

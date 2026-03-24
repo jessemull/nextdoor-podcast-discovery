@@ -12,8 +12,8 @@ import type { Metadata } from "next";
 
 const PODCAST_NAME = "Was that a gunshot?";
 const TAGLINE =
-  "Breaking down the internet's weirdest neighborhood drama with Matt and Maketa Auflick.";
-const DESCRIPTION = "In neighborhoods across the country, one question echoes through the night: Was that a gunshot? Each week, Matt and Maketa take a humorous dive into the strange, suspicious, and unintentionally hilarious posts that fill Nextdoor feeds everywhere. From blurry security camera photos to debates over fireworks versus crime, they unpack the peculiar dynamics of neighborhood vigilance and the surprisingly dramatic ways we interact with the people living just down the street."
+  "Breaking down the internet's weirdest neighborhood drama with Matt Auflick and Dr. Makeda Agonafer.";
+const DESCRIPTION = "In neighborhoods across the country, one question echoes through the night: Was that a gunshot? Each week, Matt Auflick and Dr. Makeda take a humorous dive into the strange, suspicious, and unintentionally hilarious posts that fill Nextdoor feeds everywhere. From blurry security camera photos to debates over fireworks versus crime, they unpack the peculiar dynamics of neighborhood vigilance and the surprisingly dramatic ways we interact with the people living just down the street."
 
 function HeroContactRow() {
   return (
@@ -224,8 +224,8 @@ export default async function PodcastHomePage({
                 <div className="md:max-[989px]:w-full min-[990px]:max-w-[34rem] min-[990px]:w-full">
                   <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3 min-[852px]:max-[989px]:mb-4">
                     Breaking down the internet&apos;s weirdest neighborhood drama
-                    with <strong className="text-white">Matt</strong> and{" "}
-                    <strong className="text-white">Maketa Auflick</strong>.
+                    with <strong className="text-white">Matt Auflick</strong> and{" "}
+                    <strong className="text-white">Dr. Makeda Agonafer</strong>.
                   </p>
                   <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4 min-[852px]:max-[989px]:mb-6">
                     {DESCRIPTION}
