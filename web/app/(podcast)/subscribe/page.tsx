@@ -1,5 +1,6 @@
 import { PodcastSubscribeGrid } from "@/components/PodcastSubscribeGrid";
 import { playfair } from "@/lib/fonts";
+import { PODCAST_ENTRANCE_CLASS } from "@/lib/podcast-entrance-animation";
 
 import type { Metadata } from "next";
 
@@ -61,15 +62,28 @@ export default function SubscribePage() {
         </form>
       </section>
 
-      <h1
-        className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "280ms" }}
       >
-        Subscribe
-      </h1>
-      <p className="text-podcast-muted mx-auto mb-9 max-w-2xl text-center text-base">
-        Pick your favorite podcast app.
-      </p>
-      <div className="mb-12">
+        <h1
+          className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
+        >
+          Subscribe
+        </h1>
+      </div>
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "360ms" }}
+      >
+        <p className="text-podcast-muted mx-auto mb-9 max-w-2xl text-center text-base">
+          Pick your favorite podcast app.
+        </p>
+      </div>
+      <div
+        className={`mb-12 ${PODCAST_ENTRANCE_CLASS}`}
+        style={{ animationDelay: "440ms" }}
+      >
         <PodcastSubscribeGrid />
       </div>
     </div>

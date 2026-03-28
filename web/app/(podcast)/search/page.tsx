@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  PODCAST_ENTRANCE_CLASS,
+  podcastEntranceDelayMs,
+} from "@/lib/podcast-entrance-animation";
 import { searchEpisodesPublishedSafe } from "@/lib/podcast.server";
 
 import type { Metadata } from "next";
@@ -25,21 +29,42 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
-      <h1 className="text-foreground mb-6 text-2xl font-bold">Search</h1>
-      <p className="text-muted mb-6 text-sm">
-        Use the search box in the header, or add <code className="rounded bg-surface-hover px-1 py-0.5">?q=...</code> to
-        the URL to search episodes by title and description.
-      </p>
-      {query && (
-        <p className="text-muted mb-4 text-sm">
-          Results for &quot;{query}&quot;: {episodes.length} episode
-          {episodes.length !== 1 ? "s" : ""} found.
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "0ms" }}
+      >
+        <h1 className="text-foreground mb-6 text-2xl font-bold">Search</h1>
+      </div>
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "80ms" }}
+      >
+        <p className="text-muted mb-6 text-sm">
+          Use the search box in the header, or add <code className="rounded bg-surface-hover px-1 py-0.5">?q=...</code> to
+          the URL to search episodes by title and description.
         </p>
-      )}
+      </div>
+      {query ? (
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "160ms" }}
+        >
+          <p className="text-muted mb-4 text-sm">
+            Results for &quot;{query}&quot;: {episodes.length} episode
+            {episodes.length !== 1 ? "s" : ""} found.
+          </p>
+        </div>
+      ) : null}
       {query && episodes.length > 0 ? (
         <ul className="space-y-4">
-          {episodes.map((ep) => (
-            <li key={ep.id}>
+          {episodes.map((ep, index) => (
+            <li
+              key={ep.id}
+              className={PODCAST_ENTRANCE_CLASS}
+              style={{
+                animationDelay: `${podcastEntranceDelayMs(index)}ms`,
+              }}
+            >
               <Link
                 className="border-border bg-surface-hover/30 flex gap-4 rounded-lg border p-4 transition-colors hover:border-border-focus"
                 href={`/episodes/${ep.slug}`}
@@ -77,7 +102,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           ))}
         </ul>
       ) : query ? (
-        <p className="text-muted">No episodes match your search.</p>
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "200ms" }}
+        >
+          <p className="text-muted">No episodes match your search.</p>
+        </div>
       ) : null}
     </div>
   );

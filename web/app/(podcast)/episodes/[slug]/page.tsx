@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
 import { formatDuration } from "@/lib/format-duration";
 import {
+  PODCAST_ENTRANCE_CLASS,
+  podcastEntranceDelayMs,
+} from "@/lib/podcast-entrance-animation";
+import {
   getEpisodeBySlugSafe,
   getSimilarEpisodesSafe,
 } from "@/lib/podcast.server";
@@ -114,10 +118,18 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
       <article>
         {/* Hero */}
         <header>
-          <h1 className="text-podcast-foreground block pb-3 text-4xl font-bold">
-            {episode.title}
-          </h1>
-          <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
+          <div
+            className={PODCAST_ENTRANCE_CLASS}
+            style={{ animationDelay: "0ms" }}
+          >
+            <h1 className="text-podcast-foreground block pb-3 text-4xl font-bold">
+              {episode.title}
+            </h1>
+          </div>
+          <div
+            className={`mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "80ms" }}
+          >
             {episode.published_at && (
               <span className="flex items-center gap-1.5">
                 <svg
@@ -165,15 +177,23 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           </div>
         </header>
 
-        {episode.description && (
-          <p className="mt-2 whitespace-pre-wrap text-base text-[#9fb7c4]">
-            {episode.description}
-          </p>
-        )}
+        {episode.description ? (
+          <div
+            className={PODCAST_ENTRANCE_CLASS}
+            style={{ animationDelay: "160ms" }}
+          >
+            <p className="mt-2 whitespace-pre-wrap text-base text-[#9fb7c4]">
+              {episode.description}
+            </p>
+          </div>
+        ) : null}
 
         {/* Audio player */}
-        {episode.audio_url && (
-          <div className="mt-4">
+        {episode.audio_url ? (
+          <div
+            className={`mt-4 ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "240ms" }}
+          >
             <PodcastAudioPlayer
               key={episode.audio_url}
               className="w-full"
@@ -181,11 +201,14 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
               src={episode.audio_url}
             />
           </div>
-        )}
+        ) : null}
 
         {(galleryForDisplay.length > 0 ||
-          Boolean(episode.about_episode?.trim())) && (
-          <section className="mt-8 space-y-4 sm:mt-10">
+          Boolean(episode.about_episode?.trim())) ? (
+          <section
+            className={`mt-8 space-y-4 sm:mt-10 ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "300ms" }}
+          >
             <h2 className="font-bold text-3xl text-podcast-foreground tracking-tight sm:text-4xl">
               About the Episode
             </h2>
@@ -204,12 +227,18 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
                   ))
               : null}
           </section>
-        )}
+        ) : null}
 
-        {galleryForDisplay.length > 0 && (
+        {galleryForDisplay.length > 0 ? (
           <div className="mt-8 space-y-8 sm:mt-12">
-            {galleryForDisplay.map((img) => (
-              <div key={img.id}>
+            {galleryForDisplay.map((img, galleryIndex) => (
+              <div
+                key={img.id}
+                className={PODCAST_ENTRANCE_CLASS}
+                style={{
+                  animationDelay: `${podcastEntranceDelayMs(galleryIndex, { cap: 2 })}ms`,
+                }}
+              >
                 {img.image_url && (
                   <div className="relative aspect-video overflow-hidden rounded-lg">
                     <Image
@@ -230,19 +259,28 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
               </div>
             ))}
           </div>
-        )}
+        ) : null}
 
       </article>
 
       {/* Related episodes */}
       {similar.length > 0 && (
         <aside aria-label="Related episodes" className="mt-4 sm:mt-12 border-t border-border pt-4 sm:pt-8">
-          <h2 className="text-foreground mb-4 text-xl font-semibold">
+          <h2
+            className={`text-foreground mb-4 text-xl font-semibold ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "0ms" }}
+          >
             Related Episodes
           </h2>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {similar.map((ep) => (
-              <li key={ep.id}>
+            {similar.map((ep, relatedIndex) => (
+              <li
+                key={ep.id}
+                className={PODCAST_ENTRANCE_CLASS}
+                style={{
+                  animationDelay: `${podcastEntranceDelayMs(relatedIndex)}ms`,
+                }}
+              >
                 <Link
                   className="bg-surface-hover/30 group flex h-full flex-col rounded-lg border border-podcast-accent p-3 transition-colors hover:bg-surface-hover/50 hover:border-podcast-accent sm:p-3.5"
                   href={`/episodes/${ep.slug}`}

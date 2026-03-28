@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+import {
+  PODCAST_ENTRANCE_CLASS,
+  podcastEntranceDelayMs,
+} from "@/lib/podcast-entrance-animation";
 import { getPodcastCategoriesSafe } from "@/lib/podcast.server";
 
 import type { Metadata } from "next";
@@ -34,7 +38,12 @@ export default async function CategoriesPage() {
           ))}
         </ul>
       ) : (
-        <p className="text-muted">No categories yet. Check back soon.</p>
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "80ms" }}
+        >
+          <p className="text-muted">No categories yet. Check back soon.</p>
+        </div>
       )}
     </div>
   );

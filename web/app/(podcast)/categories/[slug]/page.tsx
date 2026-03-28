@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  PODCAST_ENTRANCE_CLASS,
+  podcastEntranceDelayMs,
+} from "@/lib/podcast-entrance-animation";
 import { getEpisodesByCategorySafe } from "@/lib/podcast.server";
 
 import type { Metadata } from "next";
@@ -29,20 +33,35 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
-      <nav aria-label="Breadcrumb" className="text-muted mb-4 text-sm">
+      <nav
+        aria-label="Breadcrumb"
+        className={`text-muted mb-4 text-sm ${PODCAST_ENTRANCE_CLASS}`}
+        style={{ animationDelay: "0ms" }}
+      >
         <Link className="hover:text-foreground" href="/categories">
           Categories
         </Link>
         <span className="mx-2">/</span>
         <span className="text-foreground capitalize">{categoryName}</span>
       </nav>
-      <h1 className="text-foreground mb-6 text-2xl font-bold capitalize">
-        {categoryName}
-      </h1>
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "80ms" }}
+      >
+        <h1 className="text-foreground mb-6 text-2xl font-bold capitalize">
+          {categoryName}
+        </h1>
+      </div>
       {episodes.length > 0 ? (
         <ul className="space-y-4">
-          {episodes.map((ep) => (
-            <li key={ep.id}>
+          {episodes.map((ep, index) => (
+            <li
+              key={ep.id}
+              className={PODCAST_ENTRANCE_CLASS}
+              style={{
+                animationDelay: `${podcastEntranceDelayMs(index)}ms`,
+              }}
+            >
               <Link
                 className="border-border bg-surface-hover/30 flex gap-4 rounded-lg border p-4 transition-colors hover:border-border-focus"
                 href={`/episodes/${ep.slug}`}

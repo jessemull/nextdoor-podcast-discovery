@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PodcastEpisodeList } from "@/components/PodcastEpisodeList";
 import { PodcastMobileEpisodeSearch } from "@/components/PodcastMobileEpisodeSearch";
 import { playfair } from "@/lib/fonts";
+import { PODCAST_ENTRANCE_CLASS } from "@/lib/podcast-entrance-animation";
 import { filterPodcastEpisodesByQuery } from "@/lib/podcast-filter";
 import { getEpisodesPublishedSafe } from "@/lib/podcast.server";
 import { siteBaseUrl } from "@/lib/site-url.server";
@@ -186,26 +187,36 @@ export default async function PodcastHomePage({
         }
       >
         <div className={heroInnerClass}>
-          <h1
-            className={`text-podcast-foreground m-0 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-11 md:max-[989px]:block md:max-[989px]:w-full md:max-[989px]:text-center min-[990px]:hidden ${playfair.className}`}
+          <div
+            className={`hidden md:max-[989px]:col-span-2 md:max-[989px]:row-start-1 md:max-[989px]:mb-11 md:max-[989px]:block md:max-[989px]:w-full min-[990px]:hidden ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "100ms" }}
           >
-            {PODCAST_NAME}
-          </h1>
+            <h1
+              className={`text-podcast-foreground m-0 block w-full max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl md:max-[989px]:text-center ${playfair.className}`}
+            >
+              {PODCAST_NAME}
+            </h1>
+          </div>
 
           {/* Left column: logo — rectangle, no clipping; desktop height spans hero */}
           <aside
             aria-hidden
             className="flex w-full shrink-0 flex-col items-stretch md:w-[20.5rem] md:max-[989px]:col-start-1 md:max-[989px]:row-start-2 min-[990px]:h-full min-[990px]:min-h-[420px] min-[990px]:items-start min-[990px]:justify-end"
           >
-            <div className="relative aspect-[792/1224] w-full shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[20.5rem]">
-              <Image
-                alt={PODCAST_NAME}
-                className="object-contain"
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 352px"
-                src="/logo.png"
-              />
+            <div
+              className={`w-full shrink-0 min-[990px]:w-full ${PODCAST_ENTRANCE_CLASS}`}
+              style={{ animationDelay: "0ms" }}
+            >
+              <div className="relative aspect-[792/1224] w-full shrink-0 overflow-hidden rounded-3xl border border-podcast-accent md:w-[20.5rem]">
+                <Image
+                  alt={PODCAST_NAME}
+                  className="object-contain"
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 352px"
+                  src="/logo.png"
+                />
+              </div>
             </div>
           </aside>
 
@@ -216,31 +227,57 @@ export default async function PodcastHomePage({
               className="mb-4 md:mb-0 md:max-[989px]:block min-[990px]:flex min-[990px]:h-full min-[990px]:flex-col min-[990px]:items-start"
             >
               <div className="inline-block max-w-full md:max-[989px]:block md:max-[989px]:w-full min-[990px]:self-start">
-                <h1
-                  className={`text-podcast-foreground mb-4 hidden max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl min-[990px]:block ${playfair.className}`}
+                <div
+                  className={`mb-4 hidden min-[990px]:block ${PODCAST_ENTRANCE_CLASS}`}
+                  style={{ animationDelay: "100ms" }}
                 >
-                  {PODCAST_NAME}
-                </h1>
-                <div className="md:max-[989px]:w-full min-[990px]:max-w-[34rem] min-[990px]:w-full">
-                  <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3 min-[852px]:max-[989px]:mb-4">
-                    Breaking down the internet&apos;s weirdest neighborhood drama
-                    with <strong className="text-white">Matt Auflick</strong> and{" "}
-                    <strong className="text-white">Dr. Makeda Agonafer</strong>.
-                  </p>
-                  <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4 min-[852px]:max-[989px]:mb-6">
-                    {DESCRIPTION}
-                  </p>
-                  <Link
-                    className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)] md:max-[989px]:mb-3"
-                    href="/subscribe"
+                  <h1
+                    className={`text-podcast-foreground m-0 max-w-full break-words text-5xl font-bold tracking-tight sm:text-6xl ${playfair.className}`}
                   >
-                    Subscribe
-                  </Link>
-                  <div className="hidden min-[852px]:max-[989px]:mt-2 min-[852px]:max-[989px]:flex min-[852px]:max-[989px]:flex-col min-[852px]:max-[989px]:items-center min-[852px]:max-[989px]:gap-3 min-[852px]:max-[989px]:text-center min-[852px]:max-[989px]:w-full min-[990px]:hidden">
+                    {PODCAST_NAME}
+                  </h1>
+                </div>
+                <div className="md:max-[989px]:w-full min-[990px]:max-w-[34rem] min-[990px]:w-full">
+                  <div
+                    className={PODCAST_ENTRANCE_CLASS}
+                    style={{ animationDelay: "200ms" }}
+                  >
+                    <p className="mb-4 text-xl text-[#9fb7c4] md:max-[989px]:mb-3 min-[852px]:max-[989px]:mb-4">
+                      Breaking down the internet&apos;s weirdest neighborhood drama
+                      with <strong className="text-white">Matt Auflick</strong> and{" "}
+                      <strong className="text-white">Dr. Makeda Agonafer</strong>.
+                    </p>
+                  </div>
+                  <div
+                    className={PODCAST_ENTRANCE_CLASS}
+                    style={{ animationDelay: "350ms" }}
+                  >
+                    <p className="mb-6 text-lg leading-relaxed text-[#9fb7c4] md:max-[989px]:mb-4 min-[852px]:max-[989px]:mb-6">
+                      {DESCRIPTION}
+                    </p>
+                  </div>
+                  <div
+                    className={PODCAST_ENTRANCE_CLASS}
+                    style={{ animationDelay: "500ms" }}
+                  >
+                    <Link
+                      className="mb-5 inline-flex w-full items-center justify-center rounded-full border border-podcast-accent px-10 py-3 text-base font-medium text-podcast-accent transition-colors hover:bg-podcast-accent hover:text-black active:bg-podcast-accent active:text-black focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)] md:max-[989px]:mb-3"
+                      href="/subscribe"
+                    >
+                      Subscribe
+                    </Link>
+                  </div>
+                  <div
+                    className={`hidden min-[852px]:max-[989px]:mt-2 min-[852px]:max-[989px]:flex min-[852px]:max-[989px]:flex-col min-[852px]:max-[989px]:items-center min-[852px]:max-[989px]:gap-3 min-[852px]:max-[989px]:text-center min-[852px]:max-[989px]:w-full min-[990px]:hidden ${PODCAST_ENTRANCE_CLASS}`}
+                    style={{ animationDelay: "650ms" }}
+                  >
                     <HeroSocialLinks />
                     <HeroEmailLine />
                   </div>
-                  <div className="md:max-[989px]:hidden min-[990px]:mt-auto">
+                  <div
+                    className={`md:max-[989px]:hidden min-[990px]:mt-auto ${PODCAST_ENTRANCE_CLASS}`}
+                    style={{ animationDelay: "650ms" }}
+                  >
                     <HeroContactRow />
                   </div>
                 </div>
@@ -248,7 +285,10 @@ export default async function PodcastHomePage({
             </section>
           </div>
 
-          <div className="hidden w-full md:max-[989px]:col-span-2 md:max-[989px]:row-start-3 md:max-[989px]:max-[851px]:block min-[990px]:hidden">
+          <div
+            className={`hidden w-full md:max-[989px]:col-span-2 md:max-[989px]:row-start-3 md:max-[989px]:max-[851px]:block min-[990px]:hidden ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: "650ms" }}
+          >
             <HeroContactRow />
           </div>
         </div>

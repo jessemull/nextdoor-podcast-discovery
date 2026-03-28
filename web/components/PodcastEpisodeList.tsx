@@ -7,6 +7,10 @@ import { useMemo } from "react";
 
 import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
 import { formatDuration } from "@/lib/format-duration";
+import {
+  PODCAST_ENTRANCE_CLASS,
+  podcastEntranceDelayMs,
+} from "@/lib/podcast-entrance-animation";
 import { filterPodcastEpisodesByQuery } from "@/lib/podcast-filter";
 
 import type { PodcastEpisodeSummary } from "@/lib/podcast.types";
@@ -58,8 +62,14 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
 
   return (
     <ul className="space-y-9">
-      {filtered.map((ep) => (
+      {filtered.map((ep, index) => (
         <li key={ep.id}>
+          <div
+            className={PODCAST_ENTRANCE_CLASS}
+            style={{
+              animationDelay: `${podcastEntranceDelayMs(index)}ms`,
+            }}
+          >
           <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white">
             {ep.published_at && (
               <span className="flex items-center gap-1.5">
@@ -127,6 +137,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
               />
             </div>
           ) : null}
+          </div>
         </li>
       ))}
     </ul>
