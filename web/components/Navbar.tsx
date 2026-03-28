@@ -13,8 +13,12 @@ import { getSupabase } from "@/lib/supabase.client";
 import { useAuthUser } from "@/lib/useAuthUser.client";
 import { cn } from "@/lib/utils";
 
+const mobileNavLinkClass = cn(
+  "focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-2 text-lg font-medium text-white hover:bg-surface-hover hover:text-white focus:outline-none focus:ring-2 focus:ring-border-focus"
+);
+
 const navLinkClass = cn(
-  "flex items-center gap-2 text-muted hover:text-foreground transition-colors"
+  "flex items-center gap-2 text-base font-medium text-white transition-colors hover:text-white/85"
 );
 
 const NAV_LINKS = [
@@ -202,7 +206,7 @@ export function Navbar() {
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
               <div className="flex min-h-[44px] items-center justify-between">
                 <Link
-                  className="focus:bg-surface-hover flex min-h-[44px] flex-1 items-center rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className={cn(mobileNavLinkClass, "flex-1")}
                   href={NAV_LINKS[0].href}
                   onClick={closeMobileMenu}
                 >
@@ -220,7 +224,7 @@ export function Navbar() {
               {NAV_LINKS.slice(1).map(({ href, label }) => (
                 <Link
                   key={href}
-                  className="focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
+                  className={mobileNavLinkClass}
                   href={href}
                   onClick={closeMobileMenu}
                 >
