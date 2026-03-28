@@ -16,13 +16,26 @@ export default function SubscribePage() {
   return (
     <div className="mx-auto max-w-6xl px-5 pb-10 pt-10 sm:px-7 md:pb-14 md:pt-14 lg:pt-32">
       <section className="mx-auto mb-14 w-full max-w-5xl px-1 sm:px-2">
-        <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
-          Join Our Email List
-        </h2>
-        <p className="text-podcast-muted mb-8 text-center text-base">
-          Get new episodes delivered to your inbox every Friday.
-        </p>
-        <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.6fr] lg:gap-3">
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "0ms" }}
+        >
+          <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
+            Join Our Email List
+          </h2>
+        </div>
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "100ms" }}
+        >
+          <p className="text-podcast-muted mb-8 text-center text-base">
+            Get new episodes delivered to your inbox every Friday.
+          </p>
+        </div>
+        <form
+          className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.6fr] lg:gap-3 ${PODCAST_ENTRANCE_CLASS}`}
+          style={{ animationDelay: "200ms" }}
+        >
           <label className="sr-only" htmlFor="subscribe-first-name">
             First name
           </label>
@@ -64,7 +77,7 @@ export default function SubscribePage() {
 
       <div
         className={PODCAST_ENTRANCE_CLASS}
-        style={{ animationDelay: "280ms" }}
+        style={{ animationDelay: "480ms" }}
       >
         <h1
           className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
@@ -74,7 +87,7 @@ export default function SubscribePage() {
       </div>
       <div
         className={PODCAST_ENTRANCE_CLASS}
-        style={{ animationDelay: "360ms" }}
+        style={{ animationDelay: "560ms" }}
       >
         <p className="text-podcast-muted mx-auto mb-9 max-w-2xl text-center text-base">
           Pick your favorite podcast app.
@@ -82,7 +95,7 @@ export default function SubscribePage() {
       </div>
       <div
         className={`mb-12 ${PODCAST_ENTRANCE_CLASS}`}
-        style={{ animationDelay: "440ms" }}
+        style={{ animationDelay: "640ms" }}
       >
         <PodcastSubscribeGrid />
       </div>
