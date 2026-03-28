@@ -1,4 +1,4 @@
-.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 scrape-visible security security-scraper security-web tail-logs test test-scraper test-web venv
+.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 scrape-visible seed-podcast-demo security security-scraper security-web tail-logs test test-scraper test-web venv
 
 # Default target
 help:
@@ -24,6 +24,7 @@ help:
 	@echo "  build            Build Next.js for production"
 	@echo "  dev-scraper      Run scraper in dry-run mode"
 	@echo "  dev-web          Start Next.js dev server"
+	@echo "  seed-podcast-demo  Seed demo podcast episodes (web/.env.local; requires public/examples media)"
 	@echo "  scrape-sample    Scrape 25 posts from trending with scoring and embeddings (full pipeline)"
 	@echo "  scrape-trending-300  Scrape, score, and embed 300 trending posts (long run; use PYTHONUNBUFFERED=1 and tee for logs)"
 	@echo "  scrape-visible   Run scraper with browser visible (5 trending posts; use to watch Nextdoor)"
@@ -153,6 +154,9 @@ open-trending-details:
 
 dev-web:
 	cd web && npm run dev
+
+seed-podcast-demo:
+	cd web && npm run seed:podcast-demo
 
 # Linting
 lint: lint-scraper lint-web

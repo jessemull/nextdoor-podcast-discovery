@@ -200,7 +200,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
                   </div>
                 )}
                 {img.description && (
-                  <p className="text-podcast-muted mt-2 text-sm">
+                  <p className="mt-4 whitespace-pre-wrap text-base text-[#9fb7c4]">
                     {img.description}
                   </p>
                 )}

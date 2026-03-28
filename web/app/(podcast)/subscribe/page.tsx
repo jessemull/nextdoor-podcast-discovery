@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const subscribeInputClassName =
-  "w-full rounded-[5px] border border-podcast-accent bg-transparent px-3 py-3 text-podcast-foreground placeholder:text-podcast-muted focus:outline-none focus:ring-2 focus:ring-podcast-accent";
+  "w-full rounded-[5px] border border-podcast-accent bg-transparent px-3 py-3 text-podcast-foreground shadow-none transition-shadow duration-200 placeholder:text-podcast-muted focus:outline-none focus:shadow-[0_0_0_3px_rgba(238,207,62,0.45),0_0_28px_rgba(238,207,62,0.4)]";
 
 export default function SubscribePage() {
   return (
