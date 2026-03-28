@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { EpisodeStatusBadge } from "@/components/EpisodeStatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -27,12 +28,6 @@ interface EpisodeRow {
 
 const EPISODES_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
-
-function formatStatus(status: string): string {
-  if (status === "published") return "Published";
-  if (status === "draft") return "Draft";
-  return status;
-}
 
 export default function AdminEpisodesPage() {
   const { toast } = useToast();
@@ -336,7 +331,7 @@ export default function AdminEpisodesPage() {
                         <th className="text-foreground border-border sticky top-0 z-10 w-32 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Slug
                         </th>
-                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-center text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
                         <th className="text-foreground border-border sticky top-0 z-10 w-28 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
@@ -357,8 +352,10 @@ export default function AdminEpisodesPage() {
                             <td className="border-border w-32 border px-4 py-3">
                               <div className="bg-surface-hover h-4 w-20 animate-pulse rounded font-mono" />
                             </td>
-                            <td className="border-border w-24 border px-4 py-3">
-                              <div className="bg-surface-hover h-4 w-14 animate-pulse rounded" />
+                            <td className="border-border w-24 border px-4 py-3 align-middle">
+                              <div className="flex justify-center">
+                                <div className="bg-surface-hover h-4 w-14 animate-pulse rounded" />
+                              </div>
                             </td>
                             <td className="border-border w-28 border px-4 py-3">
                               <div className="bg-surface-hover h-4 w-16 animate-pulse rounded" />
@@ -417,12 +414,7 @@ export default function AdminEpisodesPage() {
                           <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
                             Status
                           </h4>
-                          <p
-                            className="text-muted text-sm"
-                            style={labelStyle}
-                          >
-                            {formatStatus(ep.status)}
-                          </p>
+                          <EpisodeStatusBadge status={ep.status} />
                         </div>
                         <div className="min-w-0 flex-1 basis-0">
                           <h4 className="text-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
@@ -490,7 +482,7 @@ export default function AdminEpisodesPage() {
                         <th className="text-foreground border-border sticky top-0 z-10 w-32 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
                           Slug
                         </th>
-                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
+                        <th className="text-foreground border-border sticky top-0 z-10 w-24 border bg-surface-hover px-4 py-3 text-center text-sm font-semibold uppercase tracking-wide">
                           Status
                         </th>
                         <th className="text-foreground border-border sticky top-0 z-10 w-28 border bg-surface-hover px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide">
@@ -521,11 +513,10 @@ export default function AdminEpisodesPage() {
                           >
                             {truncateCell(ep.slug)}
                           </td>
-                          <td
-                            className="text-muted border-border w-24 border px-4 py-3"
-                            style={labelStyle}
-                          >
-                            {formatStatus(ep.status)}
+                          <td className="border-border w-24 border px-4 py-3 align-middle">
+                            <div className="flex justify-center">
+                              <EpisodeStatusBadge status={ep.status} />
+                            </div>
                           </td>
                           <td
                             className="text-muted border-border w-28 border px-4 py-3"

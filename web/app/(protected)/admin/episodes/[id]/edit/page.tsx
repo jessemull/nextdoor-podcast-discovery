@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { EpisodeStatusBadge } from "@/components/EpisodeStatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -483,10 +484,13 @@ export default function EditEpisodePage() {
           <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
         <Card className="mb-8 p-8 font-sans text-sm">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
-              Episode details
-            </h2>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
+                Episode details
+              </h2>
+              <EpisodeStatusBadge status={status} />
+            </div>
             <Button
               aria-label="Delete"
               className="cursor-pointer p-2 hover:bg-transparent"
