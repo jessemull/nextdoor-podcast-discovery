@@ -2,6 +2,7 @@
 
 import { LogOut, Menu, Mic, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -14,12 +15,11 @@ import { useAuthUser } from "@/lib/useAuthUser.client";
 import { cn } from "@/lib/utils";
 
 const mobileNavLinkClass = cn(
-  "focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-2 text-lg font-medium text-white hover:bg-surface-hover hover:text-white focus:outline-none focus:ring-2 focus:ring-border-focus"
+  "focus:bg-surface-hover flex min-h-[44px] items-center rounded-lg px-4 py-2 text-lg font-medium text-neutral-500 hover:bg-surface-hover hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-border-focus"
 );
 
-const navLinkClass = cn(
-  "flex items-center gap-2 text-base font-medium text-white transition-colors hover:text-white/85"
-);
+const desktopNavLinkBase =
+  "flex items-center gap-2 text-base font-medium transition-colors";
 
 const NAV_LINKS = [
   { href: "/admin", label: "Home" },
@@ -32,7 +32,19 @@ const NAV_LINKS = [
   { href: "/admin/settings", label: "Settings" },
 ] as const;
 
+function isAdminNavActive(href: string, pathname: string): boolean {
+  const path =
+    pathname.length > 1 && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
+  if (href === "/admin") {
+    return path === "/admin";
+  }
+  return path === href || path.startsWith(`${href}/`);
+}
+
 export function Navbar() {
+  const pathname = usePathname();
   const { isLoading, user } = useAuthUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -91,15 +103,24 @@ export function Navbar() {
 
         {/* Desktop nav: visible from md up */}
         <div className="hidden items-center gap-4 md:flex">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              className={navLinkClass}
-              href={href}
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.map(({ href, label }) => {
+            const active = isAdminNavActive(href, pathname);
+            return (
+              <Link
+                key={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  desktopNavLinkBase,
+                  active
+                    ? "font-semibold text-neutral-100"
+                    : "text-neutral-500 hover:text-neutral-300"
+                )}
+                href={href}
+              >
+                {label}
+              </Link>
+            );
+          })}
 
           {isLoading ? (
             <span
@@ -206,7 +227,17 @@ export function Navbar() {
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
               <div className="flex min-h-[44px] items-center justify-between">
                 <Link
-                  className={cn(mobileNavLinkClass, "flex-1")}
+                  aria-current={
+                    isAdminNavActive(NAV_LINKS[0].href, pathname)
+                      ? "page"
+                      : undefined
+                  }
+                  className={cn(
+                    mobileNavLinkClass,
+                    "flex-1",
+                    isAdminNavActive(NAV_LINKS[0].href, pathname) &&
+                      "font-semibold text-neutral-100"
+                  )}
                   href={NAV_LINKS[0].href}
                   onClick={closeMobileMenu}
                 >
@@ -221,16 +252,23 @@ export function Navbar() {
                   <X aria-hidden className="h-6 w-6" />
                 </button>
               </div>
-              {NAV_LINKS.slice(1).map(({ href, label }) => (
-                <Link
-                  key={href}
-                  className={mobileNavLinkClass}
-                  href={href}
-                  onClick={closeMobileMenu}
-                >
-                  {label}
-                </Link>
-              ))}
+              {NAV_LINKS.slice(1).map(({ href, label }) => {
+                const active = isAdminNavActive(href, pathname);
+                return (
+                  <Link
+                    key={href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      mobileNavLinkClass,
+                      active && "font-semibold text-neutral-100"
+                    )}
+                    href={href}
+                    onClick={closeMobileMenu}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
               {user && !isLoading && (
                 <button
                   className="focus:bg-surface-hover flex min-h-[44px] w-full items-center gap-2 rounded-lg px-4 py-2 text-base font-medium text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus"
