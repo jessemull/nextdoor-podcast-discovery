@@ -144,7 +144,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
               <div
                 className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${
                   ep.audio_url
-                    ? "mt-3.5"
+                    ? "mt-5"
                     : ep.description
                       ? "mt-3"
                       : "mt-2.5"
