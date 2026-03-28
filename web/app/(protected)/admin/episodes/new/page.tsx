@@ -52,6 +52,7 @@ export default function NewEpisodePage() {
   const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(
     null
   );
+  const [imageRemoveKey, setImageRemoveKey] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   const handleSaveConfirm = useCallback(async () => {
@@ -115,6 +116,12 @@ export default function NewEpisodePage() {
     audioStoragePath !== "" ||
     imageRows.length > 0 ||
     durationSeconds.trim() !== "";
+
+  const handleImageRemoveConfirm = useCallback(() => {
+    if (!imageRemoveKey) return;
+    setImageRows((prev) => prev.filter((r) => r.key !== imageRemoveKey));
+    setImageRemoveKey(null);
+  }, [imageRemoveKey]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -449,11 +456,7 @@ export default function NewEpisodePage() {
                         aria-label="Remove image"
                         className="text-muted hover:text-destructive p-1"
                         type="button"
-                        onClick={() => {
-                          setImageRows((prev) =>
-                            prev.filter((r) => r.key !== row.key)
-                          );
-                        }}
+                        onClick={() => setImageRemoveKey(row.key)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -596,6 +599,15 @@ export default function NewEpisodePage() {
           title="Create Episode"
           onCancel={() => setSaveModalOpen(false)}
           onConfirm={handleSaveConfirm}
+        />
+        <ConfirmModal
+          cancelLabel="Cancel"
+          confirmLabel="Remove"
+          message="Are you sure you want to remove this image from the episode?"
+          open={imageRemoveKey !== null}
+          title="Remove Image"
+          onCancel={() => setImageRemoveKey(null)}
+          onConfirm={handleImageRemoveConfirm}
         />
       </div>
     </main>
