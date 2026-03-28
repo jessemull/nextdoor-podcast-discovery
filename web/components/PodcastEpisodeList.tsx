@@ -107,7 +107,7 @@ export function PodcastEpisodeList({ episodes }: PodcastEpisodeListProps) {
             )}
           </div>
           <Link
-            className="text-podcast-foreground hover:text-podcast-accent block text-2xl font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-podcast-accent focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+            className="text-podcast-foreground hover:text-podcast-accent block text-2xl font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-podcast-muted/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
             href={`/episodes/${ep.slug}`}
           >
             {ep.title}
