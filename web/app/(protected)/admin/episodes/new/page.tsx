@@ -3,8 +3,12 @@
 import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  PodcastCategoryAutocomplete,
+  type PodcastCategoryOption,
+} from "@/components/PodcastCategoryAutocomplete";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -56,8 +60,51 @@ export default function NewEpisodePage() {
   );
   const [imageRemoveKey, setImageRemoveKey] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [categories, setCategories] = useState<PodcastCategoryOption[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const audioUploadBusyRef = useRef(false);
   const imageUploadBusyRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/podcast/categories");
+        if (!res.ok || cancelled) return;
+        const j = (await res.json().catch(() => ({}))) as {
+          data?: PodcastCategoryOption[];
+        };
+        if (cancelled) return;
+        const rows = Array.isArray(j.data) ? j.data : [];
+        setCategories(
+          [...rows].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+        );
+      } catch {
+        /* list stays empty */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const addCategory = useCallback((categoryId: string) => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      next.add(categoryId);
+      return next;
+    });
+  }, []);
+
+  const removeCategory = useCallback((categoryId: string) => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      next.delete(categoryId);
+      return next;
+    });
+  }, []);
 
   const handleSaveConfirm = useCallback(async () => {
     setError(null);
@@ -67,6 +114,7 @@ export default function NewEpisodePage() {
         body: JSON.stringify({
           about_episode: aboutEpisode.trim() || null,
           audio_storage_path: audioStoragePath || null,
+          category_ids: [...selectedCategoryIds].sort(),
           description: description || null,
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
@@ -104,6 +152,7 @@ export default function NewEpisodePage() {
     description,
     durationSeconds,
     imageRows,
+    selectedCategoryIds,
     showNotes,
     status,
     title,
@@ -119,7 +168,8 @@ export default function NewEpisodePage() {
     status !== "draft" ||
     audioStoragePath !== "" ||
     imageRows.length > 0 ||
-    durationSeconds.trim() !== "";
+    durationSeconds.trim() !== "" ||
+    selectedCategoryIds.size > 0;
 
   const handleImageRemoveConfirm = useCallback(() => {
     if (!imageRemoveKey) return;
@@ -198,7 +248,7 @@ export default function NewEpisodePage() {
             ← Episodes
           </Link>
         </div>
-        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-1 text-2xl font-semibold tracking-wide">
           New Episode
         </h1>
         <p className="text-foreground mb-8 text-sm" style={labelStyle}>
@@ -207,11 +257,12 @@ export default function NewEpisodePage() {
         {error && (
           <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-8 font-sans text-sm">
-        <h2 className="text-foreground mb-6 text-sm font-semibold uppercase tracking-wide">
-          Episode details
-        </h2>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-8" onSubmit={handleSubmit}>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-6 text-sm font-semibold uppercase tracking-wide">
+              Entity details
+            </h2>
+            <div className="space-y-6">
           <div>
             <label className={labelClass} htmlFor="new-ep-status" style={labelStyle}>
               Status
@@ -281,20 +332,50 @@ export default function NewEpisodePage() {
             />
           </div>
           <div>
-            <p className={labelClass} style={labelStyle}>
-              Episode audio
-            </p>
+            <label className={labelClass} htmlFor="new-ep-duration" style={labelStyle}>
+              Duration (Seconds)
+            </label>
+            <input
+              className={inputClass}
+              id="new-ep-duration"
+              placeholder="Please enter a duration..."
+              type="number"
+              value={durationSeconds}
+              onChange={(e) => setDurationSeconds(e.target.value)}
+            />
+          </div>
+            </div>
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Categories
+            </h2>
             <p className="text-muted mb-4 text-xs">
-              Upload the episode recording. You can replace or remove it from the card below.
+              Used on the public categories pages.
+            </p>
+            <PodcastCategoryAutocomplete
+              categories={categories}
+              id="new-ep-categories"
+              selectedIds={selectedCategoryIds}
+              onAdd={addCategory}
+              onRemove={removeCategory}
+            />
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Audio
+            </h2>
+            <p className="text-muted mb-4 text-xs">
+              Upload the episode recording.
             </p>
             <div className="space-y-5">
-              <div className="border-border min-w-0 space-y-4 rounded-lg border p-5">
+              <div className="min-w-0 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <span
                     className="text-foreground font-sans text-xs font-medium uppercase"
                     style={labelStyle}
                   >
-                    Audio
+                    Recording
                   </span>
                   <div className="flex shrink-0 items-center gap-1">
                     {audioPreviewUrl && (
@@ -397,11 +478,11 @@ export default function NewEpisodePage() {
                 </div>
               </div>
             </div>
-          </div>
-          <div>
-            <p className={labelClass} style={labelStyle}>
-              Episode images
-            </p>
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Images
+            </h2>
             <p className="text-muted mb-4 text-xs">
               Add one or more images. The first image is used for listings and RSS.
             </p>
@@ -575,21 +656,8 @@ export default function NewEpisodePage() {
                 />
               </div>
             </div>
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="new-ep-duration" style={labelStyle}>
-              Duration (Seconds)
-            </label>
-            <input
-              className={inputClass}
-              id="new-ep-duration"
-              placeholder="Please enter a duration..."
-              type="number"
-              value={durationSeconds}
-              onChange={(e) => setDurationSeconds(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-4 pt-8">
+          </Card>
+          <div className="flex justify-end gap-4 pt-2">
             <Link href="/admin/episodes">
               <Button type="button" variant="secondary">
                 Cancel
@@ -605,7 +673,6 @@ export default function NewEpisodePage() {
             </Button>
           </div>
         </form>
-        </Card>
         <ConfirmModal
           cancelLabel="Cancel"
           confirmLabel="Create"

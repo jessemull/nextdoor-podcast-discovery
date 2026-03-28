@@ -6,6 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EpisodeStatusBadge } from "@/components/EpisodeStatusBadge";
+import {
+  PodcastCategoryAutocomplete,
+  type PodcastCategoryOption,
+} from "@/components/PodcastCategoryAutocomplete";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -21,10 +25,15 @@ import { cn } from "@/lib/utils";
 
 const labelStyle = { opacity: 0.85 };
 
+function sortedCategoryIdsKey(ids: Iterable<string>): string {
+  return [...ids].sort().join("\0");
+}
+
 interface Episode {
   about_episode: string | null;
   audio_storage_path: string | null;
   audio_url: string | null;
+  category_ids?: string[];
   description: string | null;
   duration_seconds: number | null;
   episode_images?: EpisodeImageRowApi[];
@@ -132,7 +141,53 @@ export default function EditEpisodePage() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const audioUploadBusyRef = useRef(false);
   const imageUploadBusyRef = useRef(false);
+  const initialCategoryIdsKeyRef = useRef("");
   const initialImagesJsonRef = useRef("");
+  const [categories, setCategories] = useState<PodcastCategoryOption[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/podcast/categories");
+        if (!res.ok || cancelled) return;
+        const j = (await res.json().catch(() => ({}))) as {
+          data?: PodcastCategoryOption[];
+        };
+        if (cancelled) return;
+        const rows = Array.isArray(j.data) ? j.data : [];
+        setCategories(
+          [...rows].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          )
+        );
+      } catch {
+        /* list stays empty */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const addCategory = useCallback((categoryId: string) => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      next.add(categoryId);
+      return next;
+    });
+  }, []);
+
+  const removeCategory = useCallback((categoryId: string) => {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      next.delete(categoryId);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -153,6 +208,9 @@ export default function EditEpisodePage() {
         setAboutEpisode(data.about_episode ?? "");
         setDescription(data.description ?? "");
         setShowNotes(data.show_notes ?? "");
+        const catIds = data.category_ids ?? [];
+        setSelectedCategoryIds(new Set(catIds));
+        initialCategoryIdsKeyRef.current = sortedCategoryIdsKey(catIds);
         setStatus(
           data.status === "published" ? "published" : "draft"
         );
@@ -233,6 +291,7 @@ export default function EditEpisodePage() {
         body: JSON.stringify({
           about_episode: aboutEpisode.trim() || null,
           audio_storage_path: audioStoragePath || null,
+          category_ids: [...selectedCategoryIds].sort(),
           description: description || null,
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
@@ -272,6 +331,7 @@ export default function EditEpisodePage() {
     durationSeconds,
     id,
     imageRows,
+    selectedCategoryIds,
     showNotes,
     slug,
     status,
@@ -287,6 +347,10 @@ export default function EditEpisodePage() {
   const imagesDirty =
     JSON.stringify(imagesPayload(imageRows)) !== initialImagesJsonRef.current;
 
+  const categoriesDirty =
+    sortedCategoryIdsKey(selectedCategoryIds) !==
+    initialCategoryIdsKeyRef.current;
+
   const dirty = episode
     ? title.trim() !== (episode.title ?? "").trim() ||
       (slug || title.toLowerCase().replace(/\s+/g, "-")) !==
@@ -297,7 +361,8 @@ export default function EditEpisodePage() {
       status !== (episode.status === "published" ? "published" : "draft") ||
       (audioStoragePath || null) !== (episode.audio_storage_path ?? null) ||
       durationSeconds !== initialDuration ||
-      imagesDirty
+      imagesDirty ||
+      categoriesDirty
     : false;
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -398,54 +463,56 @@ export default function EditEpisodePage() {
           <div className="mb-6">
             <div className="bg-surface-hover h-4 w-24 animate-pulse rounded" />
           </div>
-          <div className="text-foreground mb-2 h-8 w-48 animate-pulse rounded bg-surface-hover" />
+          <div className="text-foreground mb-1 h-8 w-48 animate-pulse rounded bg-surface-hover" />
           <div className="text-foreground mb-6 h-4 w-64 animate-pulse rounded bg-surface-hover" />
-          <Card className="mb-8 p-8">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="bg-surface-hover h-5 w-40 animate-pulse rounded" />
-              <div className="bg-surface-hover h-9 w-9 animate-pulse rounded" />
+          <div className="space-y-8">
+            <Card className="p-8">
+              <div className="mb-6 flex items-center justify-between">
+                <div className="bg-surface-hover h-5 w-40 animate-pulse rounded" />
+                <div className="bg-surface-hover h-9 w-9 animate-pulse rounded" />
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
+                  <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
+                </div>
+                <div>
+                  <div className="bg-surface-hover mb-2 h-3 w-10 animate-pulse rounded" />
+                  <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg font-mono" />
+                </div>
+                <div>
+                  <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                  <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
+                </div>
+                <div>
+                  <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
+                  <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
+                </div>
+                <div>
+                  <div className="bg-surface-hover mb-2 h-3 w-24 animate-pulse rounded" />
+                  <div className="bg-surface-hover h-10 w-24 animate-pulse rounded-lg" />
+                </div>
+              </div>
+            </Card>
+            <Card className="p-8">
+              <div className="bg-surface-hover mb-4 h-4 w-28 animate-pulse rounded" />
+              <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
+            </Card>
+            <Card className="p-8">
+              <div className="bg-surface-hover mb-4 h-4 w-16 animate-pulse rounded" />
+              <div className="bg-surface-hover mb-4 mt-3 h-12 w-full max-w-md animate-pulse rounded" />
+              <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
+            </Card>
+            <Card className="p-8">
+              <div className="bg-surface-hover mb-4 h-4 w-20 animate-pulse rounded" />
+              <div className="bg-surface-hover mb-4 mt-3 h-48 w-full animate-pulse rounded" />
+              <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
+            </Card>
+            <div className="flex justify-end gap-4 pt-2">
+              <div className="bg-surface-hover h-9 w-16 animate-pulse rounded-md" />
+              <div className="bg-surface-hover h-9 w-14 animate-pulse rounded-md" />
             </div>
-            <div className="space-y-6">
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
-                <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-10 animate-pulse rounded" />
-                <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg font-mono" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
-                <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
-                <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
-                <div className="bg-surface-hover h-10 w-32 animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
-                <div className="bg-surface-hover mb-4 mt-3 h-12 w-full max-w-md animate-pulse rounded" />
-                <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
-                <div className="bg-surface-hover mb-4 mt-3 h-48 w-full animate-pulse rounded" />
-                <div className="bg-surface-hover mt-4 flex h-10 w-64 animate-pulse rounded-lg" />
-              </div>
-              <div>
-                <div className="bg-surface-hover mb-2 h-3 w-24 animate-pulse rounded" />
-                <div className="bg-surface-hover h-10 w-24 animate-pulse rounded-lg" />
-              </div>
-              <div className="flex justify-end gap-4 pt-8">
-                <div className="bg-surface-hover h-9 w-16 animate-pulse rounded-md" />
-                <div className="bg-surface-hover h-9 w-14 animate-pulse rounded-md" />
-              </div>
-            </div>
-          </Card>
+          </div>
         </div>
       </main>
     );
@@ -474,7 +541,7 @@ export default function EditEpisodePage() {
             ← Episodes
           </Link>
         </div>
-        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-1 text-2xl font-semibold tracking-wide">
           {episode.title}
         </h1>
         <p className="text-foreground mb-8 text-sm" style={labelStyle}>
@@ -483,25 +550,26 @@ export default function EditEpisodePage() {
         {error && (
           <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-8 font-sans text-sm">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
-                Episode details
-              </h2>
-              <EpisodeStatusBadge status={status} />
+        <form className="space-y-8" onSubmit={handleSubmit}>
+          <Card className="p-8 font-sans text-sm">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
+                  Entity details
+                </h2>
+                <EpisodeStatusBadge status={status} />
+              </div>
+              <Button
+                aria-label="Delete"
+                className="cursor-pointer p-2 hover:bg-transparent"
+                type="button"
+                variant="ghost"
+                onClick={() => setDeleteModalOpen(true)}
+              >
+                <Trash2 aria-hidden className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              aria-label="Delete"
-              className="cursor-pointer p-2 hover:bg-transparent"
-              type="button"
-              variant="ghost"
-              onClick={() => setDeleteModalOpen(true)}
-            >
-              <Trash2 aria-hidden className="h-4 w-4" />
-            </Button>
-          </div>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-6">
           <div>
             <label className={labelClass} htmlFor="edit-ep-status" style={labelStyle}>
               Status
@@ -579,20 +647,49 @@ export default function EditEpisodePage() {
             />
           </div>
           <div>
-            <p className={labelClass} style={labelStyle}>
-              Episode audio
-            </p>
+            <label className={labelClass} style={labelStyle}>
+              Duration (Seconds)
+            </label>
+            <input
+              className={inputClass}
+              placeholder="Please enter a duration..."
+              type="number"
+              value={durationSeconds}
+              onChange={(e) => setDurationSeconds(e.target.value)}
+            />
+          </div>
+            </div>
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Categories
+            </h2>
             <p className="text-muted mb-4 text-xs">
-              Upload the episode recording. You can replace or remove it from the card below.
+              Used on the public categories pages.
+            </p>
+            <PodcastCategoryAutocomplete
+              categories={categories}
+              id="edit-ep-categories"
+              selectedIds={selectedCategoryIds}
+              onAdd={addCategory}
+              onRemove={removeCategory}
+            />
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Audio
+            </h2>
+            <p className="text-muted mb-4 text-xs">
+              Upload the episode recording.
             </p>
             <div className="space-y-5">
-              <div className="border-border min-w-0 space-y-4 rounded-lg border p-5">
+              <div className="min-w-0 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <span
                     className="text-foreground font-sans text-xs font-medium uppercase"
                     style={labelStyle}
                   >
-                    Audio
+                    Recording
                   </span>
                   <div className="flex shrink-0 items-center gap-1">
                     {audioDisplayUrl && (
@@ -695,11 +792,11 @@ export default function EditEpisodePage() {
                 </div>
               </div>
             </div>
-          </div>
-          <div>
-            <p className={labelClass} style={labelStyle}>
-              Episode images
-            </p>
+          </Card>
+          <Card className="p-8 font-sans text-sm">
+            <h2 className="text-foreground mb-2 text-sm font-semibold uppercase tracking-wide">
+              Images
+            </h2>
             <p className="text-muted mb-4 text-xs">
               The first image is used for listings and RSS. Drag order with the arrows.
             </p>
@@ -873,20 +970,8 @@ export default function EditEpisodePage() {
                 />
               </div>
             </div>
-          </div>
-          <div>
-            <label className={labelClass} style={labelStyle}>
-              Duration (Seconds)
-            </label>
-            <input
-              className={inputClass}
-              placeholder="Please enter a duration..."
-              type="number"
-              value={durationSeconds}
-              onChange={(e) => setDurationSeconds(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-4 pt-8">
+          </Card>
+          <div className="flex flex-wrap items-center justify-end gap-4 pt-2">
             <Link href="/admin/episodes">
               <Button type="button" variant="secondary">
                 Cancel
@@ -902,7 +987,6 @@ export default function EditEpisodePage() {
             </Button>
           </div>
         </form>
-        </Card>
         <ConfirmModal
           cancelLabel="Cancel"
           confirmLabel="Delete"

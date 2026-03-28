@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { computeAndUpsertEpisodeEmbedding } from "@/lib/episode-embedding.server";
 import {
+  parseCategoryIds,
+  replaceEpisodeCategories,
+} from "@/lib/podcast-episode-categories.server";
+import {
   parseEpisodeImagesPayload,
   replaceEpisodeImages,
 } from "@/lib/podcast-episode-images.server";
@@ -73,7 +77,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/podcast/episodes
- * Create episode. Body: title, slug, description?, show_notes?, transcript?, published_at?, status?, audio_url?, image_url?, duration_seconds?, order_index?
+ * Create episode. Body: title, slug, description?, show_notes?, transcript?, published_at?,
+ * status?, audio_url?, image_url?, duration_seconds?, order_index?, category_ids?
  */
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -86,6 +91,11 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const categoryParse = parseCategoryIds(body);
+  if (categoryParse.kind === "error") {
+    return NextResponse.json({ error: categoryParse.message }, { status: 400 });
   }
 
   const title = typeof body.title === "string" ? body.title.trim() : "";
@@ -213,6 +223,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (categoryParse.kind === "ok") {
+    try {
+      await replaceEpisodeCategories(supabase, data.id, categoryParse.ids);
+    } catch (catErr) {
+      const msg =
+        catErr instanceof Error
+          ? catErr.message
+          : "Failed to save episode categories";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   if (useGallery) {
     try {
       await replaceEpisodeImages(
@@ -246,7 +268,16 @@ export async function POST(request: NextRequest) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
+  const { data: categoryLinks } = await supabase
+    .from("episode_categories")
+    .select("category_id")
+    .eq("episode_id", data.id);
+
+  const category_ids = (categoryLinks ?? []).map(
+    (r) => r.category_id as string
+  );
+
   return NextResponse.json({
-    data: { ...data, episode_images: episodeImages ?? [] },
+    data: { ...data, category_ids, episode_images: episodeImages ?? [] },
   });
 }

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { computeAndUpsertEpisodeEmbedding } from "@/lib/episode-embedding.server";
 import {
+  parseCategoryIds,
+  replaceEpisodeCategories,
+} from "@/lib/podcast-episode-categories.server";
+import {
   parseEpisodeImagesPayload,
   replaceEpisodeImages,
 } from "@/lib/podcast-episode-images.server";
@@ -15,6 +19,7 @@ interface RouteParams {
 
 /**
  * GET /api/admin/podcast/episodes/[id]
+ * Episode includes episode_images and category_ids (UUIDs linked in episode_categories).
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const session = await getSession();
@@ -48,13 +53,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: imgErr.message }, { status: 500 });
   }
 
+  const { data: categoryLinks, error: catErr } = await supabase
+    .from("episode_categories")
+    .select("category_id")
+    .eq("episode_id", id);
+
+  if (catErr) {
+    return NextResponse.json({ error: catErr.message }, { status: 500 });
+  }
+
+  const category_ids = (categoryLinks ?? []).map(
+    (r) => r.category_id as string
+  );
+
   return NextResponse.json({
-    data: { ...data, episode_images: episodeImages ?? [] },
+    data: { ...data, category_ids, episode_images: episodeImages ?? [] },
   });
 }
 
 /**
  * PUT /api/admin/podcast/episodes/[id]
+ * Body may include category_ids: string[] (replaces episode_categories for this episode).
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const session = await getSession();
@@ -68,6 +87,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const categoryUpdate = Object.prototype.hasOwnProperty.call(
+    body,
+    "category_ids"
+  );
+  let categoryIdsForPut: string[] | undefined;
+  if (categoryUpdate) {
+    const parsed = parseCategoryIds(body);
+    if (parsed.kind === "error") {
+      return NextResponse.json({ error: parsed.message }, { status: 400 });
+    }
+    if (parsed.kind === "ok") {
+      categoryIdsForPut = parsed.ids;
+    }
   }
 
   const supabase = getSupabaseAdmin();
@@ -220,6 +254,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
   }
 
+  if (categoryUpdate && categoryIdsForPut !== undefined) {
+    try {
+      await replaceEpisodeCategories(supabase, id, categoryIdsForPut);
+    } catch (catErr) {
+      const msg =
+        catErr instanceof Error
+          ? catErr.message
+          : "Failed to save episode categories";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   try {
     await computeAndUpsertEpisodeEmbedding(id);
   } catch (embedErr) {
@@ -248,8 +294,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
+  const { data: categoryLinks } = await supabase
+    .from("episode_categories")
+    .select("category_id")
+    .eq("episode_id", id);
+
+  const category_ids = (categoryLinks ?? []).map(
+    (r) => r.category_id as string
+  );
+
   return NextResponse.json({
-    data: { ...fresh, episode_images: episodeImages ?? [] },
+    data: { ...fresh, category_ids, episode_images: episodeImages ?? [] },
   });
 }
 

@@ -28,6 +28,8 @@ export function PodcastHeader() {
 
   const isHome = pathname === "/podcast" || pathname === "/";
   const isAbout = pathname === "/about";
+  const isCategories =
+    pathname === "/categories" || pathname.startsWith("/categories/");
   const isSubscribe = pathname === "/subscribe";
 
   const qFromUrl = searchParams.get("q") ?? "";
@@ -138,6 +140,13 @@ export function PodcastHeader() {
         onClick={closeMobileMenu}
       >
         About
+      </Link>
+      <Link
+        className={`${isCategories ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
+        href="/categories"
+        onClick={closeMobileMenu}
+      >
+        Categories
       </Link>
       <Link
         className={`${isSubscribe ? activeLinkClass : inactiveLinkClass} ${linkFocusClass}`}
