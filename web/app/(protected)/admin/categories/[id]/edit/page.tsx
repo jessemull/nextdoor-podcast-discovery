@@ -8,11 +8,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import {
+  adminFormInputClass as inputClass,
+  adminFormLabelClass as labelClass,
+} from "@/lib/admin-form-classes";
 import { useToast } from "@/lib/ToastContext";
 
-const inputClass =
-  "border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus";
-const labelClass = "text-foreground mb-1 block text-sm font-medium uppercase";
 const labelStyle = { opacity: 0.85 };
 
 interface Category {
@@ -212,9 +213,9 @@ export default function EditCategoryPage() {
         {error && (
           <p className="text-destructive mb-4 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6">
+        <Card className="mb-8 p-6 font-sans text-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-foreground text-base font-semibold uppercase tracking-wide">
+            <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
               Category Details
             </h2>
             <Button
@@ -240,7 +241,7 @@ export default function EditCategoryPage() {
                 onChange={(e) => setName(e.target.value)}
               />
               {nameError && (
-                <p className="text-destructive mt-1 text-sm">
+                <p className="text-destructive mt-1 text-xs">
                   Please enter a name.
                 </p>
               )}

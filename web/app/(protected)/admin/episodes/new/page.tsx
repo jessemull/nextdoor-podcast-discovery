@@ -10,11 +10,12 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { Spinner } from "@/components/ui/Spinner";
+import {
+  adminFormInputClass as inputClass,
+  adminFormLabelClass as labelClass,
+} from "@/lib/admin-form-classes";
 import { useToast } from "@/lib/ToastContext";
 
-const inputClass =
-  "border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus";
-const labelClass = "text-foreground mb-1 block text-sm font-medium uppercase";
 const labelStyle = { opacity: 0.85 };
 
 interface ImageRow {
@@ -192,8 +193,8 @@ export default function NewEpisodePage() {
         {error && (
           <p className="text-destructive mb-4 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6">
-        <h2 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
+        <Card className="mb-8 p-6 font-sans text-sm">
+        <h2 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
           Episode details
         </h2>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -255,7 +256,7 @@ export default function NewEpisodePage() {
             </label>
             <CustomSelect
               ariaLabel="Status"
-              className="h-10 w-full"
+              className="h-10 w-full font-sans text-xs"
               options={[
                 { label: "Draft", value: "draft" },
                 { label: "Published", value: "published" },
@@ -265,20 +266,26 @@ export default function NewEpisodePage() {
             />
           </div>
           <div>
-            <label className={labelClass} htmlFor="new-ep-audio" style={labelStyle}>
-              Audio File
-            </label>
-            <div className="mt-2 flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-3">
-              <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:flex-initial">
-                <span className="text-foreground min-w-0 flex-1 truncate md:max-w-md md:flex-none">
-                  {audioStoragePath ? audioStoragePath : "No file chosen."}
-                </span>
-                {(audioStoragePath || audioPreviewUrl) && (
-                  <span className="inline-flex shrink-0 items-center gap-1">
+            <p className={labelClass} style={labelStyle}>
+              Episode audio
+            </p>
+            <p className="text-muted mb-3 text-xs">
+              Upload the episode recording. You can replace or remove it from the card below.
+            </p>
+            <div className="space-y-4">
+              <div className="border-border min-w-0 space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="text-foreground font-sans text-xs font-medium uppercase"
+                    style={labelStyle}
+                  >
+                    Audio
+                  </span>
+                  <div className="flex shrink-0 items-center gap-1">
                     {audioPreviewUrl && (
                       <a
                         aria-label="Preview audio in new tab"
-                        className="text-muted hover:text-foreground"
+                        className="text-muted hover:text-foreground p-1"
                         href={audioPreviewUrl}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -286,58 +293,88 @@ export default function NewEpisodePage() {
                         <Eye className="h-4 w-4" />
                       </a>
                     )}
-                    <button
-                      aria-label="Remove audio file"
-                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                      type="button"
-                      onClick={() => {
-                        setAudioStoragePath("");
-                        setAudioPreviewUrl(null);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </span>
+                    {(audioStoragePath || audioPreviewUrl) && (
+                      <button
+                        aria-label="Remove audio file"
+                        className="text-muted hover:text-destructive p-1 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
+                        type="button"
+                        onClick={() => {
+                          setAudioStoragePath("");
+                          setAudioPreviewUrl(null);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {audioPreviewUrl ? (
+                  <div className="rounded-md bg-surface-hover p-3">
+                    <audio
+                      className="w-full max-w-full"
+                      controls
+                      src={audioPreviewUrl}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-40 items-center justify-center rounded-md bg-surface-hover text-muted text-xs">
+                    No file chosen.
+                  </div>
                 )}
+                <div>
+                  <p className={labelClass} style={labelStyle}>
+                    File Name
+                  </p>
+                  <span
+                    className="text-foreground block min-w-0 truncate text-xs"
+                    title={audioStoragePath ? audioStoragePath : undefined}
+                  >
+                    {audioStoragePath
+                      ? audioStoragePath
+                      : "No storage path yet."}
+                  </span>
+                </div>
+                <label
+                  className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
+                  htmlFor="new-ep-audio"
+                >
+                  {uploadingAudio && <Spinner size="sm" />}
+                  {audioStoragePath || audioPreviewUrl
+                    ? "Replace file"
+                    : "Choose file"}
+                </label>
+                <input
+                  accept="audio/*"
+                  className="sr-only"
+                  disabled={uploadingAudio}
+                  id="new-ep-audio"
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadingAudio(true);
+                    try {
+                      const form = new FormData();
+                      form.set("file", file);
+                      form.set("type", "audio");
+                      const res = await fetch("/api/admin/podcast/upload", {
+                        body: form,
+                        method: "POST",
+                      });
+                      const j = await res.json().catch(() => ({}));
+                      if (res.ok && j.data?.path) {
+                        setAudioStoragePath(j.data.path);
+                        if (j.data.previewUrl) setAudioPreviewUrl(j.data.previewUrl);
+                      } else {
+                        setError(j.error ?? "Upload failed");
+                      }
+                    } finally {
+                      setUploadingAudio(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
               </div>
-              <label
-                className="border-border bg-surface-hover text-foreground order-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80 md:order-1 md:w-auto"
-                htmlFor="new-ep-audio"
-              >
-                {uploadingAudio && <Spinner size="sm" />}
-                Choose File
-              </label>
-              <input
-                accept="audio/*"
-                className="sr-only"
-                disabled={uploadingAudio}
-                id="new-ep-audio"
-                type="file"
-                onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setUploadingAudio(true);
-                try {
-                  const form = new FormData();
-                  form.set("file", file);
-                  form.set("type", "audio");
-                  const res = await fetch("/api/admin/podcast/upload", {
-                    body: form,
-                    method: "POST",
-                  });
-                  const j = await res.json().catch(() => ({}));
-                  if (res.ok && j.data?.path) {
-                    setAudioStoragePath(j.data.path);
-                    if (j.data.previewUrl) setAudioPreviewUrl(j.data.previewUrl);
-                  } else {
-                    setError(j.error ?? "Upload failed");
-                  }
-                } finally {
-                  setUploadingAudio(false);
-                  e.target.value = "";
-                }
-              }}
-              />
             </div>
           </div>
           <div>
@@ -351,11 +388,14 @@ export default function NewEpisodePage() {
               {imageRows.map((row, index) => (
                 <div
                   key={row.key}
-                  className="border-border space-y-3 rounded-lg border p-4"
+                  className="border-border min-w-0 space-y-3 rounded-lg border p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-foreground text-sm font-medium">
-                      Image {index + 1}
+                    <span
+                      className="text-foreground font-sans text-xs font-medium uppercase"
+                      style={labelStyle}
+                    >
+                      Image #{index + 1}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -394,6 +434,17 @@ export default function NewEpisodePage() {
                       >
                         <ChevronDown className="h-4 w-4" />
                       </button>
+                      {row.previewUrl && (
+                        <a
+                          aria-label="Preview image in new tab"
+                          className="text-muted hover:text-foreground p-1"
+                          href={row.previewUrl}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </a>
+                      )}
                       <button
                         aria-label="Remove image"
                         className="text-muted hover:text-destructive p-1"
@@ -424,24 +475,21 @@ export default function NewEpisodePage() {
                       />
                     </a>
                   )}
-                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-                    <span className="text-foreground truncate">
+                  <div>
+                    <p className={labelClass} style={labelStyle}>
+                      File Name
+                    </p>
+                    <span
+                      className="text-foreground block min-w-0 truncate text-xs"
+                      title={
+                        row.image_storage_path ?? row.image_url ?? undefined
+                      }
+                    >
                       {row.image_storage_path ?? row.image_url ?? "No file"}
                     </span>
-                    {row.previewUrl && (
-                      <a
-                        aria-label="Open image preview"
-                        className="text-muted shrink-0 hover:text-foreground"
-                        href={row.previewUrl}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </a>
-                    )}
                   </div>
                   <label
-                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
                     htmlFor={`new-ep-image-${row.key}`}
                   >
                     {uploadingImageKey === row.key && <Spinner size="sm" />}
@@ -462,7 +510,7 @@ export default function NewEpisodePage() {
                   />
                   <div>
                     <label
-                      className="text-foreground mb-1 block text-xs font-medium uppercase"
+                      className={labelClass}
                       htmlFor={`new-ep-img-desc-${row.key}`}
                       style={labelStyle}
                     >
@@ -487,7 +535,7 @@ export default function NewEpisodePage() {
                 </div>
               ))}
               <label
-                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium hover:bg-surface-hover/80"
                 htmlFor="new-ep-image-add"
               >
                 {uploadingImageKey === "__new__" && <Spinner size="sm" />}
