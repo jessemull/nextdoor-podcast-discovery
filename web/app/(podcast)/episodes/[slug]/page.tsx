@@ -244,27 +244,32 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
             {similar.map((ep) => (
               <li key={ep.id}>
                 <Link
-                  className="bg-surface-hover/30 flex gap-3 rounded-lg border border-podcast-accent p-3 transition-colors hover:bg-surface-hover/50 hover:border-podcast-accent"
+                  className="bg-surface-hover/30 group flex h-full flex-col rounded-lg border border-podcast-accent p-3 transition-colors hover:bg-surface-hover/50 hover:border-podcast-accent sm:p-3.5"
                   href={`/episodes/${ep.slug}`}
                 >
-                  {ep.image_url ? (
-                    <Image
-                      alt=""
-                      className="h-16 w-16 shrink-0 rounded object-cover"
-                      height={64}
-                      src={ep.image_url}
-                      unoptimized
-                      width={64}
-                    />
-                  ) : (
-                    <div className="bg-surface-hover h-16 w-16 shrink-0 rounded" />
-                  )}
-                  <div className="min-w-0 flex-1">
+                  <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-md bg-surface-hover sm:h-36">
+                    {ep.image_url ? (
+                      <Image
+                        alt=""
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        src={ep.image_url}
+                        unoptimized
+                      />
+                    ) : (
+                      <div
+                        aria-hidden
+                        className="h-full w-full bg-gradient-to-br from-surface-hover to-background"
+                      />
+                    )}
+                  </div>
+                  <div className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5">
                     <h3 className="text-podcast-foreground line-clamp-2 text-base font-bold leading-snug">
                       {ep.title}
                     </h3>
-                    {ep.published_at && (
-                      <div className="mt-1 flex items-center gap-1.5 text-sm text-white">
+                    {ep.published_at ? (
+                      <div className="flex items-center gap-1.5 text-sm text-white">
                         <svg
                           aria-hidden
                           className="text-podcast-accent h-4 w-4 shrink-0"
@@ -287,7 +292,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
                           })}
                         </time>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </Link>
               </li>
