@@ -2,6 +2,11 @@
  * Types for podcast episodes and categories (public site).
  */
 
+export interface PodcastEpisodeCategoryRef {
+  name: string;
+  slug: string;
+}
+
 export interface PodcastEpisodeImage {
   description: string | null;
   id: string;
@@ -13,6 +18,7 @@ export interface PodcastEpisode {
   about_episode: string | null;
   audio_storage_path: string | null;
   audio_url: string | null;
+  categories: PodcastEpisodeCategoryRef[];
   created_at: string;
   description: string | null;
   duration_seconds: number | null;
@@ -30,15 +36,16 @@ export interface PodcastEpisode {
 }
 
 export interface PodcastEpisodeSummary {
-  id: string;
-  slug: string;
-  title: string;
+  audio_url: string | null;
+  categories: PodcastEpisodeCategoryRef[];
+  created_at: string;
   description: string | null;
+  duration_seconds: number | null;
+  id: string;
   image_url: string | null;
   published_at: string | null;
-  duration_seconds: number | null;
-  audio_url: string | null;
-  created_at: string;
+  slug: string;
+  title: string;
 }
 
 export interface PodcastEpisodeWithSimilarity extends PodcastEpisodeSummary {
@@ -46,8 +53,8 @@ export interface PodcastEpisodeWithSimilarity extends PodcastEpisodeSummary {
 }
 
 export interface PodcastCategory {
-  id: string;
-  slug: string;
-  name: string;
   description: string | null;
+  id: string;
+  name: string;
+  slug: string;
 }

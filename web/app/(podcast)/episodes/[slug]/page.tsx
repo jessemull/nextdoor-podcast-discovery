@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PodcastAudioPlayer } from "@/components/PodcastAudioPlayer";
+import { PodcastEpisodeCategoryChips } from "@/components/PodcastEpisodeCategoryChips";
+import { PodcastEpisodeGridCard } from "@/components/PodcastEpisodeGridCard";
 import { formatDuration } from "@/lib/format-duration";
 import {
   PODCAST_ENTRANCE_CLASS,
@@ -109,6 +111,19 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
     }),
   };
 
+  const categoriesRowTopClass = episode.audio_url
+    ? "mt-3.5"
+    : episode.description
+      ? "mt-3"
+      : "mt-4";
+  const categoriesAnimationDelay = episode.audio_url
+    ? "280ms"
+    : episode.description
+      ? "160ms"
+      : "80ms";
+  const titleAnimationDelay =
+    episode.published_at || episode.duration_seconds != null ? "80ms" : "0ms";
+
   return (
     <div className="mx-auto max-w-6xl px-5 pb-12 pt-8 sm:px-7 sm:pt-12">
       <script
@@ -118,69 +133,71 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
       <article>
         {/* Hero */}
         <header>
+          {(episode.published_at || episode.duration_seconds != null) && (
+            <div
+              className={`mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white ${PODCAST_ENTRANCE_CLASS}`}
+              style={{ animationDelay: "0ms" }}
+            >
+              {episode.published_at && (
+                <span className="flex items-center gap-1.5">
+                  <svg
+                    aria-hidden
+                    className="text-podcast-accent h-4 w-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <time dateTime={episode.published_at}>
+                    {new Date(episode.published_at).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </time>
+                </span>
+              )}
+              {episode.duration_seconds != null && (
+                <span className="flex items-center gap-1.5">
+                  <svg
+                    aria-hidden
+                    className="text-podcast-accent h-4 w-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {formatDuration(episode.duration_seconds)}
+                </span>
+              )}
+            </div>
+          )}
           <div
             className={PODCAST_ENTRANCE_CLASS}
-            style={{ animationDelay: "0ms" }}
+            style={{ animationDelay: titleAnimationDelay }}
           >
             <h1 className="text-podcast-foreground block pb-3 text-4xl font-bold">
               {episode.title}
             </h1>
-          </div>
-          <div
-            className={`mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white ${PODCAST_ENTRANCE_CLASS}`}
-            style={{ animationDelay: "80ms" }}
-          >
-            {episode.published_at && (
-              <span className="flex items-center gap-1.5">
-                <svg
-                  aria-hidden
-                  className="text-podcast-accent h-4 w-4 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <time dateTime={episode.published_at}>
-                  {new Date(episode.published_at).toLocaleDateString("en-US", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </time>
-              </span>
-            )}
-            {episode.duration_seconds != null && (
-              <span className="flex items-center gap-1.5">
-                <svg
-                  aria-hidden
-                  className="text-podcast-accent h-4 w-4 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {formatDuration(episode.duration_seconds)}
-              </span>
-            )}
           </div>
         </header>
 
         {episode.description ? (
           <div
             className={PODCAST_ENTRANCE_CLASS}
-            style={{ animationDelay: "160ms" }}
+            style={{ animationDelay: "120ms" }}
           >
             <p className="mt-2 whitespace-pre-wrap text-base text-[#9fb7c4]">
               {episode.description}
@@ -200,6 +217,18 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
               durationSeconds={episode.duration_seconds}
               src={episode.audio_url}
             />
+          </div>
+        ) : null}
+
+        {episode.categories.length > 0 ? (
+          <div
+            className={`${categoriesRowTopClass} flex flex-wrap items-center gap-x-2 gap-y-1 ${PODCAST_ENTRANCE_CLASS}`}
+            style={{ animationDelay: categoriesAnimationDelay }}
+          >
+            <span className="font-medium inline-block origin-center scale-y-[1.07] shrink-0 text-xs tracking-wider text-white/70 uppercase">
+              Categories
+            </span>
+            <PodcastEpisodeCategoryChips categories={episode.categories} />
           </div>
         ) : null}
 
@@ -281,58 +310,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
                   animationDelay: `${podcastEntranceDelayMs(relatedIndex)}ms`,
                 }}
               >
-                <Link
-                  className="bg-surface-hover/30 group flex h-full flex-col rounded-lg border border-podcast-accent p-3 transition-colors hover:bg-surface-hover/50 hover:border-podcast-accent sm:p-3.5"
-                  href={`/episodes/${ep.slug}`}
-                >
-                  <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-md bg-surface-hover sm:h-36">
-                    {ep.image_url ? (
-                      <Image
-                        alt=""
-                        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        src={ep.image_url}
-                        unoptimized
-                      />
-                    ) : (
-                      <div
-                        aria-hidden
-                        className="h-full w-full bg-gradient-to-br from-surface-hover to-background"
-                      />
-                    )}
-                  </div>
-                  <div className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5">
-                    <h3 className="text-podcast-foreground line-clamp-2 text-base font-bold leading-snug">
-                      {ep.title}
-                    </h3>
-                    {ep.published_at ? (
-                      <div className="flex items-center gap-1.5 text-sm text-white">
-                        <svg
-                          aria-hidden
-                          className="text-podcast-accent h-4 w-4 shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <time dateTime={ep.published_at}>
-                          {new Date(ep.published_at).toLocaleDateString("en-US", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </time>
-                      </div>
-                    ) : null}
-                  </div>
-                </Link>
+                <PodcastEpisodeGridCard episode={ep} />
               </li>
             ))}
           </ul>

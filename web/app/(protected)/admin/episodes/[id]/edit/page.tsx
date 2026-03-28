@@ -665,7 +665,7 @@ export default function EditEpisodePage() {
               Categories
             </h2>
             <p className="text-muted mb-4 text-xs">
-              Used on the public categories pages.
+              Shown as topic chips on the public site; each links to more episodes with that topic.
             </p>
             <PodcastCategoryAutocomplete
               categories={categories}

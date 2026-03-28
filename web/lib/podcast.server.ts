@@ -10,12 +10,27 @@ import { getSupabaseAdmin } from "@/lib/supabase.server";
 import type {
   PodcastCategory,
   PodcastEpisode,
+  PodcastEpisodeCategoryRef,
   PodcastEpisodeImage,
   PodcastEpisodeSummary,
   PodcastEpisodeWithSimilarity,
 } from "@/lib/podcast.types";
 
 const supabase = () => getSupabaseAdmin();
+
+function normalizeEpisodeCategories(raw: unknown): PodcastEpisodeCategoryRef[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PodcastEpisodeCategoryRef[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const name = typeof o.name === "string" ? o.name : "";
+    const slug = typeof o.slug === "string" ? o.slug : "";
+    if (!slug || !name) continue;
+    out.push({ name, slug });
+  }
+  return out;
+}
 
 function normalizeEpisodeImages(raw: unknown): PodcastEpisodeImage[] {
   if (!Array.isArray(raw)) return [];
@@ -41,7 +56,12 @@ export async function getEpisodesPublished(
     p_offset: offset,
   });
   if (error) throw error;
-  return (data ?? []) as PodcastEpisodeSummary[];
+  return ((data ?? []) as (PodcastEpisodeSummary & { categories?: unknown })[]).map(
+    (row) => ({
+      ...row,
+      categories: normalizeEpisodeCategories(row.categories),
+    })
+  );
 }
 
 export async function getEpisodeBySlug(
@@ -53,9 +73,13 @@ export async function getEpisodeBySlug(
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) return null;
-  const episode = row as PodcastEpisode & { episode_images?: unknown };
+  const episode = row as PodcastEpisode & {
+    categories?: unknown;
+    episode_images?: unknown;
+  };
   return {
     ...episode,
+    categories: normalizeEpisodeCategories(episode.categories),
     episode_images: normalizeEpisodeImages(episode.episode_images),
   };
 }
@@ -71,7 +95,12 @@ export async function getEpisodesByCategory(
     p_offset: offset,
   });
   if (error) throw error;
-  return (data ?? []) as PodcastEpisodeSummary[];
+  return ((data ?? []) as (PodcastEpisodeSummary & { categories?: unknown })[]).map(
+    (row) => ({
+      ...row,
+      categories: normalizeEpisodeCategories(row.categories),
+    })
+  );
 }
 
 export async function searchEpisodesPublished(
@@ -85,7 +114,12 @@ export async function searchEpisodesPublished(
     p_offset: offset,
   });
   if (error) throw error;
-  return (data ?? []) as PodcastEpisodeSummary[];
+  return ((data ?? []) as (PodcastEpisodeSummary & { categories?: unknown })[]).map(
+    (row) => ({
+      ...row,
+      categories: normalizeEpisodeCategories(row.categories),
+    })
+  );
 }
 
 export async function getSimilarEpisodes(
@@ -97,7 +131,12 @@ export async function getSimilarEpisodes(
     p_limit: limit,
   });
   if (error) throw error;
-  return (data ?? []) as PodcastEpisodeWithSimilarity[];
+  return (
+    (data ?? []) as (PodcastEpisodeWithSimilarity & { categories?: unknown })[]
+  ).map((row) => ({
+    ...row,
+    categories: normalizeEpisodeCategories(row.categories),
+  }));
 }
 
 export async function getPodcastCategories(): Promise<PodcastCategory[]> {

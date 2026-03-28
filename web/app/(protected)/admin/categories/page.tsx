@@ -258,7 +258,7 @@ export default function AdminCategoriesPage() {
           Categories
         </h1>
         <p className="text-foreground mb-6 text-sm" style={labelStyle}>
-          Add and edit categories for browsing episodes on the public site.
+          Add and edit topic tags; each appears as a chip on episodes and links to related episodes.
         </p>
         {error && (
           <p className="text-destructive mb-4 text-sm">{error}</p>

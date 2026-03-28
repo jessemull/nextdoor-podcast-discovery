@@ -49,56 +49,57 @@ const REQUIRED_FILES = [
   "example-image-3.jpg",
 ];
 
+// Demo data: exactly ten generic topic categories; episodes pick one in round-robin order.
 const CATEGORIES = [
   {
-    description: "Odd neighbor stories and HOA energy.",
-    name: "Neighborhood Drama",
-    slug: "demo-neighborhood-drama",
+    description: "Garage sales, giveaways, and marketplace threads.",
+    name: "Classifieds",
+    slug: "classifieds",
   },
   {
-    description: "Lost pets, found pets, and drama at the dog park.",
-    name: "Pets and Wildlife",
-    slug: "demo-pets-wildlife",
+    description: "Block parties, meetups, and local gatherings.",
+    name: "Community",
+    slug: "community-events",
   },
   {
-    description: "Suspicious vans, porch pirates, and ring cam lore.",
-    name: "Safety and Suspicion",
-    slug: "demo-safety-suspicion",
+    description: "Standout threads worth a listen.",
+    name: "Greatest hits",
+    slug: "greatest-hits",
   },
   {
-    description: "Who has a ladder, who needs sugar at 9pm.",
-    name: "Recommendations and Favors",
-    slug: "demo-recommendations",
+    description: "Contractors, repairs, and home projects.",
+    name: "Home",
+    slug: "home-repairs",
   },
   {
-    description: "Garage sales, free curbs, and marketplace chaos.",
-    name: "Classifieds Vibes",
-    slug: "demo-classifieds",
+    description: "Neighbors, HOAs, and block dynamics.",
+    name: "Neighborhood",
+    slug: "neighborhood",
   },
   {
-    description: "Leaf blowers, fence lines, and passive-aggressive notes.",
-    name: "Noise and Nuisance",
-    slug: "demo-noise-nuisance",
+    description: "Sound, boundaries, and polite (or not) requests.",
+    name: "Noise and nuisance",
+    slug: "noise-nuisance",
   },
   {
-    description: "Speeders, parking spots, and street justice.",
-    name: "Cars and Streets",
-    slug: "demo-cars-streets",
+    description: "Lost and found, wildlife, and pets.",
+    name: "Pets and wildlife",
+    slug: "pets-wildlife",
   },
   {
-    description: "Events, block parties, and who brought what.",
-    name: "Community Events",
-    slug: "demo-community-events",
+    description: "Asks, referrals, and favors.",
+    name: "Recommendations",
+    slug: "recommendations",
   },
   {
-    description: "Contractors, roof leaks, and permit gossip.",
-    name: "Home and Repairs",
-    slug: "demo-home-repairs",
+    description: "Crime worries, cameras, and safety tips.",
+    name: "Safety",
+    slug: "safety",
   },
   {
-    description: "The posts that make you screenshot for the group chat.",
-    name: "Greatest Hits",
-    slug: "demo-greatest-hits",
+    description: "Parking, traffic, and street life.",
+    name: "Streets and parking",
+    slug: "streets-parking",
   },
 ];
 

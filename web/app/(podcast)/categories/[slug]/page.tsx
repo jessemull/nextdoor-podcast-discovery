@@ -1,11 +1,14 @@
-import Image from "next/image";
 import Link from "next/link";
 
+import { PodcastEpisodeGridCard } from "@/components/PodcastEpisodeGridCard";
 import {
   PODCAST_ENTRANCE_CLASS,
   podcastEntranceDelayMs,
 } from "@/lib/podcast-entrance-animation";
-import { getEpisodesByCategorySafe } from "@/lib/podcast.server";
+import {
+  getEpisodesByCategorySafe,
+  getPodcastCategoriesSafe,
+} from "@/lib/podcast.server";
 
 import type { Metadata } from "next";
 
@@ -28,8 +31,12 @@ export const revalidate = 60;
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const episodes = await getEpisodesByCategorySafe(slug, 50, 0);
-  const categoryName = slug.replace(/-/g, " ");
+  const [episodes, categories] = await Promise.all([
+    getEpisodesByCategorySafe(slug, 50, 0),
+    getPodcastCategoriesSafe(),
+  ]);
+  const match = categories.find((c) => c.slug === slug);
+  const categoryName = match?.name ?? slug.replace(/-/g, " ");
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 sm:px-7">
@@ -38,22 +45,22 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         className={`text-muted mb-4 text-sm ${PODCAST_ENTRANCE_CLASS}`}
         style={{ animationDelay: "0ms" }}
       >
-        <Link className="hover:text-foreground" href="/categories">
-          Categories
+        <Link className="hover:text-foreground" href="/">
+          Home
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-foreground capitalize">{categoryName}</span>
+        <span className="text-foreground">{categoryName}</span>
       </nav>
       <div
         className={PODCAST_ENTRANCE_CLASS}
         style={{ animationDelay: "80ms" }}
       >
-        <h1 className="text-foreground mb-6 text-2xl font-bold capitalize">
+        <h1 className="text-foreground mb-6 text-2xl font-bold">
           {categoryName}
         </h1>
       </div>
       {episodes.length > 0 ? (
-        <ul className="space-y-4">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {episodes.map((ep, index) => (
             <li
               key={ep.id}
@@ -62,39 +69,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 animationDelay: `${podcastEntranceDelayMs(index)}ms`,
               }}
             >
-              <Link
-                className="border-border bg-surface-hover/30 flex gap-4 rounded-lg border p-4 transition-colors hover:border-border-focus"
-                href={`/episodes/${ep.slug}`}
-              >
-                {ep.image_url ? (
-                  <Image
-                    alt=""
-                    className="h-20 w-20 shrink-0 rounded object-cover"
-                    height={80}
-                    src={ep.image_url}
-                    unoptimized
-                    width={80}
-                  />
-                ) : (
-                  <div className="bg-surface-hover h-20 w-20 shrink-0 rounded" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-foreground font-semibold">{ep.title}</h2>
-                  {ep.published_at && (
-                    <time
-                      className="text-muted text-sm"
-                      dateTime={ep.published_at}
-                    >
-                      {new Date(ep.published_at).toLocaleDateString()}
-                    </time>
-                  )}
-                  {ep.description && (
-                    <p className="text-muted mt-1 line-clamp-2 text-sm">
-                      {ep.description}
-                    </p>
-                  )}
-                </div>
-              </Link>
+              <PodcastEpisodeGridCard episode={ep} />
             </li>
           ))}
         </ul>
