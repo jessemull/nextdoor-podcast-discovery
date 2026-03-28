@@ -21,10 +21,10 @@ function getTotpFactorsFromListFactorsResponse(data: unknown): { id: string; sta
 function getSafeReturnTo(returnTo: string | null): string {
   const path = (returnTo ?? "").trim() || "/";
   if (!path.startsWith("/") || path.includes("//")) {
-    return "/dashboard";
+    return "/admin";
   }
   if (path === "/") {
-    return "/dashboard";
+    return "/admin";
   }
   return path;
 }

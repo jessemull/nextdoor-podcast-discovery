@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { FeedPageContent } from "@/app/(protected)/feed/FeedPageContent";
+import { FeedPageContent } from "@/app/(protected)/admin/feed/FeedPageContent";
 
 export default function ClassifiedsPage() {
   return (

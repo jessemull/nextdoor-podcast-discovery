@@ -173,6 +173,8 @@ export function PostFeed({
   postType?: "classified" | "standard";
 } = {}) {
   const router = useRouter();
+  const similarSearchListPath =
+    postType === "classified" ? "/admin/classifieds" : "/admin/feed";
   const appliedInitialCategoriesRef = useRef(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
@@ -434,7 +436,7 @@ export function PostFeed({
     postRefs,
     sentinelRef,
   } = useFeedKeyboardNav({
-    onOpenPost: (postId) => router.push(`/posts/${postId}`),
+    onOpenPost: (postId) => router.push(`/admin/posts/${postId}`),
     posts,
   });
 
@@ -1207,6 +1209,7 @@ export function PostFeed({
                       isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                       post={post}
                       queueStatus={getQueueStatusForPost(post)}
+                      similarSearchListPath={similarSearchListPath}
                       onCancelRefresh={requestCancelRefresh}
                       onMarkSaved={(id, saved) =>
                         searchSlot.onMarkSaved(id, saved)
@@ -1293,13 +1296,14 @@ export function PostFeed({
                     queueStatus={getQueueStatusForPost(post)}
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
+                    similarSearchListPath={similarSearchListPath}
                     onCancelRefresh={requestCancelRefresh}
                     onMarkIgnored={requestMarkIgnored}
                     onMarkSaved={handleMarkSaved}
                     onMarkUsedChange={requestMarkUsedChange}
                     onQueueRefresh={requestQueueRefresh}
                     onSelect={toggleSelect}
-                    onViewDetails={() => router.push(`/posts/${post.id}`)}
+                    onViewDetails={() => router.push(`/admin/posts/${post.id}`)}
                   />
                 </div>
               ))}

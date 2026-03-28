@@ -25,7 +25,8 @@ export function FeedPageContent({
 }: {
   postType?: "classified" | "standard";
 } = {}) {
-  const basePath = postType === "classified" ? "/classifieds" : "/feed";
+  const basePath =
+    postType === "classified" ? "/admin/classifieds" : "/admin/feed";
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -210,7 +211,7 @@ export function FeedPageContent({
             onSearch: handleSearch,
             onSimilarityThresholdChange: handleThresholdChange,
             onUseKeywordSearchChange: setUseKeywordSearch,
-            onViewDetails: (postId) => router.push(`/posts/${postId}`),
+            onViewDetails: (postId) => router.push(`/admin/posts/${postId}`),
             query,
             results,
             searchError: searchError ?? null,

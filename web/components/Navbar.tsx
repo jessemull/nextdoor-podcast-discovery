@@ -22,14 +22,14 @@ const navLinkClass = cn(
 );
 
 const NAV_LINKS = [
-  { href: "/dashboard", label: "Home" },
-  { href: "/feed", label: "Feed" },
-  { href: "/classifieds", label: "Classifieds" },
+  { href: "/admin", label: "Home" },
+  { href: "/admin/feed", label: "Feed" },
+  { href: "/admin/classifieds", label: "Classifieds" },
   { href: "/admin/episodes", label: "Episodes" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/stats", label: "Stats" },
-  { href: "/settings", label: "Settings" },
+  { href: "/admin/jobs", label: "Jobs" },
+  { href: "/admin/stats", label: "Stats" },
+  { href: "/admin/settings", label: "Settings" },
 ] as const;
 
 export function Navbar() {
@@ -83,7 +83,7 @@ export function Navbar() {
         <Link
           aria-label="Go to dashboard"
           className="flex items-center gap-2 text-lg font-semibold text-foreground"
-          href="/dashboard"
+          href="/admin"
         >
           <Mic aria-hidden className="h-5 w-5" />
           Nextdoor Discovery

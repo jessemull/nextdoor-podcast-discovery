@@ -126,7 +126,7 @@ export function JobsList({
           {showManageLink && (
             <Link
               className="text-muted shrink-0 text-sm hover:text-foreground"
-              href="/jobs"
+              href="/admin/jobs"
             >
               Manage jobs →
             </Link>

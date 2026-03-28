@@ -62,10 +62,12 @@ interface PostCardProps {
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
   post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
+  postDetailPathPrefix?: string;
   queueStatus?: QueueStatus;
   selected?: boolean;
   showCheckbox?: boolean;
   showScoreBreakdown?: boolean;
+  similarSearchListPath?: string;
 }
 
 export const PostCard = memo(function PostCard({
@@ -84,10 +86,12 @@ export const PostCard = memo(function PostCard({
   onSelect,
   onViewDetails,
   post,
+  postDetailPathPrefix = "/admin/posts",
   queueStatus = null,
   selected = false,
   showCheckbox = false,
   showScoreBreakdown = false,
+  similarSearchListPath = "/admin/feed",
 }: PostCardProps) {
   const scores = post.llm_scores;
   const [carouselOverflows, setCarouselOverflows] = useState(false);
@@ -282,7 +286,7 @@ export const PostCard = memo(function PostCard({
                   <Link
                     key="find-similar"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                    href={`/feed?q=${encodeURIComponent(
+                    href={`${similarSearchListPath}?q=${encodeURIComponent(
                       (post.text || scores?.summary || "").slice(0, 80)
                     )}`}
                     role="menuitem"
@@ -501,7 +505,7 @@ export const PostCard = memo(function PostCard({
               <span className="text-muted-foreground text-sm">•</span>
               <Link
                 className="text-foreground inline-flex items-center gap-1 text-sm hover:underline"
-                href={`/posts/${post.id}#comments`}
+                href={`${postDetailPathPrefix}/${post.id}#comments`}
                 title="View comments"
               >
                 <MessageSquare

@@ -290,7 +290,7 @@ export function PostDetailClient({
             <p className="text-destructive">{error || "Post not found"}</p>
             <Link
               className="mt-4 inline-flex items-center gap-2 text-muted hover:text-foreground"
-              href="/feed"
+              href="/admin/feed"
             >
               <ArrowLeft aria-hidden className="h-4 w-4" />
               Back to Feed
@@ -307,7 +307,7 @@ export function PostDetailClient({
         {/* Back link */}
         <Link
           className="mb-6 inline-flex items-center gap-2 text-muted text-sm hover:text-foreground"
-          href="/feed"
+          href="/admin/feed"
         >
           <ArrowLeft aria-hidden className="h-4 w-4" />
           Back to Feed
@@ -406,7 +406,7 @@ export function PostDetailClient({
                   key={relatedPost.id}
                   post={relatedPost}
                   onViewDetails={() =>
-                    router.push(`/posts/${relatedPost.id}`)
+                    router.push(`/admin/posts/${relatedPost.id}`)
                   }
                 />
               ))}
