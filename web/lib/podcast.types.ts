@@ -10,6 +10,7 @@ export interface PodcastEpisodeImage {
 }
 
 export interface PodcastEpisode {
+  about_episode: string | null;
   audio_storage_path: string | null;
   audio_url: string | null;
   created_at: string;

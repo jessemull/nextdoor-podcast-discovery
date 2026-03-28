@@ -18,6 +18,7 @@ const labelClass = "text-foreground mb-1 block text-sm font-medium uppercase";
 const labelStyle = { opacity: 0.85 };
 
 interface Episode {
+  about_episode: string | null;
   audio_storage_path: string | null;
   audio_url: string | null;
   description: string | null;
@@ -79,6 +80,7 @@ export default function EditEpisodePage() {
   const [submitting, setSubmitting] = useState(false);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [aboutEpisode, setAboutEpisode] = useState("");
   const [description, setDescription] = useState("");
   const [showNotes, setShowNotes] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
@@ -110,6 +112,7 @@ export default function EditEpisodePage() {
           setEpisode(data);
           setTitle(data.title ?? "");
           setSlug(data.slug ?? "");
+          setAboutEpisode(data.about_episode ?? "");
           setDescription(data.description ?? "");
           setShowNotes(data.show_notes ?? "");
           setStatus(
@@ -185,6 +188,7 @@ export default function EditEpisodePage() {
     try {
       const res = await fetch(`/api/admin/podcast/episodes/${id}`, {
         body: JSON.stringify({
+          about_episode: aboutEpisode.trim() || null,
           audio_storage_path: audioStoragePath || null,
           description: description || null,
           duration_seconds: durationSeconds
@@ -219,10 +223,11 @@ export default function EditEpisodePage() {
       setSubmitting(false);
     }
   }, [
-    id,
+    aboutEpisode,
     audioStoragePath,
     description,
     durationSeconds,
+    id,
     imageRows,
     showNotes,
     slug,
@@ -243,6 +248,7 @@ export default function EditEpisodePage() {
     ? title.trim() !== (episode.title ?? "").trim() ||
       (slug || title.toLowerCase().replace(/\s+/g, "-")) !==
         (episode.slug ?? "").toLowerCase().replace(/\s+/g, "-") ||
+      (aboutEpisode.trim() || null) !== (episode.about_episode ?? null) ||
       (description || null) !== (episode.description ?? null) ||
       (showNotes || null) !== (episode.show_notes ?? null) ||
       status !== (episode.status === "published" ? "published" : "draft") ||
@@ -472,6 +478,19 @@ export default function EditEpisodePage() {
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="edit-ep-about" style={labelStyle}>
+              About the Episode
+            </label>
+            <textarea
+              className={inputClass}
+              id="edit-ep-about"
+              placeholder="Optional. Separate paragraphs with a blank line."
+              rows={5}
+              value={aboutEpisode}
+              onChange={(e) => setAboutEpisode(e.target.value)}
             />
           </div>
           <div>

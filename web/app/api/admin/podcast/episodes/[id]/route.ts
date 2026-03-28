@@ -137,6 +137,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   if (body.description !== undefined)
     update.description =
       typeof body.description === "string" ? body.description : null;
+  if (body.about_episode !== undefined)
+    update.about_episode =
+      typeof body.about_episode === "string"
+        ? body.about_episode.trim() || null
+        : null;
   if (body.show_notes !== undefined)
     update.show_notes =
       typeof body.show_notes === "string" ? body.show_notes : null;

@@ -174,7 +174,12 @@ export async function POST(request: NextRequest) {
       : publishedAtValue;
 
   const supabase = getSupabaseAdmin();
+  const aboutEpisode =
+    typeof body.about_episode === "string"
+      ? body.about_episode.trim() || null
+      : null;
   const insert: Record<string, unknown> = {
+    about_episode: aboutEpisode,
     audio_storage_path: audioStoragePath,
     audio_url: audioUrl,
     description: typeof body.description === "string" ? body.description : null,

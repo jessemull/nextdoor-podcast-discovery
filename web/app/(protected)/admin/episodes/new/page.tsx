@@ -39,6 +39,7 @@ export default function NewEpisodePage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [title, setTitle] = useState("");
+  const [aboutEpisode, setAboutEpisode] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [audioStoragePath, setAudioStoragePath] = useState("");
@@ -58,6 +59,7 @@ export default function NewEpisodePage() {
     try {
       const res = await fetch("/api/admin/podcast/episodes", {
         body: JSON.stringify({
+          about_episode: aboutEpisode.trim() || null,
           audio_storage_path: audioStoragePath || null,
           description: description || null,
           duration_seconds: durationSeconds
@@ -91,6 +93,7 @@ export default function NewEpisodePage() {
       setSubmitting(false);
     }
   }, [
+    aboutEpisode,
     audioStoragePath,
     description,
     durationSeconds,
@@ -104,6 +107,7 @@ export default function NewEpisodePage() {
 
   const dirty =
     title.trim() !== "" ||
+    aboutEpisode.trim() !== "" ||
     description.trim() !== "" ||
     showNotes.trim() !== "" ||
     status !== "draft" ||
@@ -217,6 +221,19 @@ export default function NewEpisodePage() {
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="new-ep-about" style={labelStyle}>
+              About the Episode
+            </label>
+            <textarea
+              className={inputClass}
+              id="new-ep-about"
+              placeholder="Optional. Separate paragraphs with a blank line."
+              rows={5}
+              value={aboutEpisode}
+              onChange={(e) => setAboutEpisode(e.target.value)}
             />
           </div>
           <div>

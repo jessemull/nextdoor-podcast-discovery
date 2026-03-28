@@ -13,7 +13,7 @@ const subscribeInputClassName =
 
 export default function SubscribePage() {
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-7 md:py-14">
+    <div className="mx-auto max-w-6xl px-5 pb-10 pt-10 sm:px-7 md:pb-14 md:pt-14 lg:pt-32">
       <section className="mx-auto mb-14 w-full max-w-5xl px-1 sm:px-2">
         <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
           Join Our Email List

@@ -183,6 +183,29 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           </div>
         )}
 
+        {(galleryForDisplay.length > 0 ||
+          Boolean(episode.about_episode?.trim())) && (
+          <section className="mt-8 space-y-4 sm:mt-10">
+            <h2 className="font-bold text-3xl text-podcast-foreground tracking-tight sm:text-4xl">
+              About the Episode
+            </h2>
+            {episode.about_episode?.trim()
+              ? episode.about_episode
+                  .split(/\n\n+/)
+                  .map((block) => block.trim())
+                  .filter(Boolean)
+                  .map((para, idx) => (
+                    <p
+                      key={idx}
+                      className="whitespace-pre-wrap text-base text-[#9fb7c4]"
+                    >
+                      {para}
+                    </p>
+                  ))
+              : null}
+          </section>
+        )}
+
         {galleryForDisplay.length > 0 && (
           <div className="mt-8 space-y-8 sm:mt-12">
             {galleryForDisplay.map((img) => (

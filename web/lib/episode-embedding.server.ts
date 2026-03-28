@@ -16,7 +16,7 @@ export async function computeAndUpsertEpisodeEmbedding(
   const supabase = getSupabaseAdmin();
   const { data: episode, error: fetchError } = await supabase
     .from("podcast_episodes")
-    .select("id, title, description, show_notes")
+    .select("about_episode, description, id, show_notes, title")
     .eq("id", episodeId)
     .single();
 
@@ -27,6 +27,7 @@ export async function computeAndUpsertEpisodeEmbedding(
   const parts = [
     (episode.title as string) ?? "",
     (episode.description as string) ?? "",
+    (episode.about_episode as string) ?? "",
     (episode.show_notes as string) ?? "",
   ];
   const text = parts
