@@ -149,12 +149,12 @@ export default function EditCategoryPage() {
           </div>
           <div className="text-foreground mb-2 h-8 w-48 animate-pulse rounded bg-surface-hover" />
           <div className="text-foreground mb-6 h-4 w-64 animate-pulse rounded bg-surface-hover" />
-          <Card className="mb-8 p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <Card className="mb-8 p-8">
+            <div className="mb-6 flex items-center justify-between">
               <div className="bg-surface-hover h-5 w-40 animate-pulse rounded" />
               <div className="bg-surface-hover h-9 w-9 animate-pulse rounded" />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
                 <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
@@ -167,7 +167,7 @@ export default function EditCategoryPage() {
                 <div className="bg-surface-hover mb-2 h-3 w-20 animate-pulse rounded" />
                 <div className="bg-surface-hover h-20 w-full animate-pulse rounded-lg" />
               </div>
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="flex justify-end gap-4 pt-8">
                 <div className="bg-surface-hover h-9 w-16 animate-pulse rounded-md" />
                 <div className="bg-surface-hover h-9 w-14 animate-pulse rounded-md" />
               </div>
@@ -204,17 +204,17 @@ export default function EditCategoryPage() {
             ← Categories
           </Link>
         </div>
-        <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
           {category.name}
         </h1>
-        <p className="text-foreground mb-6 text-sm" style={labelStyle}>
+        <p className="text-foreground mb-8 text-sm" style={labelStyle}>
           Update category details.
         </p>
         {error && (
-          <p className="text-destructive mb-4 text-sm">{error}</p>
+          <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6 font-sans text-sm">
-          <div className="mb-4 flex items-center justify-between">
+        <Card className="mb-8 p-8 font-sans text-sm">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
               Category Details
             </h2>
@@ -228,7 +228,7 @@ export default function EditCategoryPage() {
               <Trash2 aria-hidden className="h-4 w-4" />
             </Button>
           </div>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className={labelClass} htmlFor="edit-cat-name" style={labelStyle}>
                 Name *
@@ -241,7 +241,7 @@ export default function EditCategoryPage() {
                 onChange={(e) => setName(e.target.value)}
               />
               {nameError && (
-                <p className="text-destructive mt-1 text-xs">
+                <p className="text-destructive mt-2 text-xs">
                   Please enter a name.
                 </p>
               )}
@@ -271,7 +271,7 @@ export default function EditCategoryPage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-4 pt-8">
               <Link href="/admin/categories">
                 <Button type="button" variant="secondary">
                   Cancel

@@ -6,7 +6,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-full p-4 sm:p-6">
+    <div className="min-h-full p-5 sm:p-8">
       {children}
     </div>
   );

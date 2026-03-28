@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +14,9 @@ import {
   adminFormInputClass as inputClass,
   adminFormLabelClass as labelClass,
 } from "@/lib/admin-form-classes";
+import { newClientRowKey } from "@/lib/new-client-row-key";
 import { useToast } from "@/lib/ToastContext";
+import { cn } from "@/lib/utils";
 
 const labelStyle = { opacity: 0.85 };
 
@@ -54,6 +56,8 @@ export default function NewEpisodePage() {
   );
   const [imageRemoveKey, setImageRemoveKey] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const audioUploadBusyRef = useRef(false);
+  const imageUploadBusyRef = useRef(false);
 
   const handleSaveConfirm = useCallback(async () => {
     setError(null);
@@ -130,9 +134,9 @@ export default function NewEpisodePage() {
 
   const uploadImageFile = useCallback(
     async (file: File, targetKey: string | "new") => {
-      setUploadingImageKey(
-        targetKey === "new" ? "__new__" : targetKey
-      );
+      if (imageUploadBusyRef.current) return;
+      imageUploadBusyRef.current = true;
+      setUploadingImageKey(targetKey === "new" ? "__new__" : targetKey);
       try {
         const form = new FormData();
         form.set("file", file);
@@ -152,7 +156,7 @@ export default function NewEpisodePage() {
                 description: "",
                 image_storage_path: j.data.path,
                 image_url: null,
-                key: crypto.randomUUID(),
+                key: newClientRowKey(),
                 previewUrl,
               },
             ]);
@@ -173,8 +177,11 @@ export default function NewEpisodePage() {
         } else {
           setError(j.error ?? "Upload failed");
         }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Upload failed");
       } finally {
         setUploadingImageKey(null);
+        imageUploadBusyRef.current = false;
       }
     },
     []
@@ -191,20 +198,36 @@ export default function NewEpisodePage() {
             ← Episodes
           </Link>
         </div>
-        <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
           New Episode
         </h1>
-        <p className="text-foreground mb-6 text-sm" style={labelStyle}>
+        <p className="text-foreground mb-8 text-sm" style={labelStyle}>
           Add a new podcast episode.
         </p>
         {error && (
-          <p className="text-destructive mb-4 text-sm">{error}</p>
+          <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6 font-sans text-sm">
-        <h2 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+        <Card className="mb-8 p-8 font-sans text-sm">
+        <h2 className="text-foreground mb-6 text-sm font-semibold uppercase tracking-wide">
           Episode details
         </h2>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label className={labelClass} htmlFor="new-ep-status" style={labelStyle}>
+              Status
+            </label>
+            <CustomSelect
+              ariaLabel="Status"
+              className="h-10 w-full font-sans text-xs"
+              id="new-ep-status"
+              options={[
+                { label: "Draft", value: "draft" },
+                { label: "Published", value: "published" },
+              ]}
+              value={status}
+              onChange={(val) => setStatus(val as "draft" | "published")}
+            />
+          </div>
           <div>
             <label className={labelClass} htmlFor="new-ep-title" style={labelStyle}>
               Title *
@@ -258,30 +281,15 @@ export default function NewEpisodePage() {
             />
           </div>
           <div>
-            <label className={labelClass} htmlFor="new-ep-status" style={labelStyle}>
-              Status
-            </label>
-            <CustomSelect
-              ariaLabel="Status"
-              className="h-10 w-full font-sans text-xs"
-              options={[
-                { label: "Draft", value: "draft" },
-                { label: "Published", value: "published" },
-              ]}
-              value={status}
-              onChange={(val) => setStatus(val as "draft" | "published")}
-            />
-          </div>
-          <div>
             <p className={labelClass} style={labelStyle}>
               Episode audio
             </p>
-            <p className="text-muted mb-3 text-xs">
+            <p className="text-muted mb-4 text-xs">
               Upload the episode recording. You can replace or remove it from the card below.
             </p>
-            <div className="space-y-4">
-              <div className="border-border min-w-0 space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-2">
+            <div className="space-y-5">
+              <div className="border-border min-w-0 space-y-4 rounded-lg border p-5">
+                <div className="flex items-center justify-between gap-3">
                   <span
                     className="text-foreground font-sans text-xs font-medium uppercase"
                     style={labelStyle}
@@ -324,7 +332,7 @@ export default function NewEpisodePage() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-40 items-center justify-center rounded-md bg-surface-hover text-muted text-xs">
+                  <div className="flex h-20 items-center justify-center rounded-md bg-surface-hover text-muted text-xs">
                     No file chosen.
                   </div>
                 )}
@@ -341,46 +349,52 @@ export default function NewEpisodePage() {
                       : "No storage path yet."}
                   </span>
                 </div>
-                <label
-                  className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                  htmlFor="new-ep-audio"
-                >
-                  {uploadingAudio && <Spinner size="sm" />}
-                  {audioStoragePath || audioPreviewUrl
-                    ? "Replace file"
-                    : "Choose file"}
-                </label>
-                <input
-                  accept="audio/*"
-                  className="sr-only"
-                  disabled={uploadingAudio}
-                  id="new-ep-audio"
-                  type="file"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setUploadingAudio(true);
-                    try {
-                      const form = new FormData();
-                      form.set("file", file);
-                      form.set("type", "audio");
-                      const res = await fetch("/api/admin/podcast/upload", {
-                        body: form,
-                        method: "POST",
-                      });
-                      const j = await res.json().catch(() => ({}));
-                      if (res.ok && j.data?.path) {
-                        setAudioStoragePath(j.data.path);
-                        if (j.data.previewUrl) setAudioPreviewUrl(j.data.previewUrl);
-                      } else {
-                        setError(j.error ?? "Upload failed");
+                <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                  <span className="pointer-events-none flex items-center gap-2">
+                    {uploadingAudio && <Spinner size="sm" />}
+                    {audioStoragePath || audioPreviewUrl
+                      ? "Replace file"
+                      : "Choose file"}
+                  </span>
+                  <input
+                    accept="audio/*"
+                    aria-label="Choose episode audio file"
+                    className={cn(
+                      "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                      uploadingAudio && "pointer-events-none"
+                    )}
+                    type="file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (audioUploadBusyRef.current) return;
+                      audioUploadBusyRef.current = true;
+                      setUploadingAudio(true);
+                      try {
+                        const form = new FormData();
+                        form.set("file", file);
+                        form.set("type", "audio");
+                        const res = await fetch("/api/admin/podcast/upload", {
+                          body: form,
+                          method: "POST",
+                        });
+                        const j = await res.json().catch(() => ({}));
+                        if (res.ok && j.data?.path) {
+                          setAudioStoragePath(j.data.path);
+                          if (j.data.previewUrl) {
+                            setAudioPreviewUrl(j.data.previewUrl);
+                          }
+                        } else {
+                          setError(j.error ?? "Upload failed");
+                        }
+                      } finally {
+                        setUploadingAudio(false);
+                        audioUploadBusyRef.current = false;
+                        e.target.value = "";
                       }
-                    } finally {
-                      setUploadingAudio(false);
-                      e.target.value = "";
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -388,16 +402,16 @@ export default function NewEpisodePage() {
             <p className={labelClass} style={labelStyle}>
               Episode images
             </p>
-            <p className="text-muted mb-3 text-xs">
+            <p className="text-muted mb-4 text-xs">
               Add one or more images. The first image is used for listings and RSS.
             </p>
-            <div className="space-y-4">
+            <div className="space-y-5">
               {imageRows.map((row, index) => (
                 <div
                   key={row.key}
-                  className="border-border min-w-0 space-y-3 rounded-lg border p-4"
+                  className="border-border min-w-0 space-y-4 rounded-lg border p-5"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <span
                       className="text-foreground font-sans text-xs font-medium uppercase"
                       style={labelStyle}
@@ -465,7 +479,7 @@ export default function NewEpisodePage() {
                   {row.previewUrl && (
                     <a
                       aria-label="Preview image in new tab"
-                      className="relative block h-40 w-full overflow-hidden rounded-md bg-surface-hover"
+                      className="relative inline-block max-h-40 max-w-full overflow-hidden rounded-md"
                       href={row.previewUrl}
                       rel="noopener noreferrer"
                       target="_blank"
@@ -473,7 +487,7 @@ export default function NewEpisodePage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         alt=""
-                        className="h-full w-full object-contain object-left"
+                        className="max-h-40 w-auto max-w-full object-contain"
                         src={row.previewUrl}
                       />
                     </a>
@@ -491,26 +505,27 @@ export default function NewEpisodePage() {
                       {row.image_storage_path ?? row.image_url ?? "No file"}
                     </span>
                   </div>
-                  <label
-                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                    htmlFor={`new-ep-image-${row.key}`}
-                  >
-                    {uploadingImageKey === row.key && <Spinner size="sm" />}
-                    Replace file
-                  </label>
-                  <input
-                    accept="image/*"
-                    className="sr-only"
-                    disabled={uploadingImageKey !== null}
-                    id={`new-ep-image-${row.key}`}
-                    type="file"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      await uploadImageFile(file, row.key);
-                      e.target.value = "";
-                    }}
-                  />
+                  <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                    <span className="pointer-events-none flex items-center gap-2">
+                      {uploadingImageKey === row.key && <Spinner size="sm" />}
+                      Replace file
+                    </span>
+                    <input
+                      accept="image/*"
+                      aria-label={`Replace image ${index + 1} file`}
+                      className={cn(
+                        "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                        uploadingImageKey !== null && "pointer-events-none"
+                      )}
+                      type="file"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        await uploadImageFile(file, row.key);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
                   <div>
                     <label
                       className={labelClass}
@@ -537,27 +552,28 @@ export default function NewEpisodePage() {
                   </div>
                 </div>
               ))}
-              <label
-                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                htmlFor="new-ep-image-add"
-              >
-                {uploadingImageKey === "__new__" && <Spinner size="sm" />}
-                <Plus className="h-4 w-4" />
-                Add image
-              </label>
-              <input
-                accept="image/*"
-                className="sr-only"
-                disabled={uploadingImageKey !== null}
-                id="new-ep-image-add"
-                type="file"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  await uploadImageFile(file, "new");
-                  e.target.value = "";
-                }}
-              />
+              <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-4 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                <span className="pointer-events-none flex items-center gap-2">
+                  {uploadingImageKey === "__new__" && <Spinner size="sm" />}
+                  <Plus className="h-4 w-4" />
+                  Add image
+                </span>
+                <input
+                  accept="image/*"
+                  aria-label="Add episode image"
+                  className={cn(
+                    "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                    uploadingImageKey !== null && "pointer-events-none"
+                  )}
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await uploadImageFile(file, "new");
+                    e.target.value = "";
+                  }}
+                />
+              </div>
             </div>
           </div>
           <div>
@@ -573,7 +589,7 @@ export default function NewEpisodePage() {
               onChange={(e) => setDurationSeconds(e.target.value)}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-4 pt-8">
             <Link href="/admin/episodes">
               <Button type="button" variant="secondary">
                 Cancel

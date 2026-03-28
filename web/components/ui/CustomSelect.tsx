@@ -21,6 +21,7 @@ interface CustomSelectProps {
   ariaLabel: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
   onChange: (value: string) => void;
   options: CustomSelectOption[];
   placeholder?: string;
@@ -35,6 +36,7 @@ export function CustomSelect({
   ariaLabel,
   className,
   disabled = false,
+  id,
   onChange,
   options,
   placeholder,
@@ -66,7 +68,7 @@ export function CustomSelect({
   }, [open, close]);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative w-full min-w-0" ref={containerRef}>
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -77,6 +79,7 @@ export function CustomSelect({
           className
         )}
         disabled={disabled}
+        id={id}
         type="button"
         onClick={() => !disabled && setOpen((prev) => !prev)}
       >
@@ -98,7 +101,7 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <ul
-          className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-60 min-w-[12rem] w-max overflow-auto rounded-card border py-1 shadow-lg"
+          className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 max-h-60 w-full min-w-0 overflow-auto rounded-card border py-1 shadow-lg"
           role="listbox"
         >
           {listOptions.map((opt) => (

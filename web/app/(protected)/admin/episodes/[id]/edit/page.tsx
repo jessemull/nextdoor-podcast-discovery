@@ -14,7 +14,9 @@ import {
   adminFormInputClass as inputClass,
   adminFormLabelClass as labelClass,
 } from "@/lib/admin-form-classes";
+import { newClientRowKey } from "@/lib/new-client-row-key";
 import { useToast } from "@/lib/ToastContext";
+import { cn } from "@/lib/utils";
 
 const labelStyle = { opacity: 0.85 };
 
@@ -63,6 +65,36 @@ function imagesPayload(rows: ImageRow[]) {
   }));
 }
 
+/**
+ * Apply server image rows without clobbering in-session edits: new local-only
+ * keys, replaced files, or caption changes on existing keys.
+ */
+function mergeServerImageRowsWithLocal(
+  fromServer: ImageRow[],
+  previous: ImageRow[]
+): ImageRow[] {
+  const prevByKey = new Map(previous.map((row) => [row.key, row]));
+  const serverKeys = new Set(fromServer.map((row) => row.key));
+
+  const merged = fromServer.map((serverRow) => {
+    const local = prevByKey.get(serverRow.key);
+    if (!local) return serverRow;
+    if (
+      local.image_storage_path !== serverRow.image_storage_path ||
+      local.image_url !== serverRow.image_url
+    ) {
+      return local;
+    }
+    if (local.description !== serverRow.description) {
+      return local;
+    }
+    return serverRow;
+  });
+
+  const extras = previous.filter((row) => !serverKeys.has(row.key));
+  return [...merged, ...extras];
+}
+
 function toDatetimeLocal(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -97,6 +129,8 @@ export default function EditEpisodePage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [imageRemoveKey, setImageRemoveKey] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const audioUploadBusyRef = useRef(false);
+  const imageUploadBusyRef = useRef(false);
   const initialImagesJsonRef = useRef("");
 
   useEffect(() => {
@@ -110,70 +144,76 @@ export default function EditEpisodePage() {
         const res = await fetch(`/api/admin/podcast/episodes/${id}`);
         if (!res.ok || cancelled) return;
         const { data } = await res.json();
-        if (data) {
-          setEpisode(data);
-          setTitle(data.title ?? "");
-          setSlug(data.slug ?? "");
-          setAboutEpisode(data.about_episode ?? "");
-          setDescription(data.description ?? "");
-          setShowNotes(data.show_notes ?? "");
-          setStatus(
-            data.status === "published" ? "published" : "draft"
-          );
-          setPublishedAt(toDatetimeLocal(data.published_at));
-          setAudioStoragePath(data.audio_storage_path ?? "");
-          setDurationSeconds(
-            data.duration_seconds != null ? String(data.duration_seconds) : ""
-          );
-          if (data.audio_url) {
-            setAudioDisplayUrl(data.audio_url);
-          } else if (data.audio_storage_path) {
-            const sr = await fetch(
-              `/api/admin/podcast/episodes/${id}/signed-url?type=audio`
-            );
-            const sj = await sr.json().catch(() => ({}));
-            if (sr.ok && sj.url) setAudioDisplayUrl(sj.url);
-          }
+        if (!data || cancelled) return;
 
-          let apiRows = (data.episode_images ?? []) as EpisodeImageRowApi[];
-          if (
-            apiRows.length === 0 &&
-            (data.image_storage_path || data.image_url)
-          ) {
-            apiRows = [
-              {
-                description: data.image_description,
-                id: `legacy-${data.id}`,
-                image_storage_path: data.image_storage_path,
-                image_url: data.image_url,
-              },
-            ];
-          }
-
-          const builtRows: ImageRow[] = await Promise.all(
-            apiRows.map(async (img) => {
-              let previewUrl: string | null = img.image_url;
-              if (!previewUrl && img.image_storage_path) {
-                const ir = await fetch(
-                  `/api/admin/podcast/episodes/${id}/signed-url?type=image&path=${encodeURIComponent(img.image_storage_path)}`
-                );
-                const ij = await ir.json().catch(() => ({}));
-                if (ir.ok && ij.url) previewUrl = ij.url;
-              }
-              return {
-                description: img.description ?? "",
-                image_storage_path: img.image_storage_path,
-                image_url: img.image_url,
-                key: img.id,
-                previewUrl,
-              };
-            })
+        setEpisode(data);
+        setTitle(data.title ?? "");
+        setSlug(data.slug ?? "");
+        setAboutEpisode(data.about_episode ?? "");
+        setDescription(data.description ?? "");
+        setShowNotes(data.show_notes ?? "");
+        setStatus(
+          data.status === "published" ? "published" : "draft"
+        );
+        setPublishedAt(toDatetimeLocal(data.published_at));
+        setAudioStoragePath(data.audio_storage_path ?? "");
+        setDurationSeconds(
+          data.duration_seconds != null ? String(data.duration_seconds) : ""
+        );
+        if (data.audio_url) {
+          setAudioDisplayUrl(data.audio_url);
+        } else if (data.audio_storage_path) {
+          const sr = await fetch(
+            `/api/admin/podcast/episodes/${id}/signed-url?type=audio`
           );
-          setImageRows(builtRows);
-          initialImagesJsonRef.current = JSON.stringify(
-            imagesPayload(builtRows)
-          );
+          if (cancelled) return;
+          const sj = await sr.json().catch(() => ({}));
+          if (cancelled) return;
+          if (sr.ok && sj.url) setAudioDisplayUrl(sj.url);
         }
+
+        let apiRows = (data.episode_images ?? []) as EpisodeImageRowApi[];
+        if (
+          apiRows.length === 0 &&
+          (data.image_storage_path || data.image_url)
+        ) {
+          apiRows = [
+            {
+              description: data.image_description,
+              id: `legacy-${data.id}`,
+              image_storage_path: data.image_storage_path,
+              image_url: data.image_url,
+            },
+          ];
+        }
+
+        const builtRows: ImageRow[] = await Promise.all(
+          apiRows.map(async (img) => {
+            let previewUrl: string | null = img.image_url;
+            if (!previewUrl && img.image_storage_path) {
+              const ir = await fetch(
+                `/api/admin/podcast/episodes/${id}/signed-url?type=image&path=${encodeURIComponent(img.image_storage_path)}`
+              );
+              const ij = await ir.json().catch(() => ({}));
+              if (ir.ok && ij.url) previewUrl = ij.url;
+            }
+            return {
+              description: img.description ?? "",
+              image_storage_path: img.image_storage_path,
+              image_url: img.image_url,
+              key: img.id,
+              previewUrl,
+            };
+          })
+        );
+        if (cancelled) return;
+
+        initialImagesJsonRef.current = JSON.stringify(
+          imagesPayload(builtRows)
+        );
+        setImageRows((previous) =>
+          mergeServerImageRowsWithLocal(builtRows, previous)
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -266,6 +306,8 @@ export default function EditEpisodePage() {
 
   const uploadImageFile = useCallback(
     async (file: File, targetKey: string | "new") => {
+      if (imageUploadBusyRef.current) return;
+      imageUploadBusyRef.current = true;
       setUploadingImageKey(targetKey === "new" ? "__new__" : targetKey);
       try {
         const form = new FormData();
@@ -286,7 +328,7 @@ export default function EditEpisodePage() {
                 description: "",
                 image_storage_path: j.data.path,
                 image_url: null,
-                key: crypto.randomUUID(),
+                key: newClientRowKey(),
                 previewUrl,
               },
             ]);
@@ -307,8 +349,11 @@ export default function EditEpisodePage() {
         } else {
           setError(j.error ?? "Upload failed");
         }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Upload failed");
       } finally {
         setUploadingImageKey(null);
+        imageUploadBusyRef.current = false;
       }
     },
     []
@@ -354,12 +399,12 @@ export default function EditEpisodePage() {
           </div>
           <div className="text-foreground mb-2 h-8 w-48 animate-pulse rounded bg-surface-hover" />
           <div className="text-foreground mb-6 h-4 w-64 animate-pulse rounded bg-surface-hover" />
-          <Card className="mb-8 p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <Card className="mb-8 p-8">
+            <div className="mb-6 flex items-center justify-between">
               <div className="bg-surface-hover h-5 w-40 animate-pulse rounded" />
               <div className="bg-surface-hover h-9 w-9 animate-pulse rounded" />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <div className="bg-surface-hover mb-2 h-3 w-12 animate-pulse rounded" />
                 <div className="bg-surface-hover h-10 w-full animate-pulse rounded-lg" />
@@ -394,7 +439,7 @@ export default function EditEpisodePage() {
                 <div className="bg-surface-hover mb-2 h-3 w-24 animate-pulse rounded" />
                 <div className="bg-surface-hover h-10 w-24 animate-pulse rounded-lg" />
               </div>
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="flex justify-end gap-4 pt-8">
                 <div className="bg-surface-hover h-9 w-16 animate-pulse rounded-md" />
                 <div className="bg-surface-hover h-9 w-14 animate-pulse rounded-md" />
               </div>
@@ -428,17 +473,17 @@ export default function EditEpisodePage() {
             ← Episodes
           </Link>
         </div>
-        <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
           {episode.title}
         </h1>
-        <p className="text-foreground mb-6 text-sm" style={labelStyle}>
+        <p className="text-foreground mb-8 text-sm" style={labelStyle}>
           Update episode details. Changes appear on the public site when published.
         </p>
         {error && (
-          <p className="text-destructive mb-4 text-sm">{error}</p>
+          <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6 font-sans text-sm">
-          <div className="mb-4 flex items-center justify-between">
+        <Card className="mb-8 p-8 font-sans text-sm">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-foreground text-sm font-semibold uppercase tracking-wide">
               Episode details
             </h2>
@@ -452,7 +497,23 @@ export default function EditEpisodePage() {
               <Trash2 aria-hidden className="h-4 w-4" />
             </Button>
           </div>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label className={labelClass} htmlFor="edit-ep-status" style={labelStyle}>
+              Status
+            </label>
+            <CustomSelect
+              ariaLabel="Status"
+              className="h-10 w-full font-sans text-xs"
+              id="edit-ep-status"
+              options={[
+                { label: "Draft", value: "draft" },
+                { label: "Published", value: "published" },
+              ]}
+              value={status}
+              onChange={(val) => setStatus(val as "draft" | "published")}
+            />
+          </div>
           <div>
             <label className={labelClass} style={labelStyle}>
               Title *
@@ -514,30 +575,15 @@ export default function EditEpisodePage() {
             />
           </div>
           <div>
-            <label className={labelClass} style={labelStyle}>
-              Status
-            </label>
-            <CustomSelect
-              ariaLabel="Status"
-              className="h-10 w-full font-sans text-xs"
-              options={[
-                { label: "Draft", value: "draft" },
-                { label: "Published", value: "published" },
-              ]}
-              value={status}
-              onChange={(val) => setStatus(val as "draft" | "published")}
-            />
-          </div>
-          <div>
             <p className={labelClass} style={labelStyle}>
               Episode audio
             </p>
-            <p className="text-muted mb-3 text-xs">
+            <p className="text-muted mb-4 text-xs">
               Upload the episode recording. You can replace or remove it from the card below.
             </p>
-            <div className="space-y-4">
-              <div className="border-border min-w-0 space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-2">
+            <div className="space-y-5">
+              <div className="border-border min-w-0 space-y-4 rounded-lg border p-5">
+                <div className="flex items-center justify-between gap-3">
                   <span
                     className="text-foreground font-sans text-xs font-medium uppercase"
                     style={labelStyle}
@@ -580,7 +626,7 @@ export default function EditEpisodePage() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-40 items-center justify-center rounded-md bg-surface-hover text-muted text-xs">
+                  <div className="flex h-20 items-center justify-center rounded-md bg-surface-hover text-muted text-xs">
                     No file chosen.
                   </div>
                 )}
@@ -597,46 +643,52 @@ export default function EditEpisodePage() {
                       : "No storage path yet."}
                   </span>
                 </div>
-                <label
-                  className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                  htmlFor="edit-ep-audio"
-                >
-                  {uploadingAudio && <Spinner size="sm" />}
-                  {audioStoragePath || audioDisplayUrl
-                    ? "Replace file"
-                    : "Choose file"}
-                </label>
-                <input
-                  accept="audio/*"
-                  className="sr-only"
-                  disabled={uploadingAudio}
-                  id="edit-ep-audio"
-                  type="file"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setUploadingAudio(true);
-                    try {
-                      const form = new FormData();
-                      form.set("file", file);
-                      form.set("type", "audio");
-                      const res = await fetch("/api/admin/podcast/upload", {
-                        body: form,
-                        method: "POST",
-                      });
-                      const j = await res.json().catch(() => ({}));
-                      if (res.ok && j.data?.path) {
-                        setAudioStoragePath(j.data.path);
-                        if (j.data.previewUrl) setAudioDisplayUrl(j.data.previewUrl);
-                      } else {
-                        setError(j.error ?? "Upload failed");
+                <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                  <span className="pointer-events-none flex items-center gap-2">
+                    {uploadingAudio && <Spinner size="sm" />}
+                    {audioStoragePath || audioDisplayUrl
+                      ? "Replace file"
+                      : "Choose file"}
+                  </span>
+                  <input
+                    accept="audio/*"
+                    aria-label="Choose episode audio file"
+                    className={cn(
+                      "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                      uploadingAudio && "pointer-events-none"
+                    )}
+                    type="file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (audioUploadBusyRef.current) return;
+                      audioUploadBusyRef.current = true;
+                      setUploadingAudio(true);
+                      try {
+                        const form = new FormData();
+                        form.set("file", file);
+                        form.set("type", "audio");
+                        const res = await fetch("/api/admin/podcast/upload", {
+                          body: form,
+                          method: "POST",
+                        });
+                        const j = await res.json().catch(() => ({}));
+                        if (res.ok && j.data?.path) {
+                          setAudioStoragePath(j.data.path);
+                          if (j.data.previewUrl) {
+                            setAudioDisplayUrl(j.data.previewUrl);
+                          }
+                        } else {
+                          setError(j.error ?? "Upload failed");
+                        }
+                      } finally {
+                        setUploadingAudio(false);
+                        audioUploadBusyRef.current = false;
+                        e.target.value = "";
                       }
-                    } finally {
-                      setUploadingAudio(false);
-                      e.target.value = "";
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -644,16 +696,16 @@ export default function EditEpisodePage() {
             <p className={labelClass} style={labelStyle}>
               Episode images
             </p>
-            <p className="text-muted mb-3 text-xs">
+            <p className="text-muted mb-4 text-xs">
               The first image is used for listings and RSS. Drag order with the arrows.
             </p>
-            <div className="space-y-4">
+            <div className="space-y-5">
               {imageRows.map((row, index) => (
                 <div
                   key={row.key}
-                  className="border-border min-w-0 space-y-3 rounded-lg border p-4"
+                  className="border-border min-w-0 space-y-4 rounded-lg border p-5"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <span
                       className="text-foreground font-sans text-xs font-medium uppercase"
                       style={labelStyle}
@@ -721,7 +773,7 @@ export default function EditEpisodePage() {
                   {row.previewUrl && (
                     <a
                       aria-label="Preview image in new tab"
-                      className="relative block h-40 w-full overflow-hidden rounded-md bg-surface-hover"
+                      className="relative inline-block max-h-40 max-w-full overflow-hidden rounded-md"
                       href={row.previewUrl}
                       rel="noopener noreferrer"
                       target="_blank"
@@ -729,7 +781,7 @@ export default function EditEpisodePage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         alt=""
-                        className="h-full w-full object-contain object-left"
+                        className="max-h-40 w-auto max-w-full object-contain"
                         src={row.previewUrl}
                       />
                     </a>
@@ -747,26 +799,27 @@ export default function EditEpisodePage() {
                       {row.image_storage_path ?? row.image_url ?? "No file"}
                     </span>
                   </div>
-                  <label
-                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                    htmlFor={`edit-ep-image-${row.key}`}
-                  >
-                    {uploadingImageKey === row.key && <Spinner size="sm" />}
-                    Replace file
-                  </label>
-                  <input
-                    accept="image/*"
-                    className="sr-only"
-                    disabled={uploadingImageKey !== null}
-                    id={`edit-ep-image-${row.key}`}
-                    type="file"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      await uploadImageFile(file, row.key);
-                      e.target.value = "";
-                    }}
-                  />
+                  <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                    <span className="pointer-events-none flex items-center gap-2">
+                      {uploadingImageKey === row.key && <Spinner size="sm" />}
+                      Replace file
+                    </span>
+                    <input
+                      accept="image/*"
+                      aria-label={`Replace image ${index + 1} file`}
+                      className={cn(
+                        "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                        uploadingImageKey !== null && "pointer-events-none"
+                      )}
+                      type="file"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        await uploadImageFile(file, row.key);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
                   <div>
                     <label
                       className={labelClass}
@@ -793,27 +846,28 @@ export default function EditEpisodePage() {
                   </div>
                 </div>
               ))}
-              <label
-                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium hover:bg-surface-hover/80"
-                htmlFor="edit-ep-image-add"
-              >
-                {uploadingImageKey === "__new__" && <Spinner size="sm" />}
-                <Plus className="h-4 w-4" />
-                Add image
-              </label>
-              <input
-                accept="image/*"
-                className="sr-only"
-                disabled={uploadingImageKey !== null}
-                id="edit-ep-image-add"
-                type="file"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  await uploadImageFile(file, "new");
-                  e.target.value = "";
-                }}
-              />
+              <div className="border-border bg-surface-hover text-foreground relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg border px-4 py-2 text-xs font-medium hover:bg-surface-hover/80">
+                <span className="pointer-events-none flex items-center gap-2">
+                  {uploadingImageKey === "__new__" && <Spinner size="sm" />}
+                  <Plus className="h-4 w-4" />
+                  Add image
+                </span>
+                <input
+                  accept="image/*"
+                  aria-label="Add episode image"
+                  className={cn(
+                    "absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0",
+                    uploadingImageKey !== null && "pointer-events-none"
+                  )}
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await uploadImageFile(file, "new");
+                    e.target.value = "";
+                  }}
+                />
+              </div>
             </div>
           </div>
           <div>
@@ -828,7 +882,7 @@ export default function EditEpisodePage() {
               onChange={(e) => setDurationSeconds(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
+          <div className="flex flex-wrap items-center justify-end gap-4 pt-8">
             <Link href="/admin/episodes">
               <Button type="button" variant="secondary">
                 Cancel

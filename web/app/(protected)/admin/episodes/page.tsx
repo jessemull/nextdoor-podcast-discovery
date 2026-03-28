@@ -294,7 +294,8 @@ export default function AdminEpisodesPage() {
           {loading ? (
             <>
               <div className="flex flex-col gap-3 md:hidden">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {Array.from({ length: EPISODES_PAGE_SIZE }, (_, i) => i).map(
+                  (i) => (
                   <div
                     key={i}
                     className="border-border flex items-start justify-between gap-3 rounded-lg border p-4"
@@ -321,7 +322,8 @@ export default function AdminEpisodesPage() {
                     </div>
                     <div className="bg-surface-hover h-8 w-8 shrink-0 animate-pulse rounded" />
                   </div>
-                ))}
+                  )
+                )}
               </div>
               <div className="hidden md:block">
                 <div className="border-border max-h-[27rem] overflow-y-auto rounded-lg border">
@@ -346,25 +348,27 @@ export default function AdminEpisodesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <tr key={i} className="border-border border-t h-12">
-                          <td className="border-border border px-4 py-3">
-                            <div className="bg-surface-hover h-4 w-32 animate-pulse rounded" />
-                          </td>
-                          <td className="border-border w-32 border px-4 py-3">
-                            <div className="bg-surface-hover h-4 w-20 animate-pulse rounded font-mono" />
-                          </td>
-                          <td className="border-border w-24 border px-4 py-3">
-                            <div className="bg-surface-hover h-4 w-14 animate-pulse rounded" />
-                          </td>
-                          <td className="border-border w-28 border px-4 py-3">
-                            <div className="bg-surface-hover h-4 w-16 animate-pulse rounded" />
-                          </td>
-                          <td className="border-border w-12 border px-1 py-3 text-center">
-                            <div className="bg-surface-hover mx-auto h-4 w-8 animate-pulse rounded" />
-                          </td>
-                        </tr>
-                      ))}
+                      {Array.from({ length: EPISODES_PAGE_SIZE }, (_, i) => i).map(
+                        (i) => (
+                          <tr key={i} className="border-border border-t h-12">
+                            <td className="border-border border px-4 py-3">
+                              <div className="bg-surface-hover h-4 w-32 animate-pulse rounded" />
+                            </td>
+                            <td className="border-border w-32 border px-4 py-3">
+                              <div className="bg-surface-hover h-4 w-20 animate-pulse rounded font-mono" />
+                            </td>
+                            <td className="border-border w-24 border px-4 py-3">
+                              <div className="bg-surface-hover h-4 w-14 animate-pulse rounded" />
+                            </td>
+                            <td className="border-border w-28 border px-4 py-3">
+                              <div className="bg-surface-hover h-4 w-16 animate-pulse rounded" />
+                            </td>
+                            <td className="border-border w-12 border px-1 py-3 text-center">
+                              <div className="bg-surface-hover mx-auto h-4 w-8 animate-pulse rounded" />
+                            </td>
+                          </tr>
+                        )
+                      )}
                     </tbody>
                   </table>
                 </div>

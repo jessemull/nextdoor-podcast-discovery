@@ -83,20 +83,20 @@ export default function NewCategoryPage() {
             ← Categories
           </Link>
         </div>
-        <h1 className="text-foreground mb-2 text-2xl font-semibold tracking-wide">
+        <h1 className="text-foreground mb-3 text-2xl font-semibold tracking-wide">
           New Category
         </h1>
-        <p className="text-foreground mb-6 text-sm" style={labelStyle}>
+        <p className="text-foreground mb-8 text-sm" style={labelStyle}>
           Add a category for browsing episodes on the public site.
         </p>
         {error && (
-          <p className="text-destructive mb-4 text-sm">{error}</p>
+          <p className="text-destructive mb-6 text-sm">{error}</p>
         )}
-        <Card className="mb-8 p-6 font-sans text-sm">
-          <h2 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+        <Card className="mb-8 p-8 font-sans text-sm">
+          <h2 className="text-foreground mb-6 text-sm font-semibold uppercase tracking-wide">
             Category Details
           </h2>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className={labelClass} htmlFor="cat-name" style={labelStyle}>
                 Name *
@@ -109,7 +109,7 @@ export default function NewCategoryPage() {
                 onChange={(e) => setName(e.target.value)}
               />
               {nameError && (
-                <p className="text-destructive mt-1 text-xs">
+                <p className="text-destructive mt-2 text-xs">
                   Please enter a name.
                 </p>
               )}
@@ -127,7 +127,7 @@ export default function NewCategoryPage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-4 pt-8">
               <Link href="/admin/categories">
                 <Button type="button" variant="secondary">
                   Cancel
