@@ -14,7 +14,7 @@ export function PodcastMobileEpisodeSearch() {
   return (
     <div className="mb-10 md:hidden">
       <h2
-        className={`font-semibold leading-tight mb-7 text-3xl text-white ${playfair.className}`}
+        className={`mb-4 font-semibold leading-tight text-3xl text-white ${playfair.className}`}
       >
         Episodes
       </h2>
