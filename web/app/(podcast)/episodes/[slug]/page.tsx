@@ -24,15 +24,20 @@ export async function generateMetadata({
   if (!episode) {
     return { title: "Episode Not Found" };
   }
+  const firstGallery = episode.episode_images?.find((i) => i.image_url);
+  const ogImageUrl = firstGallery?.image_url ?? episode.image_url ?? undefined;
+  const ogImageAlt =
+    firstGallery?.description ?? episode.image_description ?? undefined;
+
   return {
     description: episode.description ?? undefined,
     openGraph: {
       description: episode.description ?? undefined,
-      images: episode.image_url
+      images: ogImageUrl
         ? [
             {
-              alt: episode.image_description ?? undefined,
-              url: episode.image_url,
+              alt: ogImageAlt ?? undefined,
+              url: ogImageUrl,
             },
           ]
         : undefined,
@@ -43,7 +48,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       description: episode.description ?? undefined,
-      images: episode.image_url ? [episode.image_url] : undefined,
+      images: ogImageUrl ? [ogImageUrl] : undefined,
       title: episode.title,
     },
   };
@@ -60,13 +65,33 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 
   const similar = await getSimilarEpisodesSafe(episode.id, 6);
 
+  const galleryWithUrl =
+    episode.episode_images?.filter((i) => i.image_url) ?? [];
+  const galleryForDisplay =
+    galleryWithUrl.length > 0
+      ? galleryWithUrl
+      : episode.image_url
+        ? [
+            {
+              description: episode.image_description,
+              id: "legacy",
+              image_url: episode.image_url,
+              sort_order: 0,
+            },
+          ]
+        : [];
+
   const episodeUrl = `${siteBaseUrl}/episodes/${episode.slug}`;
+  const jsonLdImages = galleryForDisplay.map((i) => i.image_url).filter(Boolean);
   const episodeJsonLd = {
     "@context": "https://schema.org",
     "@type": "PodcastEpisode",
     datePublished: episode.published_at ?? undefined,
     description: episode.description ?? undefined,
-    image: episode.image_url ?? undefined,
+    image:
+      jsonLdImages.length > 1
+        ? jsonLdImages
+        : jsonLdImages[0] ?? undefined,
     name: episode.title,
     url: episodeUrl,
     ...(episode.audio_url && {
@@ -158,22 +183,30 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
           </div>
         )}
 
-        {episode.image_url && (
-          <div className="relative mb-8 mt-8 sm:mt-12 aspect-video overflow-hidden rounded-lg">
-            <Image
-              alt={episode.image_description ?? ""}
-              className="object-cover"
-              fill
-              sizes="(max-width: 768px) 100vw, 800px"
-              src={episode.image_url}
-              unoptimized
-            />
+        {galleryForDisplay.length > 0 && (
+          <div className="mt-8 space-y-8 sm:mt-12">
+            {galleryForDisplay.map((img) => (
+              <div key={img.id}>
+                {img.image_url && (
+                  <div className="relative aspect-video overflow-hidden rounded-lg">
+                    <Image
+                      alt={img.description ?? ""}
+                      className="object-cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 800px"
+                      src={img.image_url}
+                      unoptimized
+                    />
+                  </div>
+                )}
+                {img.description && (
+                  <p className="text-podcast-muted mt-2 text-sm">
+                    {img.description}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        )}
-        {episode.image_description && (
-          <p className="text-podcast-muted mb-8 -mt-4 text-sm">
-            {episode.image_description}
-          </p>
         )}
 
       </article>

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { computeAndUpsertEpisodeEmbedding } from "@/lib/episode-embedding.server";
+import {
+  parseEpisodeImagesPayload,
+  replaceEpisodeImages,
+} from "@/lib/podcast-episode-images.server";
 import { copyPrivateToPublic } from "@/lib/podcast-storage.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -111,6 +115,24 @@ export async function POST(request: NextRequest) {
       ? body.image_description.trim() || null
       : null;
 
+  const galleryExplicit = Object.prototype.hasOwnProperty.call(
+    body,
+    "episode_images"
+  );
+  let galleryImages = galleryExplicit
+    ? parseEpisodeImagesPayload(body.episode_images)
+    : [];
+  if (!galleryExplicit && imageStoragePath) {
+    galleryImages = [
+      {
+        description: imageDescription,
+        image_storage_path: imageStoragePath,
+        image_url: null,
+      },
+    ];
+  }
+  const useGallery = galleryExplicit || galleryImages.length > 0;
+
   let audioUrl: string | null = null;
   let imageUrl: string | null = null;
   if (status === "published") {
@@ -127,7 +149,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    if (imageStoragePath) {
+    if (imageStoragePath && !useGallery) {
       try {
         imageUrl = await copyPrivateToPublic("image", imageStoragePath);
       } catch (err) {
@@ -158,9 +180,9 @@ export async function POST(request: NextRequest) {
     description: typeof body.description === "string" ? body.description : null,
     duration_seconds:
       typeof body.duration_seconds === "number" ? body.duration_seconds : null,
-    image_storage_path: imageStoragePath,
-    image_description: imageDescription,
-    image_url: imageUrl,
+    image_description: useGallery ? null : imageDescription,
+    image_storage_path: useGallery ? null : imageStoragePath,
+    image_url: useGallery ? null : imageUrl,
     order_index: typeof body.order_index === "number" ? body.order_index : 0,
     published_at: publishedAt,
     show_notes: typeof body.show_notes === "string" ? body.show_notes : null,
@@ -186,6 +208,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (useGallery) {
+    try {
+      await replaceEpisodeImages(
+        supabase,
+        data.id,
+        galleryImages,
+        status === "published"
+      );
+    } catch (imgErr) {
+      const msg =
+        imgErr instanceof Error ? imgErr.message : "Failed to save episode images";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   try {
     await computeAndUpsertEpisodeEmbedding(data.id);
   } catch (embedErr) {
@@ -196,5 +233,15 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-  return NextResponse.json({ data });
+
+  const { data: episodeImages } = await supabase
+    .from("podcast_episode_images")
+    .select("*")
+    .eq("episode_id", data.id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  return NextResponse.json({
+    data: { ...data, episode_images: episodeImages ?? [] },
+  });
 }

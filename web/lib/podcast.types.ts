@@ -2,12 +2,20 @@
  * Types for podcast episodes and categories (public site).
  */
 
+export interface PodcastEpisodeImage {
+  description: string | null;
+  id: string;
+  image_url: string | null;
+  sort_order: number;
+}
+
 export interface PodcastEpisode {
   audio_storage_path: string | null;
   audio_url: string | null;
   created_at: string;
   description: string | null;
   duration_seconds: number | null;
+  episode_images: PodcastEpisodeImage[];
   id: string;
   image_description: string | null;
   image_storage_path: string | null;

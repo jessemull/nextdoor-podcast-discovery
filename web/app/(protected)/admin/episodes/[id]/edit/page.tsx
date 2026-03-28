@@ -1,10 +1,9 @@
 "use client";
 
-import { Eye, Trash2 } from "lucide-react";
-import Image from "next/image";
+import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -19,21 +18,47 @@ const labelClass = "text-foreground mb-1 block text-sm font-medium uppercase";
 const labelStyle = { opacity: 0.85 };
 
 interface Episode {
-  id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-  show_notes: string | null;
-  transcript: string | null;
-  published_at: string | null;
-  status: string;
-  audio_url: string | null;
-  image_url: string | null;
   audio_storage_path: string | null;
-  image_storage_path: string | null;
+  audio_url: string | null;
+  description: string | null;
   duration_seconds: number | null;
+  episode_images?: EpisodeImageRowApi[];
+  id: string;
   image_description: string | null;
+  image_storage_path: string | null;
+  image_url: string | null;
   order_index: number;
+  published_at: string | null;
+  show_notes: string | null;
+  slug: string;
+  status: string;
+  title: string;
+  transcript: string | null;
+}
+
+interface EpisodeImageRowApi {
+  created_at?: string;
+  description: string | null;
+  id: string;
+  image_storage_path: string | null;
+  image_url: string | null;
+  sort_order?: number;
+}
+
+interface ImageRow {
+  description: string;
+  image_storage_path: string | null;
+  image_url: string | null;
+  previewUrl: string | null;
+  key: string;
+}
+
+function imagesPayload(rows: ImageRow[]) {
+  return rows.map((r) => ({
+    description: r.description.trim() || null,
+    image_storage_path: r.image_storage_path,
+    image_url: r.image_url,
+  }));
 }
 
 function toDatetimeLocal(iso: string | null): string {
@@ -60,14 +85,15 @@ export default function EditEpisodePage() {
   const [publishedAt, setPublishedAt] = useState("");
   const [audioStoragePath, setAudioStoragePath] = useState("");
   const [audioDisplayUrl, setAudioDisplayUrl] = useState<string | null>(null);
-  const [imageStoragePath, setImageStoragePath] = useState("");
-  const [imageDisplayUrl, setImageDisplayUrl] = useState<string | null>(null);
-  const [imageDescription, setImageDescription] = useState("");
+  const [imageRows, setImageRows] = useState<ImageRow[]>([]);
   const [durationSeconds, setDurationSeconds] = useState("");
   const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(
+    null
+  );
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const initialImagesJsonRef = useRef("");
 
   useEffect(() => {
     if (!id) {
@@ -91,8 +117,6 @@ export default function EditEpisodePage() {
           );
           setPublishedAt(toDatetimeLocal(data.published_at));
           setAudioStoragePath(data.audio_storage_path ?? "");
-          setImageStoragePath(data.image_storage_path ?? "");
-          setImageDescription(data.image_description ?? "");
           setDurationSeconds(
             data.duration_seconds != null ? String(data.duration_seconds) : ""
           );
@@ -105,15 +129,45 @@ export default function EditEpisodePage() {
             const sj = await sr.json().catch(() => ({}));
             if (sr.ok && sj.url) setAudioDisplayUrl(sj.url);
           }
-          if (data.image_url) {
-            setImageDisplayUrl(data.image_url);
-          } else if (data.image_storage_path) {
-            const ir = await fetch(
-              `/api/admin/podcast/episodes/${id}/signed-url?type=image`
-            );
-            const ij = await ir.json().catch(() => ({}));
-            if (ir.ok && ij.url) setImageDisplayUrl(ij.url);
+
+          let apiRows = (data.episode_images ?? []) as EpisodeImageRowApi[];
+          if (
+            apiRows.length === 0 &&
+            (data.image_storage_path || data.image_url)
+          ) {
+            apiRows = [
+              {
+                description: data.image_description,
+                id: `legacy-${data.id}`,
+                image_storage_path: data.image_storage_path,
+                image_url: data.image_url,
+              },
+            ];
           }
+
+          const builtRows: ImageRow[] = await Promise.all(
+            apiRows.map(async (img) => {
+              let previewUrl: string | null = img.image_url;
+              if (!previewUrl && img.image_storage_path) {
+                const ir = await fetch(
+                  `/api/admin/podcast/episodes/${id}/signed-url?type=image&path=${encodeURIComponent(img.image_storage_path)}`
+                );
+                const ij = await ir.json().catch(() => ({}));
+                if (ir.ok && ij.url) previewUrl = ij.url;
+              }
+              return {
+                description: img.description ?? "",
+                image_storage_path: img.image_storage_path,
+                image_url: img.image_url,
+                key: img.id,
+                previewUrl,
+              };
+            })
+          );
+          setImageRows(builtRows);
+          initialImagesJsonRef.current = JSON.stringify(
+            imagesPayload(builtRows)
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -136,15 +190,14 @@ export default function EditEpisodePage() {
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
             : null,
-          image_description: imageDescription || null,
-          image_storage_path: imageStoragePath || null,
+          episode_images: imagesPayload(imageRows),
           show_notes: showNotes || null,
           slug: slug || title.toLowerCase().replace(/\s+/g, "-"),
           status,
           title,
         }),
-        method: "PUT",
         headers: { "Content-Type": "application/json" },
+        method: "PUT",
       });
       const j = await res.json().catch(() => ({}));
       setSaveModalOpen(false);
@@ -170,8 +223,7 @@ export default function EditEpisodePage() {
     audioStoragePath,
     description,
     durationSeconds,
-    imageDescription,
-    imageStoragePath,
+    imageRows,
     showNotes,
     slug,
     status,
@@ -184,23 +236,75 @@ export default function EditEpisodePage() {
     episode?.duration_seconds != null
       ? String(episode.duration_seconds)
       : "";
+  const imagesDirty =
+    JSON.stringify(imagesPayload(imageRows)) !== initialImagesJsonRef.current;
+
   const dirty = episode
     ? title.trim() !== (episode.title ?? "").trim() ||
       (slug || title.toLowerCase().replace(/\s+/g, "-")) !==
         (episode.slug ?? "").toLowerCase().replace(/\s+/g, "-") ||
       (description || null) !== (episode.description ?? null) ||
-      (imageDescription || null) !== (episode.image_description ?? null) ||
       (showNotes || null) !== (episode.show_notes ?? null) ||
       status !== (episode.status === "published" ? "published" : "draft") ||
       (audioStoragePath || null) !== (episode.audio_storage_path ?? null) ||
-      (imageStoragePath || null) !== (episode.image_storage_path ?? null) ||
-      durationSeconds !== initialDuration
+      durationSeconds !== initialDuration ||
+      imagesDirty
     : false;
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setSaveModalOpen(true);
   }, []);
+
+  const uploadImageFile = useCallback(
+    async (file: File, targetKey: string | "new") => {
+      setUploadingImageKey(targetKey === "new" ? "__new__" : targetKey);
+      try {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("type", "image");
+        const res = await fetch("/api/admin/podcast/upload", {
+          body: form,
+          method: "POST",
+        });
+        const j = await res.json().catch(() => ({}));
+        if (res.ok && j.data?.path) {
+          const previewUrl =
+            typeof j.data.previewUrl === "string" ? j.data.previewUrl : null;
+          if (targetKey === "new") {
+            setImageRows((prev) => [
+              ...prev,
+              {
+                description: "",
+                image_storage_path: j.data.path,
+                image_url: null,
+                key: crypto.randomUUID(),
+                previewUrl,
+              },
+            ]);
+          } else {
+            setImageRows((prev) =>
+              prev.map((row) =>
+                row.key === targetKey
+                  ? {
+                      ...row,
+                      image_storage_path: j.data.path,
+                      image_url: null,
+                      previewUrl,
+                    }
+                  : row
+              )
+            );
+          }
+        } else {
+          setError(j.error ?? "Upload failed");
+        }
+      } finally {
+        setUploadingImageKey(null);
+      }
+    },
+    []
+  );
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!id) return;
@@ -479,103 +583,173 @@ export default function EditEpisodePage() {
             </div>
           </div>
           <div>
-            <label className={labelClass} style={labelStyle}>
-              Image File
-            </label>
-            {imageDisplayUrl && (
-              <div className="relative mb-4 mt-3 h-48 w-full">
-                <Image
-                  alt="Episode"
-                  className="rounded object-left object-contain"
-                  fill
-                  src={imageDisplayUrl}
-                  unoptimized
-                />
-              </div>
-            )}
-            <div className="mt-4 flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-3">
-              <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:flex-initial">
-                <span className="text-foreground min-w-0 flex-1 truncate md:max-w-md md:flex-none">
-                  {imageStoragePath ? imageStoragePath : "No file chosen."}
-                </span>
-                {(imageStoragePath || imageDisplayUrl) && (
-                  <span className="inline-flex shrink-0 items-center gap-1">
-                    {imageDisplayUrl && (
+            <p className={labelClass} style={labelStyle}>
+              Episode images
+            </p>
+            <p className="text-muted mb-3 text-xs">
+              The first image is used for listings and RSS. Drag order with the arrows.
+            </p>
+            <div className="space-y-4">
+              {imageRows.map((row, index) => (
+                <div
+                  key={row.key}
+                  className="border-border space-y-3 rounded-lg border p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-foreground text-sm font-medium">
+                      Image {index + 1}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        aria-label="Move image up"
+                        className="text-muted hover:text-foreground p-1 disabled:opacity-30"
+                        disabled={index === 0}
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) => {
+                            const next = [...prev];
+                            [next[index - 1], next[index]] = [
+                              next[index],
+                              next[index - 1],
+                            ];
+                            return next;
+                          });
+                        }}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label="Move image down"
+                        className="text-muted hover:text-foreground p-1 disabled:opacity-30"
+                        disabled={index === imageRows.length - 1}
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) => {
+                            const next = [...prev];
+                            [next[index], next[index + 1]] = [
+                              next[index + 1],
+                              next[index],
+                            ];
+                            return next;
+                          });
+                        }}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label="Remove image"
+                        className="text-muted hover:text-destructive p-1"
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) =>
+                            prev.filter((r) => r.key !== row.key)
+                          );
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {row.previewUrl && (
+                    <a
+                      aria-label="Preview image in new tab"
+                      className="relative block h-40 w-full overflow-hidden rounded-md bg-surface-hover"
+                      href={row.previewUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt=""
+                        className="h-full w-full object-contain object-left"
+                        src={row.previewUrl}
+                      />
+                    </a>
+                  )}
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                    <span className="text-foreground truncate">
+                      {row.image_storage_path ?? row.image_url ?? "No file"}
+                    </span>
+                    {row.previewUrl && (
                       <a
-                        aria-label="Preview image in new tab"
-                        className="text-muted hover:text-foreground"
-                        href={imageDisplayUrl}
+                        aria-label="Open image preview"
+                        className="text-muted shrink-0 hover:text-foreground"
+                        href={row.previewUrl}
                         rel="noopener noreferrer"
                         target="_blank"
                       >
                         <Eye className="h-4 w-4" />
                       </a>
                     )}
-                    <button
-                      aria-label="Remove image file"
-                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                      type="button"
-                      onClick={() => {
-                        setImageStoragePath("");
-                        setImageDisplayUrl(null);
-                      }}
+                  </div>
+                  <label
+                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                    htmlFor={`edit-ep-image-${row.key}`}
+                  >
+                    {uploadingImageKey === row.key && <Spinner size="sm" />}
+                    Replace file
+                  </label>
+                  <input
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploadingImageKey !== null}
+                    id={`edit-ep-image-${row.key}`}
+                    type="file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      await uploadImageFile(file, row.key);
+                      e.target.value = "";
+                    }}
+                  />
+                  <div>
+                    <label
+                      className="text-foreground mb-1 block text-xs font-medium uppercase"
+                      htmlFor={`edit-ep-img-desc-${row.key}`}
+                      style={labelStyle}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </span>
-                )}
-              </div>
+                      Description
+                    </label>
+                    <textarea
+                      className={inputClass}
+                      id={`edit-ep-img-desc-${row.key}`}
+                      placeholder="Caption or alt text..."
+                      rows={2}
+                      value={row.description}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImageRows((prev) =>
+                          prev.map((r) =>
+                            r.key === row.key ? { ...r, description: v } : r
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
               <label
-                className="border-border bg-surface-hover text-foreground order-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80 md:order-1 md:w-auto"
-                htmlFor="edit-ep-image"
+                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                htmlFor="edit-ep-image-add"
               >
-                {uploadingImage && <Spinner size="sm" />}
-                Choose File
+                {uploadingImageKey === "__new__" && <Spinner size="sm" />}
+                <Plus className="h-4 w-4" />
+                Add image
               </label>
               <input
                 accept="image/*"
                 className="sr-only"
-                disabled={uploadingImage}
-                id="edit-ep-image"
+                disabled={uploadingImageKey !== null}
+                id="edit-ep-image-add"
                 type="file"
                 onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setUploadingImage(true);
-                try {
-                  const form = new FormData();
-                  form.set("file", file);
-                  form.set("type", "image");
-                  const res = await fetch("/api/admin/podcast/upload", {
-                    body: form,
-                    method: "POST",
-                  });
-                  const j = await res.json().catch(() => ({}));
-                  if (res.ok && j.data?.path) {
-                    setImageStoragePath(j.data.path);
-                    if (j.data.previewUrl) setImageDisplayUrl(j.data.previewUrl);
-                  } else {
-                    setError(j.error ?? "Upload failed");
-                  }
-                } finally {
-                  setUploadingImage(false);
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  await uploadImageFile(file, "new");
                   e.target.value = "";
-                }
-              }}
+                }}
               />
             </div>
-          </div>
-          <div>
-            <label className={labelClass} style={labelStyle}>
-              Image Description
-            </label>
-            <textarea
-              className={inputClass}
-              placeholder="Please enter an image description..."
-              rows={2}
-              value={imageDescription}
-              onChange={(e) => setImageDescription(e.target.value)}
-            />
           </div>
           <div>
             <label className={labelClass} style={labelStyle}>

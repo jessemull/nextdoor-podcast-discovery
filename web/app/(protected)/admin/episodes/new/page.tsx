@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -17,6 +17,22 @@ const inputClass =
 const labelClass = "text-foreground mb-1 block text-sm font-medium uppercase";
 const labelStyle = { opacity: 0.85 };
 
+interface ImageRow {
+  description: string;
+  image_storage_path: string | null;
+  image_url: string | null;
+  previewUrl: string | null;
+  key: string;
+}
+
+function imagesPayload(rows: ImageRow[]) {
+  return rows.map((r) => ({
+    description: r.description.trim() || null,
+    image_storage_path: r.image_storage_path,
+    image_url: r.image_url,
+  }));
+}
+
 export default function NewEpisodePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -27,13 +43,13 @@ export default function NewEpisodePage() {
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [audioStoragePath, setAudioStoragePath] = useState("");
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
-  const [imageStoragePath, setImageStoragePath] = useState("");
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [imageDescription, setImageDescription] = useState("");
+  const [imageRows, setImageRows] = useState<ImageRow[]>([]);
   const [durationSeconds, setDurationSeconds] = useState("");
   const [showNotes, setShowNotes] = useState("");
   const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(
+    null
+  );
   const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   const handleSaveConfirm = useCallback(async () => {
@@ -47,15 +63,14 @@ export default function NewEpisodePage() {
           duration_seconds: durationSeconds
             ? parseInt(durationSeconds, 10)
             : null,
-          image_description: imageDescription || null,
-          image_storage_path: imageStoragePath || null,
+          episode_images: imagesPayload(imageRows),
           show_notes: showNotes || null,
           slug: title.trim().toLowerCase().replace(/\s+/g, "-"),
           status,
           title,
         }),
-        method: "POST",
         headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       const j = await res.json().catch(() => ({}));
       setSaveModalOpen(false);
@@ -79,8 +94,7 @@ export default function NewEpisodePage() {
     audioStoragePath,
     description,
     durationSeconds,
-    imageDescription,
-    imageStoragePath,
+    imageRows,
     showNotes,
     status,
     title,
@@ -94,14 +108,65 @@ export default function NewEpisodePage() {
     showNotes.trim() !== "" ||
     status !== "draft" ||
     audioStoragePath !== "" ||
-    imageStoragePath !== "" ||
-    imageDescription.trim() !== "" ||
+    imageRows.length > 0 ||
     durationSeconds.trim() !== "";
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setSaveModalOpen(true);
   }, []);
+
+  const uploadImageFile = useCallback(
+    async (file: File, targetKey: string | "new") => {
+      setUploadingImageKey(
+        targetKey === "new" ? "__new__" : targetKey
+      );
+      try {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("type", "image");
+        const res = await fetch("/api/admin/podcast/upload", {
+          body: form,
+          method: "POST",
+        });
+        const j = await res.json().catch(() => ({}));
+        if (res.ok && j.data?.path) {
+          const previewUrl =
+            typeof j.data.previewUrl === "string" ? j.data.previewUrl : null;
+          if (targetKey === "new") {
+            setImageRows((prev) => [
+              ...prev,
+              {
+                description: "",
+                image_storage_path: j.data.path,
+                image_url: null,
+                key: crypto.randomUUID(),
+                previewUrl,
+              },
+            ]);
+          } else {
+            setImageRows((prev) =>
+              prev.map((row) =>
+                row.key === targetKey
+                  ? {
+                      ...row,
+                      image_storage_path: j.data.path,
+                      image_url: null,
+                      previewUrl,
+                    }
+                  : row
+              )
+            );
+          }
+        } else {
+          setError(j.error ?? "Upload failed");
+        }
+      } finally {
+        setUploadingImageKey(null);
+      }
+    },
+    []
+  );
 
   return (
     <main className="h-full overflow-auto px-6 py-6 sm:px-8 sm:py-8">
@@ -259,93 +324,173 @@ export default function NewEpisodePage() {
             </div>
           </div>
           <div>
-            <label className={labelClass} htmlFor="new-ep-image" style={labelStyle}>
-              Image File
-            </label>
-            <div className="mt-2 flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-3">
-              <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:flex-initial">
-                <span className="text-foreground min-w-0 flex-1 truncate md:max-w-md md:flex-none">
-                  {imageStoragePath ? imageStoragePath : "No file chosen."}
-                </span>
-                {(imageStoragePath || imagePreviewUrl) && (
-                  <span className="inline-flex shrink-0 items-center gap-1">
-                    {imagePreviewUrl && (
+            <p className={labelClass} style={labelStyle}>
+              Episode images
+            </p>
+            <p className="text-muted mb-3 text-xs">
+              Add one or more images. The first image is used for listings and RSS.
+            </p>
+            <div className="space-y-4">
+              {imageRows.map((row, index) => (
+                <div
+                  key={row.key}
+                  className="border-border space-y-3 rounded-lg border p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-foreground text-sm font-medium">
+                      Image {index + 1}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        aria-label="Move image up"
+                        className="text-muted hover:text-foreground p-1 disabled:opacity-30"
+                        disabled={index === 0}
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) => {
+                            const next = [...prev];
+                            [next[index - 1], next[index]] = [
+                              next[index],
+                              next[index - 1],
+                            ];
+                            return next;
+                          });
+                        }}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label="Move image down"
+                        className="text-muted hover:text-foreground p-1 disabled:opacity-30"
+                        disabled={index === imageRows.length - 1}
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) => {
+                            const next = [...prev];
+                            [next[index], next[index + 1]] = [
+                              next[index + 1],
+                              next[index],
+                            ];
+                            return next;
+                          });
+                        }}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label="Remove image"
+                        className="text-muted hover:text-destructive p-1"
+                        type="button"
+                        onClick={() => {
+                          setImageRows((prev) =>
+                            prev.filter((r) => r.key !== row.key)
+                          );
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {row.previewUrl && (
+                    <a
+                      aria-label="Preview image in new tab"
+                      className="relative block h-40 w-full overflow-hidden rounded-md bg-surface-hover"
+                      href={row.previewUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt=""
+                        className="h-full w-full object-contain object-left"
+                        src={row.previewUrl}
+                      />
+                    </a>
+                  )}
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                    <span className="text-foreground truncate">
+                      {row.image_storage_path ?? row.image_url ?? "No file"}
+                    </span>
+                    {row.previewUrl && (
                       <a
-                        aria-label="Preview image in new tab"
-                        className="text-muted hover:text-foreground"
-                        href={imagePreviewUrl}
+                        aria-label="Open image preview"
+                        className="text-muted shrink-0 hover:text-foreground"
+                        href={row.previewUrl}
                         rel="noopener noreferrer"
                         target="_blank"
                       >
                         <Eye className="h-4 w-4" />
                       </a>
                     )}
-                    <button
-                      aria-label="Remove image file"
-                      className="text-muted hover:text-destructive p-0.5 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 focus:ring-offset-surface"
-                    type="button"
-                    onClick={() => {
-                      setImageStoragePath("");
-                      setImagePreviewUrl(null);
-                    }}
+                  </div>
+                  <label
+                    className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                    htmlFor={`new-ep-image-${row.key}`}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </span>
-              )}
-              </div>
+                    {uploadingImageKey === row.key && <Spinner size="sm" />}
+                    Replace file
+                  </label>
+                  <input
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploadingImageKey !== null}
+                    id={`new-ep-image-${row.key}`}
+                    type="file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      await uploadImageFile(file, row.key);
+                      e.target.value = "";
+                    }}
+                  />
+                  <div>
+                    <label
+                      className="text-foreground mb-1 block text-xs font-medium uppercase"
+                      htmlFor={`new-ep-img-desc-${row.key}`}
+                      style={labelStyle}
+                    >
+                      Description
+                    </label>
+                    <textarea
+                      className={inputClass}
+                      id={`new-ep-img-desc-${row.key}`}
+                      placeholder="Caption or alt text..."
+                      rows={2}
+                      value={row.description}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImageRows((prev) =>
+                          prev.map((r) =>
+                            r.key === row.key ? { ...r, description: v } : r
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
               <label
-                className="border-border bg-surface-hover text-foreground order-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-surface-hover/80 md:order-1 md:w-auto"
-                htmlFor="new-ep-image"
+                className="border-border bg-surface-hover text-foreground inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-surface-hover/80"
+                htmlFor="new-ep-image-add"
               >
-                {uploadingImage && <Spinner size="sm" />}
-                Choose File
+                {uploadingImageKey === "__new__" && <Spinner size="sm" />}
+                <Plus className="h-4 w-4" />
+                Add image
               </label>
               <input
                 accept="image/*"
                 className="sr-only"
-                disabled={uploadingImage}
-                id="new-ep-image"
+                disabled={uploadingImageKey !== null}
+                id="new-ep-image-add"
                 type="file"
                 onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setUploadingImage(true);
-                try {
-                  const form = new FormData();
-                  form.set("file", file);
-                  form.set("type", "image");
-                  const res = await fetch("/api/admin/podcast/upload", {
-                    body: form,
-                    method: "POST",
-                  });
-                  const j = await res.json().catch(() => ({}));
-                  if (res.ok && j.data?.path) {
-                    setImageStoragePath(j.data.path);
-                    if (j.data.previewUrl) setImagePreviewUrl(j.data.previewUrl);
-                  } else {
-                    setError(j.error ?? "Upload failed");
-                  }
-                } finally {
-                  setUploadingImage(false);
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  await uploadImageFile(file, "new");
                   e.target.value = "";
-                }
-              }}
+                }}
               />
             </div>
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="new-ep-image-description" style={labelStyle}>
-              Image Description
-            </label>
-            <textarea
-              className={inputClass}
-              id="new-ep-image-description"
-              placeholder="Please enter an image description..."
-              rows={2}
-              value={imageDescription}
-              onChange={(e) => setImageDescription(e.target.value)}
-            />
           </div>
           <div>
             <label className={labelClass} htmlFor="new-ep-duration" style={labelStyle}>

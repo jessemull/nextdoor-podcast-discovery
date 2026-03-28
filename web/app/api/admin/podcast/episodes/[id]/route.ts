@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { computeAndUpsertEpisodeEmbedding } from "@/lib/episode-embedding.server";
+import {
+  parseEpisodeImagesPayload,
+  replaceEpisodeImages,
+} from "@/lib/podcast-episode-images.server";
 import { copyPrivateToPublic } from "@/lib/podcast-storage.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
@@ -32,7 +36,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: error?.code === "PGRST116" ? 404 : 500 }
     );
   }
-  return NextResponse.json({ data });
+
+  const { data: episodeImages, error: imgErr } = await supabase
+    .from("podcast_episode_images")
+    .select("*")
+    .eq("episode_id", id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (imgErr) {
+    return NextResponse.json({ error: imgErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    data: { ...data, episode_images: episodeImages ?? [] },
+  });
 }
 
 /**
@@ -64,6 +82,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       ? body.image_storage_path.trim() || null
       : undefined;
 
+  const galleryUpdate = Object.prototype.hasOwnProperty.call(
+    body,
+    "episode_images"
+  );
+
   let copyAudioUrl: string | null | undefined;
   let copyImageUrl: string | null | undefined;
   let currentStatus: string | null = null;
@@ -87,7 +110,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         );
       }
     }
-    if (imageStoragePath) {
+    if (imageStoragePath && !galleryUpdate) {
       try {
         copyImageUrl = await copyPrivateToPublic("image", imageStoragePath);
       } catch (err) {
@@ -139,17 +162,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   if (body.status !== undefined) update.status = newStatus;
   if (body.audio_url !== undefined)
     update.audio_url = typeof body.audio_url === "string" ? body.audio_url : null;
-  if (body.image_url !== undefined)
-    update.image_url = typeof body.image_url === "string" ? body.image_url : null;
-  if (body.image_description !== undefined)
-    update.image_description =
-      typeof body.image_description === "string"
-        ? body.image_description.trim() || null
-        : null;
+  if (!galleryUpdate) {
+    if (body.image_url !== undefined)
+      update.image_url = typeof body.image_url === "string" ? body.image_url : null;
+    if (body.image_description !== undefined)
+      update.image_description =
+        typeof body.image_description === "string"
+          ? body.image_description.trim() || null
+          : null;
+    if (copyImageUrl !== undefined) update.image_url = copyImageUrl;
+    if (imageStoragePath !== undefined)
+      update.image_storage_path = imageStoragePath;
+  }
   if (copyAudioUrl !== undefined) update.audio_url = copyAudioUrl;
-  if (copyImageUrl !== undefined) update.image_url = copyImageUrl;
   if (audioStoragePath !== undefined) update.audio_storage_path = audioStoragePath;
-  if (imageStoragePath !== undefined) update.image_storage_path = imageStoragePath;
   if (body.duration_seconds !== undefined)
     update.duration_seconds =
       typeof body.duration_seconds === "number" ? body.duration_seconds : null;
@@ -174,6 +200,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (galleryUpdate) {
+    try {
+      await replaceEpisodeImages(
+        supabase,
+        id,
+        parseEpisodeImagesPayload(body.episode_images),
+        body.status === "published"
+      );
+    } catch (imgErr) {
+      const msg =
+        imgErr instanceof Error ? imgErr.message : "Failed to save episode images";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   try {
     await computeAndUpsertEpisodeEmbedding(id);
   } catch (embedErr) {
@@ -184,7 +225,27 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-  return NextResponse.json({ data });
+
+  const { data: fresh, error: freshErr } = await supabase
+    .from("podcast_episodes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (freshErr || !fresh) {
+    return NextResponse.json({ data }, { status: 200 });
+  }
+
+  const { data: episodeImages } = await supabase
+    .from("podcast_episode_images")
+    .select("*")
+    .eq("episode_id", id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  return NextResponse.json({
+    data: { ...fresh, episode_images: episodeImages ?? [] },
+  });
 }
 
 /**

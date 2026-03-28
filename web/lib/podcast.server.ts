@@ -10,11 +10,27 @@ import { getSupabaseAdmin } from "@/lib/supabase.server";
 import type {
   PodcastCategory,
   PodcastEpisode,
+  PodcastEpisodeImage,
   PodcastEpisodeSummary,
   PodcastEpisodeWithSimilarity,
 } from "@/lib/podcast.types";
 
 const supabase = () => getSupabaseAdmin();
+
+function normalizeEpisodeImages(raw: unknown): PodcastEpisodeImage[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item, index) => {
+    const o = item as Record<string, unknown>;
+    const id = typeof o.id === "string" ? o.id : "";
+    return {
+      description: typeof o.description === "string" ? o.description : null,
+      id,
+      image_url: typeof o.image_url === "string" ? o.image_url : null,
+      sort_order:
+        typeof o.sort_order === "number" ? o.sort_order : index,
+    };
+  });
+}
 
 export async function getEpisodesPublished(
   limit = 20,
@@ -36,7 +52,12 @@ export async function getEpisodeBySlug(
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return (row ?? null) as PodcastEpisode | null;
+  if (!row) return null;
+  const episode = row as PodcastEpisode & { episode_images?: unknown };
+  return {
+    ...episode,
+    episode_images: normalizeEpisodeImages(episode.episode_images),
+  };
 }
 
 export async function getEpisodesByCategory(
