@@ -101,7 +101,7 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <ul
-          className="border-border bg-surface absolute left-0 right-0 top-full z-50 mt-1 max-h-60 w-full min-w-0 overflow-auto rounded-card border py-1 shadow-lg"
+          className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-60 min-w-full w-max max-w-[calc(100vw-1.5rem)] overflow-x-hidden overflow-y-auto rounded-card border py-1 shadow-lg"
           role="listbox"
         >
           {listOptions.map((opt) => (
