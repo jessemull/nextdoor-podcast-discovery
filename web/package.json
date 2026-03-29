@@ -8,7 +8,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "security": "npm audit",
-    "seed:podcast-demo": "node scripts/seed-podcast-demo.mjs",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest"
