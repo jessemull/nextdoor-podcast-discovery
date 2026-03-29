@@ -188,7 +188,8 @@ security-scraper:
 	.venv/bin/bandit -r scraper/src/ -ll
 	@echo ""
 	@echo "Running pip-audit (dependency vulnerabilities)..."
-	.venv/bin/pip-audit
+	@echo "Ignoring CVE-2026-4539 (pygments ReDoS): no fixed PyPI release after 2.19.2 yet (GHSA-5239-wwwm-4pmq)."
+	.venv/bin/pip-audit --ignore-vuln CVE-2026-4539
 
 security-web:
 	@echo "Running npm audit (dependency vulnerabilities)..."
