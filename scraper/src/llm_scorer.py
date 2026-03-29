@@ -23,7 +23,6 @@ from src.llm_prompts import (
     BATCH_SCORING_PROMPT,
     BATCH_SCORING_RETRY_PROMPT,
     BATCH_SIZE,
-    MAX_POST_LENGTH,
     MAX_SUMMARY_LENGTH,
     PROMPT_VERSION,
     RUBRIC_SCALE,
@@ -32,6 +31,7 @@ from src.llm_prompts import (
     SINGLE_DIMENSION_SCORING_PROMPT,
     SINGLE_DIMENSION_SCORING_RETRY_PROMPT,
     TOPIC_CATEGORIES,
+    build_post_text_for_scoring,
 )
 from src.novelty import calculate_novelty
 
@@ -182,7 +182,7 @@ class LLMScorer:
         """Score multiple posts in batches for efficiency.
 
         Args:
-            posts: List of post dicts with 'id' and 'text' keys.
+            posts: List of post dicts with 'id', 'text', and optional 'comments' (JSON list).
 
         Returns:
             List of PostScore results.
@@ -279,14 +279,8 @@ class LLMScorer:
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
         )
 
-        def _truncate_with_signal(text: str) -> str:
-            t = text[:MAX_POST_LENGTH]
-            if len(text) > MAX_POST_LENGTH:
-                t += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
-            return t
-
         posts_text = "\n\n".join(
-            f"[Post {i}] (id={p.get('id')})\n{_truncate_with_signal(p.get('text', ''))}"
+            f"[Post {i}] (id={p.get('id')})\n{build_post_text_for_scoring(p)}"
             for i, p in enumerate(posts)
         )
         prompt = BATCH_SCORING_PROMPT.format(
@@ -407,7 +401,7 @@ class LLMScorer:
         """Score only one dimension for each post (for backfill). Does not write to DB.
 
         Args:
-            posts: List of dicts with 'id' and 'text' keys.
+            posts: List of dicts with 'id', 'text', and optional 'comments' (JSON list).
             dimension: Dimension key (must be in SCORING_DIMENSIONS).
 
         Returns:
@@ -435,19 +429,13 @@ class LLMScorer:
     ) -> list[tuple[str, float]]:
         """Score one dimension for a batch of posts. Raises on parse failure after retries."""
 
-        def _truncate_with_signal(text: str) -> str:
-            t = text[:MAX_POST_LENGTH]
-            if len(text) > MAX_POST_LENGTH:
-                t += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
-            return t
-
         description = SCORING_DIMENSIONS[dimension]
         if isinstance(description, tuple):
             description = description[0] if description else ""
         else:
             description = str(description)
         posts_text = "\n\n".join(
-            f"[Post {i}] (id={p.get('id')})\n{_truncate_with_signal(p.get('text', ''))}"
+            f"[Post {i}] (id={p.get('id')})\n{build_post_text_for_scoring(p)}"
             for i, p in enumerate(posts)
         )
         prompt = SINGLE_DIMENSION_SCORING_PROMPT.format(
@@ -547,7 +535,7 @@ class LLMScorer:
         """Score a single post using Claude.
 
         Args:
-            post: Post dict with 'id' and 'text' keys.
+            post: Post dict with 'id', 'text', and optional 'comments' (JSON list).
 
         Returns:
             PostScore with scores, categories, and summary.
@@ -564,11 +552,9 @@ class LLMScorer:
                 error="Empty post text",
             )
 
-        # Build the prompt with truncation signal when text is cut
+        # Build the prompt (post body + optional Comments section)
 
-        sliced = post_text[:MAX_POST_LENGTH]
-        if len(post_text) > MAX_POST_LENGTH:
-            sliced += f"\n[Text truncated at {MAX_POST_LENGTH} characters]"
+        body_with_comments = build_post_text_for_scoring(post)
 
         dimension_desc = "\n".join(
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
@@ -576,7 +562,7 @@ class LLMScorer:
         prompt = SCORING_PROMPT.format(
             categories=", ".join(TOPIC_CATEGORIES),
             dimension_descriptions=dimension_desc,
-            post_text=sliced,
+            post_text=body_with_comments,
             rubric_scale=RUBRIC_SCALE,
         )
 
@@ -1016,7 +1002,7 @@ class LLMScorer:
             limit: Maximum number of posts to return.
 
         Returns:
-            List of post dicts with 'id' and 'text', ordered by created_at ASC.
+            List of post dicts with 'id', 'text', optional 'comments', ordered by created_at ASC.
         """
         try:
             # Get posts without llm_scores
@@ -1042,7 +1028,7 @@ class LLMScorer:
         try:
             posts_result = (
                 self.supabase.table("posts")
-                .select("id, text")
+                .select("id, text, comments")
                 .order("created_at", desc=False)
                 .limit(limit)
                 .execute()

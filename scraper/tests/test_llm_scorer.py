@@ -114,6 +114,63 @@ class TestLLMScorer:
         assert "lost_pet" in results[0].categories
         assert scorer.anthropic.messages.create.call_count == 3
 
+    def test_score_posts_prompt_includes_formatted_comments(
+        self, scorer: LLMScorer
+    ) -> None:
+        """Should pass thread comments into the batch prompt for Claude."""
+        posts = [
+            {
+                "id": "post1",
+                "text": "Original post body",
+                "comments": [
+                    {"author_name": "Neighbor A", "text": "I totally agree."},
+                ],
+            },
+            {"id": "post2", "text": "Second post only"},
+        ]
+        mock_response = mock.MagicMock()
+        mock_content = mock.MagicMock()
+        batch_response = [
+            {
+                "categories": ["humor"],
+                "post_index": 0,
+                "scores": {dim: 5.0 for dim in SCORING_DIMENSIONS},
+                "summary": "S1",
+                "why_podcast_worthy": "W1",
+            },
+            {
+                "categories": ["drama"],
+                "post_index": 1,
+                "scores": {dim: 6.0 for dim in SCORING_DIMENSIONS},
+                "summary": "S2",
+                "why_podcast_worthy": "W2",
+            },
+        ]
+        mock_content.text = json.dumps(batch_response)
+        mock_response.content = [mock_content]
+        scorer.anthropic.messages.create.return_value = mock_response
+        scorer._weights = {dim: 1.0 for dim in SCORING_DIMENSIONS}
+        scorer._novelty_config = {
+            "min_multiplier": 0.2,
+            "max_multiplier": 1.5,
+            "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
+        }
+        freq_result = mock.MagicMock()
+        freq_result.data = [{"category": "humor", "count_30d": 10}]
+        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
+            freq_result
+        )
+
+        scorer.score_posts(posts)
+
+        first_call = scorer.anthropic.messages.create.call_args_list[0]
+        user_content = first_call.kwargs["messages"][0]["content"]
+        assert "Comments:" in user_content
+        assert "Neighbor A" in user_content
+        assert "I totally agree." in user_content
+        assert "Original post body" in user_content
+        assert "Second post only" in user_content
+
     def test_score_posts_handles_empty_post_text(self, scorer: LLMScorer) -> None:
         """Should return error PostScore for empty post text."""
         post = {"id": "post1", "text": ""}
@@ -271,7 +328,7 @@ class TestLLMScorer:
         rows = scorer.supabase.table.return_value.upsert.call_args[0][0]
         assert len(rows) == 1
         assert "prompt_version" in rows[0]
-        assert rows[0]["prompt_version"] == "v1"
+        assert rows[0]["prompt_version"] == "v2"
 
     def test_save_scores_skips_posts_with_errors(self, scorer: LLMScorer) -> None:
         """Should skip posts with errors."""
