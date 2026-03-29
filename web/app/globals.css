@@ -19,11 +19,35 @@
   --pittsburgh-gold-muted: #c9a01f;
 }
 
+/* Podcast public site: logo-derived palette (yellow accent, blue-grey text, etc.) */
+.podcast-site {
+  --podcast-accent: #eecf3e;
+  --podcast-foreground: #e4ebeb;
+  --podcast-muted: #9fb7c4;
+  --podcast-cta: #e2574e;
+}
+/* Allow header search to collapse to zero width (override browser/form defaults) */
+.podcast-site .podcast-search-wrapper {
+  min-width: 0 !important;
+}
+.podcast-site [data-podcast-search-input] {
+  min-width: 0 !important;
+}
+
+/* Lock viewport so only .content-scroll scrolls (no window/body scrollbar) */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 /* Override browser autofill so inputs never get a white background */
@@ -58,6 +82,24 @@ input:-webkit-autofill:active {
 
 *::-webkit-scrollbar-thumb:hover {
   background: var(--border-focus);
+}
+
+/* Main content scroll (below navbar): single scroll container */
+.content-scroll {
+  overflow-y: auto;
+}
+.content-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+.content-scroll::-webkit-scrollbar-track {
+  background: var(--surface-hover);
+}
+.content-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 7px;
+}
+.content-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
 
 /* Native select: remove default arrow, custom caret centered vertically */
@@ -102,6 +144,51 @@ input:-webkit-autofill:active {
 }
 .similarity-slider::-moz-range-progress {
   background: var(--muted-foreground);
+  border-radius: 9999px;
+}
+
+/* Podcast player volume: thin track + small thumb (native range defaults are bulky) */
+.podcast-site .podcast-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 10px;
+}
+
+.podcast-site .podcast-volume-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  border-radius: 9999px;
+  height: 3px;
+}
+
+.podcast-site .podcast-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--podcast-accent);
+  border-radius: 9999px;
+  cursor: pointer;
+  height: 8px;
+  margin-top: -3px;
+  width: 8px;
+}
+
+.podcast-site .podcast-volume-slider::-moz-range-thumb {
+  background: var(--podcast-accent);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  height: 8px;
+  width: 8px;
+}
+
+.podcast-site .podcast-volume-slider::-moz-range-track {
+  background: #3a3a3a;
+  border-radius: 9999px;
+  height: 3px;
+}
+
+.podcast-site .podcast-volume-slider::-moz-range-progress {
+  background: var(--podcast-accent);
   border-radius: 9999px;
 }
 

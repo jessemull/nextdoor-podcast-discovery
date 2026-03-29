@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable strict mode for better development experience
-  reactStrictMode: true,
+  experimental: {
+    // Default 10MB truncates large multipart bodies; truncated uploads fail with
+    // "Failed to parse body as FormData". Keep above podcast upload max (100MB
+    // in app/api/admin/podcast/upload/route.ts) plus multipart overhead.
+    // https://nextjs.org/docs/app/api-reference/config/next-config-js/middlewareClientMaxBodySize
+    proxyClientMaxBodySize: "110mb",
+  },
   images: {
     remotePatterns: [
       {
@@ -26,6 +31,7 @@ const nextConfig = {
       },
     ],
   },
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig;

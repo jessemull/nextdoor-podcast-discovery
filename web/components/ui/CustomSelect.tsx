@@ -21,6 +21,7 @@ interface CustomSelectProps {
   ariaLabel: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
   onChange: (value: string) => void;
   options: CustomSelectOption[];
   placeholder?: string;
@@ -35,6 +36,7 @@ export function CustomSelect({
   ariaLabel,
   className,
   disabled = false,
+  id,
   onChange,
   options,
   placeholder,
@@ -66,17 +68,18 @@ export function CustomSelect({
   }, [open, close]);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative min-w-0" ref={containerRef}>
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         className={cn(
-          "border-border bg-surface-hover text-foreground flex h-full min-h-0 w-full cursor-pointer items-center justify-between gap-2 rounded-card border pl-3 pr-3 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus",
+          "border-border bg-surface-hover text-foreground flex h-full min-h-0 cursor-pointer items-center justify-between gap-2 rounded-card border pl-3 pr-3 text-sm focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus",
           disabled && "cursor-not-allowed opacity-60",
           className
         )}
         disabled={disabled}
+        id={id}
         type="button"
         onClick={() => !disabled && setOpen((prev) => !prev)}
       >
@@ -98,7 +101,7 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <ul
-          className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-60 min-w-[12rem] w-max overflow-auto rounded-card border py-1 shadow-lg"
+          className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-60 min-w-full w-max max-w-[calc(100vw-1.5rem)] overflow-x-hidden overflow-y-auto rounded-card border py-1 shadow-lg"
           role="listbox"
         >
           {listOptions.map((opt) => (

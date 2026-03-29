@@ -1,5 +1,7 @@
 "use client";
 
+import { Spinner } from "@/components/ui/Spinner";
+
 import type {
   ScoreDistribution,
   ScoreDistributionStats,
@@ -60,9 +62,9 @@ export function ScoreDistributionSection({
 }: ScoreDistributionSectionProps) {
   if (loading) {
     return (
-      <p className="text-muted-foreground py-4 text-sm">
-        Loading...
-      </p>
+      <div className="flex justify-center py-8">
+        <Spinner size="md" />
+      </div>
     );
   }
 

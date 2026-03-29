@@ -22,6 +22,7 @@ import Link from "next/link";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/Card";
+import { Spinner } from "@/components/ui/Spinner";
 import { PostWithScores } from "@/lib/types";
 import {
   cn,
@@ -61,10 +62,12 @@ interface PostCardProps {
   onSelect?: (postId: string, selected: boolean) => void;
   onViewDetails?: (postId: string) => void;
   post: { ignored?: boolean; saved?: boolean; similarity?: number } & PostWithScores;
+  postDetailPathPrefix?: string;
   queueStatus?: QueueStatus;
   selected?: boolean;
   showCheckbox?: boolean;
   showScoreBreakdown?: boolean;
+  similarSearchListPath?: string;
 }
 
 export const PostCard = memo(function PostCard({
@@ -83,10 +86,12 @@ export const PostCard = memo(function PostCard({
   onSelect,
   onViewDetails,
   post,
+  postDetailPathPrefix = "/admin/posts",
   queueStatus = null,
   selected = false,
   showCheckbox = false,
   showScoreBreakdown = false,
+  similarSearchListPath = "/admin/feed",
 }: PostCardProps) {
   const scores = post.llm_scores;
   const [carouselOverflows, setCarouselOverflows] = useState(false);
@@ -281,7 +286,7 @@ export const PostCard = memo(function PostCard({
                   <Link
                     key="find-similar"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
-                    href={`/feed?q=${encodeURIComponent(
+                    href={`${similarSearchListPath}?q=${encodeURIComponent(
                       (post.text || scores?.summary || "").slice(0, 80)
                     )}`}
                     role="menuitem"
@@ -332,11 +337,7 @@ export const PostCard = memo(function PostCard({
                 });
               }
               if (onMarkIgnored) {
-                const ignoreLabel = isMarkingIgnored
-                  ? "..."
-                  : post.ignored
-                    ? "Unignore"
-                    : "Ignore";
+                const ignoreLabel = post.ignored ? "Unignore" : "Ignore";
                 menuItems.push({
                   label: ignoreLabel,
                   node: (
@@ -351,18 +352,20 @@ export const PostCard = memo(function PostCard({
                         onMarkIgnored(post.id, !post.ignored);
                       }}
                     >
-                      <EyeOff aria-hidden className="h-4 w-4" />
+                      {isMarkingIgnored ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <EyeOff aria-hidden className="h-4 w-4" />
+                      )}
                       {ignoreLabel}
                     </button>
                   ),
                 });
               }
               if (onMarkUsedChange) {
-                const usedLabel = isMarkingUsed
-                  ? "..."
-                  : post.used_on_episode
-                    ? "Mark as unused"
-                    : "Mark as used";
+                const usedLabel = post.used_on_episode
+                  ? "Mark as unused"
+                  : "Mark as used";
                 menuItems.push({
                   label: usedLabel,
                   node: (
@@ -377,7 +380,11 @@ export const PostCard = memo(function PostCard({
                         onMarkUsedChange(post.id, !post.used_on_episode);
                       }}
                     >
-                      <Check aria-hidden className="h-4 w-4" />
+                      {isMarkingUsed ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Check aria-hidden className="h-4 w-4" />
+                      )}
                       {usedLabel}
                     </button>
                   ),
@@ -385,9 +392,8 @@ export const PostCard = memo(function PostCard({
               }
               if (post.url) {
                 if (queueStatus && activeJobId && onCancelRefresh) {
-                  const cancelLabel = isCancellingRefresh ? "Cancelling…" : "Cancel Refresh";
                   menuItems.push({
-                    label: cancelLabel,
+                    label: "Cancel Refresh",
                     node: (
                       <button
                         key="cancel-refresh"
@@ -400,21 +406,18 @@ export const PostCard = memo(function PostCard({
                           onCancelRefresh(activeJobId);
                         }}
                       >
-                        <X
-                          aria-hidden
-                          className={cn(
-                            "h-4 w-4",
-                            isCancellingRefresh && "animate-pulse"
-                          )}
-                        />
-                        {cancelLabel}
+                        {isCancellingRefresh ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <X aria-hidden className="h-4 w-4" />
+                        )}
+                        Cancel Refresh
                       </button>
                     ),
                   });
                 } else if (onQueueRefresh) {
-                  const refreshLabel = isQueuingRefresh ? "Queuing…" : "Refresh Post";
                   menuItems.push({
-                    label: refreshLabel,
+                    label: "Refresh Post",
                     node: (
                       <button
                         key="refresh-post"
@@ -427,14 +430,12 @@ export const PostCard = memo(function PostCard({
                           onQueueRefresh(post.id);
                         }}
                       >
-                        <RefreshCw
-                          aria-hidden
-                          className={cn(
-                            "h-4 w-4",
-                            isQueuingRefresh && "animate-pulse"
-                          )}
-                        />
-                        {refreshLabel}
+                        {isQueuingRefresh ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <RefreshCw aria-hidden className="h-4 w-4" />
+                        )}
+                        Refresh Post
                       </button>
                     ),
                   });
@@ -486,14 +487,6 @@ export const PostCard = memo(function PostCard({
                 <span className="text-foreground text-sm font-medium tracking-wide">
                   {formatRelativeTime(post.created_at)}
                 </span>
-                {post.post_type === "classified" && post.classified_price && (
-                  <>
-                    <span className="text-muted-foreground text-sm">•</span>
-                    <span className="text-foreground text-sm font-medium">
-                      {post.classified_price}
-                    </span>
-                  </>
-                )}
               </div>
               {actionsBlock}
             </div>
@@ -512,7 +505,7 @@ export const PostCard = memo(function PostCard({
               <span className="text-muted-foreground text-sm">•</span>
               <Link
                 className="text-foreground inline-flex items-center gap-1 text-sm hover:underline"
-                href={`/posts/${post.id}#comments`}
+                href={`${postDetailPathPrefix}/${post.id}#comments`}
                 title="View comments"
               >
                 <MessageSquare
@@ -574,24 +567,40 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
-      {/* Details: neighborhood and any other details (similarity is in header row 2) */}
-      {neighborhoodName && (
+      {/* Details: neighborhood and price (classifieds); two columns */}
+      {(neighborhoodName ||
+        (post.post_type === "classified" && post.classified_price)) && (
         <div className="mb-6">
           <h3 className="text-foreground mb-4 text-base font-semibold uppercase tracking-wide">
             Details
           </h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                Neighborhood
-              </span>
-              <span
-                className="text-foreground min-w-0 break-words text-xs"
-                style={{ opacity: 0.85 }}
-              >
-                {neighborhoodName}
-              </span>
-            </div>
+            {neighborhoodName && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Neighborhood
+                </span>
+                <span
+                  className="text-foreground min-w-0 break-words text-xs"
+                  style={{ opacity: 0.85 }}
+                >
+                  {neighborhoodName}
+                </span>
+              </div>
+            )}
+            {post.post_type === "classified" && post.classified_price && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                  Price
+                </span>
+                <span
+                  className="text-foreground min-w-0 break-words text-xs"
+                  style={{ opacity: 0.85 }}
+                >
+                  {post.classified_price}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

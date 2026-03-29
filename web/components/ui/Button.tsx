@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
 
+import { Spinner } from "./Spinner";
+
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type ButtonVariant = "danger" | "ghost" | "primary" | "secondary";
@@ -7,12 +9,13 @@ type ButtonVariant = "danger" | "ghost" | "primary" | "secondary";
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   className?: string;
+  loading?: boolean;
   variant?: ButtonVariant;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
   danger:
-    "border-border bg-transparent text-destructive hover:bg-destructive/10 focus:ring-border-focus",
+    "border-destructive bg-transparent text-destructive hover:bg-destructive/10 focus:ring-border-focus",
   ghost:
     "border-transparent bg-transparent text-foreground hover:bg-surface-hover focus:ring-border-focus",
   primary:
@@ -28,9 +31,11 @@ const variantClasses: Record<ButtonVariant, string> = {
 export function Button({
   children,
   className,
+  loading = false,
   variant = "secondary",
   ...props
 }: ButtonProps) {
+  const { disabled, ...rest } = props;
   return (
     <button
       className={cn(
@@ -38,10 +43,22 @@ export function Button({
         variantClasses[variant],
         className
       )}
+      disabled={disabled ?? loading}
       type="button"
-      {...props}
+      {...rest}
     >
-      {children}
+      {loading ? (
+        <span className="relative inline-flex min-w-0 items-center justify-center">
+          <span aria-hidden className="invisible select-none">
+            {children}
+          </span>
+          <span className="absolute inset-0 flex items-center justify-center">
+            <Spinner size="sm" />
+          </span>
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }

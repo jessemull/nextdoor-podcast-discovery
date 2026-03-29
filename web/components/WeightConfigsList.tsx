@@ -11,6 +11,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/lib/ToastContext";
 import { cn } from "@/lib/utils";
 
@@ -274,8 +275,12 @@ function ConfigCard({
                     if (canActivate) onActivate(config.id);
                   }}
                 >
-                  <Power aria-hidden className="h-4 w-4" />
-                  {isActivating ? "Activating…" : "Activate"}
+                  {isActivating ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Power aria-hidden className="h-4 w-4" />
+                  )}
+                  Activate
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
@@ -287,8 +292,12 @@ function ConfigCard({
                     if (canDelete) onDelete(config.id);
                   }}
                 >
-                  <Trash2 aria-hidden className="h-4 w-4" />
-                  {deletingConfigId === config.id ? "Deleting…" : "Delete"}
+                  {deletingConfigId === config.id ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Trash2 aria-hidden className="h-4 w-4" />
+                  )}
+                  Delete
                 </button>
               </div>
             )}

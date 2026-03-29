@@ -61,19 +61,19 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(FIXED_NOW.toISOString())).toBe("Today");
   });
 
-  it("should return 'Yesterday' for previous day", () => {
+  it("should return '1d ago' for previous day", () => {
     const yesterday = new Date("2025-02-21T12:00:00.000Z");
-    expect(formatRelativeTime(yesterday.toISOString())).toBe("Yesterday");
+    expect(formatRelativeTime(yesterday.toISOString())).toBe("1d ago");
   });
 
   it("should return days ago for recent dates", () => {
     const fiveDaysAgo = new Date("2025-02-17T12:00:00.000Z");
-    expect(formatRelativeTime(fiveDaysAgo.toISOString())).toBe("5 days ago");
+    expect(formatRelativeTime(fiveDaysAgo.toISOString())).toBe("5d ago");
   });
 
   it("should return weeks ago for older dates", () => {
     const twoWeeksAgo = new Date("2025-02-08T12:00:00.000Z");
-    expect(formatRelativeTime(twoWeeksAgo.toISOString())).toBe("2 weeks ago");
+    expect(formatRelativeTime(twoWeeksAgo.toISOString())).toBe("2w ago");
   });
 
   it("should handle future dates", () => {

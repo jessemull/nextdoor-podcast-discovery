@@ -1,0 +1,104 @@
+import { PodcastSubscribeGrid } from "@/components/PodcastSubscribeGrid";
+import { playfair } from "@/lib/fonts";
+import { PODCAST_ENTRANCE_CLASS } from "@/lib/podcast-entrance-animation";
+
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  description: "Subscribe to the podcast on your favorite platform.",
+  title: "Subscribe | Podcast",
+};
+
+const subscribeInputClassName =
+  "w-full rounded-[5px] border border-podcast-accent bg-transparent px-3 py-3 text-podcast-foreground shadow-none transition-shadow duration-200 placeholder:text-podcast-muted focus:outline-none focus:shadow-[0_0_0_3px_rgba(238,207,62,0.45),0_0_28px_rgba(238,207,62,0.4)]";
+
+export default function SubscribePage() {
+  return (
+    <div className="mx-auto max-w-6xl px-5 pb-10 pt-10 sm:px-7 md:pb-14 md:pt-14 lg:pt-32">
+      <section className="mx-auto mb-14 w-full max-w-5xl px-1 sm:px-2">
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "0ms" }}
+        >
+          <h2 className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}>
+            Join Our Email List
+          </h2>
+        </div>
+        <div
+          className={PODCAST_ENTRANCE_CLASS}
+          style={{ animationDelay: "100ms" }}
+        >
+          <p className="text-podcast-muted mb-8 text-center text-base">
+            Get new episodes delivered to your inbox every Friday.
+          </p>
+        </div>
+        <form
+          className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.6fr] lg:gap-3 ${PODCAST_ENTRANCE_CLASS}`}
+          style={{ animationDelay: "200ms" }}
+        >
+          <label className="sr-only" htmlFor="subscribe-first-name">
+            First name
+          </label>
+          <input
+            className={subscribeInputClassName}
+            id="subscribe-first-name"
+            name="firstName"
+            placeholder="First name"
+            type="text"
+          />
+          <label className="sr-only" htmlFor="subscribe-last-name">
+            Last name
+          </label>
+          <input
+            className={subscribeInputClassName}
+            id="subscribe-last-name"
+            name="lastName"
+            placeholder="Last name"
+            type="text"
+          />
+          <label className="sr-only" htmlFor="subscribe-email">
+            Email
+          </label>
+          <input
+            className={`${subscribeInputClassName} sm:col-span-2 lg:col-span-1`}
+            id="subscribe-email"
+            name="email"
+            placeholder="Email address"
+            type="email"
+          />
+          <button
+            className="inline-flex w-full items-center justify-center rounded-[5px] bg-podcast-accent px-8 py-3 text-base font-semibold text-black transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-podcast-accent sm:col-span-2 lg:col-span-1"
+            type="button"
+          >
+            Subscribe
+          </button>
+        </form>
+      </section>
+
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "480ms" }}
+      >
+        <h1
+          className={`text-podcast-foreground mb-4 text-center text-2xl font-semibold sm:text-3xl ${playfair.className}`}
+        >
+          Subscribe
+        </h1>
+      </div>
+      <div
+        className={PODCAST_ENTRANCE_CLASS}
+        style={{ animationDelay: "560ms" }}
+      >
+        <p className="text-podcast-muted mx-auto mb-9 max-w-2xl text-center text-base">
+          Pick your favorite podcast app.
+        </p>
+      </div>
+      <div
+        className={`mb-12 ${PODCAST_ENTRANCE_CLASS}`}
+        style={{ animationDelay: "640ms" }}
+      >
+        <PodcastSubscribeGrid />
+      </div>
+    </div>
+  );
+}

@@ -258,7 +258,7 @@ export function PodcastPicks() {
               onMarkSaved={handleMarkSaved}
               onMarkUsedChange={requestMarkUsedChange}
               onQueueRefresh={requestQueueRefresh}
-              onViewDetails={() => router.push(`/posts/${post.id}`)}
+              onViewDetails={() => router.push(`/admin/posts/${post.id}`)}
             />
           ))}
         </div>
