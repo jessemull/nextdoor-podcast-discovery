@@ -110,6 +110,7 @@ def build_post_text_for_scoring(post: dict[str, Any]) -> str:
         return sliced + "\n\nComments:\n" + comments_block
     return sliced
 
+
 # Shared rubric scale for scoring dimensions
 RUBRIC_SCALE = "0=skip, 3=low, 5=neutral, 7=good, 10=perfect"
 
