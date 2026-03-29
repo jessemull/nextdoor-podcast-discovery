@@ -137,7 +137,7 @@ def _run_scoring_for_post(supabase_client: Client, post_id: str) -> bool:
     """
     result = (
         supabase_client.table("posts")
-        .select("id, text")
+        .select("id, text, comments")
         .eq("id", post_id)
         .limit(1)
         .execute()

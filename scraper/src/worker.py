@@ -732,7 +732,11 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
                 break
 
             posts = [
-                {"id": str(row.get("id")), "text": row.get("text") or ""}
+                {
+                    "id": str(row.get("id")),
+                    "text": row.get("text") or "",
+                    "comments": row.get("comments"),
+                }
                 for row in rows
             ]
             updates = scorer.score_single_dimension(posts, dimension)
