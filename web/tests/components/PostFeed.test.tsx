@@ -70,7 +70,6 @@ vi.mock("@/components/PostCard", () => ({
 const mockNeighborhoods = [
   { created_at: "2024-01-01", id: "neigh-1", name: "Test Neighborhood", slug: "test" },
 ];
-const mockEpisodeDates: string[] = [];
 
 const mockPosts: PostWithScores[] = [
   {
@@ -133,19 +132,13 @@ const mockPosts: PostWithScores[] = [
   },
 ];
 
-/** Default fetch mock: neighborhoods, episodes, then posts. Override per test as needed. */
+/** Default fetch mock: neighborhoods, then posts. Override per test as needed. */
 function createFetchMock(postsResponse = { data: mockPosts, total: 2 }) {
   return (url: string | URL) => {
     const u = typeof url === "string" ? url : url.toString();
     if (u.includes("/api/neighborhoods")) {
       return Promise.resolve({
         json: async () => ({ data: mockNeighborhoods }),
-        ok: true,
-      } as Response);
-    }
-    if (u.includes("/api/episodes")) {
-      return Promise.resolve({
-        json: async () => ({ data: mockEpisodeDates }),
         ok: true,
       } as Response);
     }

@@ -73,7 +73,7 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 | Saved posts | Mark saved; filter feed by saved |
 | Episode tracking | Mark “used on episode” with date; filter by episode date; avoid reuse |
 | Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults |
-| Admin access | Admin routes are protected by Supabase Auth; any logged-in user can access them. A separate admin role may be added later if needed. |
+| Admin access | Dashboard and `/api/admin/*` require a signed-in Supabase user. Tighter admin roles (e.g. auth provider roles or JWT claims) can be added later. |
 | Admin / jobs | List jobs, stats, cancel job, activate weight config |
 | Pittsburgh sports fact | Shown to all logged-in users on home page; Claude Haiku; error message if API fails |
 | Stats panel | Post counts, embedding backlog, etc. |
@@ -116,6 +116,10 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Supabase Auth session; signup is disabled and users are created manually in the Supabase Dashboard.
 - **Vercel** — Hosts Next.js only. Scraper and two workers (recompute + permalink) run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+## Pull requests
+
+Use the pre-merge checklist in [docs/CODE_REVIEW_CHECKLIST.md](docs/CODE_REVIEW_CHECKLIST.md) (automation bar §0 and quality sections).
+
 ## Repository structure
 
 ```
@@ -123,8 +127,9 @@ nextdoor/
 ├── .cursorrules           # Conventions (alphabetization, comments, style)
 ├── .github/workflows/     # ci.yml
 ├── database/
-│   ├── migrations/        # 001–036 SQL (run in numeric order in Supabase)
-│   └── seeds/             # seed_neighborhoods.sql
+│   ├── bootstrap.sql      # Generated: `make db-bootstrap` (all migrations); new Supabase projects
+│   ├── migrations/        # Numbered SQL (run in order on existing projects; see docs)
+│   └── scripts/           # Ops-only SQL (truncate, repair RPCs, etc.); not the main bootstrap
 ├── scraper/               # Python scraper + workers
 │   ├── src/
 │   │   ├── main.py         # CLI: scrape, score, embed, worker
@@ -132,10 +137,11 @@ nextdoor/
 │   │   ├── post_extractor.py, post_storage.py, session_manager.py
 │   │   ├── llm_scorer.py, llm_prompts.py, embedder.py, embed.py
 │   │   ├── recount_topics.py, worker.py, novelty.py
-│   │   ├── config.py, exceptions.py, robots.py
+│   │   ├── config.py, exceptions.py
 │   ├── tests/
 │   ├── pyproject.toml, requirements.txt
 ├── docs/
+│   ├── CODE_REVIEW_CHECKLIST.md  # Pre-merge review checklist
 │   ├── DEPLOYMENT.md      # Server setup and deploy from local machine
 │   ├── ENVIRONMENTS.md    # Dev vs prod; step-by-step deployment
 │   └── SUPABASE_MIGRATIONS.md  # Run migrations in both Supabase projects
@@ -192,7 +198,7 @@ Run **`make help`** for the short list. Targets by section:
 | `db-up` | Start local Postgres (docker-compose) |
 | `db-down` | Stop local DB |
 | `db-reset` | Wipe local DB (down + remove volume + up) |
-| `db-migrate-local` | Run all migrations + seeds into local Postgres |
+| `db-migrate-local` | Run all migrations into local Postgres |
 | `db-migrate-prod` | Print instructions for Supabase SQL Editor |
 
 ### Makefile — Development
@@ -257,7 +263,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 2. **Env files** — Create `scraper/.env` and `web/.env.local` from the example files; fill in all required variables.
 
 3. **Database**
-   - **Production:** Create a Supabase project and run all migrations 001–036 in numeric order in the SQL Editor (see [Database](#database)).
+   - **Production:** Create a Supabase project and run [`database/bootstrap.sql`](database/bootstrap.sql) once in the SQL Editor, or apply only new migration files in order on existing projects (see [Database](#database) and [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md)).
    - **Local:** `make db-up` then `make db-migrate-local`.
 
 4. **Scraper (one-off)**
@@ -272,9 +278,9 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 ## Database
 
-**Production:** Supabase. Run all files in `database/migrations/` in numeric order (001_initial_schema.sql through 036_backfill_dimension.sql) in the SQL Editor. Optionally run `database/seeds/seed_neighborhoods.sql`. For two projects (dev + prod), see [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md).
+**Production:** Supabase. For a **new** project, apply [`database/bootstrap.sql`](database/bootstrap.sql) once (regenerate with `make db-bootstrap` when migrations change). For **existing** projects, run only new files in `database/migrations/` in numeric order in the SQL Editor. For two projects (dev + prod), see [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md).
 
-**Local dev:** `docker-compose up -d db` (pgvector/pg16), then `make db-migrate-local` to pipe migrations and seeds into the container.
+**Local dev:** `docker-compose up -d db` (pgvector/pg16), then `make db-migrate-local` to pipe migrations into the container.
 
 **Main tables:** `neighborhoods`, `sessions` (encrypted cookies), `posts`, `llm_scores`, `post_embeddings`, `post_scores`, `weight_configs`, `background_jobs`, `topic_frequencies`, `settings`.
 
@@ -302,7 +308,7 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 **Pages:** `/` (feed), `/posts/[id]` (post detail), `/search`, `/settings`, `/login`.
 
-**API routes:** `GET/POST /api/posts`, `GET/POST /api/posts/[id]`, `POST /api/posts/[id]/saved`, `POST /api/posts/[id]/used`, `GET /api/search`, `GET/PUT /api/settings`, `GET /api/neighborhoods`, `GET /api/episodes`, `GET /api/stats`, `GET /api/sports-fact`, plus admin: jobs, recompute-scores, weight-configs.
+**API routes:** `GET/POST /api/posts`, `GET/POST /api/posts/[id]`, `POST /api/posts/[id]/saved`, `POST /api/posts/[id]/used`, `GET /api/search`, `GET/PUT /api/settings`, `GET /api/neighborhoods`, `GET /api/stats`, `GET /api/sports-fact`, plus admin: jobs, recompute-scores, weight-configs.
 
 **Auth:** Supabase Auth; middleware and API routes use `getSession()` from `lib/supabase-server-auth`; signup disabled; users created manually.
 
@@ -321,7 +327,7 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 ## Testing & linting
 
 - **Lint** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats scraper code.
-- **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase and NextAuth.
+- **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase Auth session where needed.
 - **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. Web tests mock Supabase Auth session.
 
 ## Security

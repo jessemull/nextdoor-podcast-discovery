@@ -706,8 +706,8 @@ def main(
         logger.info("Exiting with code 1")
         return 1
     except Exception as e:
-        # Last-resort catch so pipeline exits cleanly with code 1 (PR_REVIEW: intentional;
-        # known exceptions handled above; broad catch avoids unhandled tracebacks in cron)
+        # Last-resort catch so pipeline exits cleanly with code 1 (intentional; known exceptions
+        # handled above; broad catch avoids unhandled tracebacks in cron)
         logger.exception("Unexpected error (%s): %s", type(e).__name__, e)
         try:
             _record_scraper_run(session_manager.supabase, feed_type, "error", str(e))

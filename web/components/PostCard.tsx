@@ -22,6 +22,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
+import { POST_CARD_DIMENSION_LABELS } from "@/components/post-card/post-card-dimension-labels";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { PostWithScores } from "@/lib/types";
@@ -35,16 +36,6 @@ import {
 import { SCORING_FEW_SHOT_MAX_EXAMPLES } from "@/lib/validators";
 
 import type { DimensionScores } from "@/lib/types";
-
-const DIMENSION_LABELS: Record<keyof DimensionScores, string> = {
-  absurdity: "Absurdity",
-  discussion_spark: "Discussion",
-  drama: "Drama",
-  emotional_intensity: "Intensity",
-  news_value: "News",
-  podcast_worthy: "Podcast",
-  readability: "Readability",
-};
 
 export type QueueStatus = "pending" | "running" | null;
 
@@ -785,7 +776,7 @@ export const PostCard = memo(function PostCard({
                       className="text-foreground w-28 text-sm"
                       style={{ opacity: 0.85 }}
                     >
-                      {DIMENSION_LABELS[key as keyof DimensionScores] ?? key}
+                      {POST_CARD_DIMENSION_LABELS[key as keyof DimensionScores] ?? key}
                     </span>
                     <div className="flex-1">
                       <div className="bg-surface-hover h-2 overflow-hidden rounded-full">
