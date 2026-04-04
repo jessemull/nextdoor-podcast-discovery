@@ -26,10 +26,11 @@ __all__ = [
     "TOPIC_CATEGORIES",
     "build_post_text_for_scoring",
     "format_comments_for_scoring_prompt",
+    "format_prompt_with_example_block",
 ]
 
 # Version string for feedback loop and A/B tests; bump when prompt changes
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v4"
 
 # Maximum characters to send to Claude (longer posts are truncated)
 MAX_POST_LENGTH = 2000
@@ -111,6 +112,16 @@ def build_post_text_for_scoring(post: dict[str, Any]) -> str:
     return sliced
 
 
+def format_prompt_with_example_block(
+    template: str, example_block: str, **kwargs: str
+) -> str:
+    """Insert example_block, then format pre/post so placeholders on both sides resolve."""
+    pre, sep, post = template.partition("{example_block}")
+    if not sep:
+        return template.format(**kwargs)
+    return pre.format(**kwargs) + example_block + post.format(**kwargs)
+
+
 # Shared rubric scale for scoring dimensions
 RUBRIC_SCALE = "0=skip, 3=low, 5=neutral, 7=good, 10=perfect"
 
@@ -126,8 +137,10 @@ SCORING_DIMENSIONS = {
         "1=boring, 5=some debate, 10=everyone has an opinion"
     ),
     "drama": (
-        "Level of conflict, tension, or heated exchanges. "
-        "1=peaceful, 5=some friction, 10=full-blown neighbor war"
+        "Real neighbor conflict and stakes: disputes, accusations, threats to involve police/city/HOA, "
+        "property or parking feuds, passive-aggressive wars that escalate in the thread. "
+        "Not the same as emotional_intensity (caps/rant tone alone) or mild discussion_spark (polite debate). "
+        "1=no meaningful beef, 5=clear friction with back-and-forth, 10=peak neighbor war"
     ),
     "emotional_intensity": (
         "Passion level - caps, exclamation marks, strong language. "
@@ -138,8 +151,10 @@ SCORING_DIMENSIONS = {
         "1=nothing, 5=notable, 10=major incident"
     ),
     "podcast_worthy": (
-        "Would this work well on a comedy podcast? "
-        "1=skip, 5=maybe, 10=perfect for the show"
+        "Holistic: would this land as a strong comedy-podcast segment? Judge the full package—high scores usually "
+        "combine strong drama with supporting signal (absurdity, debate, news_value, readability) rather than one "
+        "axis fighting the others. Rare exception: one dimension alone is so strong it clearly carries the bit. "
+        "1=skip, 5=maybe one beat, 10=ideal segment"
     ),
     "readability": (
         "How easy and punchy is this to read aloud? Short, clear posts score higher; "
@@ -166,6 +181,10 @@ Each item may include the original post text plus a "Comments:" section with nei
 Use the full thread (post + comments) when scoring—especially discussion_spark, drama, and emotional_intensity.
 If there are no comments, score from the post text alone.
 
+Drama (neighbor conflict) is central for this show, but still score each dimension on its own rubric first.
+podcast_worthy should synthesize the whole thread: drama plus absurdity, debate, news value, and readability should
+feel like one coherent "would this kill on the podcast?" judgment—not contradictory scores when the package clearly works.
+
 Score this post on each dimension from 1-10. Scale: {rubric_scale}
 
 {dimension_descriptions}
@@ -173,6 +192,8 @@ Score this post on each dimension from 1-10. Scale: {rubric_scale}
 Think step-by-step internally. Respond with ONLY valid JSON.
 
 Also assign 1-3 topic categories from this list: {categories}
+
+{example_block}
 
 Post to analyze:
 ---
@@ -206,6 +227,10 @@ Each numbered post may include the original text plus a "Comments:" section with
 Use the full thread (post + comments) when scoring—especially discussion_spark, drama, and emotional_intensity.
 If a post has no comments section, score from the post text alone.
 
+Drama (neighbor conflict) is central for this show, but still score each dimension on its own rubric first.
+podcast_worthy should synthesize the whole thread: drama plus absurdity, debate, news value, and readability should
+feel like one coherent "would this kill on the podcast?" judgment—not contradictory scores when the package clearly works.
+
 Score each post on these dimensions (1-10). Scale: {rubric_scale}
 
 {dimension_descriptions}
@@ -213,6 +238,8 @@ Score each post on these dimensions (1-10). Scale: {rubric_scale}
 Think step-by-step internally. Respond with ONLY valid JSON.
 
 Also assign 1-3 topic categories from this list to each post: {categories}
+
+{example_block}
 
 Posts to analyze (each numbered):
 {posts_text}
@@ -243,6 +270,8 @@ Score each post on ONLY this dimension (1-10): {dimension}
 Description: {description}
 
 Scale: {rubric_scale}
+
+{example_block}
 
 Respond with ONLY a valid JSON array—no markdown, no code fences, no trailing commas.
 One object per post, in order. Format:

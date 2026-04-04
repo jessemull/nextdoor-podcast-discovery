@@ -32,6 +32,13 @@ load_dotenv()  # noqa: E402
 from src.llm_prompts import SCORING_DIMENSIONS  # noqa: E402
 from src.llm_scorer import LLMScorer  # noqa: E402
 from src.novelty import calculate_novelty  # noqa: E402
+from src.ranking_common import (  # noqa: E402
+    calculate_final_score,
+    count_llm_scores,
+    load_novelty_config,
+    load_topic_frequencies,
+    load_weight_config,
+)
 from src.session_manager import SessionManager  # noqa: E402
 from src.worker_handlers import (  # noqa: E402
     process_fetch_permalink_job,
@@ -49,140 +56,6 @@ PROGRESS_UPDATE_INTERVAL = 5
 
 # Backfill dimension: batch size for get_posts_missing_dimension and LLM calls
 BACKFILL_DIMENSION_BATCH_SIZE = 20
-
-
-def calculate_final_score(
-    scores: dict[str, float],
-    weights: dict[str, float],
-    novelty: float,
-) -> float:
-    """Calculate final score using weights and novelty.
-
-    Args:
-        scores: Dimension scores from LLM.
-        weights: Weight multipliers for each dimension.
-        novelty: Novelty multiplier (0.2 to 1.5).
-
-    Returns:
-        Final score (0-10).
-    """
-    # Missing dimension (e.g. newly added) defaults to 5.0; see docs on new dimension backfill
-    weighted_sum = sum(scores.get(dim, 5.0) * w for dim, w in weights.items())
-    max_possible = sum(10 * w for w in weights.values())
-    if max_possible == 0:
-        return 0.0
-
-    normalized = (weighted_sum / max_possible) * 10
-
-    # Apply novelty multiplier and clamp to [0, 10]
-    raw_score = normalized * novelty
-    return min(10.0, max(0.0, raw_score))
-
-
-def load_weight_config(supabase: Client, weight_config_id: str) -> dict[str, float]:
-    """Load ranking weights from a weight config.
-
-    Args:
-        supabase: Supabase client.
-        weight_config_id: UUID of the weight config.
-
-    Returns:
-        Dict of dimension -> weight.
-
-    Raises:
-        ValueError: If weight config not found.
-    """
-    result = (
-        supabase.table("weight_configs")
-        .select("weights")
-        .eq("id", weight_config_id)
-        .single()
-        .execute()
-    )
-
-    if not result.data:
-        raise ValueError(f"Weight config {weight_config_id} not found")
-
-    weights_data = result.data.get("weights", {})  # type: ignore[union-attr]
-    if not isinstance(weights_data, dict):
-        raise ValueError(f"Invalid weights format in config {weight_config_id}")
-
-    weights: dict[str, float] = {
-        k: float(v) for k, v in weights_data.items() if isinstance(v, (int, float))
-    }
-
-    if not weights:
-        raise ValueError(f"No valid weights found in config {weight_config_id}")
-
-    known = {k: v for k, v in weights.items() if k in SCORING_DIMENSIONS}
-    if len(known) < len(weights):
-        dropped = set(weights) - set(SCORING_DIMENSIONS)
-        logger.warning("Dropping unknown weight dimensions: %s", dropped)
-        weights = known
-
-    return weights
-
-
-def load_novelty_config(supabase: Client) -> dict[str, Any]:
-    """Load novelty configuration from settings.
-
-    Args:
-        supabase: Supabase client.
-
-    Returns:
-        Novelty config dict.
-    """
-    result = (
-        supabase.table("settings")
-        .select("value")
-        .eq("key", "novelty_config")
-        .limit(1)
-        .execute()
-    )
-
-    novelty_config: dict[str, Any] = {}
-    rows = result.data if isinstance(result.data, list) else []
-    if rows:
-        row = rows[0]
-        value = row.get("value", {}) if isinstance(row, dict) else {}
-        if isinstance(value, dict):
-            novelty_config = value
-
-    # Default config if not found
-    if not novelty_config:
-        novelty_config = {
-            "min_multiplier": 0.2,
-            "max_multiplier": 1.5,
-            "frequency_thresholds": {
-                "rare": 5,
-                "common": 30,
-                "very_common": 100,
-            },
-        }
-
-    return novelty_config
-
-
-def load_topic_frequencies(supabase: Client) -> dict[str, int]:
-    """Load topic frequencies from database.
-
-    Args:
-        supabase: Supabase client.
-
-    Returns:
-        Dict of category -> count_30d.
-    """
-    result = supabase.table("topic_frequencies").select("category, count_30d").execute()
-
-    frequencies: dict[str, int] = {}
-    rows = cast(list[dict[str, Any]], result.data or [])
-    for row in rows:
-        category = row.get("category")
-        count = row.get("count_30d", 0)
-        if isinstance(category, str) and isinstance(count, (int, float)):
-            frequencies[category] = int(count)
-
-    return frequencies
 
 
 def _load_job_dependencies(
@@ -465,12 +338,7 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         )
 
         # Get total count of posts with scores
-        count_result = (
-            supabase.table("llm_scores")
-            .select("id", count=cast(Any, "exact"))
-            .execute()
-        )
-        total = count_result.count or 0
+        total = count_llm_scores(supabase)
 
         logger.info(
             "[recompute] job=%s weight_config_id=%s found %d posts with scores",

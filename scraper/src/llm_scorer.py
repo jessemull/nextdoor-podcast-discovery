@@ -32,8 +32,10 @@ from src.llm_prompts import (
     SINGLE_DIMENSION_SCORING_RETRY_PROMPT,
     TOPIC_CATEGORIES,
     build_post_text_for_scoring,
+    format_prompt_with_example_block,
 )
 from src.novelty import calculate_novelty
+from src.scoring_few_shot import build_scoring_few_shot_block
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +180,10 @@ class LLMScorer:
         self._weights: dict[str, float] | None = None
         self._novelty_config: dict[str, Any] | None = None
 
+    def _scoring_few_shot_block(self) -> str:
+        """Few-shot calibration from settings (Admin UI); raises if unconfigured."""
+        return build_scoring_few_shot_block(self.supabase)
+
     def score_posts(self, posts: list[dict[str, Any]]) -> list[PostScore]:
         """Score multiple posts in batches for efficiency.
 
@@ -283,7 +289,10 @@ class LLMScorer:
             f"[Post {i}] (id={p.get('id')})\n{build_post_text_for_scoring(p)}"
             for i, p in enumerate(posts)
         )
-        prompt = BATCH_SCORING_PROMPT.format(
+        example_block = self._scoring_few_shot_block()
+        prompt = format_prompt_with_example_block(
+            BATCH_SCORING_PROMPT,
+            example_block,
             categories=", ".join(TOPIC_CATEGORIES),
             dimension_descriptions=dimension_desc,
             posts_text=posts_text,
@@ -438,7 +447,10 @@ class LLMScorer:
             f"[Post {i}] (id={p.get('id')})\n{build_post_text_for_scoring(p)}"
             for i, p in enumerate(posts)
         )
-        prompt = SINGLE_DIMENSION_SCORING_PROMPT.format(
+        example_block = self._scoring_few_shot_block()
+        prompt = format_prompt_with_example_block(
+            SINGLE_DIMENSION_SCORING_PROMPT,
+            example_block,
             dimension=dimension,
             description=description,
             posts_text=posts_text,
@@ -559,7 +571,10 @@ class LLMScorer:
         dimension_desc = "\n".join(
             f"- {dim}: {desc}" for dim, desc in SCORING_DIMENSIONS.items()
         )
-        prompt = SCORING_PROMPT.format(
+        example_block = self._scoring_few_shot_block()
+        prompt = format_prompt_with_example_block(
+            SCORING_PROMPT,
+            example_block,
             categories=", ".join(TOPIC_CATEGORIES),
             dimension_descriptions=dimension_desc,
             post_text=body_with_comments,

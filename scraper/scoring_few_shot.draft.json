@@ -1,0 +1,107 @@
+{
+  "intro": "These reference threads calibrate scores for a comedy podcast built from real Nextdoor drama. Anchor relative levels like this: drama is real conflict, stakes, or escalation—not just loud typing. absurdity is how unhinged or “peak Nextdoor” the situation and voice feel. discussion_spark is how much neighbors would argue, pile on, or riff in the thread. news_value is whether something concrete happened worth reporting (crime, policy, incident). emotional_intensity is heat in the writing (caps, outrage, shock). readability is how tellable the post is aloud (short, clear beats rambling). podcast_worthy is holistic: strong segments usually combine a sharp hook with drama and/or absurdity and good pacing—serious stories can still score high if they drive a compelling segment. Match the shape of these examples when you score new posts; do not copy numbers blindly if the new thread is clearly milder or wilder.",
+  "examples": [
+    {
+      "post_id": "d11c2ec8-3315-41ba-9dbb-f4ad1698df3e",
+      "ideal": {
+        "categories": ["crime", "drama"],
+        "scores": {
+          "absurdity": 6,
+          "discussion_spark": 9,
+          "drama": 9,
+          "emotional_intensity": 7,
+          "news_value": 8,
+          "podcast_worthy": 9,
+          "readability": 8
+        },
+        "summary": "Author admits a tow-worthy parking mistake, then finds their new leased car keyed, tire stabbed, and graffitied at the impound lot—neighbors debate Seattle reactions and class cues in the alley.",
+        "why_podcast_worthy": "Great segment fuel: relatable mistake collides with disproportionate neighbor vigilantism and a long thread of takes."
+      }
+    },
+    {
+      "post_id": "3febb3ea-7fa4-4cdf-ba12-72c4ff65f14e",
+      "ideal": {
+        "categories": ["suspicious", "drama"],
+        "scores": {
+          "absurdity": 10,
+          "discussion_spark": 9,
+          "drama": 8,
+          "emotional_intensity": 9,
+          "news_value": 6,
+          "podcast_worthy": 9,
+          "readability": 7
+        },
+        "summary": "All-caps warning about a peeper at the window; author describes confronting someone in the hedges with provocative, chaotic wording and neighbors argue about police and safety.",
+        "why_podcast_worthy": "Peak Nextdoor voice and escalation—dark, absurd, and comment-thread gasoline."
+      }
+    },
+    {
+      "post_id": "4516a98f-8bf3-4fff-80b3-30fc97b47412",
+      "ideal": {
+        "categories": ["crime", "local_news"],
+        "scores": {
+          "absurdity": 5,
+          "discussion_spark": 10,
+          "drama": 9,
+          "emotional_intensity": 9,
+          "news_value": 8,
+          "podcast_worthy": 9,
+          "readability": 8
+        },
+        "summary": "Author reports being assaulted outside a Rainier Lowe’s after staff said there was no parking-lot security; SPD allegedly labeled it mutual combat, sparking a heated thread about policy and blame.",
+        "why_podcast_worthy": "Serious incident with a clear narrative hook and huge debate energy—strong show material despite the heavy topic."
+      }
+    },
+    {
+      "post_id": "9d317b83-8c30-4eb0-b28a-29d34bfee23a",
+      "ideal": {
+        "categories": ["crime", "suspicious"],
+        "scores": {
+          "absurdity": 4,
+          "discussion_spark": 9,
+          "drama": 9,
+          "emotional_intensity": 8,
+          "news_value": 8,
+          "podcast_worthy": 8,
+          "readability": 9
+        },
+        "summary": "Detailed account of indecent exposure in a Target women’s restroom, store response, and follow-up reporting; comments explode over corporate policy and child safety.",
+        "why_podcast_worthy": "Long-form, high-stakes retail-neighborhood story with policy angle—heavy, but very discussable on-mic with care."
+      }
+    },
+    {
+      "post_id": "2a7f56d2-19f9-49e5-ab8a-fca6db3f429f",
+      "ideal": {
+        "categories": ["humor", "drama"],
+        "scores": {
+          "absurdity": 8,
+          "discussion_spark": 10,
+          "drama": 6,
+          "emotional_intensity": 7,
+          "news_value": 3,
+          "podcast_worthy": 8,
+          "readability": 9
+        },
+        "summary": "Short outrage post: neighbor urinated in their own driveway in view of the porch; comments spiral into legality, decency, and jokes.",
+        "why_podcast_worthy": "Tiny setup, massive comment pile-on—classic quick-hit neighborhood gross-out with legal pedantry."
+      }
+    },
+    {
+      "post_id": "eeef3f11-1c94-43a3-bbb3-ab58eaa48bd4",
+      "ideal": {
+        "categories": ["wildlife", "humor"],
+        "scores": {
+          "absurdity": 7,
+          "discussion_spark": 10,
+          "drama": 6,
+          "emotional_intensity": 5,
+          "news_value": 3,
+          "podcast_worthy": 7,
+          "readability": 9
+        },
+        "summary": "Provocative one-liner claiming coyotes are harmless in Seattle; thread devolves into mushrooms jokes, euthanasia hot takes, and fact fights.",
+        "why_podcast_worthy": "Bait post that reliably starts a neighborhood flame war—funny meta fodder for a show."
+      }
+    }
+  ]
+}

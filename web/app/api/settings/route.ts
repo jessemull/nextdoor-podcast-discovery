@@ -4,7 +4,10 @@ import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { logError } from "@/lib/log.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
-import { settingsPutBodySchema } from "@/lib/validators";
+import {
+  scoringFewShotConfigSchema,
+  settingsPutBodySchema,
+} from "@/lib/validators";
 
 /**
  * GET /api/settings
@@ -29,6 +32,7 @@ export async function GET(request: NextRequest) {
     // Fetch active weight config, search defaults, novelty config, picks defaults in parallel
     const [
       configResult,
+      scoringFewShotResult,
       searchDefaultsResult,
       noveltyConfigResult,
       picksDefaultsResult,
@@ -40,6 +44,7 @@ export async function GET(request: NextRequest) {
             .eq("id", activeConfigId)
             .single()
         : Promise.resolve({ data: null, error: null }),
+      supabase.from("settings").select("value").eq("key", "scoring_few_shot").single(),
       supabase.from("settings").select("value").eq("key", "search_defaults").single(),
       supabase.from("settings").select("value").eq("key", "novelty_config").single(),
       supabase.from("settings").select("value").eq("key", "picks_defaults").single(),
@@ -84,11 +89,16 @@ export async function GET(request: NextRequest) {
         ? (picksDefaultsResult.data.value as Record<string, unknown>)
         : { picks_min: 7 };
 
+    const rawFewShot = scoringFewShotResult.data?.value;
+    const parsedFewShot = scoringFewShotConfigSchema.safeParse(rawFewShot);
+    const scoringFewShot = parsedFewShot.success ? parsedFewShot.data : null;
+
     return NextResponse.json({
       data: {
         novelty_config: noveltyConfig,
         picks_defaults: picksDefaults,
         ranking_weights: rankingWeights,
+        scoring_few_shot: scoringFewShot,
         search_defaults: searchDefaults,
       },
     });
@@ -113,6 +123,9 @@ export async function GET(request: NextRequest) {
  * Body:
  * - ranking_weights?: Record<string, number>
  * - search_defaults?: Record<string, unknown>
+ * - novelty_config?: Record<string, unknown>
+ * - picks_defaults?: { picks_min: number }
+ * - scoring_few_shot?: { intro: string; examples: Array<{ post_id: string; ideal: ... }> }
  */
 export async function PUT(request: NextRequest) {
   const session = await getSession();
@@ -128,7 +141,7 @@ export async function PUT(request: NextRequest) {
       const message = first?.message ?? "Invalid request body";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { novelty_config, picks_defaults, ranking_weights, search_defaults } =
+    const { novelty_config, picks_defaults, ranking_weights, scoring_few_shot, search_defaults } =
       parsed.data;
 
     const supabase = getSupabaseAdmin();
@@ -163,6 +176,14 @@ export async function PUT(request: NextRequest) {
         supabase
           .from("settings")
           .upsert({ key: "picks_defaults", value: picks_defaults }, { onConflict: "key" })
+      );
+    }
+
+    if (scoring_few_shot) {
+      updates.push(
+        supabase
+          .from("settings")
+          .upsert({ key: "scoring_few_shot", value: scoring_few_shot }, { onConflict: "key" })
       );
     }
 
