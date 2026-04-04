@@ -322,9 +322,11 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(20)
     .transform((n) => Math.min(100, Math.max(1, n))),
+  max_comment_count: z.coerce.number().int().min(0).optional(),
   max_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   max_reaction_count: z.coerce.number().int().min(0).optional(),
   max_score: z.coerce.number().min(0).optional(),
+  min_comment_count: z.coerce.number().int().min(0).optional(),
   min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   min_reaction_count: z.coerce.number().int().min(0).optional(),
   min_score: z.coerce.number().min(0).optional(),
@@ -356,7 +358,7 @@ export const postsQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   sort: z
-    .enum(["date", "podcast_score", "score"])
+    .enum(["comment_count", "date", "podcast_score", "score"])
     .optional()
     .default("score"),
   unused_only: z
@@ -417,9 +419,11 @@ export const postsBulkQuerySchema = z.object({
       "Invalid category in categories"
     ),
   ignored_only: z.boolean().optional(),
+  max_comment_count: z.number().int().min(0).optional(),
   max_podcast_worthy: z.number().min(0).max(10).optional(),
   max_reaction_count: z.number().int().min(0).optional(),
   max_score: z.number().min(0).optional(),
+  min_comment_count: z.number().int().min(0).optional(),
   min_podcast_worthy: z.number().min(0).max(10).optional(),
   min_reaction_count: z.number().int().min(0).optional(),
   min_score: z.number().min(0).optional(),
@@ -432,7 +436,9 @@ export const postsBulkQuerySchema = z.object({
     ),
   order: z.enum(["asc", "desc"]).optional(),
   saved_only: z.boolean().optional(),
-  sort: z.enum(["date", "podcast_score", "score"]).optional(),
+  sort: z
+    .enum(["comment_count", "date", "podcast_score", "score"])
+    .optional(),
   unused_only: z.boolean().optional(),
 });
 

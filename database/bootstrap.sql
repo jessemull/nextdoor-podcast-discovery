@@ -5923,7 +5923,2299 @@ ADD COLUMN IF NOT EXISTS post_type TEXT
     CHECK (post_type IN ('standard', 'classified'))
     DEFAULT 'standard';
 
+-- Add p_post_type to posts RPCs so feed and classifieds return and count by post type.
+-- Run after 051_posts_post_type_classifieds.sql.
+
+-- ============================================================================
+-- Step 1: get_posts_with_scores (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_scores(uuid, integer, integer, double precision, text[], boolean, uuid[], boolean, double precision, text, integer, boolean, boolean, double precision, double precision, integer);
+
+CREATE OR REPLACE FUNCTION get_posts_with_scores(
+    p_weight_config_id UUID,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_order_by TEXT DEFAULT 'score',
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+) AS $$
+BEGIN
+    SET search_path = public;
+    IF p_order_by = 'podcast_worthy' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY (ls.scores->>'podcast_worthy')::float ASC NULLS LAST, ps.final_score ASC
+            LIMIT p_limit
+            OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY (ls.scores->>'podcast_worthy')::float DESC NULLS LAST, ps.final_score DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END IF;
+    ELSE
+        IF p_order_asc THEN
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY ps.final_score ASC
+            LIMIT p_limit
+            OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY ps.final_score DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 2: get_posts_with_scores_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_scores_count(uuid, double precision, text[], boolean, uuid[], boolean, double precision, integer, boolean, double precision, double precision, integer);
+
+CREATE OR REPLACE FUNCTION get_posts_with_scores_count(
+    p_weight_config_id UUID,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT AS $$
+DECLARE
+    result_count INT;
+BEGIN
+    SET search_path = public;
+    SELECT COUNT(*) INTO result_count
+    FROM post_scores ps
+    INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+    INNER JOIN posts p ON ps.post_id = p.id
+    WHERE ps.weight_config_id = p_weight_config_id
+        AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+        AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+        AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+        AND (NOT p_unused_only OR p.used_on_episode = false)
+        AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+        AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+        AND (p_ignored_only = COALESCE(p.ignored, false))
+        AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+        AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+        AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+        AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+        AND p.post_type = COALESCE(p_post_type, 'standard');
+
+    RETURN result_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 3: get_posts_by_date (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_by_date(integer, integer, text, double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer);
+DROP FUNCTION IF EXISTS get_posts_by_date(integer, integer, text[], double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer);
+
+CREATE OR REPLACE FUNCTION get_posts_by_date(
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_categories TEXT[] DEFAULT NULL,
+    p_min_score FLOAT DEFAULT NULL,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+) AS $$
+BEGIN
+    SET search_path = public;
+    IF p_order_asc THEN
+        RETURN QUERY
+        SELECT
+            ls.categories,
+            ls.created_at AS llm_created_at,
+            ls.id AS llm_score_id,
+            ls.model_version,
+            p.id AS post_id,
+            ls.final_score,
+            ls.scores,
+            ls.summary,
+            ls.why_podcast_worthy
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+            AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+        ORDER BY p.created_at ASC
+        LIMIT p_limit
+        OFFSET p_offset;
+    ELSE
+        RETURN QUERY
+        SELECT
+            ls.categories,
+            ls.created_at AS llm_created_at,
+            ls.id AS llm_score_id,
+            ls.model_version,
+            p.id AS post_id,
+            ls.final_score,
+            ls.scores,
+            ls.summary,
+            ls.why_podcast_worthy
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+            AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+        ORDER BY p.created_at DESC
+        LIMIT p_limit
+        OFFSET p_offset;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 4: get_posts_by_date_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_by_date_count(text, double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer);
+DROP FUNCTION IF EXISTS get_posts_by_date_count(text[], double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer);
+
+CREATE OR REPLACE FUNCTION get_posts_by_date_count(
+    p_categories TEXT[] DEFAULT NULL,
+    p_min_score FLOAT DEFAULT NULL,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT AS $$
+DECLARE
+    result_count INT;
+BEGIN
+    SET search_path = public;
+    SELECT COUNT(*) INTO result_count
+    FROM posts p
+    INNER JOIN llm_scores ls ON p.id = ls.post_id
+    WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+        AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+        AND (NOT p_unused_only OR p.used_on_episode = false)
+        AND (p_ignored_only = COALESCE(p.ignored, false))
+        AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+        AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+        AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+        AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+        AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+        AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+        AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+        AND p.post_type = COALESCE(p_post_type, 'standard');
+
+    RETURN result_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 5: get_posts_with_runtime_scores (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_runtime_scores(uuid, integer, integer, double precision, text[], boolean, uuid[], boolean, double precision, text, integer, boolean, boolean, double precision, double precision, integer, jsonb);
+
+CREATE OR REPLACE FUNCTION get_posts_with_runtime_scores(
+    p_weight_config_id UUID,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_order_by TEXT DEFAULT 'score',
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_weights JSONB DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_weights JSONB;
+    v_novelty_config JSONB;
+    v_frequencies JSONB;
+    v_total_scored INT;
+BEGIN
+    IF p_weights IS NOT NULL AND jsonb_typeof(p_weights) = 'object' THEN
+        v_weights := p_weights;
+    ELSIF p_weight_config_id IS NOT NULL THEN
+        SELECT wc.weights INTO v_weights
+        FROM weight_configs wc
+        WHERE wc.id = p_weight_config_id;
+    END IF;
+
+    IF v_weights IS NULL THEN
+        RETURN;
+    END IF;
+
+    SELECT COALESCE(s.value::jsonb, '{}'::jsonb) INTO v_novelty_config
+    FROM settings s
+    WHERE s.key = 'novelty_config'
+    LIMIT 1;
+
+    SELECT COALESCE(jsonb_object_agg(tf.category, tf.count_30d), '{}'::jsonb) INTO v_frequencies
+    FROM topic_frequencies tf;
+
+    SELECT COUNT(*)::int INTO v_total_scored
+    FROM llm_scores;
+
+    IF p_order_by = 'podcast_worthy' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY (s.ls_scores->>'podcast_worthy')::float ASC NULLS LAST, s.fs ASC
+            LIMIT p_limit OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY (s.ls_scores->>'podcast_worthy')::float DESC NULLS LAST, s.fs DESC
+            LIMIT p_limit OFFSET p_offset;
+        END IF;
+    ELSE
+        IF p_order_asc THEN
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.fs ASC
+            LIMIT p_limit OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.fs DESC
+            LIMIT p_limit OFFSET p_offset;
+        END IF;
+    END IF;
+END;
+$$;
+
+-- ============================================================================
+-- Step 6: get_posts_with_runtime_scores_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_runtime_scores_count(uuid, double precision, text[], boolean, uuid[], boolean, double precision, integer, boolean, double precision, double precision, integer, jsonb);
+
+CREATE OR REPLACE FUNCTION get_posts_with_runtime_scores_count(
+    p_weight_config_id UUID,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_weights JSONB DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_weights JSONB;
+    v_novelty_config JSONB;
+    v_frequencies JSONB;
+    v_total_scored INT;
+    v_count INT;
+BEGIN
+    IF p_weights IS NOT NULL AND jsonb_typeof(p_weights) = 'object' THEN
+        v_weights := p_weights;
+    ELSIF p_weight_config_id IS NOT NULL THEN
+        SELECT wc.weights INTO v_weights
+        FROM weight_configs wc
+        WHERE wc.id = p_weight_config_id;
+    END IF;
+
+    IF v_weights IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    SELECT COALESCE(s.value::jsonb, '{}'::jsonb) INTO v_novelty_config
+    FROM settings s
+    WHERE s.key = 'novelty_config'
+    LIMIT 1;
+
+    SELECT COALESCE(jsonb_object_agg(tf.category, tf.count_30d), '{}'::jsonb) INTO v_frequencies
+    FROM topic_frequencies tf;
+
+    SELECT COUNT(*)::int INTO v_total_scored
+    FROM llm_scores;
+
+    SELECT COUNT(*)::int INTO v_count
+    FROM (
+        SELECT compute_final_score_runtime(
+            ls.scores, ls.categories, v_weights,
+            v_novelty_config, v_frequencies, v_total_scored
+        ) AS fs
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+    ) sub
+    WHERE (p_min_score IS NULL OR sub.fs >= p_min_score)
+        AND (p_max_score IS NULL OR sub.fs <= p_max_score);
+
+    RETURN v_count;
+END;
+$$;
 -- Migration: Add classified_price to posts for classifieds
+-- Run after 052_posts_rpc_post_type_filter.sql.
+--
+-- Stores price string (e.g. "Free", "$50") for classified/For Sale posts.
+-- Null for standard posts.
+
 ALTER TABLE posts
 ADD COLUMN IF NOT EXISTS classified_price TEXT;
+-- Migration: Podcast website schema (episodes, categories, embeddings)
+-- Run in Supabase SQL Editor after 053.
+--
+-- Adds tables for the public podcast site: episodes, categories, many-to-many,
+-- episode embeddings for related-episode similarity, and optional show settings.
 
+-- Podcast episodes (CMS content for the public site)
+CREATE TABLE podcast_episodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT,
+    show_notes TEXT,
+    transcript TEXT,
+    published_at TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+    audio_url TEXT,
+    image_url TEXT,
+    duration_seconds INT,
+    order_index INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_podcast_episodes_slug ON podcast_episodes(slug);
+CREATE INDEX idx_podcast_episodes_published_at ON podcast_episodes(published_at DESC NULLS LAST);
+CREATE INDEX idx_podcast_episodes_status ON podcast_episodes(status);
+CREATE INDEX idx_podcast_episodes_order_index ON podcast_episodes(order_index);
+
+CREATE TRIGGER update_podcast_episodes_updated_at
+    BEFORE UPDATE ON podcast_episodes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Podcast categories (e.g. topic buckets for browse)
+CREATE TABLE podcast_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_podcast_categories_slug ON podcast_categories(slug);
+
+CREATE TRIGGER update_podcast_categories_updated_at
+    BEFORE UPDATE ON podcast_categories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Episode <-> Category many-to-many
+CREATE TABLE episode_categories (
+    episode_id UUID NOT NULL REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES podcast_categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (episode_id, category_id)
+);
+
+CREATE INDEX idx_episode_categories_episode ON episode_categories(episode_id);
+CREATE INDEX idx_episode_categories_category ON episode_categories(category_id);
+
+-- Episode embeddings for semantic similarity (related episodes)
+CREATE TABLE episode_embeddings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    episode_id UUID NOT NULL UNIQUE REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+    embedding extensions.vector(1536),
+    model TEXT DEFAULT 'text-embedding-3-small',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_episode_embeddings_episode ON episode_embeddings(episode_id);
+CREATE INDEX idx_episode_embeddings_vector ON episode_embeddings
+    USING hnsw (embedding vector_cosine_ops);
+
+-- Optional: show-level settings for RSS and SEO (can also use existing settings table)
+CREATE TABLE podcast_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT NOT NULL UNIQUE,
+    value TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER update_podcast_settings_updated_at
+    BEFORE UPDATE ON podcast_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+-- Migration: Podcast RPCs for public read and similarity
+-- Run after 054_podcast_schema.sql.
+--
+-- get_episodes_published: list published episodes (for homepage and /episodes)
+-- get_episode_by_slug: single episode for episode page
+-- get_episodes_by_category: episodes in a category
+-- search_episodes_published: full-text search on title, description, show_notes
+-- get_similar_episodes: vector similarity for related episodes
+
+-- List published episodes, ordered by published_at DESC then order_index
+CREATE OR REPLACE FUNCTION get_episodes_published(
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_url TEXT,
+    published_at TIMESTAMPTZ,
+    duration_seconds INT,
+    audio_url TEXT,
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_url,
+        e.published_at,
+        e.duration_seconds,
+        e.audio_url,
+        e.created_at
+    FROM podcast_episodes e
+    WHERE e.status = 'published' AND e.published_at IS NOT NULL
+    ORDER BY e.published_at DESC, e.order_index ASC, e.created_at DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+
+-- Single episode by slug (published only)
+CREATE OR REPLACE FUNCTION get_episode_by_slug(p_slug TEXT)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_description TEXT,
+    show_notes TEXT,
+    transcript TEXT,
+    published_at TIMESTAMPTZ,
+    audio_url TEXT,
+    image_url TEXT,
+    duration_seconds INT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_description,
+        e.show_notes,
+        e.transcript,
+        e.published_at,
+        e.audio_url,
+        e.image_url,
+        e.duration_seconds,
+        e.created_at,
+        e.updated_at
+    FROM podcast_episodes e
+    WHERE e.slug = p_slug AND e.status = 'published' AND e.published_at IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+
+-- Episodes in a category (by category slug)
+CREATE OR REPLACE FUNCTION get_episodes_by_category(
+    p_category_slug TEXT,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_url TEXT,
+    published_at TIMESTAMPTZ,
+    duration_seconds INT,
+    audio_url TEXT,
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_url,
+        e.published_at,
+        e.duration_seconds,
+        e.audio_url,
+        e.created_at
+    FROM podcast_episodes e
+    INNER JOIN episode_categories ec ON e.id = ec.episode_id
+    INNER JOIN podcast_categories c ON c.id = ec.category_id AND c.slug = p_category_slug
+    WHERE e.status = 'published' AND e.published_at IS NOT NULL
+    ORDER BY e.published_at DESC, e.order_index ASC, e.created_at DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+
+-- Full-text search on title, description, show_notes (plainto_tsquery)
+CREATE OR REPLACE FUNCTION search_episodes_published(
+    p_query TEXT,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_url TEXT,
+    published_at TIMESTAMPTZ,
+    duration_seconds INT,
+    audio_url TEXT,
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_url,
+        e.published_at,
+        e.duration_seconds,
+        e.audio_url,
+        e.created_at
+    FROM podcast_episodes e
+    WHERE e.status = 'published'
+      AND e.published_at IS NOT NULL
+      AND (
+          p_query IS NULL OR p_query = '' OR
+          to_tsvector('english', coalesce(e.title, '') || ' ' || coalesce(e.description, '') || ' ' || coalesce(e.show_notes, '')) @@ plainto_tsquery('english', p_query)
+      )
+    ORDER BY e.published_at DESC, e.order_index ASC, e.created_at DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+
+-- Similar episodes by vector similarity (exclude self, published only)
+CREATE OR REPLACE FUNCTION get_similar_episodes(
+    p_episode_id UUID,
+    p_limit INT DEFAULT 6
+)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_url TEXT,
+    published_at TIMESTAMPTZ,
+    duration_seconds INT,
+    similarity DOUBLE PRECISION
+) AS $$
+DECLARE
+    v_embedding extensions.vector(1536);
+BEGIN
+    SELECT ee.embedding INTO v_embedding
+    FROM episode_embeddings ee
+    WHERE ee.episode_id = p_episode_id;
+
+    IF v_embedding IS NULL THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_url,
+        e.published_at,
+        e.duration_seconds,
+        (1 - (ee.embedding <=> v_embedding))::DOUBLE PRECISION AS similarity
+    FROM podcast_episodes e
+    INNER JOIN episode_embeddings ee ON ee.episode_id = e.id
+    WHERE e.id != p_episode_id
+      AND e.status = 'published'
+      AND e.published_at IS NOT NULL
+    ORDER BY ee.embedding <=> v_embedding
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public, extensions;
+
+-- List all categories (for explore)
+CREATE OR REPLACE FUNCTION get_podcast_categories()
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    name TEXT,
+    description TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT c.id, c.slug, c.name, c.description
+    FROM podcast_categories c
+    ORDER BY c.name;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+-- Migration: Add storage path columns for private-bucket media
+-- Run after 055_podcast_rpcs.sql.
+--
+-- audio_storage_path / image_storage_path hold the object key in the private
+-- buckets. On publish, files are copied to public buckets and audio_url/image_url
+-- are set. Draft episodes keep only paths; published get URLs after copy.
+
+ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS audio_storage_path TEXT;
+ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS image_storage_path TEXT;
+-- Migration: Add image description for podcast episodes
+-- Allows admin users to store alt/caption text for episode artwork.
+
+ALTER TABLE podcast_episodes
+ADD COLUMN IF NOT EXISTS image_description TEXT;
+
+-- Migration: Multiple images per podcast episode
+-- Run after 057_podcast_episode_image_description.sql.
+--
+-- podcast_episode_images holds ordered gallery rows. podcast_episodes.image_url,
+-- image_storage_path, and image_description remain denormalized copies of the
+-- first image (sort_order ASC, created_at ASC) for RSS and list thumbnails.
+
+CREATE TABLE podcast_episode_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    episode_id UUID NOT NULL REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+    sort_order INT NOT NULL DEFAULT 0,
+    image_storage_path TEXT,
+    image_url TEXT,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_podcast_episode_images_episode_sort
+    ON podcast_episode_images(episode_id, sort_order ASC, created_at ASC);
+
+CREATE INDEX idx_podcast_episode_images_episode
+    ON podcast_episode_images(episode_id);
+
+CREATE TRIGGER update_podcast_episode_images_updated_at
+    BEFORE UPDATE ON podcast_episode_images
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE podcast_episode_images ENABLE ROW LEVEL SECURITY;
+
+-- Backfill one row per episode that had any legacy image metadata
+INSERT INTO podcast_episode_images (
+    episode_id,
+    sort_order,
+    image_storage_path,
+    image_url,
+    description
+)
+SELECT
+    e.id,
+    0,
+    e.image_storage_path,
+    e.image_url,
+    e.image_description
+FROM podcast_episodes e
+WHERE
+    e.image_url IS NOT NULL
+    OR e.image_storage_path IS NOT NULL
+    OR e.image_description IS NOT NULL;
+
+-- Replacing get_episode_by_slug changes the RETURNS TABLE shape; CREATE OR REPLACE
+-- cannot alter OUT parameter types (PostgreSQL 42P13). Drop first, then create.
+DROP FUNCTION IF EXISTS get_episode_by_slug(TEXT);
+
+-- Single episode by slug (published): include ordered gallery as JSONB
+CREATE FUNCTION get_episode_by_slug(p_slug TEXT)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_description TEXT,
+    show_notes TEXT,
+    transcript TEXT,
+    published_at TIMESTAMPTZ,
+    audio_url TEXT,
+    image_url TEXT,
+    duration_seconds INT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    episode_images JSONB
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_description,
+        e.show_notes,
+        e.transcript,
+        e.published_at,
+        e.audio_url,
+        e.image_url,
+        e.duration_seconds,
+        e.created_at,
+        e.updated_at,
+        COALESCE(
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'id', i.id,
+                        'image_url', i.image_url,
+                        'description', i.description,
+                        'sort_order', i.sort_order
+                    )
+                    ORDER BY i.sort_order ASC, i.created_at ASC
+                )
+                FROM podcast_episode_images i
+                WHERE i.episode_id = e.id
+            ),
+            '[]'::jsonb
+        ) AS episode_images
+    FROM podcast_episodes e
+    WHERE e.slug = p_slug AND e.status = 'published' AND e.published_at IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+-- Migration: Optional long-form "About the Episode" copy for the public episode page
+-- Run after 058_podcast_episode_images.sql.
+
+ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS about_episode TEXT;
+
+-- Extend get_episode_by_slug with about_episode (OUT shape change requires drop + create).
+DROP FUNCTION IF EXISTS get_episode_by_slug(TEXT);
+
+CREATE FUNCTION get_episode_by_slug(p_slug TEXT)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    about_episode TEXT,
+    image_description TEXT,
+    show_notes TEXT,
+    transcript TEXT,
+    published_at TIMESTAMPTZ,
+    audio_url TEXT,
+    image_url TEXT,
+    duration_seconds INT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    episode_images JSONB
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.about_episode,
+        e.image_description,
+        e.show_notes,
+        e.transcript,
+        e.published_at,
+        e.audio_url,
+        e.image_url,
+        e.duration_seconds,
+        e.created_at,
+        e.updated_at,
+        COALESCE(
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'id', i.id,
+                        'image_url', i.image_url,
+                        'description', i.description,
+                        'sort_order', i.sort_order
+                    )
+                    ORDER BY i.sort_order ASC, i.created_at ASC
+                )
+                FROM podcast_episode_images i
+                WHERE i.episode_id = e.id
+            ),
+            '[]'::jsonb
+        ) AS episode_images
+    FROM podcast_episodes e
+    WHERE e.slug = p_slug AND e.status = 'published' AND e.published_at IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+-- Migration: Expose episode categories on public list/detail RPCs (topic chips).
+-- Run after 059_podcast_episode_about.sql.
+
+-- Return shape change: drop + create.
+DROP FUNCTION IF EXISTS get_episodes_published(INT, INT);
+
+CREATE FUNCTION get_episodes_published(
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    image_url TEXT,
+    published_at TIMESTAMPTZ,
+    duration_seconds INT,
+    audio_url TEXT,
+    created_at TIMESTAMPTZ,
+    categories JSONB
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.image_url,
+        e.published_at,
+        e.duration_seconds,
+        e.audio_url,
+        e.created_at,
+        COALESCE(
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_object('slug', c.slug, 'name', c.name)
+                    ORDER BY c.name
+                )
+                FROM episode_categories ec
+                INNER JOIN podcast_categories c ON c.id = ec.category_id
+                WHERE ec.episode_id = e.id
+            ),
+            '[]'::jsonb
+        ) AS categories
+    FROM podcast_episodes e
+    WHERE e.status = 'published' AND e.published_at IS NOT NULL
+    ORDER BY e.published_at DESC, e.order_index ASC, e.created_at DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+
+DROP FUNCTION IF EXISTS get_episode_by_slug(TEXT);
+
+CREATE FUNCTION get_episode_by_slug(p_slug TEXT)
+RETURNS TABLE(
+    id UUID,
+    slug TEXT,
+    title TEXT,
+    description TEXT,
+    about_episode TEXT,
+    image_description TEXT,
+    show_notes TEXT,
+    transcript TEXT,
+    published_at TIMESTAMPTZ,
+    audio_url TEXT,
+    image_url TEXT,
+    duration_seconds INT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    episode_images JSONB,
+    categories JSONB
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.id,
+        e.slug,
+        e.title,
+        e.description,
+        e.about_episode,
+        e.image_description,
+        e.show_notes,
+        e.transcript,
+        e.published_at,
+        e.audio_url,
+        e.image_url,
+        e.duration_seconds,
+        e.created_at,
+        e.updated_at,
+        COALESCE(
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'id', i.id,
+                        'image_url', i.image_url,
+                        'description', i.description,
+                        'sort_order', i.sort_order
+                    )
+                    ORDER BY i.sort_order ASC, i.created_at ASC
+                )
+                FROM podcast_episode_images i
+                WHERE i.episode_id = e.id
+            ),
+            '[]'::jsonb
+        ) AS episode_images,
+        COALESCE(
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_object('slug', c.slug, 'name', c.name)
+                    ORDER BY c.name
+                )
+                FROM episode_categories ec
+                INNER JOIN podcast_categories c ON c.id = ec.category_id
+                WHERE ec.episode_id = e.id
+            ),
+            '[]'::jsonb
+        ) AS categories
+    FROM podcast_episodes e
+    WHERE e.slug = p_slug AND e.status = 'published' AND e.published_at IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql STABLE SET search_path = public;
+-- Migration: Include posts.comments in scoring RPCs for LLM context
+-- Run after 060_podcast_episode_categories_rpc.sql (or latest prior migration).
+--
+-- Extends get_unscored_posts and get_posts_missing_dimension to return comments JSONB
+-- so the scraper can pass thread context to Claude.
+
+-- ============================================================================
+-- get_unscored_posts: add comments column
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_unscored_posts(int);
+
+CREATE OR REPLACE FUNCTION get_unscored_posts(p_limit INT DEFAULT 100)
+RETURNS TABLE(id UUID, text TEXT, comments JSONB) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.id, p.text, COALESCE(p.comments, '[]'::jsonb) AS comments
+    FROM posts p
+    LEFT JOIN llm_scores ls ON p.id = ls.post_id
+    WHERE ls.id IS NULL
+    ORDER BY p.created_at ASC
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION get_unscored_posts(int) SET search_path = public;
+
+-- ============================================================================
+-- get_posts_missing_dimension: add comments column
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_missing_dimension(text, int);
+
+CREATE OR REPLACE FUNCTION get_posts_missing_dimension(
+    p_dimension TEXT,
+    p_limit INT DEFAULT 100
+)
+RETURNS TABLE(id UUID, text TEXT, comments JSONB) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.id, p.text, COALESCE(p.comments, '[]'::jsonb) AS comments
+    FROM posts p
+    INNER JOIN llm_scores ls ON p.id = ls.post_id
+    WHERE (ls.scores->>p_dimension) IS NULL
+       OR NOT (ls.scores ? p_dimension)
+    ORDER BY ls.created_at ASC
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION get_posts_missing_dimension(text, int) SET search_path = public;
+-- Add comment_count sort (p_order_by) and min/max comment filters to feed RPCs.
+-- Thread count for filter/sort: COALESCE(comment_count, jsonb_array_length(comments), 0).
+-- PostCard still shows comments.length only; rare mismatch when UI count and scrape diverge.
+-- Run after 061_scoring_include_comments.sql (or latest prior migration).
+
+-- ============================================================================
+-- Step 1: get_posts_with_scores (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_scores(uuid, integer, integer, double precision, text[], boolean, uuid[], boolean, double precision, text, integer, boolean, boolean, double precision, double precision, integer, text);
+
+CREATE OR REPLACE FUNCTION get_posts_with_scores(
+    p_weight_config_id UUID,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_order_by TEXT DEFAULT 'score',
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+) AS $$
+BEGIN
+    SET search_path = public;
+    IF p_order_by = 'podcast_worthy' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY (ls.scores->>'podcast_worthy')::float ASC NULLS LAST, ps.final_score ASC
+            LIMIT p_limit
+            OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY (ls.scores->>'podcast_worthy')::float DESC NULLS LAST, ps.final_score DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END IF;
+    ELSIF p_order_by = 'comment_count' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) ASC, ps.post_id ASC
+            LIMIT p_limit
+            OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) DESC, ps.post_id DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END IF;
+    ELSE
+        IF p_order_asc THEN
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY ps.final_score ASC
+            LIMIT p_limit
+            OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            SELECT
+                ls.categories,
+                ls.created_at AS llm_created_at,
+                ls.id AS llm_score_id,
+                ls.model_version,
+                ps.post_id,
+                ps.final_score,
+                ls.scores,
+                ls.summary,
+                ls.why_podcast_worthy
+            FROM post_scores ps
+            INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+            INNER JOIN posts p ON ps.post_id = p.id
+            WHERE ps.weight_config_id = p_weight_config_id
+                AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+                AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+                AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                AND (NOT p_unused_only OR p.used_on_episode = false)
+                AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                AND (p_ignored_only = COALESCE(p.ignored, false))
+                AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                AND p.post_type = COALESCE(p_post_type, 'standard')
+            ORDER BY ps.final_score DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 2: get_posts_with_scores_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_scores_count(uuid, double precision, text[], boolean, uuid[], boolean, double precision, integer, boolean, double precision, double precision, integer, text);
+
+CREATE OR REPLACE FUNCTION get_posts_with_scores_count(
+    p_weight_config_id UUID,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT AS $$
+DECLARE
+    result_count INT;
+BEGIN
+    SET search_path = public;
+    SELECT COUNT(*) INTO result_count
+    FROM post_scores ps
+    INNER JOIN llm_scores ls ON ps.post_id = ls.post_id
+    INNER JOIN posts p ON ps.post_id = p.id
+    WHERE ps.weight_config_id = p_weight_config_id
+        AND (p_min_score IS NULL OR ps.final_score >= p_min_score)
+        AND (p_max_score IS NULL OR ps.final_score <= p_max_score)
+        AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+        AND (NOT p_unused_only OR p.used_on_episode = false)
+        AND (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+        AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+        AND (p_ignored_only = COALESCE(p.ignored, false))
+        AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+        AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+        AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+        AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+        AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+        AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+        AND p.post_type = COALESCE(p_post_type, 'standard');
+
+    RETURN result_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 3: get_posts_by_date (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_by_date(integer, integer, text[], double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer, text);
+
+CREATE OR REPLACE FUNCTION get_posts_by_date(
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_categories TEXT[] DEFAULT NULL,
+    p_min_score FLOAT DEFAULT NULL,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+) AS $$
+BEGIN
+    SET search_path = public;
+    IF p_order_asc THEN
+        RETURN QUERY
+        SELECT
+            ls.categories,
+            ls.created_at AS llm_created_at,
+            ls.id AS llm_score_id,
+            ls.model_version,
+            p.id AS post_id,
+            ls.final_score,
+            ls.scores,
+            ls.summary,
+            ls.why_podcast_worthy
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+            AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+            AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+        ORDER BY p.created_at ASC
+        LIMIT p_limit
+        OFFSET p_offset;
+    ELSE
+        RETURN QUERY
+        SELECT
+            ls.categories,
+            ls.created_at AS llm_created_at,
+            ls.id AS llm_score_id,
+            ls.model_version,
+            p.id AS post_id,
+            ls.final_score,
+            ls.scores,
+            ls.summary,
+            ls.why_podcast_worthy
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+            AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+            AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+        ORDER BY p.created_at DESC
+        LIMIT p_limit
+        OFFSET p_offset;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 4: get_posts_by_date_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_by_date_count(text[], double precision, uuid[], boolean, boolean, double precision, integer, boolean, double precision, double precision, integer, text);
+
+CREATE OR REPLACE FUNCTION get_posts_by_date_count(
+    p_categories TEXT[] DEFAULT NULL,
+    p_min_score FLOAT DEFAULT NULL,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT AS $$
+DECLARE
+    result_count INT;
+BEGIN
+    SET search_path = public;
+    SELECT COUNT(*) INTO result_count
+    FROM posts p
+    INNER JOIN llm_scores ls ON p.id = ls.post_id
+    WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+        AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+        AND (NOT p_unused_only OR p.used_on_episode = false)
+        AND (p_ignored_only = COALESCE(p.ignored, false))
+        AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+        AND (p_min_score IS NULL OR ls.final_score >= p_min_score)
+        AND (p_max_score IS NULL OR ls.final_score <= p_max_score)
+        AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+        AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+        AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+        AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+        AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+        AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+        AND p.post_type = COALESCE(p_post_type, 'standard');
+
+    RETURN result_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Step 5: get_posts_with_runtime_scores (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_runtime_scores(uuid, integer, integer, double precision, text[], boolean, uuid[], boolean, double precision, text, integer, boolean, boolean, double precision, double precision, integer, jsonb, text);
+
+CREATE OR REPLACE FUNCTION get_posts_with_runtime_scores(
+    p_weight_config_id UUID,
+    p_limit INT DEFAULT 20,
+    p_offset INT DEFAULT 0,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_order_by TEXT DEFAULT 'score',
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_order_asc BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_weights JSONB DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS TABLE(
+    categories TEXT[],
+    llm_created_at TIMESTAMPTZ,
+    llm_score_id UUID,
+    model_version TEXT,
+    post_id UUID,
+    final_score FLOAT,
+    scores JSONB,
+    summary TEXT,
+    why_podcast_worthy TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_weights JSONB;
+    v_novelty_config JSONB;
+    v_frequencies JSONB;
+    v_total_scored INT;
+BEGIN
+    IF p_weights IS NOT NULL AND jsonb_typeof(p_weights) = 'object' THEN
+        v_weights := p_weights;
+    ELSIF p_weight_config_id IS NOT NULL THEN
+        SELECT wc.weights INTO v_weights
+        FROM weight_configs wc
+        WHERE wc.id = p_weight_config_id;
+    END IF;
+
+    IF v_weights IS NULL THEN
+        RETURN;
+    END IF;
+
+    SELECT COALESCE(s.value::jsonb, '{}'::jsonb) INTO v_novelty_config
+    FROM settings s
+    WHERE s.key = 'novelty_config'
+    LIMIT 1;
+
+    SELECT COALESCE(jsonb_object_agg(tf.category, tf.count_30d), '{}'::jsonb) INTO v_frequencies
+    FROM topic_frequencies tf;
+
+    SELECT COUNT(*)::int INTO v_total_scored
+    FROM llm_scores;
+
+    IF p_order_by = 'podcast_worthy' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY (s.ls_scores->>'podcast_worthy')::float ASC NULLS LAST, s.fs ASC
+            LIMIT p_limit OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY (s.ls_scores->>'podcast_worthy')::float DESC NULLS LAST, s.fs DESC
+            LIMIT p_limit OFFSET p_offset;
+        END IF;
+    ELSIF p_order_by = 'comment_count' THEN
+        IF p_order_asc THEN
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) AS thread_n,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.thread_n ASC, s.p_id ASC
+            LIMIT p_limit OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) AS thread_n,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.thread_n DESC, s.p_id DESC
+            LIMIT p_limit OFFSET p_offset;
+        END IF;
+    ELSE
+        IF p_order_asc THEN
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.fs ASC
+            LIMIT p_limit OFFSET p_offset;
+        ELSE
+            RETURN QUERY
+            WITH scored AS (
+                SELECT
+                    ls.categories,
+                    ls.created_at AS ls_created_at,
+                    ls.id AS ls_id,
+                    ls.model_version,
+                    p.id AS p_id,
+                    ls.scores AS ls_scores,
+                    ls.summary AS ls_summary,
+                    ls.why_podcast_worthy AS ls_why,
+                    compute_final_score_runtime(
+                        ls.scores, ls.categories, v_weights,
+                        v_novelty_config, v_frequencies, v_total_scored
+                    ) AS fs
+                FROM posts p
+                INNER JOIN llm_scores ls ON p.id = ls.post_id
+                WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+                    AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+                    AND (NOT p_unused_only OR p.used_on_episode = false)
+                    AND (p_ignored_only = COALESCE(p.ignored, false))
+                    AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+                    AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+                    AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+                    AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+                    AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+                    AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+                    AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+                    AND p.post_type = COALESCE(p_post_type, 'standard')
+            )
+            SELECT
+                s.categories,
+                s.ls_created_at AS llm_created_at,
+                s.ls_id AS llm_score_id,
+                s.model_version,
+                s.p_id AS post_id,
+                s.fs AS final_score,
+                s.ls_scores AS scores,
+                s.ls_summary AS summary,
+                s.ls_why AS why_podcast_worthy
+            FROM scored s
+            WHERE (p_min_score IS NULL OR s.fs >= p_min_score)
+                AND (p_max_score IS NULL OR s.fs <= p_max_score)
+            ORDER BY s.fs DESC
+            LIMIT p_limit OFFSET p_offset;
+        END IF;
+    END IF;
+END;
+$$;
+
+-- ============================================================================
+-- Step 6: get_posts_with_runtime_scores_count (add p_post_type)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS get_posts_with_runtime_scores_count(uuid, double precision, text[], boolean, uuid[], boolean, double precision, integer, boolean, double precision, double precision, integer, jsonb, text);
+
+CREATE OR REPLACE FUNCTION get_posts_with_runtime_scores_count(
+    p_weight_config_id UUID,
+    p_min_score FLOAT DEFAULT NULL,
+    p_categories TEXT[] DEFAULT NULL,
+    p_unused_only BOOLEAN DEFAULT false,
+    p_neighborhood_ids UUID[] DEFAULT NULL,
+    p_saved_only BOOLEAN DEFAULT false,
+    p_min_podcast_worthy FLOAT DEFAULT NULL,
+    p_min_reaction_count INT DEFAULT NULL,
+    p_ignored_only BOOLEAN DEFAULT false,
+    p_max_score FLOAT DEFAULT NULL,
+    p_max_podcast_worthy FLOAT DEFAULT NULL,
+    p_max_reaction_count INT DEFAULT NULL,
+    p_min_comment_count INT DEFAULT NULL,
+    p_max_comment_count INT DEFAULT NULL,
+    p_weights JSONB DEFAULT NULL,
+    p_post_type TEXT DEFAULT 'standard'
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_weights JSONB;
+    v_novelty_config JSONB;
+    v_frequencies JSONB;
+    v_total_scored INT;
+    v_count INT;
+BEGIN
+    IF p_weights IS NOT NULL AND jsonb_typeof(p_weights) = 'object' THEN
+        v_weights := p_weights;
+    ELSIF p_weight_config_id IS NOT NULL THEN
+        SELECT wc.weights INTO v_weights
+        FROM weight_configs wc
+        WHERE wc.id = p_weight_config_id;
+    END IF;
+
+    IF v_weights IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    SELECT COALESCE(s.value::jsonb, '{}'::jsonb) INTO v_novelty_config
+    FROM settings s
+    WHERE s.key = 'novelty_config'
+    LIMIT 1;
+
+    SELECT COALESCE(jsonb_object_agg(tf.category, tf.count_30d), '{}'::jsonb) INTO v_frequencies
+    FROM topic_frequencies tf;
+
+    SELECT COUNT(*)::int INTO v_total_scored
+    FROM llm_scores;
+
+    SELECT COUNT(*)::int INTO v_count
+    FROM (
+        SELECT compute_final_score_runtime(
+            ls.scores, ls.categories, v_weights,
+            v_novelty_config, v_frequencies, v_total_scored
+        ) AS fs
+        FROM posts p
+        INNER JOIN llm_scores ls ON p.id = ls.post_id
+        WHERE (p_neighborhood_ids IS NULL OR cardinality(p_neighborhood_ids) = 0 OR p.neighborhood_id = ANY(p_neighborhood_ids))
+            AND (NOT p_saved_only OR COALESCE(p.saved, false) = true)
+            AND (NOT p_unused_only OR p.used_on_episode = false)
+            AND (p_ignored_only = COALESCE(p.ignored, false))
+            AND (p_categories IS NULL OR cardinality(p_categories) = 0 OR ls.categories && p_categories)
+            AND (p_min_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float >= p_min_podcast_worthy)
+            AND (p_max_podcast_worthy IS NULL OR (ls.scores->>'podcast_worthy')::float <= p_max_podcast_worthy)
+            AND (p_min_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) >= p_min_reaction_count)
+            AND (p_max_reaction_count IS NULL OR COALESCE(p.reaction_count, 0) <= p_max_reaction_count)
+            AND (p_min_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) >= p_min_comment_count)
+            AND (p_max_comment_count IS NULL OR COALESCE(p.comment_count, COALESCE(jsonb_array_length(COALESCE(p.comments, '[]'::jsonb)), 0)) <= p_max_comment_count)
+            AND p.post_type = COALESCE(p_post_type, 'standard')
+    ) sub
+    WHERE (p_min_score IS NULL OR sub.fs >= p_min_score)
+        AND (p_max_score IS NULL OR sub.fs <= p_max_score);
+
+    RETURN v_count;
+END;
+$$;
+-- Migration: Enable RLS on podcast tables (Supabase Security Advisor)
+-- Run in Supabase SQL Editor after 062 (or latest prior migration).
+--
+-- Fixes "RLS Disabled in Public" for podcast_settings, podcast_categories,
+-- podcast_episodes, episode_categories, episode_embeddings.
+--
+-- No GRANT changes: the app reads/writes these tables only with the service role
+-- (getSupabaseAdmin), which bypasses RLS. Public podcast pages use RPCs via that
+-- client. Anon/authenticated direct table access stays denied (defense in depth),
+-- same pattern as sessions in 025_enable_rls.sql.
+
+ALTER TABLE episode_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE episode_embeddings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE podcast_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE podcast_episodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE podcast_settings ENABLE ROW LEVEL SECURITY;

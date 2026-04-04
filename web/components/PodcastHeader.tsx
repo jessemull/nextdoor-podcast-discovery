@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { usePodcastSearch } from "@/components/PodcastSearchProvider";
 import { playfair } from "@/lib/fonts";
+import { isPodcastHomePath } from "@/lib/hooks/usePodcastSearchUrl";
 
 const activeLinkClass =
   "text-podcast-accent underline decoration-2 decoration-podcast-accent underline-offset-[0.4em]";
@@ -26,7 +27,7 @@ export function PodcastHeader() {
   const { commitSearch, handleClear, handleSearchChange, inputValue } =
     usePodcastSearch();
 
-  const isHome = pathname === "/podcast" || pathname === "/";
+  const isHome = isPodcastHomePath(pathname);
   const isAbout = pathname === "/about";
   const isSubscribe = pathname === "/subscribe";
 
@@ -46,6 +47,23 @@ export function PodcastHeader() {
     });
     return () => cancelAnimationFrame(id);
   }, [isHome, qFromUrl]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- collapse search chrome when leaving podcast home */
+  useEffect(() => {
+    if (isHome) return;
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    if (expandRafRef.current != null) {
+      cancelAnimationFrame(expandRafRef.current);
+      expandRafRef.current = null;
+    }
+    setIsClosing(false);
+    setIsSearchOpen(false);
+    setSearchWidth(SEARCH_WIDTH_CLOSED);
+  }, [isHome]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* eslint-disable react-hooks/set-state-in-effect -- desktop search width animation (expand/collapse) */
   useEffect(() => {

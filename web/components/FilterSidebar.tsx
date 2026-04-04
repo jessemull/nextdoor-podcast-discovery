@@ -419,6 +419,43 @@ export function FilterSidebar({
           />
         </div>
 
+        <h2 className={sectionHeadingClass}>Comments Range</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <NumInput
+            id="filter-min-comments"
+            min={0}
+            placeholder="0"
+            value={filters.minCommentCount}
+            onChange={(v) =>
+              setFilters((prev) => ({
+                ...prev,
+                minCommentCount:
+                  v === "" ||
+                  (!isNaN(parseInt(v, 10)) && parseInt(v, 10) >= 0)
+                    ? v
+                    : prev.minCommentCount,
+              }))
+            }
+          />
+          <span className="text-muted-foreground text-sm">to</span>
+          <NumInput
+            id="filter-max-comments"
+            min={0}
+            placeholder="—"
+            value={filters.maxCommentCount}
+            onChange={(v) =>
+              setFilters((prev) => ({
+                ...prev,
+                maxCommentCount:
+                  v === "" ||
+                  (!isNaN(parseInt(v, 10)) && parseInt(v, 10) >= 0)
+                    ? v
+                    : prev.maxCommentCount,
+              }))
+            }
+          />
+        </div>
+
         {similarityThreshold !== undefined &&
           onSimilarityThresholdChange && (
             <>

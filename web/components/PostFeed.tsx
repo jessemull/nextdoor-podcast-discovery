@@ -148,12 +148,14 @@ const BULK_ACTION_OPTIONS = [
 const SKELETON_CARD_COUNT = 8;
 
 const SORT_OPTIONS = [
-  { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
-  { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
-  { label: "Podcast Score (High to Low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
-  { label: "Podcast Score (Low to High)", sort: "podcast_score" as const, sortOrder: "asc" as const },
+  { label: "Comments (Least First)", sort: "comment_count" as const, sortOrder: "asc" as const },
+  { label: "Comments (Most First)", sort: "comment_count" as const, sortOrder: "desc" as const },
   { label: "Newest First", sort: "date" as const, sortOrder: "desc" as const },
   { label: "Oldest First", sort: "date" as const, sortOrder: "asc" as const },
+  { label: "Podcast Score (High to Low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
+  { label: "Podcast Score (Low to High)", sort: "podcast_score" as const, sortOrder: "asc" as const },
+  { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
+  { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
 ];
 
 /**
@@ -243,9 +245,11 @@ export function PostFeed({
   const activeConfigWeights =
     weightConfigs.find((c) => c.id === activeConfigId)?.weights ?? null;
   const {
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -278,9 +282,11 @@ export function PostFeed({
     total,
   } = usePostFeedData({
     activeConfigWeights,
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -289,9 +295,11 @@ export function PostFeed({
   });
 
   const getCurrentQuery = useCallback((): BulkQuery => {
+    const maxCommentCount = parseInt(debouncedMaxCommentCount, 10);
     const maxPodcastWorthy = parseFloat(debouncedMaxPodcastWorthy);
     const maxReactionCount = parseInt(debouncedMaxReactionCount, 10);
     const maxScoreNum = parseFloat(debouncedMaxScore);
+    const minCommentCount = parseInt(debouncedMinCommentCount, 10);
     const minPodcastWorthy = parseFloat(debouncedMinPodcastWorthy);
     const minReactionCount = parseInt(debouncedMinReactionCount, 10);
     const minScoreNum = parseFloat(debouncedMinScore);
@@ -299,6 +307,10 @@ export function PostFeed({
       categories:
         filters.categoryIds?.length ? filters.categoryIds : undefined,
       ignored_only: filters.ignoredOnly,
+      max_comment_count:
+        !isNaN(maxCommentCount) && maxCommentCount >= 0
+          ? maxCommentCount
+          : undefined,
       max_podcast_worthy:
         !isNaN(maxPodcastWorthy) &&
         maxPodcastWorthy >= 0 &&
@@ -311,6 +323,10 @@ export function PostFeed({
           : undefined,
       max_score:
         !isNaN(maxScoreNum) && maxScoreNum >= 0 ? maxScoreNum : undefined,
+      min_comment_count:
+        !isNaN(minCommentCount) && minCommentCount >= 0
+          ? minCommentCount
+          : undefined,
       min_podcast_worthy:
         !isNaN(minPodcastWorthy) && minPodcastWorthy >= 0 && minPodcastWorthy <= 10
           ? minPodcastWorthy
@@ -329,9 +345,11 @@ export function PostFeed({
       unused_only: filters.unusedOnly,
     };
   }, [
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -583,12 +601,14 @@ export function PostFeed({
   const activeFilterCount = [
     filters.categoryIds.length > 0,
     filters.ignoredOnly,
+    filters.maxCommentCount,
+    filters.maxPodcastWorthy,
+    filters.maxReactionCount,
+    filters.maxScore,
+    filters.minCommentCount,
     filters.minPodcastWorthy,
     filters.minReactionCount,
     filters.minScore,
-    filters.maxScore,
-    filters.maxPodcastWorthy,
-    filters.maxReactionCount,
     filters.neighborhoodIds.length > 0,
     filters.preview,
     filters.savedOnly,

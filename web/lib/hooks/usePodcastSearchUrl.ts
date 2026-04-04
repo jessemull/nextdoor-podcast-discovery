@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const SEARCH_DEBOUNCE_MS = 200;
 
-function isPodcastHomePath(pathname: string) {
+export function isPodcastHomePath(pathname: string) {
   return pathname === "/" || pathname === "/podcast";
 }
 

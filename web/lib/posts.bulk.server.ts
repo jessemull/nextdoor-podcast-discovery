@@ -13,16 +13,18 @@ interface PostScoreRow {
 export interface BulkQueryInput {
   categories?: string[];
   ignored_only?: boolean;
+  max_comment_count?: number;
   max_podcast_worthy?: number;
   max_reaction_count?: number;
   max_score?: number;
+  min_comment_count?: number;
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;
   neighborhood_ids?: string[];
   order?: "asc" | "desc";
   saved_only?: boolean;
-  sort?: "date" | "podcast_score" | "score";
+  sort?: "comment_count" | "date" | "podcast_score" | "score";
   unused_only?: boolean;
 }
 
@@ -51,9 +53,11 @@ export async function getPostIdsByQuery(
         p_categories: query.categories?.length ? query.categories : null,
         p_ignored_only: query.ignored_only ?? false,
         p_limit: BULK_QUERY_LIMIT,
+        p_max_comment_count: query.max_comment_count ?? null,
         p_max_podcast_worthy: query.max_podcast_worthy ?? null,
         p_max_reaction_count: query.max_reaction_count ?? null,
         p_max_score: validMaxScore,
+        p_min_comment_count: query.min_comment_count ?? null,
         p_min_podcast_worthy: query.min_podcast_worthy ?? null,
         p_min_reaction_count: query.min_reaction_count ?? null,
         p_min_score: validMinScore,
@@ -92,16 +96,23 @@ export async function getPostIdsByQuery(
     };
   }
 
-  const orderBy = sort === "podcast_score" ? "podcast_worthy" : "score";
+  const orderBy =
+    sort === "comment_count"
+      ? "comment_count"
+      : sort === "podcast_score"
+        ? "podcast_worthy"
+        : "score";
   const { data: scoresData, error: scoresError } = await supabase.rpc(
     "get_posts_with_scores",
     {
       p_categories: query.categories?.length ? query.categories : null,
       p_ignored_only: query.ignored_only ?? false,
       p_limit: BULK_QUERY_LIMIT,
+      p_max_comment_count: query.max_comment_count ?? null,
       p_max_podcast_worthy: query.max_podcast_worthy ?? null,
       p_max_reaction_count: query.max_reaction_count ?? null,
       p_max_score: validMaxScore,
+      p_min_comment_count: query.min_comment_count ?? null,
       p_min_podcast_worthy: query.min_podcast_worthy ?? null,
       p_min_reaction_count: query.min_reaction_count ?? null,
       p_min_score: validMinScore,

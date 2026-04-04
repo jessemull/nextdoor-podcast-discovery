@@ -9,16 +9,18 @@ import { useDebounce } from "@/lib/hooks";
 
 import type { RankingWeights } from "@/lib/types";
 
-type SortOption = "date" | "podcast_score" | "score";
+type SortOption = "comment_count" | "date" | "podcast_score" | "score";
 
 export type SortOrder = "asc" | "desc";
 
 export interface PostFeedFilters {
   categoryIds: string[];
   ignoredOnly: boolean;
+  maxCommentCount: string;
   maxPodcastWorthy: string;
   maxReactionCount: string;
   maxScore: string;
+  minCommentCount: string;
   minPodcastWorthy: string;
   minReactionCount: string;
   minScore: string;
@@ -38,9 +40,11 @@ export interface Neighborhood {
 }
 
 export interface UsePostFeedFiltersResult {
+  debouncedMaxCommentCount: string;
   debouncedMaxPodcastWorthy: string;
   debouncedMaxReactionCount: string;
   debouncedMaxScore: string;
+  debouncedMinCommentCount: string;
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
@@ -53,9 +57,11 @@ export interface UsePostFeedFiltersResult {
 export const DEFAULT_FILTERS: PostFeedFilters = {
   categoryIds: [],
   ignoredOnly: false,
+  maxCommentCount: "",
   maxPodcastWorthy: "",
   maxReactionCount: "",
   maxScore: "",
+  minCommentCount: "",
   minPodcastWorthy: "",
   minReactionCount: "",
   minScore: "",
@@ -93,6 +99,10 @@ export function usePostFeedFilters(
     ? "Could not load filter options. Some filters may be empty."
     : null;
 
+  const debouncedMaxCommentCount = useDebounce(
+    filters.maxCommentCount,
+    debounceDelayMs
+  );
   const debouncedMaxPodcastWorthy = useDebounce(
     filters.maxPodcastWorthy,
     debounceDelayMs
@@ -103,6 +113,10 @@ export function usePostFeedFilters(
   );
   const debouncedMaxScore = useDebounce(filters.maxScore, debounceDelayMs);
   const debouncedMinScore = useDebounce(filters.minScore, debounceDelayMs);
+  const debouncedMinCommentCount = useDebounce(
+    filters.minCommentCount,
+    debounceDelayMs
+  );
   const debouncedMinPodcastWorthy = useDebounce(
     filters.minPodcastWorthy,
     debounceDelayMs
@@ -113,9 +127,11 @@ export function usePostFeedFilters(
   );
 
   return {
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
