@@ -24,9 +24,11 @@ function weightsEqual(a: RankingWeights, b: null | RankingWeights): boolean {
 function buildPostsQueryParams(
   activeConfigWeights: null | RankingWeights,
   filters: PostFeedFilters,
+  debouncedMaxCommentCount: string,
   debouncedMaxPodcastWorthy: string,
   debouncedMaxReactionCount: string,
   debouncedMaxScore: string,
+  debouncedMinCommentCount: string,
   debouncedMinPodcastWorthy: string,
   debouncedMinReactionCount: string,
   debouncedMinScore: string,
@@ -56,6 +58,19 @@ function buildPostsQueryParams(
     const maxScoreNum = parseFloat(debouncedMaxScore);
     if (!isNaN(maxScoreNum) && maxScoreNum >= 0) {
       searchParams.set("max_score", String(maxScoreNum));
+    }
+  }
+
+  if (debouncedMinCommentCount) {
+    const minComments = parseInt(debouncedMinCommentCount, 10);
+    if (!isNaN(minComments) && minComments >= 0) {
+      searchParams.set("min_comment_count", String(minComments));
+    }
+  }
+  if (debouncedMaxCommentCount) {
+    const maxComments = parseInt(debouncedMaxCommentCount, 10);
+    if (!isNaN(maxComments) && maxComments >= 0) {
+      searchParams.set("max_comment_count", String(maxComments));
     }
   }
 
@@ -111,9 +126,11 @@ function buildPostsQueryParams(
 
 export interface UsePostFeedDataParams {
   activeConfigWeights: null | RankingWeights;
+  debouncedMaxCommentCount: string;
   debouncedMaxPodcastWorthy: string;
   debouncedMaxReactionCount: string;
   debouncedMaxScore: string;
+  debouncedMinCommentCount: string;
   debouncedMinPodcastWorthy: string;
   debouncedMinReactionCount: string;
   debouncedMinScore: string;
@@ -139,9 +156,11 @@ export function usePostFeedData(
 ): UsePostFeedDataResult {
   const {
     activeConfigWeights,
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -153,9 +172,11 @@ export function usePostFeedData(
   const queryParams = buildPostsQueryParams(
     activeConfigWeights,
     filters,
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -197,9 +218,11 @@ export function usePostFeedData(
     queryKey: [
       "posts",
       activeConfigWeights,
+      debouncedMaxCommentCount,
       debouncedMaxPodcastWorthy,
       debouncedMaxReactionCount,
       debouncedMaxScore,
+      debouncedMinCommentCount,
       debouncedMinPodcastWorthy,
       debouncedMinReactionCount,
       debouncedMinScore,

@@ -11,16 +11,16 @@ import {
   EyeOff,
   Filter,
   Inbox,
+  ListPlus,
   MoreHorizontal,
   RefreshCw,
   RotateCcw,
   Search,
   SearchX,
   X,
-  XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   DEBOUNCE_DELAY_MS,
@@ -28,6 +28,7 @@ import {
   GENERIC_ERROR_MESSAGE_LINE_1,
   GENERIC_ERROR_MESSAGE_LINE_2,
 } from "@/lib/constants";
+import { useAddPostsToScoringFewShot } from "@/lib/hooks/useAddPostsToScoringFewShot";
 import {
   type BulkActionType,
   type BulkQuery,
@@ -44,6 +45,7 @@ import { useWeightConfigs } from "@/lib/hooks/useWeightConfigs";
 import { useToast } from "@/lib/ToastContext";
 import { POSTS_PER_PAGE } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { SCORING_FEW_SHOT_MAX_EXAMPLES } from "@/lib/validators";
 
 import { FeedSearchBar } from "./FeedSearchBar";
 import { FilterSidebar } from "./FilterSidebar";
@@ -51,7 +53,7 @@ import { PostCard } from "./PostCard";
 import { PostCardSkeleton } from "./PostCardSkeleton";
 import { Card } from "./ui/Card";
 import { ConfirmModal } from "./ui/ConfirmModal";
-import { CustomSelect } from "./ui/CustomSelect";
+import { CustomSelect, type CustomSelectOption } from "./ui/CustomSelect";
 
 import type { PostWithScores } from "@/lib/types";
 
@@ -76,6 +78,8 @@ export interface PostFeedSearchSlotProps {
   similarityThreshold: number;
   useKeywordSearch: boolean;
 }
+
+const BULK_ADD_AS_EXAMPLE_VALUE = "add_as_example";
 
 const BULK_ACTION_LABELS: Record<BulkActionType, string> = {
   ignore: "Ignore",
@@ -144,12 +148,14 @@ const BULK_ACTION_OPTIONS = [
 const SKELETON_CARD_COUNT = 8;
 
 const SORT_OPTIONS = [
-  { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
-  { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
-  { label: "Podcast Score (High to Low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
-  { label: "Podcast Score (Low to High)", sort: "podcast_score" as const, sortOrder: "asc" as const },
+  { label: "Comments (Least First)", sort: "comment_count" as const, sortOrder: "asc" as const },
+  { label: "Comments (Most First)", sort: "comment_count" as const, sortOrder: "desc" as const },
   { label: "Newest First", sort: "date" as const, sortOrder: "desc" as const },
   { label: "Oldest First", sort: "date" as const, sortOrder: "asc" as const },
+  { label: "Podcast Score (High to Low)", sort: "podcast_score" as const, sortOrder: "desc" as const },
+  { label: "Podcast Score (Low to High)", sort: "podcast_score" as const, sortOrder: "asc" as const },
+  { label: "Score (High to Low)", sort: "score" as const, sortOrder: "desc" as const },
+  { label: "Score (Low to High)", sort: "score" as const, sortOrder: "asc" as const },
 ];
 
 /**
@@ -239,9 +245,11 @@ export function PostFeed({
   const activeConfigWeights =
     weightConfigs.find((c) => c.id === activeConfigId)?.weights ?? null;
   const {
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -274,9 +282,11 @@ export function PostFeed({
     total,
   } = usePostFeedData({
     activeConfigWeights,
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -285,9 +295,11 @@ export function PostFeed({
   });
 
   const getCurrentQuery = useCallback((): BulkQuery => {
+    const maxCommentCount = parseInt(debouncedMaxCommentCount, 10);
     const maxPodcastWorthy = parseFloat(debouncedMaxPodcastWorthy);
     const maxReactionCount = parseInt(debouncedMaxReactionCount, 10);
     const maxScoreNum = parseFloat(debouncedMaxScore);
+    const minCommentCount = parseInt(debouncedMinCommentCount, 10);
     const minPodcastWorthy = parseFloat(debouncedMinPodcastWorthy);
     const minReactionCount = parseInt(debouncedMinReactionCount, 10);
     const minScoreNum = parseFloat(debouncedMinScore);
@@ -295,6 +307,10 @@ export function PostFeed({
       categories:
         filters.categoryIds?.length ? filters.categoryIds : undefined,
       ignored_only: filters.ignoredOnly,
+      max_comment_count:
+        !isNaN(maxCommentCount) && maxCommentCount >= 0
+          ? maxCommentCount
+          : undefined,
       max_podcast_worthy:
         !isNaN(maxPodcastWorthy) &&
         maxPodcastWorthy >= 0 &&
@@ -307,6 +323,10 @@ export function PostFeed({
           : undefined,
       max_score:
         !isNaN(maxScoreNum) && maxScoreNum >= 0 ? maxScoreNum : undefined,
+      min_comment_count:
+        !isNaN(minCommentCount) && minCommentCount >= 0
+          ? minCommentCount
+          : undefined,
       min_podcast_worthy:
         !isNaN(minPodcastWorthy) && minPodcastWorthy >= 0 && minPodcastWorthy <= 10
           ? minPodcastWorthy
@@ -325,9 +345,11 @@ export function PostFeed({
       unused_only: filters.unusedOnly,
     };
   }, [
+    debouncedMaxCommentCount,
     debouncedMaxPodcastWorthy,
     debouncedMaxReactionCount,
     debouncedMaxScore,
+    debouncedMinCommentCount,
     debouncedMinPodcastWorthy,
     debouncedMinReactionCount,
     debouncedMinScore,
@@ -358,7 +380,128 @@ export function PostFeed({
     offset,
     setError,
   });
+  const { addPosts, addingIds, examplesFull } = useAddPostsToScoringFewShot();
   const { toast } = useToast();
+
+  const handleAddToScoringFewShot = useCallback(
+    (postId: string) => {
+      if (examplesFull) {
+        return;
+      }
+      void addPosts([postId]);
+    },
+    [addPosts, examplesFull]
+  );
+
+  const handleBulkAddToScoringFewShot = useCallback(async () => {
+    if (
+      examplesFull ||
+      selectAllChecked ||
+      selectedIds.size === 0 ||
+      bulkActionLoading
+    ) {
+      return;
+    }
+    const ids = Array.from(selectedIds);
+    await addPosts(ids);
+    setBulkMode(false);
+    setSelectAllChecked(false);
+    setSelectedIds(new Set());
+  }, [
+    addPosts,
+    bulkActionLoading,
+    examplesFull,
+    selectAllChecked,
+    selectedIds,
+    setSelectedIds,
+  ]);
+
+  const feedBulkActionOptions: CustomSelectOption[] = useMemo(
+    () => [
+      {
+        disabled: examplesFull || selectAllChecked,
+        icon: <ListPlus aria-hidden className="h-4 w-4" />,
+        label: "Add As Example",
+        title: examplesFull
+          ? `Already have ${SCORING_FEW_SHOT_MAX_EXAMPLES} examples (max). Remove one in Settings.`
+          : selectAllChecked
+            ? "Turn off Select all to add specific posts as examples."
+            : undefined,
+        value: BULK_ADD_AS_EXAMPLE_VALUE,
+      },
+      ...BULK_ACTION_OPTIONS,
+    ],
+    [examplesFull, selectAllChecked]
+  );
+
+  const handleBulkActionMenuChange = useCallback(
+    async (val: string) => {
+      if (!val) {
+        return;
+      }
+      if (!selectAllChecked && selectedIds.size === 0) {
+        return;
+      }
+
+      if (val === BULK_ADD_AS_EXAMPLE_VALUE) {
+        if (selectAllChecked) {
+          toast.error(
+            "Turn off Select all to add specific posts as scoring examples."
+          );
+          return;
+        }
+        if (examplesFull) {
+          return;
+        }
+        await handleBulkAddToScoringFewShot();
+        return;
+      }
+
+      const action = val as BulkActionType;
+      if (selectAllChecked) {
+        setConfirmModal({ action });
+        setCountLoading(true);
+        try {
+          const response = await fetch("/api/posts/bulk/count", {
+            body: JSON.stringify({ query: getCurrentQuery() }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+          if (!response.ok) {
+            const data = await response.json();
+            setError((data.error as string) ?? "Failed to get count");
+            setConfirmModal(null);
+            return;
+          }
+          const {
+            data: { count },
+          } = await response.json();
+          if (count === 0) {
+            setError("No posts match the current filters.");
+            setConfirmModal(null);
+            return;
+          }
+          setConfirmModal((prev) =>
+            prev && prev.count === undefined ? { action: prev.action, count } : prev
+          );
+        } finally {
+          setCountLoading(false);
+        }
+      } else {
+        setConfirmModal({ action, count: selectedIds.size });
+      }
+    },
+    [
+      examplesFull,
+      getCurrentQuery,
+      handleBulkAddToScoringFewShot,
+      selectAllChecked,
+      selectedIds.size,
+      setError,
+      toast,
+    ]
+  );
+
   const {
     getActiveJobForPost,
     getQueueStatusForPost,
@@ -458,12 +601,14 @@ export function PostFeed({
   const activeFilterCount = [
     filters.categoryIds.length > 0,
     filters.ignoredOnly,
+    filters.maxCommentCount,
+    filters.maxPodcastWorthy,
+    filters.maxReactionCount,
+    filters.maxScore,
+    filters.minCommentCount,
     filters.minPodcastWorthy,
     filters.minReactionCount,
     filters.minScore,
-    filters.maxScore,
-    filters.maxPodcastWorthy,
-    filters.maxReactionCount,
     filters.neighborhoodIds.length > 0,
     filters.preview,
     filters.savedOnly,
@@ -585,16 +730,16 @@ export function PostFeed({
       )}
 
       {/* Main content: fixed header + scrollable cards (scrollbar at viewport edge) */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden py-6 sm:py-8">
-        <div className="flex shrink-0 flex-col gap-3 px-6 sm:px-8">
-          <h1 className="text-foreground mb-4 text-left text-2xl font-semibold sm:text-3xl">
+      <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden py-6 sm:py-8">
+        <div className="relative z-10 flex shrink-0 flex-col gap-3 bg-background px-6 sm:px-8">
+          <h1 className="text-foreground text-left text-2xl font-semibold sm:text-3xl">
             Nextdoor Discovery
           </h1>
 
           {searchSlot && (
           <>
-            {/* Compact: search bar only (count + icons row is below, outside scroll) */}
-            <div className="mb-2 flex w-full flex-col gap-2.5 lg:hidden">
+            {/* Compact search (<lg): contents = hoists rows into parent flex so gap-3 matches count row */}
+            <div className="contents lg:hidden">
               <FeedSearchBar
                 compact
                 embeddingBacklog={searchSlot.embeddingBacklog}
@@ -606,6 +751,34 @@ export function PostFeed({
                 onSearch={searchSlot.onSearch}
                 onUseKeywordSearchChange={searchSlot.onUseKeywordSearchChange}
               />
+              {bulkMode ? (
+                <div className="mt-1 flex w-full items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CustomSelect
+                      ariaLabel="Bulk action"
+                      className="h-8 w-full text-sm"
+                      disabled={!selectAllChecked && selectedIds.size === 0}
+                      options={feedBulkActionOptions}
+                      placeholder="Actions"
+                      value=""
+                      onChange={(val) => {
+                        void handleBulkActionMenuChange(val);
+                      }}
+                    />
+                  </div>
+                  <button
+                    className="text-foreground hover:opacity-80 flex h-8 w-16 shrink-0 items-center justify-center rounded px-2 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
+                    type="button"
+                    onClick={() => {
+                      setBulkMode(false);
+                      setSelectAllChecked(false);
+                      setSelectedIds(new Set());
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
             </div>
             {searchSlot.loadDefaultsError && (
               <p
@@ -617,7 +790,7 @@ export function PostFeed({
             )}
 
             {/* Desktop: from lg – single row, all controls exactly 40px tall */}
-            <div className="mb-2 hidden h-[40px] w-full items-center gap-3 lg:flex">
+            <div className="mb-0 hidden h-[40px] w-full items-center gap-3 lg:mb-2 lg:flex">
               <FeedSearchBar
                 embeddingBacklog={searchSlot.embeddingBacklog}
                 loadDefaultsError={searchSlot.loadDefaultsError}
@@ -669,61 +842,11 @@ export function PostFeed({
                       ariaLabel="Bulk action"
                       className="h-[40px] min-w-0 w-full shrink sm:min-w-[11rem] sm:w-auto"
                       disabled={!selectAllChecked && selectedIds.size === 0}
-                      options={BULK_ACTION_OPTIONS}
+                      options={feedBulkActionOptions}
                       placeholder="Actions"
                       value=""
-                      onChange={async (val) => {
-                        if (!val) return;
-                        const action = val as BulkActionType;
-                        if (!selectAllChecked && selectedIds.size === 0) return;
-                        if (selectAllChecked) {
-                          setConfirmModal({ action });
-                          setCountLoading(true);
-                          try {
-                            const response = await fetch(
-                              "/api/posts/bulk/count",
-                              {
-                                body: JSON.stringify({
-                                  query: getCurrentQuery(),
-                                }),
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                method: "POST",
-                              }
-                            );
-                            if (!response.ok) {
-                              const data = await response.json();
-                              setError(
-                                (data.error as string) ?? "Failed to get count"
-                              );
-                              setConfirmModal(null);
-                              return;
-                            }
-                            const {
-                              data: { count },
-                            } = await response.json();
-                            if (count === 0) {
-                              setError(
-                                "No posts match the current filters."
-                              );
-                              setConfirmModal(null);
-                              return;
-                            }
-                            setConfirmModal((prev) =>
-                              prev && prev.count === undefined
-                                ? { action: prev.action, count }
-                                : prev
-                            );
-                          } finally {
-                            setCountLoading(false);
-                          }
-                        } else {
-                          setConfirmModal({
-                            action,
-                            count: selectedIds.size,
-                          });
-                        }
+                      onChange={(val) => {
+                        void handleBulkActionMenuChange(val);
                       }}
                     />
                     <button
@@ -813,328 +936,243 @@ export function PostFeed({
           </>
         )}
 
-          {/* Count + actions row: outside scroll so it stays visible (feed view only) */}
-          {(!searchSlot || !searchSlot.query.trim()) && (
-            <>
-              <div
-                className={cn(
-                  "flex min-w-0 flex-wrap items-center justify-between gap-2",
-                  bulkMode ? "pb-1" : "pb-4"
-                )}
-              >
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    aria-label="Filters"
-                    className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
-                    type="button"
-                    onClick={() => setOpenFilterDrawer(true)}
-                  >
-                    <Filter className="h-4 w-4" />
-                    {activeFilterCount > 0 && (
-                      <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                  <span className="text-muted-foreground shrink-0 text-sm">
-                    Showing {posts.length} of {total} Posts
-                  </span>
-                </div>
-                <div className="flex min-w-0 shrink-0 items-center gap-0 lg:hidden">
+        {(!searchSlot || !searchSlot.query.trim()) && (
+          <div
+            className={cn(
+              "bg-background",
+              bulkMode && "pr-[17px] lg:pr-7"
+            )}
+          >
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-1">
+                <button
+                  aria-label="Filters"
+                  className="text-foreground hover:opacity-80 relative flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus md:hidden"
+                  type="button"
+                  onClick={() => setOpenFilterDrawer(true)}
+                >
+                  <Filter className="h-4 w-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="bg-border text-foreground absolute -right-0.5 -top-0.5 rounded-full px-1 py-0.5 text-[10px]">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <span className="text-muted-foreground shrink-0 text-sm">
+                  Showing {posts.length} of {total} Posts
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <div
+                  className={cn(
+                    "flex min-w-0 shrink-0 items-center gap-0 lg:hidden",
+                    bulkMode && "hidden"
+                  )}
+                >
                   {searchSlot ? (
                     <>
-                      {bulkMode ? (
+                      <button
+                        aria-label="Bulk Actions"
+                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                        type="button"
+                        onClick={() => setBulkMode(true)}
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                      </button>
+                      <div className="relative" ref={sortMenuRef}>
                         <button
-                          aria-label="Cancel bulk actions"
+                          aria-expanded={sortMenuOpen}
+                          aria-haspopup="menu"
+                          aria-label="Sort"
+                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() => setSortMenuOpen((o) => !o)}
+                        >
+                          <ArrowUpDown className="h-4 w-4" />
+                        </button>
+                        {sortMenuOpen && (
+                          <div
+                            className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[12rem] rounded-card border py-1 shadow-lg"
+                            role="menu"
+                          >
+                            {SORT_OPTIONS.map((o, i) => (
+                              <button
+                                key={o.label}
+                                className={cn(
+                                  "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                                  currentSortOption.sort === o.sort &&
+                                    currentSortOption.sortOrder === o.sortOrder &&
+                                    "bg-surface-hover font-medium"
+                                )}
+                                role="menuitem"
+                                type="button"
+                                onClick={() => {
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    sort: o.sort,
+                                    sortOrder: o.sortOrder,
+                                  }));
+                                  setSortMenuOpen(false);
+                                }}
+                              >
+                                {o.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                        <button
+                          aria-label="Reset filters"
                           className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                           type="button"
                           onClick={() => {
-                            setBulkMode(false);
-                            setSelectAllChecked(false);
-                            setSelectedIds(new Set());
+                            handleResetFilters();
+                            searchSlot.onResetAll?.();
                           }}
                         >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <button
-                          aria-label="Bulk Actions"
-                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                          type="button"
-                          onClick={() => setBulkMode(true)}
-                        >
-                          <CheckSquare className="h-4 w-4" />
+                          <RotateCcw className="h-4 w-4" />
                         </button>
                       )}
-                    <div className="relative" ref={sortMenuRef}>
-                      <button
-                        aria-expanded={sortMenuOpen}
-                        aria-haspopup="menu"
-                        aria-label="Sort"
-                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                        type="button"
-                        onClick={() => setSortMenuOpen((o) => !o)}
-                      >
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                      {sortMenuOpen && (
-                        <div
-                          className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[12rem] rounded-card border py-1 shadow-lg"
-                          role="menu"
+                      <div className="relative" ref={searchTypeMenuRef}>
+                        <button
+                          aria-expanded={searchTypeMenuOpen}
+                          aria-haspopup="menu"
+                          aria-label="Search type"
+                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() => setSearchTypeMenuOpen((o) => !o)}
                         >
-                          {SORT_OPTIONS.map((o, i) => (
+                          <Search className="h-4 w-4" />
+                        </button>
+                        {searchTypeMenuOpen && (
+                          <div
+                            className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[8rem] rounded-card border py-1 shadow-lg"
+                            role="menu"
+                          >
                             <button
-                              key={o.label}
                               className={cn(
                                 "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                                currentSortOption.sort === o.sort &&
-                                  currentSortOption.sortOrder === o.sortOrder &&
+                                !searchSlot.useKeywordSearch &&
                                   "bg-surface-hover font-medium"
                               )}
                               role="menuitem"
                               type="button"
                               onClick={() => {
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  sort: o.sort,
-                                  sortOrder: o.sortOrder,
-                                }));
-                                setSortMenuOpen(false);
+                                searchSlot.onUseKeywordSearchChange(false);
+                                setSearchTypeMenuOpen(false);
                               }}
                             >
-                              {o.label}
+                              AI Powered
                             </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {(searchSlot.query.trim() || activeFilterCount > 0) && (
+                            <button
+                              className={cn(
+                                "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
+                                searchSlot.useKeywordSearch &&
+                                  "bg-surface-hover font-medium"
+                              )}
+                              role="menuitem"
+                              type="button"
+                              onClick={() => {
+                                searchSlot.onUseKeywordSearchChange(true);
+                                setSearchTypeMenuOpen(false);
+                              }}
+                            >
+                              Keyword
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="relative" ref={sortMenuRef}>
+                        <button
+                          aria-expanded={sortMenuOpen}
+                          aria-haspopup="menu"
+                          aria-label="Sort"
+                          className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
+                          type="button"
+                          onClick={() => setSortMenuOpen((open) => !open)}
+                        >
+                          <ArrowUpDown className="h-4 w-4" />
+                        </button>
+                        {sortMenuOpen && (
+                          <div className="border-border bg-surface absolute right-0 left-auto top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
+                            {SORT_OPTIONS.map((opt, i) => (
+                              <button
+                                key={opt.label}
+                                className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
+                                type="button"
+                                onClick={() => {
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    sort: opt.sort,
+                                    sortOrder: opt.sortOrder,
+                                  }));
+                                  setSortMenuOpen(false);
+                                }}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         aria-label="Reset filters"
                         className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
                         type="button"
-                        onClick={() => {
-                          handleResetFilters();
-                          searchSlot.onResetAll?.();
-                        }}
+                        onClick={handleResetFilters}
                       >
                         <RotateCcw className="h-4 w-4" />
                       </button>
-                    )}
-                    <div className="relative" ref={searchTypeMenuRef}>
-                      <button
-                        aria-expanded={searchTypeMenuOpen}
-                        aria-haspopup="menu"
-                        aria-label="Search type"
-                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                        type="button"
-                        onClick={() => setSearchTypeMenuOpen((o) => !o)}
-                      >
-                        <Search className="h-4 w-4" />
-                      </button>
-                      {searchTypeMenuOpen && (
-                        <div
-                          className="border-border bg-surface absolute right-0 left-auto top-full z-10 mt-1 min-w-[8rem] rounded-card border py-1 shadow-lg"
-                          role="menu"
-                        >
-                          <button
-                            className={cn(
-                              "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                              !searchSlot.useKeywordSearch &&
-                                "bg-surface-hover font-medium"
-                            )}
-                            role="menuitem"
-                            type="button"
-                            onClick={() => {
-                              searchSlot.onUseKeywordSearchChange(false);
-                              setSearchTypeMenuOpen(false);
-                            }}
-                          >
-                            AI Powered
-                          </button>
-                          <button
-                            className={cn(
-                              "flex w-full px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-border-focus",
-                              searchSlot.useKeywordSearch &&
-                                "bg-surface-hover font-medium"
-                            )}
-                            role="menuitem"
-                            type="button"
-                            onClick={() => {
-                              searchSlot.onUseKeywordSearchChange(true);
-                              setSearchTypeMenuOpen(false);
-                            }}
-                          >
-                            Keyword
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="relative" ref={sortMenuRef}>
-                      <button
-                        aria-expanded={sortMenuOpen}
-                        aria-haspopup="menu"
-                        aria-label="Sort"
-                        className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                        type="button"
-                        onClick={() => setSortMenuOpen((open) => !open)}
-                      >
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                      {sortMenuOpen && (
-                        <div className="border-border bg-surface absolute right-0 left-auto top-full z-20 mt-1 min-w-[11rem] rounded border py-1 shadow-lg">
-                          {SORT_OPTIONS.map((opt, i) => (
-                            <button
-                              key={opt.label}
-                              className="text-foreground hover:bg-surface-hover w-full px-3 py-2 text-left text-sm"
-                              type="button"
-                              onClick={() => {
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  sort: opt.sort,
-                                  sortOrder: opt.sortOrder,
-                                }));
-                                setSortMenuOpen(false);
-                              }}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      aria-label="Reset filters"
-                      className="text-foreground hover:opacity-80 flex h-8 w-7 shrink-0 items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-border-focus"
-                      type="button"
-                      onClick={handleResetFilters}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </button>
-                  </>
-                )}
-              </div>
-              {bulkMode && (
-                <label
-                  className="hidden min-h-[44px] cursor-pointer items-center gap-2 lg:flex"
-                  htmlFor="select-all-feed"
-                >
-                  <span className="text-muted-foreground text-sm">
-                    Select All
-                  </span>
-                  <input
-                    aria-label="Select All"
-                    checked={selectedIds.size === posts.length && posts.length > 0}
-                    className="rounded border-border bg-surface-hover"
-                    id="select-all-feed"
-                    ref={selectAllCheckboxRef}
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(new Set(posts.map((p) => p.id)));
-                        setSelectAllChecked(true);
-                      } else {
-                        setSelectedIds(new Set());
-                        setSelectAllChecked(false);
-                      }
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-            {bulkMode && searchSlot && (
-              <div className="flex w-full items-center gap-2 pb-4 lg:hidden">
-                <div className="min-w-0 flex-1">
-                  <CustomSelect
-                    ariaLabel="Bulk action"
-                    className="h-8 w-full text-sm"
-                  disabled={!selectAllChecked && selectedIds.size === 0}
-                  options={BULK_ACTION_OPTIONS}
-                  placeholder="Actions"
-                  value=""
-                  onChange={async (val) => {
-                    if (!val) return;
-                    const action = val as BulkActionType;
-                    if (!selectAllChecked && selectedIds.size === 0) return;
-                    if (selectAllChecked) {
-                      setConfirmModal({ action });
-                      setCountLoading(true);
-                      try {
-                        const response = await fetch(
-                          "/api/posts/bulk/count",
-                          {
-                            body: JSON.stringify({
-                              query: getCurrentQuery(),
-                            }),
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            method: "POST",
-                          }
-                        );
-                        if (!response.ok) {
-                          const data = await response.json();
-                          setError(
-                            (data.error as string) ?? "Failed to get count"
-                          );
-                          setConfirmModal(null);
-                          return;
-                        }
-                        const {
-                          data: { count },
-                        } = await response.json();
-                        if (count === 0) {
-                          setError(
-                            "No posts match the current filters."
-                          );
-                          setConfirmModal(null);
-                          return;
-                        }
-                        setConfirmModal((prev) =>
-                          prev && prev.count === undefined
-                            ? { action: prev.action, count }
-                            : prev
-                        );
-                      } finally {
-                        setCountLoading(false);
-                      }
-                    } else {
-                      setConfirmModal({
-                        action,
-                        count: selectedIds.size,
-                      });
-                    }
-                  }}
-                  />
+                    </>
+                  )}
                 </div>
-                <button
-                  className="text-foreground hover:opacity-80 flex h-8 w-16 shrink-0 items-center justify-center rounded px-2 text-xs focus:outline-none focus:ring-2 focus:ring-border-focus"
-                  type="button"
-                  onClick={() => {
-                    setBulkMode(false);
-                    setSelectAllChecked(false);
-                    setSelectedIds(new Set());
-                  }}
-                >
-                  Cancel
-                </button>
+                {bulkMode ? (
+                  <label
+                    className="flex h-8 cursor-pointer items-center gap-2"
+                    htmlFor="select-all-feed"
+                  >
+                    <span className="text-muted-foreground text-sm">
+                      Select All
+                    </span>
+                    <input
+                      aria-label="Select All"
+                      checked={
+                        selectedIds.size === posts.length && posts.length > 0
+                      }
+                      className="rounded border-border bg-surface-hover"
+                      id="select-all-feed"
+                      ref={selectAllCheckboxRef}
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(new Set(posts.map((p) => p.id)));
+                          setSelectAllChecked(true);
+                        } else {
+                          setSelectedIds(new Set());
+                          setSelectAllChecked(false);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : null}
               </div>
-            )}
-          </>
-          )}
+            </div>
+          </div>
+        )}
 
         </div>
 
         <div
           aria-label="Feed posts"
-          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-4 pb-6 sm:pb-8"
+          className="relative z-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-background pb-6 pt-3 sm:pb-8 sm:pt-4"
           role="region"
           style={{ scrollbarGutter: "stable" }}
         >
-        <div className="min-w-0 px-6 sm:px-8">
+        <div className="min-w-0 bg-background px-6 sm:px-8">
         {searchSlot && searchSlot.query.trim() ? (
           <div className="space-y-6">
             {searchSlot.loading && searchSlot.query.trim()
@@ -1206,10 +1244,13 @@ export function PostFeed({
                     <PostCard
                       key={post.id}
                       activeJobId={activeJob?.id ?? null}
+                      isAddAsExampleDisabled={examplesFull}
+                      isAddingToScoringFewShot={addingIds.has(post.id)}
                       isMarkingSaved={searchSlot.markingSaved.has(post.id)}
                       post={post}
                       queueStatus={getQueueStatusForPost(post)}
                       similarSearchListPath={similarSearchListPath}
+                      onAddToScoringFewShot={handleAddToScoringFewShot}
                       onCancelRefresh={requestCancelRefresh}
                       onMarkSaved={(id, saved) =>
                         searchSlot.onMarkSaved(id, saved)
@@ -1227,10 +1268,8 @@ export function PostFeed({
           </div>
         ) : (
           <>
-            {(!searchSlot || !searchSlot.query.trim()) && (
-          <>
-            {error ? (
-              <div className="flex justify-center mt-24">
+            {(!searchSlot || !searchSlot.query.trim()) && error ? (
+              <div className="mt-24 flex justify-center">
                 <div className="border border-destructive rounded-lg px-6 py-4 text-center text-destructive">
                   <div className="mb-2 flex justify-center">
                     <AlertTriangle aria-hidden className="h-12 w-12" />
@@ -1244,8 +1283,6 @@ export function PostFeed({
                 </div>
               </div>
             ) : null}
-          </>
-        )}
 
         {!error && initialLoading && (
           <div aria-busy="true" aria-label="Loading feed" className="space-y-4">
@@ -1289,6 +1326,8 @@ export function PostFeed({
                 >
                   <PostCard
                     activeJobId={getActiveJobForPost(post)?.id ?? null}
+                    isAddAsExampleDisabled={examplesFull}
+                    isAddingToScoringFewShot={addingIds.has(post.id)}
                     isMarkingIgnored={markingIgnored.has(post.id)}
                     isMarkingSaved={markingSaved.has(post.id)}
                     isMarkingUsed={markingUsed.has(post.id)}
@@ -1297,6 +1336,7 @@ export function PostFeed({
                     selected={selectedIds.has(post.id)}
                     showCheckbox={bulkMode}
                     similarSearchListPath={similarSearchListPath}
+                    onAddToScoringFewShot={handleAddToScoringFewShot}
                     onCancelRefresh={requestCancelRefresh}
                     onMarkIgnored={requestMarkIgnored}
                     onMarkSaved={handleMarkSaved}

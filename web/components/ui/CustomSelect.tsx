@@ -12,8 +12,10 @@ import {
 import { cn } from "@/lib/utils";
 
 export interface CustomSelectOption {
+  disabled?: boolean;
   icon?: ReactNode;
   label: string;
+  title?: string;
   value: string;
 }
 
@@ -107,14 +109,22 @@ export function CustomSelect({
           {listOptions.map((opt) => (
             <li
               key={opt.value}
+              aria-disabled={opt.disabled === true ? true : undefined}
               aria-selected={opt.value === value}
               className={cn(
-                "flex cursor-pointer items-center gap-2 whitespace-nowrap px-3 py-2 text-sm text-foreground hover:bg-surface-hover",
-                opt.value === value && "bg-surface-hover"
+                "flex items-center gap-2 whitespace-nowrap px-3 py-2 text-sm text-foreground",
+                opt.disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:bg-surface-hover",
+                opt.value === value && !opt.disabled && "bg-surface-hover"
               )}
               role="option"
+              title={opt.title}
               onMouseDown={(e) => {
                 e.preventDefault();
+                if (opt.disabled) {
+                  return;
+                }
                 onChange(opt.value);
                 close();
               }}

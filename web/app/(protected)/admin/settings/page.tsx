@@ -7,6 +7,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SettingsAlerts } from "@/components/SettingsAlerts";
 import { SettingsDefaultsSection } from "@/components/SettingsDefaultsSection";
 import { SettingsPageSkeleton } from "@/components/SettingsPageSkeleton";
+import {
+  SettingsScoringFewShotSection,
+  type ScoringFewShotDraft,
+} from "@/components/SettingsScoringFewShotSection";
 import { SettingsWeightSection } from "@/components/SettingsWeightSection";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -20,6 +24,7 @@ import { useToast } from "@/lib/ToastContext";
 import { useMfa } from "@/lib/useMfa.client";
 
 import type { Job, RankingWeights, WeightConfig } from "@/lib/types";
+import type { ScoringFewShotConfig } from "@/lib/validators";
 
 interface NoveltyConfig {
   frequency_thresholds?: { common: number; rare: number; very_common: number };
@@ -33,6 +38,7 @@ interface SettingsResponse {
     novelty_config?: NoveltyConfig;
     picks_defaults?: { picks_min: number };
     ranking_weights: RankingWeights;
+    scoring_few_shot: null | ScoringFewShotConfig;
     search_defaults: {
       similarity_threshold: number;
     };
@@ -94,6 +100,10 @@ export default function SettingsPage() {
   const [picksDefaults, setPicksDefaults] = useState<{ picks_min: number }>({
     picks_min: 7,
   });
+  const [scoringFewShotDraft, setScoringFewShotDraft] = useState<ScoringFewShotDraft>({
+    examples: [],
+    intro: "",
+  });
   const [successMessage, setSuccessMessage] = useState<null | string>(null);
   const [isActivating, setIsActivating] = useState(false);
   const [deleteConfirmConfigId, setDeleteConfirmConfigId] = useState<null | string>(null);
@@ -134,6 +144,15 @@ export default function SettingsPage() {
               picks_min:
                 typeof pd.picks_min === "number" ? pd.picks_min : 7,
             });
+          }
+          if (settingsData.data.scoring_few_shot) {
+            const sf = settingsData.data.scoring_few_shot;
+            setScoringFewShotDraft({
+              examples: sf.examples,
+              intro: sf.intro,
+            });
+          } else {
+            setScoringFewShotDraft({ examples: [], intro: "" });
           }
         }
 
@@ -400,7 +419,7 @@ export default function SettingsPage() {
             className="text-foreground mb-8 text-sm"
             style={{ opacity: 0.85 }}
           >
-            Configure ranking weights and search preferences.
+            Configure ranking weights, Scoring Few Shot, and search preferences.
           </p>
           <SettingsPageSkeleton />
         </div>
@@ -423,7 +442,7 @@ export default function SettingsPage() {
             className="text-foreground mb-8 text-sm"
             style={{ opacity: 0.85 }}
           >
-            Configure ranking weights and search preferences.
+            Configure ranking weights, Scoring Few Shot, and search preferences.
           </p>
 
           <SettingsAlerts
@@ -478,6 +497,14 @@ export default function SettingsPage() {
             onRenameSuccess={refetchWeightConfigs}
             onReset={() => setRankingWeights(DEFAULT_WEIGHTS)}
             onSave={handleSaveWeights}
+          />
+
+          <SettingsScoringFewShotSection
+            value={{
+              examples: scoringFewShotDraft.examples,
+              intro: scoringFewShotDraft.intro,
+            }}
+            onChange={setScoringFewShotDraft}
           />
 
           <SettingsDefaultsSection

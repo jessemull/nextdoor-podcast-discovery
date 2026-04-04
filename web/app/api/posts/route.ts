@@ -20,7 +20,8 @@ import type { PostsResponse, PostWithScores } from "@/lib/types";
  * - categories: string[] (filter by categories; any match)
  * - min_score: number (minimum final_score)
  * - unused_only: boolean (only show posts not used in episodes)
- * - sort: "score" | "date" (default "score")
+ * - sort: "score" | "podcast_score" | "comment_count" | "date" (default "score")
+ * - min_comment_count / max_comment_count: optional int filters
  */
 export async function GET(request: NextRequest) {
   // Require authentication
@@ -45,9 +46,11 @@ export async function GET(request: NextRequest) {
           : undefined,
     ignored_only: searchParams.get("ignored_only") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
+    max_comment_count: searchParams.get("max_comment_count") ?? undefined,
     max_podcast_worthy: searchParams.get("max_podcast_worthy") ?? undefined,
     max_reaction_count: searchParams.get("max_reaction_count") ?? undefined,
     max_score: searchParams.get("max_score") ?? undefined,
+    min_comment_count: searchParams.get("min_comment_count") ?? undefined,
     min_podcast_worthy: searchParams.get("min_podcast_worthy") ?? undefined,
     min_reaction_count: searchParams.get("min_reaction_count") ?? undefined,
     min_score: searchParams.get("min_score") ?? undefined,
@@ -78,9 +81,11 @@ export async function GET(request: NextRequest) {
     categories,
     ignored_only: ignoredOnly,
     limit,
+    max_comment_count: maxCommentCountParam,
     max_podcast_worthy: maxPodcastWorthyParam,
     max_reaction_count: maxReactionCountParam,
     max_score: maxScoreParam,
+    min_comment_count: minCommentCountParam,
     min_podcast_worthy: minPodcastWorthyParam,
     min_reaction_count: minReactionCountParam,
     min_score: minScoreParam,
@@ -97,12 +102,16 @@ export async function GET(request: NextRequest) {
   } = parsed.data;
   const orderAsc = order === "asc";
   const postType = postTypeParam ?? "standard";
+  const maxCommentCount =
+    maxCommentCountParam != null ? maxCommentCountParam : null;
   const maxPodcastWorthy =
     maxPodcastWorthyParam != null ? maxPodcastWorthyParam : null;
   const maxReactionCount =
     maxReactionCountParam != null ? maxReactionCountParam : null;
   const maxScore =
     maxScoreParam != null ? String(maxScoreParam) : null;
+  const minCommentCount =
+    minCommentCountParam != null ? minCommentCountParam : null;
   const minPodcastWorthy =
     minPodcastWorthyParam != null ? minPodcastWorthyParam : null;
   const minReactionCount =
@@ -125,9 +134,11 @@ export async function GET(request: NextRequest) {
         categories: categories?.length ? categories : null,
         ignoredOnly,
         limit,
+        maxCommentCount,
         maxPodcastWorthy,
         maxReactionCount,
         maxScore,
+        minCommentCount,
         minPodcastWorthy,
         minReactionCount,
         minScore,
@@ -144,15 +155,21 @@ export async function GET(request: NextRequest) {
     } else {
       // For score or podcast_score sorting, use get_posts_with_scores
       const orderBy =
-        sort === "podcast_score" ? "podcast_worthy" : "score";
+        sort === "comment_count"
+          ? "comment_count"
+          : sort === "podcast_score"
+            ? "podcast_worthy"
+            : "score";
 
       return await getPostsByScore(supabase, {
         categories: categories?.length ? categories : null,
         ignoredOnly,
         limit,
+        maxCommentCount,
         maxPodcastWorthy,
         maxReactionCount,
         maxScore,
+        minCommentCount,
         minPodcastWorthy,
         minReactionCount,
         minScore,
@@ -186,16 +203,18 @@ interface QueryParams {
   categories: null | string[];
   ignoredOnly: boolean;
   limit: number;
+  maxCommentCount: null | number;
   maxPodcastWorthy: null | number;
   maxReactionCount: null | number;
   maxScore: null | string;
+  minCommentCount: null | number;
   minPodcastWorthy: null | number;
   minReactionCount: null | number;
   minScore: null | string;
   neighborhoodIds: null | string[];
   offset: number;
   orderAsc: boolean;
-  orderBy?: "podcast_worthy" | "score";
+  orderBy?: "comment_count" | "podcast_worthy" | "score";
   preview: boolean;
   savedOnly: boolean;
   unusedOnly: boolean;
@@ -244,9 +263,11 @@ async function getPostsByScore(
     categories,
     ignoredOnly,
     limit,
+    maxCommentCount,
     maxPodcastWorthy,
     maxReactionCount,
     maxScore,
+    minCommentCount,
     minPodcastWorthy,
     minReactionCount,
     minScore,
@@ -333,9 +354,11 @@ async function getPostsByScore(
   const baseRpcParams = {
     p_categories: categories,
     p_ignored_only: ignoredOnly,
+    p_max_comment_count: maxCommentCount,
     p_max_podcast_worthy: maxPodcastWorthy,
     p_max_reaction_count: maxReactionCount,
     p_max_score: validMaxScore,
+    p_min_comment_count: minCommentCount,
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,
@@ -489,9 +512,11 @@ async function getPostsByDate(
     categories,
     ignoredOnly,
     limit,
+    maxCommentCount,
     maxPodcastWorthy,
     maxReactionCount,
     maxScore,
+    minCommentCount,
     minPodcastWorthy,
     minReactionCount,
     minScore,
@@ -513,9 +538,11 @@ async function getPostsByDate(
   const rpcParams = {
     p_categories: categories,
     p_ignored_only: ignoredOnly,
+    p_max_comment_count: maxCommentCount,
     p_max_podcast_worthy: maxPodcastWorthy,
     p_max_reaction_count: maxReactionCount,
     p_max_score: validMaxScore,
+    p_min_comment_count: minCommentCount,
     p_min_podcast_worthy: minPodcastWorthy,
     p_min_reaction_count: minReactionCount,
     p_min_score: validMinScore,

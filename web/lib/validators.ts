@@ -76,6 +76,66 @@ export const searchBodySchema = z.object({
 
 export type SearchBody = z.infer<typeof searchBodySchema>;
 
+/** Max reference examples in LLM scoring few-shot (matches scraper scoring_few_shot.MAX_EXAMPLES). */
+export const SCORING_FEW_SHOT_MAX_EXAMPLES = 6;
+
+/** Used when no intro exists yet in settings; refine on the Scoring Few Shot settings page. */
+export const DEFAULT_SCORING_FEW_SHOT_INTRO =
+  "Below are reference posts with ideal scores and summaries. Use them to calibrate each scoring dimension consistently.";
+
+const topicCategorySchema = z.enum(
+  TOPIC_CATEGORIES as unknown as [string, ...string[]]
+);
+
+const scoringFewShotIdealScoresSchema = z
+  .object({
+    absurdity: z.coerce.number().min(1).max(10),
+    discussion_spark: z.coerce.number().min(1).max(10),
+    drama: z.coerce.number().min(1).max(10),
+    emotional_intensity: z.coerce.number().min(1).max(10),
+    news_value: z.coerce.number().min(1).max(10),
+    podcast_worthy: z.coerce.number().min(1).max(10),
+    readability: z.coerce.number().min(1).max(10),
+  })
+  .strict();
+
+export const scoringFewShotIdealSchema = z.object({
+  categories: z.array(topicCategorySchema).min(1).max(3),
+  scores: scoringFewShotIdealScoresSchema,
+  summary: z.string().min(1).max(2000),
+  why_podcast_worthy: z.string().min(1).max(2000),
+});
+
+export type ScoringFewShotIdeal = z.infer<typeof scoringFewShotIdealSchema>;
+
+export const scoringFewShotExampleSchema = z.object({
+  ideal: scoringFewShotIdealSchema,
+  post_id: z.string().regex(UUID_REGEX, "post_id must be a UUID"),
+});
+
+export const scoringFewShotConfigSchema = z.object({
+  examples: z
+    .array(scoringFewShotExampleSchema)
+    .min(1, "At least one example is required")
+    .max(
+      SCORING_FEW_SHOT_MAX_EXAMPLES,
+      `At most ${SCORING_FEW_SHOT_MAX_EXAMPLES} examples`
+    ),
+  intro: z.string().trim().min(1, "Intro is required"),
+});
+
+export type ScoringFewShotConfig = z.infer<typeof scoringFewShotConfigSchema>;
+
+/** POST /api/settings/scoring-few-shot/add-posts */
+export const scoringFewShotAddPostsBodySchema = z.object({
+  post_ids: z
+    .array(z.string().regex(UUID_REGEX, "Each post_id must be a UUID"))
+    .min(1, "At least one post_id is required")
+    .max(25),
+});
+
+export type ScoringFewShotAddPostsBody = z.infer<typeof scoringFewShotAddPostsBodySchema>;
+
 const noveltyConfigSchema = z.object({
   frequency_thresholds: z
     .object({
@@ -99,6 +159,7 @@ export const settingsPutBodySchema = z
       })
       .optional(),
     ranking_weights: rankingWeightsSchema.optional(),
+    scoring_few_shot: scoringFewShotConfigSchema.optional(),
     search_defaults: z
       .object({
         similarity_threshold: z.number().min(0).max(1).optional(),
@@ -110,8 +171,9 @@ export const settingsPutBodySchema = z
       data.ranking_weights !== undefined ||
       data.search_defaults !== undefined ||
       data.novelty_config !== undefined ||
-      data.picks_defaults !== undefined,
-    "At least one of ranking_weights, search_defaults, novelty_config, or picks_defaults must be provided"
+      data.picks_defaults !== undefined ||
+      data.scoring_few_shot !== undefined,
+    "At least one of ranking_weights, search_defaults, novelty_config, picks_defaults, or scoring_few_shot must be provided"
   );
 
 export type SettingsPutBody = z.infer<typeof settingsPutBodySchema>;
@@ -239,10 +301,6 @@ export const weightConfigPatchBodySchema = z
 
 export type WeightConfigPatchBody = z.infer<typeof weightConfigPatchBodySchema>;
 
-const topicCategorySchema = z.enum(
-  TOPIC_CATEGORIES as unknown as [string, ...string[]]
-);
-
 /** GET /api/posts query params. Validates at API boundary for safe parsing. */
 export const postsQuerySchema = z.object({
   categories: z
@@ -264,9 +322,11 @@ export const postsQuerySchema = z.object({
     .optional()
     .default(20)
     .transform((n) => Math.min(100, Math.max(1, n))),
+  max_comment_count: z.coerce.number().int().min(0).optional(),
   max_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   max_reaction_count: z.coerce.number().int().min(0).optional(),
   max_score: z.coerce.number().min(0).optional(),
+  min_comment_count: z.coerce.number().int().min(0).optional(),
   min_podcast_worthy: z.coerce.number().min(0).max(10).optional(),
   min_reaction_count: z.coerce.number().int().min(0).optional(),
   min_score: z.coerce.number().min(0).optional(),
@@ -298,7 +358,7 @@ export const postsQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   sort: z
-    .enum(["date", "podcast_score", "score"])
+    .enum(["comment_count", "date", "podcast_score", "score"])
     .optional()
     .default("score"),
   unused_only: z
@@ -359,9 +419,11 @@ export const postsBulkQuerySchema = z.object({
       "Invalid category in categories"
     ),
   ignored_only: z.boolean().optional(),
+  max_comment_count: z.number().int().min(0).optional(),
   max_podcast_worthy: z.number().min(0).max(10).optional(),
   max_reaction_count: z.number().int().min(0).optional(),
   max_score: z.number().min(0).optional(),
+  min_comment_count: z.number().int().min(0).optional(),
   min_podcast_worthy: z.number().min(0).max(10).optional(),
   min_reaction_count: z.number().int().min(0).optional(),
   min_score: z.number().min(0).optional(),
@@ -374,7 +436,9 @@ export const postsBulkQuerySchema = z.object({
     ),
   order: z.enum(["asc", "desc"]).optional(),
   saved_only: z.boolean().optional(),
-  sort: z.enum(["date", "podcast_score", "score"]).optional(),
+  sort: z
+    .enum(["comment_count", "date", "podcast_score", "score"])
+    .optional(),
   unused_only: z.boolean().optional(),
 });
 

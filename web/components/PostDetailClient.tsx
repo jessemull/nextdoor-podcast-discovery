@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useAddPostsToScoringFewShot } from "@/lib/hooks/useAddPostsToScoringFewShot";
 import { usePermalinkJobs } from "@/lib/hooks/usePermalinkJobs";
 import { useToast } from "@/lib/ToastContext";
 
@@ -29,6 +30,16 @@ export function PostDetailClient({
     getQueueStatusForPost,
     refetch: refetchPermalinkJobs,
   } = usePermalinkJobs();
+  const { addPosts, addingIds, examplesFull } = useAddPostsToScoringFewShot();
+  const handleAddToScoringFewShot = useCallback(
+    (id: string) => {
+      if (examplesFull) {
+        return;
+      }
+      void addPosts([id]);
+    },
+    [addPosts, examplesFull]
+  );
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<null | string>(null);
@@ -318,12 +329,15 @@ export function PostDetailClient({
           <PostCard
             activeJobId={getActiveJobForPost(post)?.id ?? null}
             defaultExpanded
+            isAddAsExampleDisabled={examplesFull}
+            isAddingToScoringFewShot={addingIds.has(post.id)}
             isMarkingIgnored={markingIgnored}
             isMarkingSaved={markingSaved}
             isMarkingUsed={markingUsed}
             post={post}
             queueStatus={getQueueStatusForPost(post)}
             showScoreBreakdown
+            onAddToScoringFewShot={handleAddToScoringFewShot}
             onCancelRefresh={requestCancelRefresh}
             onMarkIgnored={requestMarkIgnored}
             onMarkSaved={(_postId, saved) => handleMarkSaved(saved)}

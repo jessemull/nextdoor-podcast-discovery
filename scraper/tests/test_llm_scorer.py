@@ -15,6 +15,56 @@ from src.llm_scorer import (
 )
 from src.novelty import calculate_novelty
 
+_FEW_SHOT_TEST_POST_ID = "00000000-0000-4000-8000-000000000001"
+
+
+def _minimal_few_shot_config() -> dict[str, object]:
+    dims = sorted(SCORING_DIMENSIONS.keys())
+    return {
+        "examples": [
+            {
+                "ideal": {
+                    "categories": ["drama"],
+                    "scores": {dim: 5.0 for dim in dims},
+                    "summary": "Ref",
+                    "why_podcast_worthy": "Ref why",
+                },
+                "post_id": _FEW_SHOT_TEST_POST_ID,
+            }
+        ],
+        "intro": "Test calibration intro for unit tests.",
+    }
+
+
+def mock_supabase_few_shot_for_scoring(supabase: mock.MagicMock) -> None:
+    """Stub settings.scoring_few_shot + reference post so batch scoring can build prompts."""
+
+    def table_side_effect(name: str) -> mock.MagicMock:
+        m = mock.MagicMock()
+        if name == "settings":
+            ch = mock.MagicMock()
+            ch.execute.return_value = mock.Mock(
+                data=[{"value": _minimal_few_shot_config()}]
+            )
+            m.select.return_value.eq.return_value.limit.return_value = ch
+        elif name == "posts":
+            ch = mock.MagicMock()
+            ch.execute.return_value = mock.Mock(
+                data=[
+                    {
+                        "comments": [],
+                        "id": _FEW_SHOT_TEST_POST_ID,
+                        "post_id_ext": "ref",
+                        "text": "Reference thread for few-shot.",
+                        "url": "",
+                    }
+                ]
+            )
+            m.select.return_value.eq.return_value.limit.return_value = ch
+        return m
+
+    supabase.table.side_effect = table_side_effect
+
 
 class TestLLMScorer:
     """Test LLMScorer class."""
@@ -96,15 +146,7 @@ class TestLLMScorer:
             "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
         }
 
-        # Mock topic frequencies
-        freq_result = mock.MagicMock()
-        freq_result.data = [
-            {"category": "lost_pet", "count_30d": 10},
-            {"category": "humor", "count_30d": 20},
-        ]
-        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
-            freq_result
-        )
+        mock_supabase_few_shot_for_scoring(scorer.supabase)
 
         results = scorer.score_posts(posts)
 
@@ -155,11 +197,7 @@ class TestLLMScorer:
             "max_multiplier": 1.5,
             "frequency_thresholds": {"rare": 5, "common": 30, "very_common": 100},
         }
-        freq_result = mock.MagicMock()
-        freq_result.data = [{"category": "humor", "count_30d": 10}]
-        scorer.supabase.table.return_value.select.return_value.execute.return_value = (
-            freq_result
-        )
+        mock_supabase_few_shot_for_scoring(scorer.supabase)
 
         scorer.score_posts(posts)
 
@@ -190,6 +228,8 @@ class TestLLMScorer:
         mock_response.content = [mock_content]
         scorer.anthropic.messages.create.return_value = mock_response
 
+        mock_supabase_few_shot_for_scoring(scorer.supabase)
+
         results = scorer.score_posts([post])
 
         assert len(results) == 1
@@ -199,6 +239,7 @@ class TestLLMScorer:
     def test_score_posts_handles_exception(self, scorer: LLMScorer) -> None:
         """Should return error PostScore when exception occurs."""
         post = {"id": "post1", "text": "Test post"}
+        mock_supabase_few_shot_for_scoring(scorer.supabase)
         scorer.anthropic.messages.create.side_effect = Exception("API error")
 
         results = scorer.score_posts([post])
@@ -328,7 +369,7 @@ class TestLLMScorer:
         rows = scorer.supabase.table.return_value.upsert.call_args[0][0]
         assert len(rows) == 1
         assert "prompt_version" in rows[0]
-        assert rows[0]["prompt_version"] == "v2"
+        assert rows[0]["prompt_version"] == "v4"
 
     def test_save_scores_skips_posts_with_errors(self, scorer: LLMScorer) -> None:
         """Should skip posts with errors."""

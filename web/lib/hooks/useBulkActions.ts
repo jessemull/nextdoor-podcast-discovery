@@ -17,16 +17,18 @@ export type BulkActionType =
 export interface BulkQuery {
   categories?: string[];
   ignored_only?: boolean;
+  max_comment_count?: number;
   max_podcast_worthy?: number;
   max_reaction_count?: number;
   max_score?: number;
+  min_comment_count?: number;
   min_podcast_worthy?: number;
   min_reaction_count?: number;
   min_score?: number;
   neighborhood_ids?: string[];
   order?: "asc" | "desc";
   saved_only?: boolean;
-  sort?: "date" | "podcast_score" | "score";
+  sort?: "comment_count" | "date" | "podcast_score" | "score";
   unused_only?: boolean;
 }
 

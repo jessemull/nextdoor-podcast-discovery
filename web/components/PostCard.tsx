@@ -10,6 +10,7 @@ import {
   ExternalLink,
   EyeOff,
   List,
+  ListPlus,
   MessageSquare,
   MoreHorizontal,
   RefreshCw,
@@ -31,6 +32,7 @@ import {
   formatTitleCase,
   POST_PREVIEW_LENGTH,
 } from "@/lib/utils";
+import { SCORING_FEW_SHOT_MAX_EXAMPLES } from "@/lib/validators";
 
 import type { DimensionScores } from "@/lib/types";
 
@@ -49,11 +51,14 @@ export type QueueStatus = "pending" | "running" | null;
 interface PostCardProps {
   activeJobId?: null | string;
   defaultExpanded?: boolean;
+  isAddAsExampleDisabled?: boolean;
+  isAddingToScoringFewShot?: boolean;
   isCancellingRefresh?: boolean;
   isMarkingIgnored?: boolean;
   isMarkingSaved?: boolean;
   isMarkingUsed?: boolean;
   isQueuingRefresh?: boolean;
+  onAddToScoringFewShot?: (postId: string) => void;
   onCancelRefresh?: (jobId: string) => void;
   onMarkIgnored?: (postId: string, ignored: boolean) => void;
   onMarkSaved?: (postId: string, saved: boolean) => void;
@@ -73,11 +78,14 @@ interface PostCardProps {
 export const PostCard = memo(function PostCard({
   activeJobId = null,
   defaultExpanded = false,
+  isAddAsExampleDisabled = false,
+  isAddingToScoringFewShot = false,
   isCancellingRefresh = false,
   isMarkingIgnored = false,
   isMarkingSaved = false,
   isMarkingUsed = false,
   isQueuingRefresh = false,
+  onAddToScoringFewShot,
   onCancelRefresh,
   onMarkIgnored,
   onMarkSaved,
@@ -297,6 +305,36 @@ export const PostCard = memo(function PostCard({
                   </Link>
                 ),
               });
+              if (onAddToScoringFewShot) {
+                menuItems.push({
+                  label: "Add As Example",
+                  node: (
+                    <button
+                      key="add-as-example"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={isAddAsExampleDisabled || isAddingToScoringFewShot}
+                      role="menuitem"
+                      title={
+                        isAddAsExampleDisabled
+                          ? `Already have ${SCORING_FEW_SHOT_MAX_EXAMPLES} examples (max). Remove one in Settings.`
+                          : undefined
+                      }
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        onAddToScoringFewShot(post.id);
+                      }}
+                    >
+                      {isAddingToScoringFewShot ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <ListPlus aria-hidden className="h-4 w-4" />
+                      )}
+                      Add As Example
+                    </button>
+                  ),
+                });
+              }
               if (onViewDetails) {
                 menuItems.push({
                   label: "View Details",

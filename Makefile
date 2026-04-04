@@ -1,4 +1,4 @@
-.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details scrape-sample scrape-trending-300 scrape-visible seed-podcast-demo security security-scraper security-web tail-logs test test-scraper test-web venv
+.PHONY: help build clean compare-env-scores deploy-scraper deploy-web-prod db-bootstrap db-migrate-local db-migrate-prod db-reset db-up db-down dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details recompute-scores-once rescore-urls scrape-sample scrape-trending-300 scrape-visible seed-podcast-demo security security-scraper security-web tail-logs test test-scraper test-web tune-ranking-weights venv
 
 # Default target
 help:
@@ -30,6 +30,10 @@ help:
 	@echo "  scrape-visible   Run scraper with browser visible (5 trending posts; use to watch Nextdoor)"
 	@echo "  inspect-scraper  Run scraper in inspect mode (browser pauses for DOM inspection)"
 	@echo "  open-trending-details  Open trending tab, click first post to details view, then pause"
+	@echo "  tune-ranking-weights   Tune active weight_configs (ARGS='--examples-file PATH'; optional --no-novelty for prod-aligned objective; scraper/.env)"
+	@echo "  rescore-urls           Re-run LLM scoring for posts in FILE (default ./urls.txt; ARGS='--strict-few-shot' to require few-shot; scraper/.env)"
+	@echo "  compare-env-scores     Compare LLM scores (URLS= file path relative to make cwd; COMPARE_* env vars; see script docstring)"
+	@echo "  recompute-scores-once  Process one pending recompute_final_scores job (local worker; scraper/.env; queue job via admin API first)"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint             Run linters (scraper + web, check only)"
@@ -151,6 +155,27 @@ inspect-scraper:
 
 open-trending-details:
 	cd scraper && python -m src.main --open-trending-details
+
+# Example: make tune-ranking-weights ARGS='--examples-file ./my-posts.txt --no-novelty --apply'
+tune-ranking-weights:
+	cd scraper && ../.venv/bin/python -m src.tune_ranking_weights $(ARGS)
+
+# Example: make rescore-urls FILE=./urls.txt  (paths resolved from scraper cwd and repo root)
+rescore-urls:
+	cd scraper && ../.venv/bin/python scripts/rescore_posts_file.py $(or $(FILE),./urls.txt) $(ARGS)
+
+# Example: ... make compare-env-scores URLS=./urls.txt  (path is relative to cwd where you run make, not scraper/)
+compare-env-scores:
+	@if [ -z "$(URLS)" ]; then echo "Set URLS=path/to/file (newline-separated Nextdoor URLs or UUIDs)"; exit 1; fi
+	@case "$(URLS)" in \
+	  /*) U_ABS="$(URLS)" ;; \
+	  *) U_ABS="$(CURDIR)/$(URLS)" ;; \
+	esac; \
+	cd scraper && ../.venv/bin/python scripts/compare_env_scores.py $(ARGS) "$$U_ABS"
+
+# After POST /api/admin/recompute-scores (pending job in background_jobs): run worker once locally
+recompute-scores-once:
+	cd scraper && ../.venv/bin/python -m src.worker --job-type recompute_final_scores --once
 
 dev-web:
 	cd web && npm run dev
