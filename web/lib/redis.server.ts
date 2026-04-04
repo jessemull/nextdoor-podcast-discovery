@@ -8,8 +8,9 @@
  * Keys are prefixed by environment (VERCEL_ENV or "development") so one Redis
  * instance can serve both Preview and Production without collision.
  *
- * Key patterns (after prefix): <prefix>:active_config_id, <prefix>:emb:<hash>
- * TTLs: active_config 45s, embedding 300s.
+ * Key patterns (after prefix): <prefix>:active_config_id, <prefix>:emb:<hash>,
+ * <prefix>:sports_fact, <prefix>:sports_fact_rl:<userId>:<bucket>
+ * TTLs: active_config 45s, embedding 300s, sports_fact 300s, rate-limit buckets 1h.
  */
 
 import { Redis } from "@upstash/redis";

@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { CLAUDE_MODEL } from "@/lib/env.server";
 import { logError } from "@/lib/log.server";
+import {
+  consumeSportsFactRateLimit,
+  getCachedSportsFact,
+  setCachedSportsFact,
+} from "@/lib/sports-fact.server";
 import { getSession } from "@/lib/supabase-server-auth";
 
 import type { ErrorResponse, SportsFactResponse } from "@/lib/types";
@@ -29,7 +34,7 @@ Rules:
 Example format: "In 1995, the Pittsburgh Penguins mascot Iceburgh was once ejected from a game for spraying silly string on a referee."`;
 
 export async function GET(
-  request: NextRequest
+  _request?: NextRequest
 ): Promise<NextResponse<ErrorResponse | SportsFactResponse>> {
   const session = await getSession();
 
@@ -37,6 +42,27 @@ export async function GET(
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const cached = await getCachedSportsFact();
+  if (cached != null) {
+    return NextResponse.json(
+      { fact: cached },
+      { headers: { "X-Sports-Fact-Cache": "HIT" } }
+    );
+  }
+
+  const rate = await consumeSportsFactRateLimit(session.user.id);
+  if (!rate.allowed) {
+    const headers: Record<string, string> = {};
+    if (rate.retryAfterSec != null) {
+      headers["Retry-After"] = String(rate.retryAfterSec);
+    }
+
+    return NextResponse.json(
+      { error: "Too many sports fact requests; try again later." },
+      { headers, status: 429 }
+    );
   }
 
   try {
@@ -55,7 +81,14 @@ export async function GET(
     const fact =
       firstBlock?.type === "text" ? (firstBlock as { text: string; type: "text" }).text : "";
 
-    return NextResponse.json({ fact });
+    if (fact.trim().length > 0) {
+      await setCachedSportsFact(fact);
+    }
+
+    return NextResponse.json(
+      { fact },
+      { headers: { "X-Sports-Fact-Cache": "MISS" } }
+    );
   } catch (error) {
     logError("[sports-fact]", error);
 

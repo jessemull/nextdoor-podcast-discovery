@@ -7554,7 +7554,7 @@ BEGIN
         END IF;
     END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- Step 2: get_posts_with_scores_count (add p_post_type)
@@ -7606,7 +7606,7 @@ BEGIN
 
     RETURN result_count;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- Step 3: get_posts_by_date (add p_post_type)
@@ -7710,7 +7710,7 @@ BEGIN
         OFFSET p_offset;
     END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- Step 4: get_posts_by_date_count (add p_post_type)
@@ -7759,7 +7759,7 @@ BEGIN
 
     RETURN result_count;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- Step 5: get_posts_with_runtime_scores (add p_post_type)
@@ -7799,9 +7799,7 @@ RETURNS TABLE(
     scores JSONB,
     summary TEXT,
     why_podcast_worthy TEXT
-)
-LANGUAGE plpgsql
-AS $$
+) AS $$
 DECLARE
     v_weights JSONB;
     v_novelty_config JSONB;
@@ -8117,7 +8115,7 @@ BEGIN
         END IF;
     END IF;
 END;
-$$;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- Step 6: get_posts_with_runtime_scores_count (add p_post_type)
@@ -8143,9 +8141,7 @@ CREATE OR REPLACE FUNCTION get_posts_with_runtime_scores_count(
     p_weights JSONB DEFAULT NULL,
     p_post_type TEXT DEFAULT 'standard'
 )
-RETURNS INT
-LANGUAGE plpgsql
-AS $$
+RETURNS INT AS $$
 DECLARE
     v_weights JSONB;
     v_novelty_config JSONB;
@@ -8202,7 +8198,7 @@ BEGIN
 
     RETURN v_count;
 END;
-$$;
+$$ LANGUAGE plpgsql SET search_path = public;
 -- Migration: Enable RLS on podcast tables (Supabase Security Advisor)
 -- Run in Supabase SQL Editor after 062 (or latest prior migration).
 --
@@ -8219,3 +8215,75 @@ ALTER TABLE episode_embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE podcast_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE podcast_episodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE podcast_settings ENABLE ROW LEVEL SECURITY;
+-- Migration: Set search_path on feed RPCs (Supabase Security Advisor)
+-- Run after 063_podcast_tables_enable_rls.sql (or latest prior migration).
+--
+-- Fixes "Function Search Path Mutable" for feed RPCs. Uses the catalog to ALTER
+-- every overload of these names that exists (signatures differ across migration
+-- history; hard-coded ALTER FUNCTION fails if 062 has not been applied yet).
+--
+-- Skips functions owned by extensions (same pattern as 044_security_advisor_fixes.sql).
+
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public'
+      AND p.prokind = 'f'
+      AND p.proname IN (
+        'get_posts_by_date',
+        'get_posts_by_date_count',
+        'get_posts_with_runtime_scores',
+        'get_posts_with_runtime_scores_count',
+        'get_posts_with_scores',
+        'get_posts_with_scores_count'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.objid = p.oid
+          AND d.classid = 'pg_proc'::regclass
+          AND d.refclassid = 'pg_extension'::regclass
+      )
+  LOOP
+    EXECUTE format(
+      'ALTER FUNCTION %I.%I(%s) SET search_path = public',
+      r.nspname,
+      r.proname,
+      r.args
+    );
+  END LOOP;
+END $$;
+-- Migration: Drop broad anon SELECT policies (defense in depth)
+-- Run in Supabase SQL Editor after 064 (or latest prior migration).
+--
+-- The web app and scraper use SUPABASE_SERVICE_KEY for all post/dashboard data
+-- (PostgREST bypasses RLS for the service role). The browser Supabase client is
+-- used only for Auth (sign-in, MFA, password reset), not for querying posts,
+-- embeddings, scores, or jobs.
+--
+-- Removing these policies prevents unauthenticated callers who know
+-- NEXT_PUBLIC_SUPABASE_ANON_KEY from reading sensitive tables via the REST API.
+-- RLS remains enabled; service role and SECURITY DEFINER RPCs used with the
+-- service role are unchanged.
+
+DROP POLICY IF EXISTS "Anon can read background_jobs" ON background_jobs;
+
+DROP POLICY IF EXISTS "Anon can read llm_scores" ON llm_scores;
+
+DROP POLICY IF EXISTS "Anon can read neighborhoods" ON neighborhoods;
+
+DROP POLICY IF EXISTS "Anon can read post_embeddings" ON post_embeddings;
+
+DROP POLICY IF EXISTS "Anon can read post_scores" ON post_scores;
+
+DROP POLICY IF EXISTS "Anon can read posts" ON posts;
+
+DROP POLICY IF EXISTS "Anon can read settings" ON settings;
+
+DROP POLICY IF EXISTS "Anon can read topic_frequencies" ON topic_frequencies;
+
+DROP POLICY IF EXISTS "Anon can read weight_configs" ON weight_configs;

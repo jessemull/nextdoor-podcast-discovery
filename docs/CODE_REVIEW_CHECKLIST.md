@@ -7,7 +7,7 @@ This checklist applies to:
 - SQL (PostgreSQL, Supabase, pgvector, PL/pgSQL)
 - CI/CD (GitHub Actions for CI only, Vercel for web deploy)
 - Security tooling (bandit, pip-audit, ESLint, etc.)
-- Infrastructure (Docker, Redis, Supabase)
+- Infrastructure (Redis, Supabase, Vercel)
 
 ---
 
@@ -167,7 +167,6 @@ All of the following must pass before merge. Run from repo root.
 - [ ] Cron (if used) runs on the server, not in GitHub
 - [ ] CI caching configured correctly
 - [ ] Vercel deployment unaffected
-- [ ] Docker config valid
 - [ ] No environment drift
 - [ ] Lockfiles committed (`package-lock.json`, etc.); dependency adds/version bumps intentional and documented
 

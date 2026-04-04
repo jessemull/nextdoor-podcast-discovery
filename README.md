@@ -11,6 +11,7 @@ Automatically discover, analyze, and curate interesting Nextdoor posts for podca
   - [Worker](#worker)
 - [Technologies](#technologies-used)
 - [Architecture](#architecture)
+- [Pull requests](#pull-requests)
 - [Repository structure](#repository-structure)
 - [Scripts](#scripts)
 - [Makefile](#makefile)
@@ -20,6 +21,7 @@ Automatically discover, analyze, and curate interesting Nextdoor posts for podca
   - [Quality](#makefile--quality)
   - [Security](#makefile--security)
   - [Testing](#makefile--testing)
+  - [Deploy](#makefile--deploy)
   - [Utilities](#makefile--utilities)
 - [Environment variables](#environment-variables)
 - [Setup & quick start](#setup--quick-start)
@@ -66,16 +68,19 @@ The **podcast** consumes this data: hosts pick posts from the dashboard to discu
 
 | Feature | Description |
 | :------ | :----------- |
-| Authentication | Supabase Auth (email/password); signup disabled; users created manually in Supabase Dashboard |
+| Authentication | Supabase Auth (email/password + optional TOTP MFA); signup disabled; users created manually in Supabase Dashboard |
 | Post feed | Paginated, filterable; sort by score or “podcast worthy”; filter by neighborhood, min reactions, episode date; “why podcast worthy” and tags |
 | Search | Keyword (full-text) + semantic (embedding) search; configurable similarity threshold; defaults from settings |
 | Post detail | Single post + related posts (semantic similarity) |
 | Saved posts | Mark saved; filter feed by saved |
 | Episode tracking | Mark “used on episode” with date; filter by episode date; avoid reuse |
-| Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults |
+| Settings | Weight sliders; “Save & Recompute Scores” (new config + background job); view/activate configs; cancel/retry jobs; search defaults; MFA enrollment in admin settings |
 | Admin access | Dashboard and `/api/admin/*` require a signed-in Supabase user. Tighter admin roles (e.g. auth provider roles or JWT claims) can be added later. |
-| Admin / jobs | List jobs, stats, cancel job, activate weight config |
+| Admin / jobs | Jobs, scraper runs, permalink queue, recompute scores, weight configs, trigger scrape, backfill dimension, podcast upload and metadata |
+| Admin / content | Episodes and categories (CRUD), classifieds, RSS feed preview, per-post admin view, stats |
 | Pittsburgh sports fact | Shown to all logged-in users on home page; Claude Haiku; error message if API fails |
+| Public podcast site | Published episodes, categories, search, subscribe, about (see `web/app/(podcast)/`) |
+| Podcast RSS | `GET /feed.xml` — RSS for published episodes |
 | Stats panel | Post counts, embedding backlog, etc. |
 
 ### Worker
@@ -89,7 +94,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 
 **Scraper:** Python 3.11+, Playwright, Anthropic (Claude Haiku), OpenAI, Supabase Python client, Cryptography (Fernet), Tenacity.
 
-**Web:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, React Query (TanStack), Supabase Auth, Zod, Vitest + Testing Library.
+**Web:** Next.js 16+ (App Router), React 19, TypeScript, Tailwind CSS, React Query (TanStack), Supabase Auth, Zod, Vitest + Testing Library.
 
 **Database & deploy:** Supabase (PostgreSQL + pgvector), Vercel (Next.js Hobby).
 
@@ -113,7 +118,7 @@ Conventions (from `.cursorrules`): PEP 8 and type hints (Python); alphabetized i
 - **Scraper** — Writes `posts`; optionally scoring + topic recount. Reads/writes `sessions` for cookies. Uses Supabase **service key** (same as web server-side).
 - **Embedder** (`src.embed`) — Reads `posts` and `llm_scores`; writes `post_embeddings`. No browser.
 - **Worker** — Reads `background_jobs`, `weight_configs`, `llm_scores`/topic data; writes `post_scores` and job status. Triggered by “Save & Recompute” in the UI.
-- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Supabase Auth session; signup is disabled and users are created manually in the Supabase Dashboard.
+- **Web app** — Supabase **anon key** (client) and **service key** (server). All mutation/admin routes require Supabase Auth session (optional TOTP MFA when enrolled); signup is disabled and users are created manually in the Supabase Dashboard.
 - **Vercel** — Hosts Next.js only. Scraper and two workers (recompute + permalink) run on a server you control; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Pull requests
@@ -132,11 +137,11 @@ nextdoor/
 │   └── scripts/           # Ops-only SQL (truncate, repair RPCs, etc.); not the main bootstrap
 ├── scraper/               # Python scraper + workers
 │   ├── src/
-│   │   ├── main.py         # CLI: scrape, score, embed, worker
+│   │   ├── main.py         # CLI: scrape, score, embed pipeline
 │   │   ├── scraper.py     # Playwright scraper
 │   │   ├── post_extractor.py, post_storage.py, session_manager.py
 │   │   ├── llm_scorer.py, llm_prompts.py, embedder.py, embed.py
-│   │   ├── recount_topics.py, worker.py, novelty.py
+│   │   ├── recount_topics.py, worker.py, novelty.py  # worker: python -m src.worker
 │   │   ├── config.py, exceptions.py
 │   ├── tests/
 │   ├── pyproject.toml, requirements.txt
@@ -147,6 +152,7 @@ nextdoor/
 │   └── SUPABASE_MIGRATIONS.md  # Run migrations in both Supabase projects
 ├── scripts/
 │   ├── deploy-to-server.sh    # SSH + git pull (optional scrape)
+│   ├── *.service              # systemd units (recompute + permalink; install-worker-service.sh)
 │   ├── setup-server.sh        # One-time production host setup
 │   ├── run-embeddings.sh      # Embed (optional healthcheck ping)
 │   ├── run-scrape.sh          # Scrape + recount (optional healthcheck ping)
@@ -154,10 +160,9 @@ nextdoor/
 │   ├── generate-encryption-key.py
 │   └── test-supabase-connection.py
 ├── web/                   # Next.js app
-│   ├── app/               # App Router: page, layout, api/*, posts, search, settings
+│   ├── app/               # App Router: dashboard, (podcast), admin, api/*, login, etc.
 │   ├── components/, lib/, tests/
 │   ├── package.json, next.config.js
-├── docker-compose.yml     # Local Postgres + pgvector (dev only)
 ├── Makefile
 ├── DOM.html               # Optional: mobile DOM snapshot for scraper debugging
 └── README.md
@@ -176,7 +181,9 @@ nextdoor/
 | `scripts/setup-server.sh` | One-time production host setup: install deps, clone repo, venv, scraper, Playwright Chromium, .env from example, log dir, cron. Run on the host (as root for full setup or as target user). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). |
 | `scripts/tail-logs.sh` | Tail scraper logs on the server via SSH. Set `DEPLOY_HOST`; optional `LOG_PATH` (default `~/nextdoor-logs/scraper.log`). Use `-n N` for last N lines. |
 | `scripts/test-supabase-connection.py` | Connects to Supabase, lists settings and neighborhoods. Run with scraper env and `supabase` installed. |
+| `scripts/validate-scraper-env.py` | Validates required variables in `scraper/.env` (aligned with scraper `REQUIRED_ENV_VARS`). Run from repo root. |
 | `scripts/verify-host-env.sh` | After editing `scraper/.env`, run from repo root to validate required vars and test Supabase. See [docs/HOST_ENV_CHECKLIST.md](docs/HOST_ENV_CHECKLIST.md). |
+| `scripts/verify-host-prereqs.sh` | Preflight on the production host: supported OS/package manager, sudo, network — before `setup-server.sh`. |
 
 ## Makefile
 
@@ -188,17 +195,14 @@ Run **`make help`** for the short list. Targets by section:
 | :----- | :----------- |
 | `venv` | Create `.venv` in repo root |
 | `install` | Install scraper + web deps (expects venv active) |
-| `install-scraper` | pip install + `playwright install chromium` |
+| `install-scraper` | pip install + `playwright install chromium` (requires active repo-root venv or exits with error) |
 | `install-web` | `npm install --legacy-peer-deps` in web |
 
 ### Makefile — Database
 
 | Target | Description |
 | :----- | :----------- |
-| `db-up` | Start local Postgres (docker-compose) |
-| `db-down` | Stop local DB |
-| `db-reset` | Wipe local DB (down + remove volume + up) |
-| `db-migrate-local` | Run all migrations into local Postgres |
+| `db-bootstrap` | Regenerate `database/bootstrap.sql` from all files in `database/migrations/` (commit after schema changes) |
 | `db-migrate-prod` | Print instructions for Supabase SQL Editor |
 
 ### Makefile — Development
@@ -210,16 +214,22 @@ Run **`make help`** for the short list. Targets by section:
 | `dev-web` | `npm run dev` in web |
 | `inspect-scraper` | Open browser on feed, pause for DOM inspection |
 | `open-trending-details` | Open trending tab, click first post to details view, pause for inspection |
+| `recompute-scores-once` | Process one pending `recompute_final_scores` job locally (`src.worker --once`; queue job via admin API first) |
 | `scrape-sample` | Scrape 25 trending posts (full pipeline) |
+| `scrape-trending-300` | Long run: 300 trending posts under `caffeinate` (Mac; avoids sleep freezing the browser) |
+| `scrape-visible` | Scrape 5 trending posts with visible Chromium (watch the feed) |
+| `tune-ranking-weights` | Tune active weight configs; pass `ARGS='...'` (see `make help`) |
 
 ### Makefile — Quality
 
 | Target | Description |
 | :----- | :----------- |
+| `format` | ruff format + `ruff check --fix` in scraper |
 | `lint` | lint-scraper + lint-web |
-| `lint-scraper` | ruff format check, ruff check, mypy |
+| `lint-ci` | lint-scraper + `lint-web-fix` (used in CI after `format`) |
+| `lint-scraper` | ruff format (applies), ruff format `--check`, ruff check, mypy |
 | `lint-web` | `npm run lint` |
-| `format` | ruff format + fix in scraper |
+| `lint-web-fix` | `npm run lint:fix` (ESLint with `--fix`) |
 
 ### Makefile — Security
 
@@ -237,19 +247,27 @@ Run **`make help`** for the short list. Targets by section:
 | `test-scraper` | pytest in scraper |
 | `test-web` | `npm test` (Vitest) in web |
 
+### Makefile — Deploy
+
+| Target | Description |
+| :----- | :----------- |
+| `deploy-scraper` | SSH deploy: `scripts/deploy-to-server.sh` (requires `DEPLOY_HOST`; optional `FEED=`) |
+| `deploy-web-prod` | Merge `main` into `release` and push (promotes web to production; requires clean git tree) |
+| `tail-logs` | Tail remote scraper log via `scripts/tail-logs.sh` (requires `DEPLOY_HOST`; optional `ARGS`) |
+
 ### Makefile — Utilities
 
 | Target | Description |
 | :----- | :----------- |
-| `gen-key` | Run `scripts/generate-encryption-key.py` |
 | `clean` | Remove `__pycache__`, `.pytest_cache`, `node_modules`, `.next`, `*.pyc` |
+| `gen-key` | Run `scripts/generate-encryption-key.py` |
 
-The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper` warns if `VIRTUAL_ENV` is not set.
+The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper` **exits with an error** if `VIRTUAL_ENV` is not set.
 
 ## Environment variables
 
 - **Scraper:** `scraper/.env` (copy from `scraper/.env.example`). Required: Nextdoor credentials, Supabase URL and service key, `SESSION_ENCRYPTION_KEY`, Anthropic and OpenAI keys. Optional: `APP_URL` and `INTERNAL_API_SECRET` (production worker → app cache invalidation), `SCRAPER_LOG_DIR` or `SCRAPER_LOG_FILE`, `UNSCORED_BATCH_LIMIT`. For dev use dev Supabase; on the server use **production** Supabase only. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
-- **Web:** `web/.env.local` (copy from `web/.env.example`). Required: Supabase URL/keys. Optional: `ANTHROPIC_API_KEY` (sports fact), `INTERNAL_API_SECRET`. Recommended for Vercel: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (cache; keys are namespaced by env). Full matrix and dev vs prod: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+- **Web:** `web/.env.local` (copy from `web/.env.example`). Required: Supabase URL/keys. **`OPENAI_API_KEY`** — required for **semantic (embedding) search**, search suggestions, and server-side episode/OpenAI features. Optional: `ANTHROPIC_API_KEY` (Pittsburgh sports fact on the home page), `INTERNAL_API_SECRET`. Recommended for Vercel: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (cache; keys are namespaced by env). Full matrix and dev vs prod: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ## Setup & quick start
 
@@ -262,9 +280,7 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 2. **Env files** — Create `scraper/.env` and `web/.env.local` from the example files; fill in all required variables.
 
-3. **Database**
-   - **Production:** Create a Supabase project and run [`database/bootstrap.sql`](database/bootstrap.sql) once in the SQL Editor, or apply only new migration files in order on existing projects (see [Database](#database) and [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md)).
-   - **Local:** `make db-up` then `make db-migrate-local`.
+3. **Database** — Use a **dev** Supabase project for local development and a separate project for production. For a **new** project, run [`database/bootstrap.sql`](database/bootstrap.sql) once in the SQL Editor. For **existing** projects, apply only new files from `database/migrations/` in numeric order. See [Database](#database) and [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md).
 
 4. **Scraper (one-off)**
    ```bash
@@ -278,11 +294,9 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 ## Database
 
-**Production:** Supabase. For a **new** project, apply [`database/bootstrap.sql`](database/bootstrap.sql) once (regenerate with `make db-bootstrap` when migrations change). For **existing** projects, run only new files in `database/migrations/` in numeric order in the SQL Editor. For two projects (dev + prod), see [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md).
+**Supabase:** For a **new** project, apply [`database/bootstrap.sql`](database/bootstrap.sql) once (regenerate with `make db-bootstrap` when migrations change). For **existing** projects, run only new files in `database/migrations/` in numeric order in the SQL Editor. For dev and prod projects, see [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md). Point `scraper/.env` and `web/.env.local` at the appropriate project URL and keys ([docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md)).
 
-**Local dev:** `docker-compose up -d db` (pgvector/pg16), then `make db-migrate-local` to pipe migrations into the container.
-
-**Main tables:** `neighborhoods`, `sessions` (encrypted cookies), `posts`, `llm_scores`, `post_embeddings`, `post_scores`, `weight_configs`, `background_jobs`, `topic_frequencies`, `settings`.
+**Main tables:** `background_jobs`, `llm_scores`, `neighborhoods`, `post_embeddings`, `post_scores`, `posts`, `scraper_runs` (self-reported scrape outcomes), `sessions` (encrypted cookies), `settings`, `topic_frequencies`, `weight_configs`.
 
 **Key RPCs:** `get_posts_with_scores`, `get_posts_by_date`, `search_posts_by_embedding`, `get_unscored_posts`, `recount_topic_frequencies`, `get_embedding_backlog_count`, and others used by web and scraper. See `database/migrations/` for full schema and RPC definitions.
 
@@ -300,17 +314,17 @@ The Makefile assumes a **single venv at repo root** (`.venv`); `install-scraper`
 
 **Logging:** By default logs go to stdout. On the server, set `SCRAPER_LOG_DIR=~/nextdoor-logs` (or `SCRAPER_LOG_FILE=/path/to/scraper.log`) in `scraper/.env` to also write rotating logs (5 MB per file, 3 backups). To inspect when something goes wrong: SSH to the server and run `tail -n 500 ~/nextdoor-logs/scraper.log` or `grep -i error ~/nextdoor-logs/scraper.log`, or use `scripts/tail-logs.sh`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-**Long runs and debugging:** For large runs use `make scrape-trending-300` (or `python -m src.main --feed-type trending --max-posts 300`). The Make target runs under **caffeinate** (`-dis`: display and system stay awake) so the Mac does not sleep or show the screensaver and freeze the browser. The pipeline may stop before `max_posts` if the feed runs out of new content: after **5 consecutive scrolls** with 0 new posts it logs "No new posts after 5 scrolls, stopping" (e.g. 200 posts instead of 300). The pipeline logs PID and start time, and a **heartbeat every 60s** so you can tell if it’s still running or stuck. If heartbeats continue but no new “Scroll N” or “Scrolling down” logs, the main thread is stuck in a Playwright call (often due to display/sleep having fired before caffeinate). Granular logs (“Extracting from page (scroll N…)”, “Scrolling down (about to run scroll N)”, “Scroll down done”) show where it stalled. To capture logs: `PYTHONUNBUFFERED=1 make scrape-trending-300 2>&1 | tee scrape.log`. Every exit logs `Exiting with code 0` or `Exiting with code 1`.
+**Long runs and debugging:** For large runs use `make scrape-trending-300` (or `python -m src.main --feed-type trending --max-posts 300`). The Make target runs under **caffeinate** (`-dis`: display and system stay awake) so the Mac does not sleep or show the screensaver and freeze the browser. The pipeline may stop before `max_posts` if the feed runs out of new content: after **5 consecutive scrolls** with 0 new posts it logs "No new posts after 5 scrolls, stopping" (e.g. 200 posts instead of 300). The pipeline logs PID and start time, and a **heartbeat every 300 seconds (5 minutes)** so you can tell if it’s still running or stuck. If heartbeats continue but no new “Scroll N” or “Scrolling down” logs, the main thread is stuck in a Playwright call (often due to display/sleep having fired before caffeinate). Granular logs (“Extracting from page (scroll N…)”, “Scrolling down (about to run scroll N)”, “Scroll down done”) show where it stalled. To capture logs: `PYTHONUNBUFFERED=1 make scrape-trending-300 2>&1 | tee scrape.log`. Every exit logs `Exiting with code 0` or `Exiting with code 1`.
 
 Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at least once.
 
 ## Web UI (Next.js)
 
-**Pages:** `/` (feed), `/posts/[id]` (post detail), `/search`, `/settings`, `/login`.
+**Pages (dashboard):** `/` (feed), `/posts/[id]`, `/search`, `/settings`, `/login`, `/reset-password`. **Admin:** `/admin` (hub), jobs, stats, posts, feed preview, episodes and categories (CRUD), classifieds, settings (including MFA). **Public podcast:** episode and category pages, search, subscribe, about (under `web/app/(podcast)/`). **RSS:** `/feed.xml`.
 
-**API routes:** `GET/POST /api/posts`, `GET/POST /api/posts/[id]`, `POST /api/posts/[id]/saved`, `POST /api/posts/[id]/used`, `GET /api/search`, `GET/PUT /api/settings`, `GET /api/neighborhoods`, `GET /api/stats`, `GET /api/sports-fact`, plus admin: jobs, recompute-scores, weight-configs.
+**API routes (summary):** Posts (`/api/posts`, `/api/posts/[id]`, bulk, saved, used, ignored); search and `/api/search/suggestions`; `/api/settings` and scoring few-shot helpers; `/api/neighborhoods`, `/api/stats`, `/api/sports-fact`. **Admin:** jobs (list, cancel, retry), recompute scores, weight configs, activate, invalidate active config, permalink queue, scraper runs, trigger scrape, backfill dimension; podcast upload, episodes, categories, signed URLs, embed. For the full list, see [`web/app/api/`](web/app/api/).
 
-**Auth:** Supabase Auth; middleware and API routes use `getSession()` from `lib/supabase-server-auth`; signup disabled; users created manually.
+**Auth:** Supabase Auth (email/password and optional TOTP MFA on login and in admin settings); middleware and API routes use `getSession()` from `lib/supabase-server-auth`; signup disabled; users created manually.
 
 **Data:** Server components and API routes use the Supabase server client; the client uses React Query against the API. Helpers and embedding cache live in `lib/`.
 
@@ -326,7 +340,8 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 
 ## Testing & linting
 
-- **Lint** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats scraper code.
+- **Lint (local)** — `make lint` (scraper: ruff + mypy; web: eslint). `make format` formats and fixes Ruff issues in the scraper.
+- **Lint (CI)** — `make format` then `make lint-ci` (same as lint but ESLint runs with `--fix` on the web app). See [CI/CD & deployment](#cicd--deployment).
 - **Test** — `make test` runs pytest in scraper and Vitest in web. Scraper tests mock Playwright, Anthropic, Supabase; web tests mock Supabase Auth session where needed.
 - **E2E / manual** — Use the UI and Supabase to verify: create weight config → run worker → activate → check feed; run scraper → check posts; run embed → check search. Web tests mock Supabase Auth session.
 
@@ -335,13 +350,13 @@ Use repo root `.venv` or `scraper/.venv`; run `playwright install chromium` at l
 - **Secrets** — Environment variables and GitHub Secrets only; never committed.
 - **Scraper** — `make security-scraper` runs bandit and pip-audit.
 - **Web** — `make security-web` runs npm audit.
-- **Auth** — Supabase Auth; server-side session checks on all mutation and admin API routes; signup disabled; users created manually in Dashboard.
+- **Auth** — Supabase Auth (optional MFA); server-side session checks on all mutation and admin API routes; signup disabled; users created manually in Dashboard.
 
 ## CI/CD & deployment
 
 | Workflow | Trigger / schedule | What it does |
 | :------- | :----------------- | :----------- |
-| **CI** | Pull request and push to `main` | Lint (scraper + web), test (scraper + web), security (bandit, pip-audit, npm audit), build web. |
+| **CI** | Pull request and push to `main` or `release` | `make format`, `make lint-ci` (scraper linters + ESLint `--fix` on web), `make test`, `make security` (bandit, pip-audit, npm audit), `make build` (Next.js). |
 
 **Environments:** Dev (Preview + dev Supabase, local scraper) and production (Vercel Production + prod Supabase, server scraper/worker). [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) has the full variable matrix, Redis notes, and deploy steps.
 
