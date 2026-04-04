@@ -917,7 +917,12 @@ export function PostFeed({
         )}
 
         {(!searchSlot || !searchSlot.query.trim()) && (
-          <div className={cn("bg-background", bulkMode && "pr-[17px]")}>
+          <div
+            className={cn(
+              "bg-background",
+              bulkMode && "pr-[17px] lg:pr-7"
+            )}
+          >
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-1">
                 <button
