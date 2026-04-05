@@ -44,6 +44,7 @@ from src.worker_handlers import (  # noqa: E402
     process_fetch_permalink_job,
     process_run_scraper_job,
 )
+from src.worker_job_claim import claim_next_background_job  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -323,14 +324,6 @@ def process_recompute_job(supabase: Client, job: dict[str, Any]) -> None:
         weight_config_id,
     )
 
-    # Update job status to running
-    supabase.table("background_jobs").update(
-        {
-            "started_at": datetime.now(UTC).isoformat(),
-            "status": "running",
-        }
-    ).eq("id", job_id).execute()
-
     try:
         # Load dependencies
         weights, novelty_config, frequencies = _load_job_dependencies(
@@ -548,13 +541,6 @@ def process_backfill_dimension_job(supabase: Client, job: dict[str, Any]) -> Non
         dimension,
     )
 
-    supabase.table("background_jobs").update(
-        {
-            "started_at": datetime.now(UTC).isoformat(),
-            "status": "running",
-        }
-    ).eq("id", job_id).execute()
-
     try:
         anthropic = Anthropic()
         scorer = LLMScorer(anthropic, supabase)
@@ -672,22 +658,9 @@ def poll_and_process(supabase: Client, job_type: str, poll_interval: int = 30) -
 
     while True:
         try:
-            query = (
-                supabase.table("background_jobs")
-                .select("*")
-                .eq("status", "pending")
-                .order("created_at", desc=False)
-                .limit(1)
-            )
-            if len(job_types) == 1:
-                query = query.eq("type", job_types[0])
-            else:
-                query = query.in_("type", job_types)
+            job = claim_next_background_job(supabase, job_types)
 
-            result = query.execute()
-
-            if result.data and len(result.data) > 0:
-                job = cast(dict[str, Any], result.data[0])
+            if job:
                 actual_type = job.get("type") or ""
                 if actual_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)
@@ -771,21 +744,9 @@ def main() -> int:
             job_types = [t.strip() for t in args.job_type.split(",") if t.strip()] or [
                 "recompute_final_scores"
             ]
-            query = (
-                supabase.table("background_jobs")
-                .select("*")
-                .eq("status", "pending")
-                .order("created_at", desc=False)
-                .limit(1)
-            )
-            if len(job_types) == 1:
-                query = query.eq("type", job_types[0])
-            else:
-                query = query.in_("type", job_types)
-            result = query.execute()
+            job = claim_next_background_job(supabase, job_types)
 
-            if result.data and len(result.data) > 0:
-                job = cast(dict[str, Any], result.data[0])
+            if job:
                 actual_type = job.get("type") or ""
                 if actual_type == "recompute_final_scores":
                     process_recompute_job(supabase, job)

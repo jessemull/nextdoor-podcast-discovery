@@ -1,4 +1,5 @@
-# CI: Lint, test, security, and build on PR and push to main/release
+# CI: Lint, test, security, and build on PR and push to main/release.
+# Playwright is installed only so scraper unit tests can run; the production scraper is not executed in GitHub Actions.
 name: CI
 
 on:
@@ -45,8 +46,8 @@ jobs:
       - name: Lint (scraper + web, ESLint --fix in CI)
         run: make lint-ci
 
-      - name: Test (scraper + web)
-        run: make test
+      - name: Test (scraper + web with coverage)
+        run: make test-ci
 
       - name: Security (scraper + web)
         run: make security

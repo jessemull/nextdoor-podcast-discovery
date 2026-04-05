@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { getMfaApi } from "@/lib/supabase-mfa.client";
 import { getSupabase } from "@/lib/supabase.client";
 
 interface TotpFactor {
@@ -44,7 +45,7 @@ export function useMfa(): UseMfaResult {
     try {
       const supabase = getSupabase();
       // Supabase returns factors in data.all with factor_type (e.g. "totp"), not data.totp.
-      const { data, error } = await (supabase.auth as any).mfa.listFactors();
+      const { data, error } = await getMfaApi(supabase).listFactors();
       if (error) {
         throw error;
       }
@@ -73,12 +74,11 @@ export function useMfa(): UseMfaResult {
 
     try {
       const supabase = getSupabase();
+      const mfa = getMfaApi(supabase);
       // 1) Enroll a new TOTP factor to get QR/secret + factorId.
-      const { data: enrollData, error: enrollError } = await (supabase.auth as any).mfa.enroll(
-        {
-          factorType: "totp",
-        }
-      );
+      const { data: enrollData, error: enrollError } = await mfa.enroll({
+        factorType: "totp",
+      });
 
       if (enrollError) {
         throw enrollError;
@@ -93,10 +93,9 @@ export function useMfa(): UseMfaResult {
       }
 
       // 2) Start a challenge for this factor so verify() has a challengeId.
-      const { data: challengeData, error: challengeError } = await (supabase.auth as any).mfa
-        .challenge({
-          factorId,
-        });
+      const { data: challengeData, error: challengeError } = await mfa.challenge({
+        factorId,
+      });
 
       if (challengeError) {
         throw challengeError;
@@ -138,7 +137,7 @@ export function useMfa(): UseMfaResult {
 
       try {
         const supabase = getSupabase();
-        const { error } = await (supabase.auth as any).mfa.verify({
+        const { error } = await getMfaApi(supabase).verify({
           factorId: pendingEnrollment.factorId,
           challengeId: pendingEnrollment.challengeId,
           code,
@@ -174,7 +173,7 @@ export function useMfa(): UseMfaResult {
 
     try {
       const supabase = getSupabase();
-      const { error } = await (supabase.auth as any).mfa.unenroll({
+      const { error } = await getMfaApi(supabase).unenroll({
         factorId: enrolledTotp.id,
       });
       if (error) {

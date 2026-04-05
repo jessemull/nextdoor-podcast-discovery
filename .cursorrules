@@ -211,7 +211,7 @@ it("should [expected behavior] when [condition]", () => {
 ### API Routes
 - Validate request data before processing
 - Return consistent JSON responses: `{ data }` or `{ error }`
-- Use `auth0.getSession()` for auth checks
+- Use `getSession()` from `lib/supabase-server-auth.ts` for auth checks in route handlers
 
 ### Database
 - Use `getSupabase()` from `lib/supabase.client.ts` for client-side
@@ -219,9 +219,9 @@ it("should [expected behavior] when [condition]", () => {
 - Never expose service keys to client
 
 ### Auth
-- Auth0 (see `lib/auth0.ts`)
-- Access controlled by Auth0 only; no server-side email whitelist
-- Protect routes with middleware or `auth0.getSession()`
+- Supabase Auth (email/password + MFA); see `lib/supabase-server-auth.ts` and `middleware.ts`
+- Dashboard and `/api/admin/*` require an authenticated Supabase user (any signed-in user for now; prefer roles or JWT claims later, not env email lists)
+- Protect routes with middleware and `getSession()` in route handlers where needed
 
 ---
 
