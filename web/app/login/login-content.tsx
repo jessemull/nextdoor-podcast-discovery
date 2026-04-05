@@ -38,6 +38,13 @@ export function LoginContent() {
           </p>
         )}
 
+        {!flow.isInMfaFlow && reason === "recovery_link_invalid" && (
+          <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            This password reset link is invalid or has expired. Request a new
+            reset from the sign-in page.
+          </p>
+        )}
+
         {!flow.isInMfaFlow && flow.showForgotPassword ? (
           <LoginForgotForm
             email={flow.email}

@@ -23,9 +23,35 @@ export interface SessionUser {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+function createSupabaseAuthClientWithResponseCookies(
+  request: NextRequest,
+  response: NextResponse
+) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required for auth"
+    );
+  }
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, options, value }) =>
+          response.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+}
+
 /**
- * Create a Supabase auth client for the current request (Server Components / Route Handlers).
- * Uses next/headers cookies. For middleware, use createSupabaseAuthClientForMiddleware instead.
+ * Create a Supabase auth client for the current request (Server Components).
+ * Uses next/headers cookies. For middleware or Route Handlers that attach
+ * cookies to a NextResponse, use createSupabaseAuthClientForMiddleware or
+ * createSupabaseAuthClientForRouteHandler.
  */
 export async function createSupabaseAuthClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -62,24 +88,18 @@ export function createSupabaseAuthClientForMiddleware(
   request: NextRequest,
   response: NextResponse
 ) {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required for auth"
-    );
-  }
+  return createSupabaseAuthClientWithResponseCookies(request, response);
+}
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, options, value }) =>
-          response.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
+/**
+ * Create a Supabase auth client in a Route Handler. Reads cookies from the
+ * request and writes session cookies to the NextResponse you return.
+ */
+export function createSupabaseAuthClientForRouteHandler(
+  request: NextRequest,
+  response: NextResponse
+) {
+  return createSupabaseAuthClientWithResponseCookies(request, response);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, type MockedFunction, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "@/app/api/search/route";
 import { clearEmbeddingCacheForTest } from "@/lib/embedding-cache.server";
@@ -44,6 +44,11 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
+vi.mock("@/lib/active-config-cache.server", () => ({
+  getActiveWeightConfigId: vi.fn(),
+}));
+
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { getSession } from "@/lib/supabase-server-auth";
 
 /** Chain for supabase.from().select().in() used when enriching search results. */
@@ -53,11 +58,26 @@ const fromSelectInChain = () => ({
   })),
 });
 
+/** post_scores: select().in().eq() resolves to rows. */
+const postScoresChain = (rows: { final_score: number; post_id: string }[]) => ({
+  select: vi.fn(() => ({
+    in: vi.fn(() => ({
+      eq: vi.fn(() => Promise.resolve({ data: rows, error: null })),
+    })),
+  })),
+});
+
 describe("POST /api/search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearEmbeddingCacheForTest();
-    mockFrom.mockImplementation(() => fromSelectInChain());
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(null);
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "post_scores") {
+        return postScoresChain([]);
+      }
+      return fromSelectInChain();
+    });
     mockCreate.mockResolvedValue({
       data: [{ embedding: new Array(1536).fill(0.1) }],
     });
@@ -221,13 +241,38 @@ describe("POST /api/search", () => {
       error: null,
     });
 
-    mockFrom.mockReturnValue({
-      select: vi.fn(() => ({
-        in: vi.fn(() => ({
-          data: [],
-          error: null,
-        })),
-      })),
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(
+      "323e4567-e89b-12d3-a456-426614174000"
+    );
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "llm_scores") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(() =>
+              Promise.resolve({
+                data: [
+                  {
+                    categories: [],
+                    created_at: "2024-01-01T00:00:00Z",
+                    final_score: 2,
+                    id: "ls-1",
+                    model_version: "claude-3-haiku-20240307",
+                    post_id: "post-1",
+                    scores: {},
+                    summary: null,
+                    why_podcast_worthy: null,
+                  },
+                ],
+                error: null,
+              })
+            ),
+          })),
+        };
+      }
+      if (table === "post_scores") {
+        return postScoresChain([{ final_score: 8.5, post_id: "post-1" }]);
+      }
+      return fromSelectInChain();
     });
 
     const request = new NextRequest("http://localhost:3000/api/search", {
@@ -241,6 +286,7 @@ describe("POST /api/search", () => {
     expect(data.data).toHaveLength(1);
     expect(data.data[0].id).toBe("post-1");
     expect(data.data[0].text).toBe("Test post");
+    expect(data.data[0].llm_scores?.final_score).toBe(8.5);
   });
 
   it("should validate and clamp limit parameter", async () => {

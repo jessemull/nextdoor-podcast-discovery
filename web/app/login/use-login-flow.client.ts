@@ -67,7 +67,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         const supabase = getSupabase();
         const redirectTo =
           typeof window !== "undefined"
-            ? new URL("/reset-password", window.location.origin).href
+            ? new URL("/auth/confirm", window.location.origin).href
             : "";
         if (!redirectTo) {
           setForgotError("Could not determine reset URL. Please try again.");

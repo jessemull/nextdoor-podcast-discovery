@@ -2,144 +2,109 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+} from "react";
 
+import { getTotpFactorsFromListFactorsResponse } from "@/app/login/login-utils";
 import { Spinner } from "@/components/ui/Spinner";
+import { isInvalidRefreshTokenError } from "@/lib/auth-errors";
+import { getMfaApi } from "@/lib/supabase-mfa.client";
 import { getSupabase } from "@/lib/supabase.client";
 import { cn } from "@/lib/utils";
 
-type Status = "loading" | "invalid" | "verified" | "error";
+import type { FormEvent } from "react";
 
-/** Visible on-page debug info so we can see state after redirects without console. */
-interface PageDebug {
-  cookieNames: string[];
-  codeParamPresent: boolean;
-  codeParamLength: number;
-  exchangeError: string | null;
-  localStorageKeysWithVerifier: string[];
-  status: Status;
-  urlSearch: string;
-  verifierCookieNames: string[];
-}
-
-function getCookieNames(): string[] {
-  if (typeof document === "undefined") return [];
-  return document.cookie
-    .split(";")
-    .map((s) => s.trim().split("=")[0] ?? "")
-    .filter(Boolean);
-}
-
-function getLocalStorageKeysContaining(substring: string): string[] {
-  if (typeof localStorage === "undefined") return [];
-  const keys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.toLowerCase().includes(substring)) keys.push(key);
-  }
-  return keys;
-}
+type Phase = "error" | "invalid" | "loading" | "mfa" | "password";
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const code = searchParams.get("code");
-  const [status, dispatchStatus] = useReducer(
-    (_state: Status, action: Status) => action,
-    "loading" as Status
+  const [phase, dispatchPhase] = useReducer(
+    (_state: Phase, action: Phase) => action,
+    "loading" as Phase
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mfaBootstrapError, setMfaBootstrapError] = useState<string | null>(
+    null
+  );
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const initialSearchRef = useRef<string | null>(null);
-  const [debug, setDebug] = useState<PageDebug>({
-    cookieNames: [],
-    codeParamPresent: false,
-    codeParamLength: 0,
-    exchangeError: null,
-    localStorageKeysWithVerifier: [],
-    status: "loading",
-    urlSearch: "",
-    verifierCookieNames: [],
-  });
+  const [isSubmittingMfa, setIsSubmittingMfa] = useState(false);
 
-  // Capture URL search once on first mount so we don't lose it after client nav
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (initialSearchRef.current === null) {
-      initialSearchRef.current = window.location.search;
-    }
-  }, []);
-
-  // Keep debug in sync with status/error and capture URL + cookies + localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const cookies = getCookieNames();
-    const verifierCookies = cookies.filter(
-      (n) =>
-        n.includes("code-verifier") || n.includes("verifier")
-    );
-    setDebug((prev) => ({
-      ...prev,
-      codeParamLength: code?.length ?? 0,
-      codeParamPresent: Boolean(code?.trim()),
-      cookieNames: cookies,
-      localStorageKeysWithVerifier: getLocalStorageKeysContaining("verifier"),
-      status,
-      urlSearch: initialSearchRef.current ?? window.location.search,
-      verifierCookieNames: verifierCookies,
-    }));
-  }, [code, status]);
-
-  // When we have a code: try client-side exchange. When we have no code: check for
-  // existing session (e.g. server did the exchange and redirected here).
   useEffect(() => {
     let cancelled = false;
-    if (!code?.trim()) {
-      (async () => {
-        const supabase = getSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (cancelled) return;
-        dispatchStatus(user ? "verified" : "invalid");
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }
     (async () => {
       const supabase = getSupabase();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (cancelled) return;
-      if (error) {
-        const cookies = getCookieNames();
-        setErrorMessage(error.message);
-        setDebug((prev) => ({
-          ...prev,
-          cookieNames: cookies,
-          exchangeError: error.message,
-          localStorageKeysWithVerifier: getLocalStorageKeysContaining("verifier"),
-          verifierCookieNames: cookies.filter(
-            (n) =>
-              n.includes("code-verifier") || n.includes("verifier")
-          ),
-        }));
-        dispatchStatus("error");
+      if (!user) {
+        dispatchPhase("invalid");
         return;
       }
-      dispatchStatus("verified");
+
+      const { data: factorsData, error: factorsError } =
+        await getMfaApi(supabase).listFactors();
+      if (cancelled) return;
+      if (factorsError) {
+        setMfaBootstrapError(factorsError.message);
+        dispatchPhase("error");
+        return;
+      }
+
+      const totpFactors = getTotpFactorsFromListFactorsResponse(factorsData);
+      const verified = totpFactors.filter((f) => f.status === "verified");
+      if (verified.length === 0) {
+        dispatchPhase("password");
+        return;
+      }
+
+      const factorId = verified[0].id;
+      const { data: challengeData, error: challengeError } =
+        await getMfaApi(supabase).challenge({
+          factorId,
+        });
+      if (cancelled) return;
+      if (challengeError) {
+        setMfaBootstrapError(challengeError.message);
+        dispatchPhase("error");
+        return;
+      }
+      const challengeId = challengeData?.id;
+      if (!challengeId) {
+        setMfaBootstrapError("Could not start two-factor verification.");
+        dispatchPhase("error");
+        return;
+      }
+
+      setMfaFactorId(factorId);
+      setMfaChallengeId(challengeId);
+      dispatchPhase("mfa");
     })();
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, []);
+
+  const handleBackToSignIn = useCallback(async () => {
+    await getSupabase().auth.signOut();
+    router.push("/login");
+  }, [router]);
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       setErrorMessage(null);
       if (password !== confirmPassword) {
@@ -168,6 +133,47 @@ function ResetPasswordContent() {
     [password, confirmPassword, router]
   );
 
+  const handleVerifyMfa = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      if (!mfaFactorId || !mfaChallengeId || mfaCode.trim().length === 0) {
+        return;
+      }
+
+      setMfaError(null);
+      setIsSubmittingMfa(true);
+
+      try {
+        const supabase = getSupabase();
+        const { error: verifyError } = await getMfaApi(supabase).verify({
+          challengeId: mfaChallengeId,
+          code: mfaCode.trim(),
+          factorId: mfaFactorId,
+        });
+        if (verifyError) {
+          throw verifyError;
+        }
+
+        await supabase.auth.getSession();
+        await new Promise((r) => setTimeout(r, 200));
+        setMfaCode("");
+        dispatchPhase("password");
+      } catch (err) {
+        if (isInvalidRefreshTokenError(err)) {
+          await getSupabase().auth.signOut();
+          setMfaError(
+            "Session could not be established. Please start over from the reset link."
+          );
+        } else {
+          setMfaError("Invalid code. Please double-check and try again.");
+        }
+      } finally {
+        setIsSubmittingMfa(false);
+      }
+    },
+    [mfaChallengeId, mfaCode, mfaFactorId]
+  );
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <div className="bg-surface-elevated mx-4 w-full max-w-md rounded-2xl border border-border p-8 shadow-2xl">
@@ -178,11 +184,27 @@ function ResetPasswordContent() {
           <p className="text-white">Set a new password for your account.</p>
         </div>
 
-        {status === "loading" && (
-          <p className="text-muted text-center text-sm">Verifying link…</p>
+        {phase === "loading" && (
+          <p className="text-muted text-center text-sm">Checking session…</p>
         )}
 
-        {status === "invalid" && (
+        {phase === "error" && mfaBootstrapError && (
+          <>
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              {mfaBootstrapError}
+            </p>
+            <p className="text-center text-sm text-muted">
+              <Link
+                className="text-foreground underline hover:no-underline"
+                href="/login"
+              >
+                Back To Sign In
+              </Link>
+            </p>
+          </>
+        )}
+
+        {phase === "invalid" && (
           <>
             <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
               This link is invalid or has expired. Request a new password reset
@@ -199,27 +221,68 @@ function ResetPasswordContent() {
           </>
         )}
 
-        {status === "error" && (
-          <>
-            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
-              {errorMessage ?? "Verification failed."}
-            </p>
-            <p className="text-muted mb-4 text-xs">
-              If you opened this link in a new tab, try copying the link and
-              pasting it into the tab where you requested the reset.
-            </p>
-            <p className="text-center text-sm text-muted">
-              <Link
-                className="text-foreground underline hover:no-underline"
-                href="/login"
+        {phase === "mfa" && (
+          <form onSubmit={handleVerifyMfa}>
+            <div className="mb-4">
+              <h2 className="mb-1 text-lg font-semibold text-foreground">
+                Two-factor authentication
+              </h2>
+              <p className="text-sm text-muted">
+                Enter the 6-digit code from your authenticator app to continue.
+              </p>
+            </div>
+            <div className="mb-4">
+              <label
+                className="mb-1 block text-sm font-medium text-white"
+                htmlFor="reset-mfa-code"
+              >
+                6-Digit Code
+              </label>
+              <input
+                className="border-border bg-background w-full rounded-lg border px-3 py-2 text-foreground focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+                id="reset-mfa-code"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter code"
+                value={mfaCode}
+                onChange={(e) =>
+                  setMfaCode(e.target.value.replace(/\D/g, ""))
+                }
+              />
+            </div>
+            {mfaError && (
+              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+                {mfaError}
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                className={cn(
+                  "w-1/2 rounded-lg px-4 py-2 text-center text-sm font-medium transition-all duration-200",
+                  "bg-surface-hover text-foreground border border-border",
+                  "hover:bg-surface-hover/80 focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                  "inline-flex items-center justify-center gap-2"
+                )}
+                disabled={isSubmittingMfa || mfaCode.length === 0}
+                type="submit"
+              >
+                {isSubmittingMfa && <Spinner size="sm" />}
+                Verify Code
+              </button>
+              <button
+                className="w-1/2 rounded-lg border border-border bg-transparent px-4 py-2 text-center text-sm font-medium text-muted hover:bg-surface-hover/40 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmittingMfa}
+                type="button"
+                onClick={handleBackToSignIn}
               >
                 Back To Sign In
-              </Link>
-            </p>
-          </>
+              </button>
+            </div>
+          </form>
         )}
 
-        {status === "verified" && (
+        {phase === "password" && (
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label
@@ -294,35 +357,6 @@ function ResetPasswordContent() {
             </button>
           </form>
         )}
-
-        {/* Visible debug: survives redirects and works without console */}
-        <details className="border-border bg-background/80 mt-6 rounded-lg border p-3">
-          <summary className="cursor-pointer text-xs font-medium text-muted">
-            Debug (reset flow)
-          </summary>
-          <p className="text-muted mt-2 text-xs">
-            In DevTools → Application: check Cookies and Local Storage for keys
-            containing &quot;code-verifier&quot;. Verifier must exist when you
-            open the reset link (set when you clicked Send Reset Link).
-          </p>
-          <pre className="text-muted mt-2 whitespace-pre-wrap break-all text-xs">
-            {JSON.stringify(
-              {
-                codeParamLength: debug.codeParamLength,
-                codeParamPresent: debug.codeParamPresent,
-                cookieNames: debug.cookieNames,
-                exchangeError: debug.exchangeError ?? "(none)",
-                status: debug.status,
-                urlSearchFirstCapture: debug.urlSearch || "(empty)",
-                verifierCookieNames: debug.verifierCookieNames,
-                localStorageKeysWithVerifier:
-                  debug.localStorageKeysWithVerifier,
-              },
-              null,
-              2
-            )}
-          </pre>
-        </details>
       </div>
     </div>
   );

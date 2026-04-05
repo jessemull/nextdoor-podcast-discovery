@@ -18,6 +18,11 @@ vi.mock("@/lib/supabase.server", () => ({
   getSupabaseAdmin: () => mockSupabase,
 }));
 
+vi.mock("@/lib/active-config-cache.server", () => ({
+  getActiveWeightConfigId: vi.fn(),
+}));
+
+import { getActiveWeightConfigId } from "@/lib/active-config-cache.server";
 import { getSession } from "@/lib/supabase-server-auth";
 
 const createParams = (id: string) => ({
@@ -27,6 +32,7 @@ const createParams = (id: string) => ({
 describe("GET /api/posts/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(null);
   });
 
   it("should return 401 when not authenticated", async () => {
@@ -77,7 +83,6 @@ describe("GET /api/posts/[id]", () => {
       summary: "Funny",
     };
 
-    const callCount = 0;
     mockFrom.mockImplementation((table: string) => {
       if (table === "posts") {
         return {
@@ -106,6 +111,69 @@ describe("GET /api/posts/[id]", () => {
     expect(data.data.id).toBe(postId);
     expect(data.data.text).toBe("Test post");
     expect(data.data.llm_scores?.final_score).toBe(8);
+  });
+
+  it("should use post_scores final_score when active weight config has a row", async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: { email: "test@example.com", id: "test-user-id" },
+    });
+    vi.mocked(getActiveWeightConfigId).mockResolvedValue(
+      "223e4567-e89b-12d3-a456-426614174000"
+    );
+
+    const postId = "123e4567-e89b-12d3-a456-426614174000";
+    const mockPost = {
+      id: postId,
+      text: "Test post",
+      neighborhood: { id: "n1", name: "Test", slug: "test" },
+    };
+    const mockScore = {
+      id: "score-1",
+      post_id: postId,
+      final_score: 1.6,
+      scores: { absurdity: 9 },
+      categories: ["humor"],
+      summary: "Funny",
+    };
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "posts") {
+        return {
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: mockPost, error: null }),
+        };
+      }
+      if (table === "llm_scores") {
+        return {
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: mockScore, error: null }),
+        };
+      }
+      if (table === "post_scores") {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({
+                data: [{ final_score: 9, post_id: postId }],
+                error: null,
+              }),
+            })),
+          })),
+        };
+      }
+      return {};
+    });
+
+    const response = await GET(
+      new Request(`http://localhost:3000/api/posts/${postId}`),
+      createParams(postId)
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.data.llm_scores?.final_score).toBe(9);
   });
 
   it("should return 404 when post not found", async () => {
