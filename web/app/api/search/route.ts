@@ -115,7 +115,9 @@ export async function GET(request: NextRequest) {
       supabase.from("llm_scores").select("*").in("post_id", postIds),
       getFinalScoresForPostIds(supabase, postIds),
     ]);
-    const scoresMap = new Map((scores || []).map((s: { post_id: string }) => [s.post_id, s]));
+    const scoresMap = new Map(
+      (scores || []).map((s) => [s.post_id, s])
+    );
 
     const results = posts.map((post: Record<string, unknown>) => {
       const pid = post.id as string;
@@ -300,7 +302,7 @@ export async function POST(request: NextRequest) {
     // Build maps for quick lookups
 
     const scoresMap = new Map(
-      (scores || []).map((score: { post_id: string }) => [score.post_id, score])
+      (scores || []).map((score) => [score.post_id, score])
     );
     const neighborhoodsMap = new Map(
       (neighborhoods || []).map((neighborhood: { id: string }) => [

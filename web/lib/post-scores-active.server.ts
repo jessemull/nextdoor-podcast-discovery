@@ -13,6 +13,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type AdminClient = SupabaseClient<Database>;
 
+type PostScoreFinalRow = Pick<
+  Database["public"]["Tables"]["post_scores"]["Row"],
+  "final_score" | "post_id"
+>;
+
 /**
  * Load final_score from post_scores for the given posts under the active weight config.
  */
@@ -40,7 +45,8 @@ export async function getFinalScoresForPostIds(
     return map;
   }
 
-  for (const row of data ?? []) {
+  const rows = (data ?? []) as PostScoreFinalRow[];
+  for (const row of rows) {
     if (
       row.post_id != null &&
       row.final_score != null &&

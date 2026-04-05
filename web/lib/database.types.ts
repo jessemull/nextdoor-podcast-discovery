@@ -116,6 +116,28 @@ export interface Database {
           slug?: string;
         };
       };
+      post_scores: {
+        Insert: {
+          computed_at?: string;
+          final_score: number;
+          id?: string;
+          post_id: string;
+          weight_config_id: string;
+        };
+        Row: {
+          computed_at: string;
+          final_score: number;
+          id: string;
+          post_id: string;
+          weight_config_id: string;
+        };
+        Update: {
+          computed_at?: string;
+          final_score?: number;
+          post_id?: string;
+          weight_config_id?: string;
+        };
+      };
       posts: {
         Insert: {
           author_name?: null | string;
