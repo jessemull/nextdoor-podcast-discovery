@@ -24,6 +24,7 @@ coverage.xml
 # ===================
 # Node.js / Next.js
 # ===================
+web/coverage/
 node_modules/
 .next/
 out/

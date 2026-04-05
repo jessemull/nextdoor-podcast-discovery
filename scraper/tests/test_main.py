@@ -8,6 +8,9 @@ import pytest
 from src.config import REQUIRED_ENV_VARS
 from src.exceptions import ScraperError
 from src.main import main
+from src.main_permalink import _run_permalink_fetch
+from src.main_scoring import _run_scoring_for_post
+from src.post_extractor import RawPost
 
 
 class TestMain:
@@ -146,3 +149,122 @@ class TestMain:
         assert mock_storage.store_posts.call_count == 2
         mock_storage.store_posts.assert_any_call(fake_batch1)
         mock_storage.store_posts.assert_any_call(fake_batch2)
+
+
+class TestMainPermalinkAndScoring:
+    """Tests for permalink mode and single-post scoring."""
+
+    @pytest.fixture
+    def mock_env(self) -> dict[str, str]:
+        """Provide valid environment variables for testing."""
+        return {var: "test_value" for var in REQUIRED_ENV_VARS}
+
+    def test_main_routes_to_permalink_fetch(self, mock_env: dict[str, str]) -> None:
+        """Should call _run_permalink_fetch when permalink is set."""
+        with mock.patch.dict(os.environ, mock_env, clear=True):
+            with mock.patch(
+                "src.main._run_permalink_fetch", return_value=0
+            ) as mock_fetch:
+                result = main(
+                    dry_run=True,
+                    permalink="https://nextdoor.com/p/abc123",
+                    post_id="uuid-here",
+                    visible=True,
+                )
+
+        assert result == 0
+        mock_fetch.assert_called_once_with(
+            dry_run=True,
+            permalink="https://nextdoor.com/p/abc123",
+            post_id="uuid-here",
+            visible=True,
+        )
+
+    def test_run_permalink_fetch_dry_run_success(
+        self, mock_env: dict[str, str]
+    ) -> None:
+        """Should return 0 in dry run when a post is extracted."""
+        post = RawPost(
+            author_id="a1",
+            author_name="Sam",
+            content="hello world content here for the podcast",
+            content_hash="hash1",
+            post_url="https://nextdoor.com/p/abc",
+            reaction_count=2,
+        )
+        mock_page = mock.MagicMock()
+        mock_extractor = mock.MagicMock()
+        mock_extractor.extract_single_post_from_current_page.return_value = post
+        mock_extractor._extract_comments_via_new_tab.return_value = []
+
+        mock_scraper = mock.MagicMock()
+        mock_scraper.page = mock_page
+        mock_scraper.is_logged_in.return_value = True
+        mock_cm = mock.MagicMock()
+        mock_cm.__enter__.return_value = mock_scraper
+        mock_cm.__exit__.return_value = None
+
+        with mock.patch.dict(os.environ, mock_env, clear=True):
+            with mock.patch("src.main_permalink.validate_env"):
+                with mock.patch("src.main_permalink.SessionManager") as mock_sm:
+                    mock_sm.return_value.get_cookies.return_value = [{"name": "c"}]
+                    with mock.patch(
+                        "src.main_permalink.NextdoorScraper",
+                        return_value=mock_cm,
+                    ):
+                        with mock.patch(
+                            "src.main_permalink.PostExtractor",
+                            return_value=mock_extractor,
+                        ):
+                            code = _run_permalink_fetch(
+                                "https://nextdoor.com/p/abc",
+                                dry_run=True,
+                                post_id=None,
+                                visible=False,
+                            )
+
+        assert code == 0
+
+    def test_run_scoring_for_post_returns_false_when_missing(
+        self, mock_env: dict[str, str]
+    ) -> None:
+        """Should return False when post row is not found."""
+        supabase = mock.MagicMock()
+        supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = mock.MagicMock(
+            data=[]
+        )
+
+        with mock.patch.dict(os.environ, mock_env, clear=True):
+            result = _run_scoring_for_post(supabase, "missing-id")
+
+        assert result is False
+
+    def test_run_scoring_for_post_returns_true_when_saved(
+        self, mock_env: dict[str, str]
+    ) -> None:
+        """Should return True when save_scores reports saved > 0."""
+        row = {"id": "pid", "text": "hi", "comments": None}
+        exec_result = mock.MagicMock()
+        exec_result.data = [row]
+        supabase = mock.MagicMock()
+        supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = exec_result
+
+        mock_scorer = mock.MagicMock()
+        mock_scorer.score_posts.return_value = [{"post_id": "pid"}]
+        mock_scorer.calculate_final_scores.return_value = [{"post_id": "pid"}]
+        mock_scorer.save_scores.return_value = {
+            "errors": 0,
+            "saved": 1,
+            "skipped": 0,
+        }
+
+        with mock.patch.dict(os.environ, mock_env, clear=True):
+            with mock.patch("src.main_scoring.Anthropic"):
+                with mock.patch(
+                    "src.main_scoring.LLMScorer",
+                    return_value=mock_scorer,
+                ):
+                    result = _run_scoring_for_post(supabase, "pid")
+
+        assert result is True
+        mock_scorer.save_scores.assert_called_once()

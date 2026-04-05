@@ -37,7 +37,6 @@ export const searchQuerySchema = z.object({
   limit: z.coerce
     .number()
     .int()
-    .min(1)
     .optional()
     .default(20)
     .transform((n) => Math.min(50, Math.max(1, n))),
@@ -67,8 +66,6 @@ export const searchBodySchema = z.object({
     .max(MAX_QUERY_LENGTH, `Query too long (max ${MAX_QUERY_LENGTH} characters)`),
   similarity_threshold: z.coerce
     .number()
-    .min(0)
-    .max(2)
     .optional()
     .default(0.5)
     .transform((t) => Math.max(0, Math.min(1, t))),

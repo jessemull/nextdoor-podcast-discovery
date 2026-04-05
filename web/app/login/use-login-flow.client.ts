@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useState } from "react";
 
 import { isInvalidRefreshTokenError } from "@/lib/auth-errors";
+import { getMfaApi } from "@/lib/supabase-mfa.client";
 import { getSupabase } from "@/lib/supabase.client";
 
 import {
@@ -112,9 +113,8 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
           return;
         }
 
-        const { data: factorsData, error: factorsError } = await (
-          supabase.auth as any
-        ).mfa.listFactors();
+        const { data: factorsData, error: factorsError } =
+          await getMfaApi(supabase).listFactors();
         if (factorsError) {
           throw factorsError;
         }
@@ -123,29 +123,26 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         const hasVerifiedTotp = totpFactors.some((f) => f.status === "verified");
 
         if (!totpFactors || totpFactors.length === 0) {
-          const { data: enrollData, error: enrollError } = await (
-            supabase.auth as any
-          ).mfa.enroll({
+          const { data: enrollData, error: enrollError } = await getMfaApi(supabase).enroll({
             factorType: "totp",
           });
           if (enrollError) {
             if (isMfaFactorNameConflict(enrollError)) {
-              const { data: retryFactors } = await (supabase.auth as any).mfa.listFactors();
+              const { data: retryFactors } = await getMfaApi(supabase).listFactors();
               const retryTotp = getTotpFactorsFromListFactorsResponse(retryFactors);
 
               if (retryTotp && retryTotp.length > 0) {
                 const existingFactorId = retryTotp[0].id;
-                const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+                const { error: unenrollErr } = await getMfaApi(supabase).unenroll({
                   factorId: existingFactorId,
                 });
                 if (unenrollErr) {
                   throw unenrollErr;
                 }
-                const { data: retryEnrollData, error: retryEnrollErr } = await (
-                  supabase.auth as any
-                ).mfa.enroll({
-                  factorType: "totp",
-                });
+                const { data: retryEnrollData, error: retryEnrollErr } =
+                  await getMfaApi(supabase).enroll({
+                    factorType: "totp",
+                  });
                 if (retryEnrollErr) {
                   throw retryEnrollErr;
                 }
@@ -156,7 +153,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
                   throw new Error("Missing factor id from enrollment response.");
                 }
                 const { data: retryChallengeData, error: retryChallengeError } =
-                  await (supabase.auth as any).mfa.challenge({
+                  await getMfaApi(supabase).challenge({
                     factorId: retryFactorId,
                   });
                 if (retryChallengeError) {
@@ -187,9 +184,9 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
             throw new Error("Missing factor id from enrollment response.");
           }
 
-          const { data: challengeData, error: challengeError } = await (
-            supabase.auth as any
-          ).mfa.challenge({
+          const { data: challengeData, error: challengeError } = await getMfaApi(
+            supabase
+          ).challenge({
             factorId,
           });
           if (challengeError) {
@@ -212,15 +209,13 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
 
         if (totpFactors.length > 0 && !hasVerifiedTotp) {
           const existingFactorId = totpFactors[0].id;
-          const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+          const { error: unenrollErr } = await getMfaApi(supabase).unenroll({
             factorId: existingFactorId,
           });
           if (unenrollErr) {
             throw unenrollErr;
           }
-          const { data: enrollData, error: enrollError } = await (
-            supabase.auth as any
-          ).mfa.enroll({
+          const { data: enrollData, error: enrollError } = await getMfaApi(supabase).enroll({
             factorType: "totp",
           });
           if (enrollError) {
@@ -232,9 +227,9 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
           if (!factorId) {
             throw new Error("Missing factor id from enrollment response.");
           }
-          const { data: challengeData, error: challengeError } = await (
-            supabase.auth as any
-          ).mfa.challenge({
+          const { data: challengeData, error: challengeError } = await getMfaApi(
+            supabase
+          ).challenge({
             factorId,
           });
           if (challengeError) {
@@ -255,9 +250,9 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         }
 
         const factorId = totpFactors[0].id;
-        const { data: challengeData, error: challengeError } = await (
-          supabase.auth as any
-        ).mfa.challenge({
+        const { data: challengeData, error: challengeError } = await getMfaApi(
+          supabase
+        ).challenge({
           factorId,
         });
         if (challengeError) {
@@ -279,19 +274,18 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         if (isMfaFactorNameConflict(err)) {
           try {
             const supabase = getSupabase();
-            const { data: retryFactors } = await (supabase.auth as any).mfa.listFactors();
+            const mfaRetry = getMfaApi(supabase);
+            const { data: retryFactors } = await mfaRetry.listFactors();
             const retryTotp = getTotpFactorsFromListFactorsResponse(retryFactors);
 
             if (retryTotp.length > 0) {
               const existingFactorId = retryTotp[0].id;
-              const { error: unenrollErr } = await (supabase.auth as any).mfa.unenroll({
+              const { error: unenrollErr } = await mfaRetry.unenroll({
                 factorId: existingFactorId,
               });
               if (unenrollErr) throw unenrollErr;
 
-              const { data: retryEnrollData, error: retryEnrollErr } = await (
-                supabase.auth as any
-              ).mfa.enroll({
+              const { data: retryEnrollData, error: retryEnrollErr } = await mfaRetry.enroll({
                 factorType: "totp",
               });
               if (retryEnrollErr) throw retryEnrollErr;
@@ -304,7 +298,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
               }
 
               const { data: retryChallengeData, error: retryChallengeError } =
-                await (supabase.auth as any).mfa.challenge({
+                await mfaRetry.challenge({
                   factorId: retryFactorId,
                 });
               if (retryChallengeError) throw retryChallengeError;
@@ -346,7 +340,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
 
       try {
         const supabase = getSupabase();
-        const { error: verifyError } = await (supabase.auth as any).mfa.verify({
+        const { error: verifyError } = await getMfaApi(supabase).verify({
           challengeId: mfaChallengeId,
           code: mfaCode.trim(),
           factorId: mfaFactorId,
@@ -383,16 +377,15 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
     try {
       const supabase = getSupabase();
 
-      const { error: unenrollError } = await (supabase.auth as any).mfa.unenroll({
+      const mfaReset = getMfaApi(supabase);
+      const { error: unenrollError } = await mfaReset.unenroll({
         factorId: mfaFactorId,
       });
       if (unenrollError) {
         throw unenrollError;
       }
 
-      const { data: factorsData, error: factorsError } = await (
-        supabase.auth as any
-      ).mfa.listFactors();
+      const { data: factorsData, error: factorsError } = await mfaReset.listFactors();
       if (factorsError) {
         throw factorsError;
       }
@@ -405,9 +398,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         return;
       }
 
-      const { data: enrollData, error: enrollError } = await (
-        supabase.auth as any
-      ).mfa.enroll({
+      const { data: enrollData, error: enrollError } = await mfaReset.enroll({
         factorType: "totp",
       });
       if (enrollError) {
@@ -421,9 +412,7 @@ export function useLoginFlow(returnTo: string): UseLoginFlowResult {
         throw new Error("Missing factor id from enrollment response.");
       }
 
-      const { data: challengeData, error: challengeError } = await (
-        supabase.auth as any
-      ).mfa.challenge({
+      const { data: challengeData, error: challengeError } = await mfaReset.challenge({
         factorId,
       });
       if (challengeError) {

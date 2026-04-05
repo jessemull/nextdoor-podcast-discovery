@@ -1,4 +1,4 @@
-.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-prod dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details recompute-scores-once scrape-sample scrape-trending-300 scrape-visible security security-scraper security-web tail-logs test test-scraper test-web tune-ranking-weights venv
+.PHONY: help build clean deploy-scraper deploy-web-prod db-bootstrap db-migrate-prod dev-scraper dev-web format gen-key install install-scraper install-web inspect-scraper lint lint-ci lint-scraper lint-web lint-web-fix open-trending-details recompute-scores-once scrape-sample scrape-trending-300 scrape-visible security security-scraper security-web tail-logs test test-ci test-scraper test-web test-web-coverage tune-ranking-weights venv
 
 # Default target
 help:
@@ -41,9 +41,11 @@ help:
 	@echo "  security-web     Run TypeScript security scan (npm audit)"
 	@echo ""
 	@echo "Testing:"
-	@echo "  test             Run all tests"
+	@echo "  test             Run all tests (scraper + web, no coverage)"
+	@echo "  test-ci          Run scraper tests + web tests with Vitest coverage (CI)"
 	@echo "  test-scraper     Run scraper tests only"
 	@echo "  test-web         Run web tests only"
+	@echo "  test-web-coverage Run web tests with coverage report"
 	@echo ""
 	@echo "Deploy:"
 	@echo "  deploy-scraper   Deploy scraper to server (set DEPLOY_HOST; optional FEED=recent|trending)"
@@ -174,11 +176,16 @@ security-web:
 # Testing
 test: test-scraper test-web
 
+test-ci: test-scraper test-web-coverage
+
 test-scraper:
 	cd scraper && ../.venv/bin/pytest -v
 
 test-web:
 	cd web && npm test
+
+test-web-coverage:
+	cd web && npm run test:coverage
 
 # Deploy
 deploy-scraper:

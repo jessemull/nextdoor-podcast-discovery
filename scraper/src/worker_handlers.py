@@ -67,13 +67,6 @@ def process_fetch_permalink_job(supabase: Client, job: dict[str, Any]) -> bool:
     if post_id is not None and not isinstance(post_id, str):
         post_id = None
 
-    supabase.table("background_jobs").update(
-        {
-            "started_at": datetime.now(UTC).isoformat(),
-            "status": "running",
-        }
-    ).eq("id", job_id).execute()
-
     logger.info(
         "[permalink] job=%s url=%s post_id=%s starting fetch",
         job_id,
@@ -183,13 +176,6 @@ def process_run_scraper_job(supabase: Client, job: dict[str, Any]) -> None:
         job_id,
         feed_type,
     )
-
-    supabase.table("background_jobs").update(
-        {
-            "started_at": datetime.now(UTC).isoformat(),
-            "status": "running",
-        }
-    ).eq("id", job_id).execute()
 
     # repo_root is the monorepo root (one level above scraper/)
     repo_root = Path(__file__).resolve().parent.parent.parent

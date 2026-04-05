@@ -46,8 +46,8 @@ jobs:
       - name: Lint (scraper + web, ESLint --fix in CI)
         run: make lint-ci
 
-      - name: Test (scraper + web)
-        run: make test
+      - name: Test (scraper + web with coverage)
+        run: make test-ci
 
       - name: Security (scraper + web)
         run: make security
