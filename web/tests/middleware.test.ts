@@ -5,20 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockCreateSupabaseAuthClientForMiddleware,
-  mockExchangeCodeForSession,
   mockGetUser,
 } = vi.hoisted(() => {
-  const exchangeCodeForSession = vi.fn();
   const getUser = vi.fn();
   const createSupabaseAuthClientForMiddleware = vi.fn(() => ({
     auth: {
-      exchangeCodeForSession,
       getUser,
     },
   }));
   return {
     mockCreateSupabaseAuthClientForMiddleware: createSupabaseAuthClientForMiddleware,
-    mockExchangeCodeForSession: exchangeCodeForSession,
     mockGetUser: getUser,
   };
 });
@@ -32,7 +28,6 @@ import middleware from "@/middleware";
 describe("middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockExchangeCodeForSession.mockResolvedValue({ error: null });
     mockGetUser.mockResolvedValue({ data: { user: null } });
   });
 
@@ -55,6 +50,16 @@ describe("middleware", () => {
   it("should pass through public path prefixes", async () => {
     const request = new NextRequest(
       "http://localhost:3000/episodes/my-episode-slug"
+    );
+    const response = await middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(mockCreateSupabaseAuthClientForMiddleware).not.toHaveBeenCalled();
+  });
+
+  it("should pass through auth confirm without session check", async () => {
+    const request = new NextRequest(
+      "http://localhost:3000/auth/confirm?token_hash=abc&type=recovery"
     );
     const response = await middleware(request);
 
@@ -86,32 +91,6 @@ describe("middleware", () => {
     });
 
     const request = new NextRequest("http://localhost:3000/admin");
-    const response = await middleware(request);
-
-    expect(response.status).toBe(200);
-  });
-
-  it("should redirect on reset-password with code when exchange succeeds", async () => {
-    mockExchangeCodeForSession.mockResolvedValue({ error: null });
-
-    const request = new NextRequest(
-      "http://localhost:3000/reset-password?code=abc123"
-    );
-    const response = await middleware(request);
-
-    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("abc123");
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/reset-password");
-  });
-
-  it("should continue to public reset-password when exchange fails", async () => {
-    mockExchangeCodeForSession.mockResolvedValue({
-      error: { message: "exchange failed" },
-    });
-
-    const request = new NextRequest(
-      "http://localhost:3000/reset-password?code=bad"
-    );
     const response = await middleware(request);
 
     expect(response.status).toBe(200);

@@ -5,6 +5,10 @@
 
 import "server-only";
 
+import {
+  applyActiveFinalScore,
+  getFinalScoresForPostIds,
+} from "@/lib/post-scores-active.server";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 
 import type { Database } from "@/lib/database.types";
@@ -17,7 +21,7 @@ import type { LLMScore, PostWithScores } from "@/lib/types";
 export async function getPostById(id: string): Promise<null | PostWithScores> {
   const supabase = getSupabaseAdmin();
 
-  const [postResult, llmScoreResult] = await Promise.all([
+  const [postResult, llmScoreResult, activeFinalMap] = await Promise.all([
     supabase
       .from("posts")
       .select("*, neighborhood:neighborhoods(*)")
@@ -28,6 +32,7 @@ export async function getPostById(id: string): Promise<null | PostWithScores> {
       .select("*")
       .eq("post_id", id)
       .single(),
+    getFinalScoresForPostIds(supabase, [id]),
   ]);
 
   const { data: post, error: postError } = postResult;
@@ -53,22 +58,24 @@ export async function getPostById(id: string): Promise<null | PostWithScores> {
         })()
       : (rawScores as LLMScore["scores"]) || {};
 
+  const baseLlmScores: LLMScore | null = llmScore
+    ? ({
+        categories: llmScore.categories || [],
+        created_at: llmScore.created_at,
+        final_score: llmScore.final_score,
+        id: llmScore.id,
+        model_version: llmScore.model_version || "claude-3-haiku-20240307",
+        post_id: llmScore.post_id,
+        scores: parsedScores,
+        summary: llmScore.summary,
+        why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
+      } as LLMScore)
+    : null;
+
   const result: PostWithScores = {
     ...postRow,
     image_urls: (postRow.image_urls as string[]) || [],
-    llm_scores: llmScore
-      ? ({
-          categories: llmScore.categories || [],
-          created_at: llmScore.created_at,
-          final_score: llmScore.final_score,
-          id: llmScore.id,
-          model_version: llmScore.model_version || "claude-3-haiku-20240307",
-          post_id: llmScore.post_id,
-          scores: parsedScores,
-          summary: llmScore.summary,
-          why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
-        } as LLMScore)
-      : null,
+    llm_scores: applyActiveFinalScore(baseLlmScores, activeFinalMap.get(id)),
     neighborhood: postRow.neighborhood,
   };
 

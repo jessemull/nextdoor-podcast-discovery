@@ -7,6 +7,10 @@ import {
 } from "@/lib/embedding-cache.server";
 import { env } from "@/lib/env.server";
 import { logError } from "@/lib/log.server";
+import {
+  applyActiveFinalScore,
+  getFinalScoresForPostIds,
+} from "@/lib/post-scores-active.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { searchBodySchema, searchQuerySchema } from "@/lib/validators";
@@ -107,16 +111,25 @@ export async function GET(request: NextRequest) {
     }
 
     const postIds = posts.map((p: { id: string }) => p.id);
-    const { data: scores } = await supabase.from("llm_scores").select("*").in("post_id", postIds);
-    const scoresMap = new Map((scores || []).map((s: { post_id: string }) => [s.post_id, s]));
+    const [{ data: scores }, activeFinalMap] = await Promise.all([
+      supabase.from("llm_scores").select("*").in("post_id", postIds),
+      getFinalScoresForPostIds(supabase, postIds),
+    ]);
+    const scoresMap = new Map(
+      (scores || []).map((s) => [s.post_id, s])
+    );
 
-    const results = posts.map((post: Record<string, unknown>) => ({
-      ...post,
-      image_urls: post.image_urls || [],
-      llm_scores: scoresMap.get(post.id as string) || null,
-      neighborhood: post.neighborhood || null,
-      similarity: null,
-    }));
+    const results = posts.map((post: Record<string, unknown>) => {
+      const pid = post.id as string;
+      const rawScores = scoresMap.get(pid) || null;
+      return {
+        ...post,
+        image_urls: post.image_urls || [],
+        llm_scores: applyActiveFinalScore(rawScores, activeFinalMap.get(pid)),
+        neighborhood: post.neighborhood || null,
+        similarity: null,
+      };
+    });
 
     return NextResponse.json({ data: results, total: results.length });
   } catch (error) {
@@ -256,14 +269,16 @@ export async function POST(request: NextRequest) {
       (post: SearchResult) => post.neighborhood_id
     );
 
-    const [scoresResult, neighborhoodsResult, postDetailsResult] = await Promise.all([
-      supabase.from("llm_scores").select("*").in("post_id", postIds),
-      supabase.from("neighborhoods").select("*").in("id", neighborhoodIds),
-      supabase
-        .from("posts")
-        .select("id, author_name, comments, ignored, reaction_count, saved")
-        .in("id", postIds),
-    ]);
+    const [scoresResult, neighborhoodsResult, postDetailsResult, activeFinalMap] =
+      await Promise.all([
+        supabase.from("llm_scores").select("*").in("post_id", postIds),
+        supabase.from("neighborhoods").select("*").in("id", neighborhoodIds),
+        supabase
+          .from("posts")
+          .select("id, author_name, comments, ignored, reaction_count, saved")
+          .in("id", postIds),
+        getFinalScoresForPostIds(supabase, postIds),
+      ]);
 
     const { data: scores, error: scoresError } = scoresResult;
     const { data: neighborhoods, error: neighborhoodsError } = neighborhoodsResult;
@@ -287,7 +302,7 @@ export async function POST(request: NextRequest) {
     // Build maps for quick lookups
 
     const scoresMap = new Map(
-      (scores || []).map((score: { post_id: string }) => [score.post_id, score])
+      (scores || []).map((score) => [score.post_id, score])
     );
     const neighborhoodsMap = new Map(
       (neighborhoods || []).map((neighborhood: { id: string }) => [
@@ -321,7 +336,10 @@ export async function POST(request: NextRequest) {
         id: result.id,
         ignored: details.ignored ?? false,
         image_urls: result.image_urls || [],
-        llm_scores: scoresMap.get(result.id) || null,
+        llm_scores: applyActiveFinalScore(
+          scoresMap.get(result.id) || null,
+          activeFinalMap.get(result.id)
+        ),
         neighborhood:
           neighborhoodsMap.get(result.neighborhood_id) || {
             created_at: new Date().toISOString(),

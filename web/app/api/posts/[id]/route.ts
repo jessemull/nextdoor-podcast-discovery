@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { logError } from "@/lib/log.server";
+import {
+  applyActiveFinalScore,
+  getFinalScoresForPostIds,
+} from "@/lib/post-scores-active.server";
 import { getSession } from "@/lib/supabase-server-auth";
 import { getSupabaseAdmin } from "@/lib/supabase.server";
 import { UUID_REGEX } from "@/lib/validators";
@@ -16,6 +20,8 @@ interface RouteParams {
  * GET /api/posts/[id]
  *
  * Fetch a single post with LLM scores and neighborhood. Requires authentication.
+ * When a row exists in post_scores for the active weight config, llm_scores.final_score
+ * matches the feed (canonical ranking score); otherwise it falls back to llm_scores.final_score.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const session = await getSession();
@@ -85,22 +91,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           })()
         : (rawScores as LLMScore["scores"]) || {};
 
+    const activeFinalMap = await getFinalScoresForPostIds(supabase, [id]);
+    const baseLlmScores: LLMScore | null = llmScore
+      ? ({
+          categories: llmScore.categories || [],
+          created_at: llmScore.created_at,
+          final_score: llmScore.final_score,
+          id: llmScore.id,
+          model_version: llmScore.model_version || "claude-3-haiku-20240307",
+          post_id: llmScore.post_id,
+          scores: parsedScores,
+          summary: llmScore.summary,
+          why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
+        } as LLMScore)
+      : null;
+
     const result: PostWithScores = {
       ...postRow,
       image_urls: (postRow.image_urls as string[]) || [],
-      llm_scores: llmScore
-        ? ({
-            categories: llmScore.categories || [],
-            created_at: llmScore.created_at,
-            final_score: llmScore.final_score,
-            id: llmScore.id,
-            model_version: llmScore.model_version || "claude-3-haiku-20240307",
-            post_id: llmScore.post_id,
-            scores: parsedScores,
-            summary: llmScore.summary,
-            why_podcast_worthy: llmScore.why_podcast_worthy ?? null,
-          } as LLMScore)
-        : null,
+      llm_scores: applyActiveFinalScore(baseLlmScores, activeFinalMap.get(id)),
       neighborhood: postRow.neighborhood,
     };
 
