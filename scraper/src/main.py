@@ -43,6 +43,10 @@ def _record_scraper_run(
     feed_type: str,
     status: str,
     error_message: str | None = None,
+    scoring_attempted_count: int | None = None,
+    scoring_error_count: int | None = None,
+    scoring_saved_count: int | None = None,
+    scoring_skipped_count: int | None = None,
 ) -> None:
     """Insert one row into scraper_runs for Jobs page (self-reported outcome)."""
     try:
@@ -53,6 +57,10 @@ def _record_scraper_run(
         }
         if error_message:
             row["error_message"] = error_message[:SCRAPER_RUN_ERROR_MESSAGE_MAX_LEN]
+        row["scoring_attempted_count"] = scoring_attempted_count
+        row["scoring_error_count"] = scoring_error_count
+        row["scoring_saved_count"] = scoring_saved_count
+        row["scoring_skipped_count"] = scoring_skipped_count
         supabase.table("scraper_runs").insert(row).execute()
     except Exception as e:
         logger.warning(
@@ -337,6 +345,7 @@ def main(
                 "comment_mismatches": 0,
             }
             storage_stats: dict[str, int] | None = None
+            scoring_stats: dict[str, int] | None = None
             if not dry_run:
                 storage = PostStorage(session_manager.supabase)
 
@@ -418,7 +427,7 @@ def main(
                     "Running LLM scoring on unscored posts (limit=%d)",
                     scoring_limit,
                 )
-                _run_scoring(
+                scoring_stats = _run_scoring(
                     session_manager.supabase,
                     unscored_batch_limit=scoring_limit,
                 )
@@ -468,7 +477,31 @@ def main(
                         e,
                         type(e).__name__,
                     )
-                _record_scraper_run(session_manager.supabase, feed_type, "completed")
+                _record_scraper_run(
+                    session_manager.supabase,
+                    feed_type,
+                    "completed",
+                    scoring_attempted_count=(
+                        scoring_stats.get("attempted")
+                        if scoring_stats is not None
+                        else None
+                    ),
+                    scoring_error_count=(
+                        scoring_stats.get("errors")
+                        if scoring_stats is not None
+                        else None
+                    ),
+                    scoring_saved_count=(
+                        scoring_stats.get("saved")
+                        if scoring_stats is not None
+                        else None
+                    ),
+                    scoring_skipped_count=(
+                        scoring_stats.get("skipped")
+                        if scoring_stats is not None
+                        else None
+                    ),
+                )
 
             # Run summary last so it is the final human-facing message before exit
             mismatches = run_stats.get("comment_mismatches", 0)

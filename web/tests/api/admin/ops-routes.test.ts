@@ -205,7 +205,19 @@ describe("admin ops routes", () => {
     });
 
     it("should return runs with limit query", async () => {
-      const runs = [{ feed_type: "trending", id: "r1", run_at: "2025-01-01", status: "ok" }];
+      const runs = [
+        {
+          error_message: null,
+          feed_type: "trending",
+          id: "r1",
+          run_at: "2025-01-01",
+          scoring_attempted_count: 10,
+          scoring_error_count: 0,
+          scoring_saved_count: 10,
+          scoring_skipped_count: 0,
+          status: "ok",
+        },
+      ];
       const jobsSelect = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           in: vi.fn().mockResolvedValue({ data: [], error: null }),

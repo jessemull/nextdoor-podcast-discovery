@@ -133,6 +133,10 @@ export interface ScraperRun {
   feed_type: string;
   id: string;
   run_at: string;
+  scoring_attempted_count: null | number;
+  scoring_error_count: null | number;
+  scoring_saved_count: null | number;
+  scoring_skipped_count: null | number;
   status: string;
 }
 

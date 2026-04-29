@@ -43,8 +43,13 @@ function feedLabel(feedType: string): string {
   return feedType;
 }
 
-function formatStatusLabel(status: string, isQueued: boolean): string {
+function formatStatusLabel(
+  status: string,
+  isPartialScoring: boolean,
+  isQueued: boolean
+): string {
   if (isQueued) return "Queued";
+  if (isPartialScoring) return "Warning";
   switch (status) {
     case "completed":
       return "Completed";
@@ -61,11 +66,17 @@ function formatStatusLabel(status: string, isQueued: boolean): string {
   }
 }
 
-function statusBadgeClass(status: string, isQueued: boolean): string {
+function statusBadgeClass(
+  status: string,
+  isPartialScoring: boolean,
+  isQueued: boolean
+): string {
   const base =
     "shrink-0 rounded border px-2 py-0.5 text-xs font-medium";
   if (isQueued)
     return `${base} border-sky-500/50 bg-sky-500/10 text-sky-600`;
+  if (isPartialScoring)
+    return `${base} border-amber-500/60 bg-amber-500/15 text-amber-500`;
   switch (status) {
     case "completed":
       return `${base} border-emerald-500/60 bg-emerald-500/10 text-emerald-600`;
@@ -116,8 +127,24 @@ export function ScraperRunsSection({
         <div className="max-h-96 space-y-3 overflow-y-auto">
           {runs.map((run) => {
             const isQueued = queuedRetrySet.has(run.id);
-            const statusLabel = formatStatusLabel(run.status, isQueued);
-            const badgeClass = statusBadgeClass(run.status, isQueued);
+            const attemptedCount = run.scoring_attempted_count;
+            const savedCount = run.scoring_saved_count;
+            const isPartialScoring =
+              run.status === "completed" &&
+              attemptedCount != null &&
+              savedCount != null &&
+              attemptedCount > 0 &&
+              savedCount < attemptedCount;
+            const statusLabel = formatStatusLabel(
+              run.status,
+              isPartialScoring,
+              isQueued
+            );
+            const badgeClass = statusBadgeClass(
+              run.status,
+              isPartialScoring,
+              isQueued
+            );
             const showRetry =
               run.status === "error" && onRetry && !isQueued;
             return (
@@ -149,6 +176,13 @@ export function ScraperRunsSection({
                     value={new Date(run.run_at).toLocaleString()}
                   />
                   <DetailRow label="Feed" value={feedLabel(run.feed_type)} />
+                  {run.scoring_attempted_count != null &&
+                    run.scoring_saved_count != null && (
+                      <DetailRow
+                        label="Scored"
+                        value={`${run.scoring_saved_count.toLocaleString()} / ${run.scoring_attempted_count.toLocaleString()}`}
+                      />
+                    )}
                   {run.error_message != null && run.error_message !== "" && (
                     <DetailRow
                       label="Error"
