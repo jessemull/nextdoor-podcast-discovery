@@ -32,7 +32,7 @@ __all__ = [
 # Claude settings
 
 CLAUDE_MAX_TOKENS = 500
-CLAUDE_MODEL = "claude-3-haiku-20240307"
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5")
 ENSEMBLE_RUNS = 3
 ENSEMBLE_TEMPERATURE = 0.3
 

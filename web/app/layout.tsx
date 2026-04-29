@@ -7,6 +7,9 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   description: "Discover and curate interesting Nextdoor posts for your podcast",
+  icons: {
+    icon: "/icon.svg",
+  },
   title: "Nextdoor Podcast Discovery",
 };
 
