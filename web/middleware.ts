@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/episodes",
   "/feed.xml",
   "/login",
+  "/robots.txt",
   "/reset-password",
   "/search",
   "/subscribe",

@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
       );
       const { data, error } = await supabase
         .from("scraper_runs")
-        .select("id, run_at, status, feed_type, error_message")
+        .select(
+          "id, run_at, status, feed_type, error_message, scoring_attempted_count, scoring_error_count, scoring_saved_count, scoring_skipped_count"
+        )
         .order("run_at", { ascending: false })
         .limit(limit);
 
@@ -82,7 +84,9 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("scraper_runs")
-      .select("id, run_at, status, feed_type, error_message")
+      .select(
+        "id, run_at, status, feed_type, error_message, scoring_attempted_count, scoring_error_count, scoring_saved_count, scoring_skipped_count"
+      )
       .gte("run_at", sinceIso)
       .order("run_at", { ascending: false });
 

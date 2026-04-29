@@ -35,5 +35,5 @@ export const env = {
 };
 
 // Claude model configuration
-
-export const CLAUDE_MODEL = "claude-3-haiku-20240307";
+// Use env override when available; otherwise default to current Haiku alias.
+export const CLAUDE_MODEL = getEnvVar("CLAUDE_MODEL", false) || "claude-haiku-4-5";

@@ -17,12 +17,14 @@ logger = logging.getLogger(__name__)
 def _run_scoring(
     supabase_client: Client,
     unscored_batch_limit: int = 50,
-) -> None:
+) -> dict[str, int]:
     """Run LLM scoring on unscored posts.
 
     Args:
         supabase_client: Supabase client instance.
         unscored_batch_limit: Max number of unscored posts to fetch and score (default 50).
+    Returns:
+        Dict with attempted/saved/skipped/errors counts for this scoring run.
     """
     anthropic = Anthropic(
         api_key=os.environ["ANTHROPIC_API_KEY"],
@@ -35,7 +37,12 @@ def _run_scoring(
     unscored = scorer.get_unscored_posts(limit=unscored_batch_limit)
     if not unscored:
         logger.info("No unscored posts found")
-        return
+        return {
+            "attempted": 0,
+            "errors": 0,
+            "saved": 0,
+            "skipped": 0,
+        }
 
     logger.info("Scoring %d unscored posts", len(unscored))
 
@@ -53,6 +60,12 @@ def _run_scoring(
         stats["skipped"],
         stats["errors"],
     )
+    return {
+        "attempted": len(unscored),
+        "errors": stats["errors"],
+        "saved": stats["saved"],
+        "skipped": stats["skipped"],
+    }
 
 
 def _run_scoring_for_post(supabase_client: Client, post_id: str) -> bool:
